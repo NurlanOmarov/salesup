@@ -1,0 +1,102 @@
+/**
+ * Парсинг VTT-субтитров YouTube (S3.1). Авто-субтитры приходят «прокручивающимися»
+ * (rolling): соседние реплики дублируют хвост предыдущей. Дедуплицируем и собираем
+ * чистый текст с таймкодами. Чистый модуль — юнит-тестируем.
+ */
+
+export interface VttCue {
+  startSec: number;
+  text: string;
+}
+
+/** «00:01:23.456» | «01:23.456» → секунды. */
+export function parseTimestamp(ts: string): number {
+  const parts = ts.split(":").map((p) => parseFloat(p.replace(",", ".")));
+  if (parts.length === 3) return parts[0]! * 3600 + parts[1]! * 60 + parts[2]!;
+  if (parts.length === 2) return parts[0]! * 60 + parts[1]!;
+  return parts[0] ?? 0;
+}
+
+const TS_LINE = /(\d{2}:)?\d{2}:\d{2}[.,]\d{3}\s*-->\s*(\d{2}:)?\d{2}:\d{2}[.,]\d{3}/;
+
+/** Убрать инлайновые теги (<c>, <00:00:01.000>) и схлопнуть пробелы. */
+function stripTags(s: string): string {
+  return s
+    .replace(/<[^>]+>/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Разобрать VTT в реплики с дедупликацией прокручивающихся авто-субтитров.
+ * Каждую реплику добавляем, отрезая префикс, совпадающий с хвостом накопленного текста.
+ */
+export function parseVtt(vtt: string): VttCue[] {
+  const lines = vtt.split(/\r?\n/);
+  const cues: VttCue[] = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i] ?? "";
+    if (TS_LINE.test(line)) {
+      const startStr = line.split("-->")[0]!.trim();
+      const startSec = parseTimestamp(startStr);
+      i++;
+      const textLines: string[] = [];
+      while (i < lines.length && lines[i]!.trim() !== "" && !TS_LINE.test(lines[i]!)) {
+        const t = stripTags(lines[i]!);
+        if (t) textLines.push(t);
+        i++;
+      }
+      const text = textLines.join(" ").trim();
+      if (text) cues.push({ startSec, text });
+    } else {
+      i++;
+    }
+  }
+
+  return dedupeRolling(cues);
+}
+
+/** Склейка прокручивающихся субтитров: отбрасываем повторяющиеся строки. */
+function dedupeRolling(cues: VttCue[]): VttCue[] {
+  const out: VttCue[] = [];
+  let lastText = "";
+  for (const cue of cues) {
+    if (cue.text === lastText) continue;
+    // авто-субтитры часто повторяют предыдущую строку как первую — оставляем только новое
+    out.push(cue);
+    lastText = cue.text;
+  }
+  return out;
+}
+
+/**
+ * Дописать слова `next` к `acc`, отрезав максимальное перекрытие: хвост acc,
+ * совпадающий с началом next (прокручивающиеся авто-субтитры повторяют контекст).
+ */
+function appendWithOverlap(acc: string[], next: string[]): string[] {
+  const maxK = Math.min(acc.length, next.length);
+  for (let k = maxK; k > 0; k--) {
+    if (acc.slice(-k).join(" ") === next.slice(0, k).join(" ")) {
+      return acc.concat(next.slice(k));
+    }
+  }
+  return acc.concat(next);
+}
+
+/** Собрать сплошной текст транскрипта без таймкодов (для дальнейшей очистки LLM). */
+export function cuesToRawText(cues: VttCue[]): string {
+  let words: string[] = [];
+  for (const c of cues) {
+    words = appendWithOverlap(words, c.text.split(/\s+/).filter(Boolean));
+  }
+  return words.join(" ").replace(/\s+/g, " ").trim();
+}
+
+/** mm:ss из секунд (для разметки абзацев). */
+export function fmtTimecode(sec: number): string {
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
