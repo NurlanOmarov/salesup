@@ -1,0 +1,90 @@
+import type { Metadata } from "next";
+import { BookOpen } from "lucide-react";
+import { db } from "@/lib/db";
+import { Reveal } from "@/components/landing/reveal";
+import { CourseCard, type CourseCardData } from "@/components/catalog/course-card";
+
+export const revalidate = 60;
+
+export const metadata: Metadata = {
+  title: "Каталог курсов",
+  description:
+    "Видеокурсы по продажам для туризма, мебели, обуви, недвижимости, медпредставителей и B2B. Авторские программы бизнес-тренера Виталия Дубовика.",
+  alternates: { canonical: "/courses" },
+  openGraph: {
+    title: "Каталог курсов по продажам — SalesAcademy",
+    description: "Практические видеокурсы для 8 отраслей. AI-наставник в каждом курсе.",
+    type: "website",
+  },
+};
+
+async function getCourses(): Promise<CourseCardData[]> {
+  return db.course.findMany({
+    where: { status: "PUBLISHED" },
+    orderBy: [{ sortOrder: "asc" }, { publishedAt: "desc" }],
+    select: {
+      slug: true,
+      title: true,
+      subtitle: true,
+      industry: true,
+      coverUrl: true,
+      priceTiyn: true,
+      oldPriceTiyn: true,
+      hoursLabel: true,
+      _count: { select: { modules: true } },
+    },
+  });
+}
+
+export default async function CoursesPage() {
+  const courses = await getCourses();
+
+  const listJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: "Курсы по продажам — SalesAcademy",
+    itemListElement: courses.map((c, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: c.title,
+      url: `${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/courses/${c.slug}`,
+    })),
+  };
+
+  return (
+    <main className="mx-auto max-w-6xl px-4 py-12 sm:py-16">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(listJsonLd) }}
+      />
+
+      <Reveal>
+        <h1 className="text-3xl font-bold sm:text-4xl">Каталог курсов</h1>
+        <p className="mt-2 max-w-2xl text-foreground/60">
+          Практические программы Виталия Дубовика — бизнес-тренера с 20-летним опытом.
+          В каждом курсе: видеоуроки, тесты и AI-наставник 24/7.
+        </p>
+      </Reveal>
+
+      {courses.length === 0 ? (
+        <Reveal>
+          <div className="mt-20 text-center text-foreground/40">
+            <BookOpen className="mx-auto mb-4 size-12 opacity-30" />
+            <p className="font-medium">Курсы скоро появятся</p>
+            <p className="mt-1 text-sm">
+              Оставьте заявку на главной странице — уведомим вас о старте.
+            </p>
+          </div>
+        </Reveal>
+      ) : (
+        <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {courses.map((c, i) => (
+            <Reveal key={c.slug} delay={i * 0.04}>
+              <CourseCard course={c} />
+            </Reveal>
+          ))}
+        </div>
+      )}
+    </main>
+  );
+}

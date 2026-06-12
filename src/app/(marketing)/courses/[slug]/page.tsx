@@ -1,0 +1,491 @@
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import Image from "next/image";
+import Link from "next/link";
+import {
+  CheckCircle2,
+  Clock,
+  Users,
+  Award,
+  PlayCircle,
+  Lock,
+  ChevronDown,
+} from "lucide-react";
+import { db } from "@/lib/db";
+import { env } from "@/env";
+import { formatPrice } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
+import { Reveal } from "@/components/landing/reveal";
+import { LeadForm } from "@/components/landing/lead-form";
+import { Reviews, type ReviewItem } from "@/components/landing/reviews";
+import { trainer } from "@/content/landing";
+
+export const revalidate = 60;
+
+type Params = { slug: string };
+
+async function getCourse(slug: string) {
+  return db.course.findFirst({
+    where: { slug, status: "PUBLISHED" },
+    include: {
+      modules: {
+        orderBy: { sortOrder: "asc" },
+        include: {
+          lessons: {
+            orderBy: { sortOrder: "asc" },
+            select: {
+              id: true,
+              title: true,
+              isFreePreview: true,
+              videoStatus: true,
+            },
+          },
+        },
+      },
+      reviews: {
+        where: { autoModeration: "VALIDATED" },
+        orderBy: { createdAt: "desc" },
+        take: 6,
+        select: { id: true, userName: true, rating: true, text: true },
+      },
+    },
+  });
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<Params>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const course = await getCourse(slug);
+  if (!course) return {};
+
+  return {
+    title: course.seoTitle ?? course.title,
+    description: course.seoDescription ?? course.subtitle ?? undefined,
+    alternates: { canonical: `/courses/${slug}` },
+    openGraph: {
+      title: course.title,
+      description: course.subtitle ?? undefined,
+      type: "website",
+    },
+  };
+}
+
+export async function generateStaticParams() {
+  const courses = await db.course.findMany({
+    where: { status: "PUBLISHED" },
+    select: { slug: true },
+  });
+  return courses.map((c) => ({ slug: c.slug }));
+}
+
+export default async function CoursePage({
+  params,
+}: {
+  params: Promise<Params>;
+}) {
+  const { slug } = await params;
+  const course = await getCourse(slug);
+  if (!course) notFound();
+
+  const wa = env.NEXT_PUBLIC_SUPPORT_WHATSAPP;
+  const tg = env.NEXT_PUBLIC_SUPPORT_TELEGRAM;
+  const reviews = course.reviews as ReviewItem[];
+
+  const learnPoints = Array.isArray(course.learnPoints)
+    ? (course.learnPoints as string[])
+    : [];
+  const targetAudience = Array.isArray(course.targetAudience)
+    ? (course.targetAudience as string[])
+    : [];
+  const faqItems = Array.isArray(course.faq)
+    ? (course.faq as { q: string; a: string }[])
+    : [];
+
+  const totalLessons = course.modules.reduce((n, m) => n + m.lessons.length, 0);
+
+  // JSON-LD
+  const siteUrl = env.NEXT_PUBLIC_SITE_URL ?? "";
+  const courseJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Course",
+    name: course.title,
+    description: course.subtitle ?? course.description,
+    url: `${siteUrl}/courses/${slug}`,
+    provider: {
+      "@type": "Organization",
+      name: "SalesAcademy",
+      url: siteUrl,
+    },
+    instructor: {
+      "@type": "Person",
+      name: trainer.name,
+      jobTitle: trainer.role,
+    },
+    offers: {
+      "@type": "Offer",
+      price: Math.round(course.priceTiyn / 100),
+      priceCurrency: "KZT",
+      availability: "https://schema.org/InStock",
+    },
+    ...(course.hoursLabel ? { timeRequired: course.hoursLabel } : {}),
+  };
+
+  const faqJsonLd =
+    faqItems.length > 0
+      ? {
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: faqItems.map((f) => ({
+            "@type": "Question",
+            name: f.q,
+            acceptedAnswer: { "@type": "Answer", text: f.a },
+          })),
+        }
+      : null;
+
+  return (
+    <main>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(courseJsonLd) }}
+      />
+      {faqJsonLd ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+        />
+      ) : null}
+
+      {/* Hero */}
+      <section className="bg-slate-950 text-white">
+        <div className="mx-auto max-w-6xl px-4 py-12 sm:py-16">
+          <div className="grid items-start gap-10 lg:grid-cols-[1fr_380px]">
+            <div>
+              {course.industry ? (
+                <Reveal>
+                  <span className="inline-flex items-center rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-xs font-medium text-amber-300">
+                    {course.industry}
+                  </span>
+                </Reveal>
+              ) : null}
+              <Reveal delay={0.05}>
+                <h1 className="mt-4 text-3xl font-bold leading-tight sm:text-4xl xl:text-5xl">
+                  {course.title}
+                </h1>
+              </Reveal>
+              {course.subtitle ? (
+                <Reveal delay={0.08}>
+                  <p className="mt-3 text-lg text-white/70">{course.subtitle}</p>
+                </Reveal>
+              ) : null}
+
+              {/* Мета-строка */}
+              <Reveal delay={0.1}>
+                <div className="mt-5 flex flex-wrap items-center gap-4 text-sm text-white/50">
+                  {course.hoursLabel ? (
+                    <span className="flex items-center gap-1.5">
+                      <Clock className="size-4" />
+                      {course.hoursLabel}
+                    </span>
+                  ) : null}
+                  <span className="flex items-center gap-1.5">
+                    <PlayCircle className="size-4" />
+                    {totalLessons} уроков
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <Award className="size-4" />
+                    Сертификат
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <Users className="size-4" />
+                    Пожизненный доступ
+                  </span>
+                </div>
+              </Reveal>
+
+              {/* Что вы получите */}
+              {learnPoints.length > 0 ? (
+                <Reveal delay={0.12}>
+                  <div className="mt-8">
+                    <h2 className="text-sm font-semibold uppercase tracking-wider text-amber-400">
+                      Что вы получите
+                    </h2>
+                    <ul className="mt-3 space-y-2">
+                      {learnPoints.map((p) => (
+                        <li key={p} className="flex items-start gap-2.5">
+                          <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-amber-400" />
+                          <span className="text-white/80">{p}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </Reveal>
+              ) : null}
+            </div>
+
+            {/* Sticky price card */}
+            <Reveal delay={0.15}>
+              <div className="rounded-2xl border border-white/10 bg-slate-900 p-6 lg:sticky lg:top-24">
+                {course.coverUrl ? (
+                  <div className="relative mb-4 aspect-video overflow-hidden rounded-xl">
+                    <Image
+                      src={course.coverUrl}
+                      alt={course.title}
+                      fill
+                      className="object-cover"
+                      sizes="380px"
+                    />
+                  </div>
+                ) : null}
+
+                <div className="flex items-baseline gap-3">
+                  <span className="text-3xl font-bold text-white">
+                    {formatPrice(course.priceTiyn)}
+                  </span>
+                  {course.oldPriceTiyn ? (
+                    <span className="text-lg text-white/40 line-through">
+                      {formatPrice(course.oldPriceTiyn)}
+                    </span>
+                  ) : null}
+                </div>
+                <p className="mt-1 text-sm text-white/50">
+                  Онлайн-оплата не требуется
+                </p>
+
+                <a
+                  href="#zayavka"
+                  className={cn(
+                    buttonVariants({ variant: "accent", size: "lg" }),
+                    "mt-4 w-full",
+                  )}
+                >
+                  Записаться на курс
+                </a>
+
+                <div className="mt-4 flex flex-col gap-2">
+                  {wa ? (
+                    <a
+                      href={wa}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={cn(
+                        buttonVariants({ variant: "outline-light", size: "sm" }),
+                        "w-full",
+                      )}
+                    >
+                      Написать в WhatsApp
+                    </a>
+                  ) : null}
+                  {tg ? (
+                    <a
+                      href={tg}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={cn(
+                        buttonVariants({ variant: "outline-light", size: "sm" }),
+                        "w-full",
+                      )}
+                    >
+                      Написать в Telegram
+                    </a>
+                  ) : null}
+                </div>
+
+                <ul className="mt-5 space-y-1.5 border-t border-white/10 pt-4 text-sm text-white/60">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="size-3.5 text-amber-400" />
+                    Пожизненный доступ
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="size-3.5 text-amber-400" />
+                    AI-наставник 24/7
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="size-3.5 text-amber-400" />
+                    Сертификат по окончании
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="size-3.5 text-amber-400" />
+                    Субтитры на 4 языках
+                  </li>
+                </ul>
+              </div>
+            </Reveal>
+          </div>
+        </div>
+      </section>
+
+      {/* Программа курса */}
+      <section className="mx-auto max-w-6xl px-4 py-14">
+        <Reveal>
+          <h2 className="text-2xl font-bold">Программа курса</h2>
+          <p className="mt-1 text-foreground/60">
+            {course.modules.length} модулей · {totalLessons} уроков
+          </p>
+        </Reveal>
+
+        <div className="mt-6 space-y-3">
+          {course.modules.map((module, mIdx) => (
+            <Reveal key={module.id} delay={mIdx * 0.04}>
+              <details className="group rounded-xl border border-foreground/10 bg-background">
+                <summary className="flex cursor-pointer items-center justify-between gap-4 px-5 py-4 marker:content-none">
+                  <div className="flex items-center gap-3">
+                    <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-xs font-bold text-amber-700">
+                      {mIdx + 1}
+                    </span>
+                    <span className="font-semibold">{module.title}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-foreground/40">
+                    <span>{module.lessons.length} уроков</span>
+                    <ChevronDown className="size-4 shrink-0 transition-transform group-open:rotate-180" />
+                  </div>
+                </summary>
+                <ul className="border-t border-foreground/5 px-5 py-3">
+                  {module.lessons.map((lesson, lIdx) => (
+                    <li
+                      key={lesson.id}
+                      className="flex items-center gap-3 py-2.5 text-sm"
+                    >
+                      <span className="text-foreground/30">{lIdx + 1}.</span>
+                      {lesson.isFreePreview ? (
+                        <PlayCircle className="size-4 shrink-0 text-amber-600" />
+                      ) : (
+                        <Lock className="size-4 shrink-0 text-foreground/20" />
+                      )}
+                      <span className="flex-1 text-foreground/80">{lesson.title}</span>
+                      {lesson.isFreePreview ? (
+                        <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-700">
+                          Бесплатно
+                        </span>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            </Reveal>
+          ))}
+        </div>
+      </section>
+
+      {/* Для кого курс */}
+      {targetAudience.length > 0 ? (
+        <section className="border-y border-foreground/5 bg-foreground/[0.025]">
+          <div className="mx-auto max-w-6xl px-4 py-14">
+            <Reveal>
+              <h2 className="text-2xl font-bold">Для кого этот курс</h2>
+            </Reveal>
+            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              {targetAudience.map((a, i) => (
+                <Reveal key={a} delay={i * 0.04}>
+                  <div className="flex items-start gap-3 rounded-xl border border-foreground/10 bg-background p-4">
+                    <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-amber-700" />
+                    <span>{a}</span>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {/* Описание */}
+      <section className="mx-auto max-w-6xl px-4 py-14">
+        <div className="grid gap-10 lg:grid-cols-2">
+          <Reveal>
+            <h2 className="text-2xl font-bold">О курсе</h2>
+            <p className="mt-4 leading-relaxed text-foreground/70">{course.description}</p>
+          </Reveal>
+
+          {/* Тренер — краткий блок */}
+          <Reveal delay={0.05}>
+            <div className="rounded-2xl border border-foreground/10 bg-background p-6">
+              <p className="text-xs font-semibold uppercase tracking-wider text-amber-700">
+                Ваш тренер
+              </p>
+              <p className="mt-2 text-lg font-bold">{trainer.name}</p>
+              <p className="text-sm text-foreground/60">{trainer.role}</p>
+              <p className="mt-3 text-sm text-foreground/70">{trainer.text}</p>
+              <Link
+                href="/#trainer"
+                className="mt-4 inline-block text-sm font-medium text-amber-700 hover:text-amber-600"
+              >
+                Подробнее о тренере →
+              </Link>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* Отзывы */}
+      {reviews.length > 0 ? (
+        <section className="border-y border-foreground/5 bg-foreground/[0.025]">
+          <div className="mx-auto max-w-6xl px-4 py-14">
+            <Reveal>
+              <h2 className="text-2xl font-bold">Отзывы</h2>
+            </Reveal>
+            <Reveal delay={0.05}>
+              <div className="mt-8">
+                <Reviews items={reviews} />
+              </div>
+            </Reveal>
+          </div>
+        </section>
+      ) : null}
+
+      {/* FAQ */}
+      {faqItems.length > 0 ? (
+        <section className="mx-auto max-w-3xl px-4 py-14">
+          <Reveal>
+            <h2 className="text-center text-2xl font-bold">Частые вопросы</h2>
+          </Reveal>
+          <div className="mt-6 space-y-3">
+            {faqItems.map((f, i) => (
+              <Reveal key={f.q} delay={i * 0.04}>
+                <details className="group rounded-xl border border-foreground/10">
+                  <summary className="flex cursor-pointer items-center justify-between gap-4 px-5 py-4 font-medium marker:content-none">
+                    {f.q}
+                    <ChevronDown className="size-4 shrink-0 text-foreground/40 transition-transform group-open:rotate-180" />
+                  </summary>
+                  <p className="border-t border-foreground/5 px-5 pb-4 pt-3 text-sm text-foreground/70">
+                    {f.a}
+                  </p>
+                </details>
+              </Reveal>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {/* CTA — форма заявки */}
+      <section id="zayavka" className="mx-auto max-w-6xl px-4 pb-20 pt-4">
+        <div className="relative overflow-hidden rounded-3xl bg-slate-950 p-8 text-white md:p-12">
+          <div className="pointer-events-none absolute -top-24 right-0 h-72 w-72 rounded-full bg-amber-500/10 blur-3xl" />
+          <div className="relative grid items-center gap-10 md:grid-cols-2">
+            <Reveal>
+              <div>
+                <h2 className="text-3xl font-bold">Записаться на курс</h2>
+                <p className="mt-3 text-white/70">
+                  Оставьте заявку — расскажем об условиях, подберём удобный способ
+                  оплаты. Доступ выдаётся вручную после подтверждения оплаты.
+                </p>
+                <p className="mt-2 font-semibold text-amber-400">
+                  {course.title}
+                </p>
+                <p className="text-2xl font-bold">{formatPrice(course.priceTiyn)}</p>
+              </div>
+            </Reveal>
+            <Reveal delay={0.05}>
+              <div className="rounded-2xl bg-background p-6 text-foreground shadow-2xl">
+                <LeadForm courseId={course.id} />
+              </div>
+            </Reveal>
+          </div>
+        </div>
+      </section>
+    </main>
+  );
+}
