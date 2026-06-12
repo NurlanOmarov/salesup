@@ -455,7 +455,9 @@ async function upsertCourse(spec: CourseSpec) {
             moduleId: moduleRow.id,
             title: l.title,
             sortOrder: lIdx,
-            status: "DRAFT",
+            // Бесплатное превью публикуем сразу (маркетинг: «первый урок бесплатно»);
+            // остальные уроки остаются DRAFT, пока фабрика не соберёт контент.
+            status: l.free ? "PUBLISHED" : "DRAFT",
             isFreePreview: l.free ?? false,
             youtubeUrl: l.yt,
             videoStatus: "NONE",
