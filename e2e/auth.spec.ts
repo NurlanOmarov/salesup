@@ -52,7 +52,7 @@ test("вход выданным паролем → форс-смена → ка�
 
   await expect(page).toHaveURL(/\/app/);
   await expect(
-    page.getByRole("heading", { name: "Личный кабинет" }),
+    page.getByRole("heading", { name: "Моё обучение" }),
   ).toBeVisible();
 });
 
