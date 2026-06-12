@@ -22,6 +22,7 @@
     "db:generate": "prisma generate",
     "factory:video": "tsx --env-file=.env scripts/factory/video.ts",
     "factory:transcript": "tsx --env-file=.env scripts/factory/transcript.ts",
+    "factory:subs": "tsx --env-file=.env scripts/factory/subs.ts",
     "worker": "tsx --env-file=.env scripts/worker.ts"
   },
   "prisma": {

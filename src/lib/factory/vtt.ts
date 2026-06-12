@@ -100,3 +100,76 @@ export function fmtTimecode(sec: number): string {
   const s = Math.floor(sec % 60);
   return `${m}:${String(s).padStart(2, "0")}`;
 }
+
+/** Сегмент субтитров с интервалом времени. */
+export interface SubtitleCue {
+  startSec: number;
+  endSec: number;
+  text: string;
+}
+
+/**
+ * Агрегировать «прокручивающиеся» реплики в субтитровые сегменты для дорожки:
+ * группируем по ~maxChars символов / maxDurSec секунд, чтобы не было мельтешения.
+ * Возвращает интервальные cue [start, end).
+ */
+export function aggregateCues(
+  cues: VttCue[],
+  opts: { maxChars?: number; maxDurSec?: number } = {},
+): SubtitleCue[] {
+  const maxChars = opts.maxChars ?? 90;
+  const maxDurSec = opts.maxDurSec ?? 6;
+  // Сначала собираем уникальный текст с overlap-merge (как в cuesToRawText), но
+  // сохраняя время начала каждого нового фрагмента.
+  const out: SubtitleCue[] = [];
+  let buf = "";
+  let bufStart = cues[0]?.startSec ?? 0;
+  let prevWords: string[] = [];
+
+  const flush = (endSec: number) => {
+    const text = buf.trim();
+    if (text) out.push({ startSec: bufStart, endSec, text });
+    buf = "";
+  };
+
+  for (let i = 0; i < cues.length; i++) {
+    const cue = cues[i]!;
+    const words = cue.text.split(/\s+/).filter(Boolean);
+    // новая часть = слова cue без перекрытия с хвостом предыдущего
+    let k = Math.min(prevWords.length, words.length);
+    while (k > 0 && prevWords.slice(-k).join(" ") !== words.slice(0, k).join(" ")) k--;
+    const fresh = words.slice(k).join(" ");
+    prevWords = words;
+    if (!fresh) continue;
+
+    if (buf === "") bufStart = cue.startSec;
+    buf = buf ? `${buf} ${fresh}` : fresh;
+
+    const dur = cue.startSec - bufStart;
+    if (buf.length >= maxChars || dur >= maxDurSec) {
+      flush(cue.startSec + 2);
+    }
+  }
+  flush((cues[cues.length - 1]?.startSec ?? bufStart) + 3);
+  return out;
+}
+
+/** Время в формат VTT 00:00:00.000. */
+export function vttTimestamp(sec: number): string {
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = Math.floor(sec % 60);
+  const ms = Math.round((sec - Math.floor(sec)) * 1000);
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}.${String(ms).padStart(3, "0")}`;
+}
+
+/** Собрать VTT-файл из субтитровых сегментов. */
+export function cuesToVtt(cues: SubtitleCue[]): string {
+  const lines = ["WEBVTT", ""];
+  for (const c of cues) {
+    lines.push(`${vttTimestamp(c.startSec)} --> ${vttTimestamp(Math.max(c.endSec, c.startSec + 1))}`);
+    lines.push(c.text);
+    lines.push("");
+  }
+  return lines.join("\n");
+}

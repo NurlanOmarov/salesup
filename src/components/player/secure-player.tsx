@@ -20,14 +20,23 @@ interface Level {
   index: number;
 }
 
+export interface SubtitleTrackInfo {
+  lang: "RU" | "KK" | "EN" | "UZ";
+  label: string;
+}
+
 export function SecurePlayer({
   lessonId,
   watermark,
   startPositionSec = 0,
+  subtitles = [],
+  defaultSubtitleLang = null,
 }: {
   lessonId: string;
   watermark: string;
   startPositionSec?: number;
+  subtitles?: SubtitleTrackInfo[];
+  defaultSubtitleLang?: string | null;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
@@ -37,6 +46,9 @@ export function SecurePlayer({
   const [levels, setLevels] = useState<Level[]>([]);
   const [currentLevel, setCurrentLevel] = useState(-1); // -1 = авто
   const [speed, setSpeed] = useState(1);
+  const [subLang, setSubLang] = useState<string>(
+    defaultSubtitleLang && subtitles.some((s) => s.lang === defaultSubtitleLang) ? defaultSubtitleLang : "off",
+  );
   const [wmPos, setWmPos] = useState({ top: "10%", left: "10%" });
   const [error, setError] = useState<string | null>(null);
 
@@ -154,6 +166,17 @@ export function SecurePlayer({
     if (hlsRef.current) hlsRef.current.currentLevel = levelIndex;
   };
 
+  // Применяем выбранную дорожку субтитров через textTracks API.
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    const tracks = video.textTracks;
+    for (let i = 0; i < tracks.length; i++) {
+      const t = tracks[i]!;
+      t.mode = t.language?.toUpperCase() === subLang ? "showing" : "disabled";
+    }
+  }, [subLang, subtitles.length]);
+
   return (
     <div className="relative overflow-hidden rounded-2xl bg-black">
       <video
@@ -163,7 +186,19 @@ export function SecurePlayer({
         playsInline
         onContextMenu={(e) => e.preventDefault()}
         className="aspect-video w-full"
-      />
+        crossOrigin="use-credentials"
+      >
+        {subtitles.map((t) => (
+          <track
+            key={t.lang}
+            kind="subtitles"
+            srcLang={t.lang.toLowerCase()}
+            label={t.label}
+            src={`/api/video/subtitle/${lessonId}/${t.lang}`}
+            default={t.lang === subLang}
+          />
+        ))}
+      </video>
 
       {/* Водяной знак — поверх видео, не перехватывает клики */}
       <div
@@ -203,6 +238,24 @@ export function SecurePlayer({
               {levels.map((l) => (
                 <option key={l.index} value={l.index}>
                   {l.height}p
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
+
+        {subtitles.length > 0 ? (
+          <label className="flex items-center gap-1.5">
+            Субтитры:
+            <select
+              value={subLang}
+              onChange={(e) => setSubLang(e.target.value)}
+              className="rounded bg-slate-800 px-1.5 py-0.5 text-white"
+            >
+              <option value="off">Выкл</option>
+              {subtitles.map((t) => (
+                <option key={t.lang} value={t.lang}>
+                  {t.label}
                 </option>
               ))}
             </select>
