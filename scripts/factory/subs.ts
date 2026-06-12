@@ -11,10 +11,11 @@ import { c, log } from "./lib/log.js";
 
 /**
  * CLI: субтитры RU/KK/EN (S2.3). RU берём из авто-субтитров YouTube (таймкоды),
- * агрегируем в читаемые сегменты, KK/EN переводим Haiku с сохранением таймкодов.
- *   pnpm factory:subs --course <slug> [--langs kk,en] [--cookies chrome]
- * Дорожки сохраняются в storage и раздаются защищённым каналом; критика субтитров —
- * выборочная (в этой версии помечаем VALIDATED, перевод стабилен по длине).
+ * агрегируем в читаемые сегменты. По умолчанию генерируем ТОЛЬКО RU без API —
+ * KK/EN переводит оператор в Claude Code (решение владельца, см. memory).
+ *   pnpm factory:subs --course <slug> [--cookies chrome]      # только RU (без API)
+ *   pnpm factory:subs --course <slug> --translate-api         # + KK/EN через Haiku
+ * Дорожки сохраняются в storage и раздаются защищённым каналом.
  */
 
 type Lang = "KK" | "EN";
@@ -49,7 +50,8 @@ async function saveTrack(courseSlug: string, lessonId: string, lang: string, vtt
 async function processLesson(
   lesson: { id: string; title: string; youtubeUrl: string | null; courseSlug: string },
   langs: Lang[],
-  cookies?: string,
+  cookies: string | undefined,
+  translateApi: boolean,
 ): Promise<boolean> {
   if (!lesson.youtubeUrl) return false;
 
@@ -65,8 +67,15 @@ async function processLesson(
   await saveTrack(lesson.courseSlug, lesson.id, "RU", cuesToVtt(cues), "ORIGINAL");
   log.ok(`RU дорожка сохранена`);
 
+  // По умолчанию KK/EN НЕ переводим (контент делает оператор в Claude Code).
+  // Haiku-перевод — только по явному флагу --translate-api.
+  if (!translateApi) {
+    log.info(`Перевод KK/EN — вручную в Claude Code (без API). RU-дорожка готова.`);
+    return true;
+  }
+
   for (const lang of langs) {
-    log.step(`Перевод → ${c.bold(lang)} (Haiku)…`);
+    log.step(`Перевод → ${c.bold(lang)} (Haiku, --translate-api)…`);
     const translations = await translateSegments(cues.map((x) => x.text), lang);
     const translated: SubtitleCue[] = cues.map((cue, i) => ({ ...cue, text: translations[i] ?? cue.text }));
     await saveTrack(lesson.courseSlug, lesson.id, lang, cuesToVtt(translated), "TRANSLATED");
@@ -78,6 +87,7 @@ async function processLesson(
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const cookies = typeof args.options.cookies === "string" ? args.options.cookies : undefined;
+  const translateApi = args.options["translate-api"] === true;
   const langs = (typeof args.options.langs === "string" ? args.options.langs : "kk,en")
     .split(",").map((l) => l.trim().toUpperCase()).filter((l) => l === "KK" || l === "EN") as Lang[];
 
@@ -102,14 +112,15 @@ async function main() {
     throw new Error("Укажите --lesson <id> или --course <slug>");
   }
 
-  log.step(`Субтитры: ${lessons.length} уроков, языки: RU + ${langs.join(", ")}`);
+  const mode = translateApi ? `RU + ${langs.join(", ")} (Haiku)` : "только RU (KK/EN — вручную)";
+  log.step(`Субтитры: ${lessons.length} уроков, ${mode}`);
   let ok = 0;
   for (const [i, l] of lessons.entries()) {
     console.log(`\n${c.bold(`[${i + 1}/${lessons.length}]`)} ${l.title}`);
-    if (await processLesson(l, langs, cookies)) ok++;
+    if (await processLesson(l, langs, cookies, translateApi)) ok++;
   }
   console.log(`\n${c.bold("── Отчёт ──")}`);
-  log.info(`Готово дорожек: ${ok}/${lessons.length} уроков × (RU+${langs.join("+")})`);
+  log.info(`Готово: ${ok}/${lessons.length} уроков`);
   await db.$disconnect();
 }
 
