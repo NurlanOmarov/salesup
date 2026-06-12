@@ -1,0 +1,148 @@
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import Link from "next/link";
+import { ChevronLeft, ChevronRight, LayoutGrid } from "lucide-react";
+import { requireUser } from "@/lib/auth/guards";
+import { db } from "@/lib/db";
+import { canAccessLesson } from "@/lib/access";
+import { SecurePlayer } from "@/components/player/secure-player";
+import { LessonSidebar, type SidebarModule } from "@/components/learn/lesson-sidebar";
+
+export const metadata: Metadata = {
+  title: "Урок",
+  robots: { index: false },
+};
+
+export const dynamic = "force-dynamic";
+
+export default async function LearnPage({
+  params,
+}: {
+  params: Promise<{ courseSlug: string; lessonId: string }>;
+}) {
+  const { courseSlug, lessonId } = await params;
+  const session = await requireUser();
+  const userId = session.user.id;
+
+  const access = await canAccessLesson(userId, lessonId);
+  if (!access.ok) notFound();
+
+  const course = await db.course.findUnique({
+    where: { slug: courseSlug },
+    select: {
+      title: true,
+      modules: {
+        orderBy: { sortOrder: "asc" },
+        select: {
+          title: true,
+          lessons: {
+            orderBy: { sortOrder: "asc" },
+            select: { id: true, title: true, status: true, videoStatus: true },
+          },
+        },
+      },
+    },
+  });
+  if (!course) notFound();
+
+  // Прогресс пользователя по урокам этого курса.
+  const progress = await db.lessonProgress.findMany({
+    where: { userId, completedAt: { not: null }, lesson: { module: { course: { slug: courseSlug } } } },
+    select: { lessonId: true },
+  });
+  const completedSet = new Set(progress.map((p) => p.lessonId));
+
+  const lessonPos = await db.lessonProgress.findUnique({
+    where: { userId_lessonId: { userId, lessonId } },
+    select: { lastPositionSec: true },
+  });
+
+  // Оглавление + плоский порядок доступных уроков для prev/next.
+  const flat: { id: string; title: string }[] = [];
+  const modules: SidebarModule[] = course.modules.map((m) => ({
+    title: m.title,
+    lessons: m.lessons.map((l) => {
+      const available = l.status === "PUBLISHED";
+      if (available) flat.push({ id: l.id, title: l.title });
+      return {
+        id: l.id,
+        title: l.title,
+        available,
+        completed: completedSet.has(l.id),
+      };
+    }),
+  }));
+
+  const current = course.modules.flatMap((m) => m.lessons).find((l) => l.id === lessonId);
+  if (!current) notFound();
+
+  const idx = flat.findIndex((l) => l.id === lessonId);
+  const prev = idx > 0 ? flat[idx - 1] : null;
+  const next = idx >= 0 && idx < flat.length - 1 ? flat[idx + 1] : null;
+
+  return (
+    <div className="mx-auto grid max-w-6xl gap-8 px-4 py-6 lg:grid-cols-[260px_1fr]">
+      {/* Сайдбар-оглавление */}
+      <aside className="lg:sticky lg:top-6 lg:h-fit">
+        <Link
+          href="/app"
+          className="mb-4 inline-flex items-center gap-1.5 px-3 text-sm text-foreground/60 transition-colors hover:text-foreground"
+        >
+          <LayoutGrid className="size-4" />
+          Моё обучение
+        </Link>
+        <LessonSidebar
+          courseSlug={courseSlug}
+          courseTitle={course.title}
+          modules={modules}
+          currentLessonId={lessonId}
+        />
+      </aside>
+
+      {/* Урок */}
+      <main className="min-w-0">
+        <h1 className="text-xl font-bold sm:text-2xl">{current.title}</h1>
+
+        <div className="mt-4">
+          {current.videoStatus === "READY" ? (
+            <SecurePlayer
+              lessonId={lessonId}
+              watermark={session.user.email ?? userId}
+              startPositionSec={lessonPos?.lastPositionSec ?? 0}
+            />
+          ) : (
+            <div className="flex aspect-video items-center justify-center rounded-2xl border border-foreground/10 bg-foreground/[0.03] text-foreground/50">
+              Видео готовится — загляните позже.
+            </div>
+          )}
+        </div>
+
+        {/* Навигация prev/next */}
+        <div className="mt-6 flex items-center justify-between gap-3">
+          {prev ? (
+            <Link
+              href={`/app/learn/${courseSlug}/${prev.id}`}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-foreground/15 px-4 py-2 text-sm transition-colors hover:bg-foreground/5"
+            >
+              <ChevronLeft className="size-4" />
+              Назад
+            </Link>
+          ) : (
+            <span />
+          )}
+          {next ? (
+            <Link
+              href={`/app/learn/${courseSlug}/${next.id}`}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-slate-950 transition-colors hover:bg-amber-400"
+            >
+              Следующий урок
+              <ChevronRight className="size-4" />
+            </Link>
+          ) : (
+            <span />
+          )}
+        </div>
+      </main>
+    </div>
+  );
+}

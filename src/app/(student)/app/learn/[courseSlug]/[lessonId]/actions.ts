@@ -6,9 +6,9 @@ import { db } from "@/lib/db";
 import { canAccessLesson } from "@/lib/access";
 
 /**
- * Сохранение прогресса просмотра урока (CLAUDE.md S2.2): upsert LessonProgress
- * каждые ~10 с и на паузу. completedAt выставляется при просмотре ≥ 90% длительности.
- * Доступ к уроку проверяется через lib/access (нельзя писать прогресс по чужому уроку).
+ * Сохранение прогресса просмотра урока (S2.2/S4.2): upsert LessonProgress каждые
+ * ~10 с и на паузу. completedAt — при просмотре ≥ 90% длительности. Доступ к уроку
+ * проверяется через lib/access (нельзя писать прогресс по чужому уроку).
  */
 export const saveLessonProgress = safeAction(
   {

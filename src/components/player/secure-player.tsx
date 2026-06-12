@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import Hls from "hls.js";
-import { saveLessonProgress } from "@/app/(student)/app/learn/[lessonId]/actions";
+import { saveLessonProgress } from "@/app/(student)/app/learn/[courseSlug]/[lessonId]/actions";
 
 /**
  * Защищённый HLS-плеер (CLAUDE.md, правило 2 / S2.2). Источник — наш проксирующий
