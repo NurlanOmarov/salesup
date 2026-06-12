@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { hashPassword } from "../src/lib/auth/password.js";
 import { PHARMA_SUMMARIES } from "./seed-data/pharma-summaries.js";
+import { PHARMA_LESSON_QUIZZES } from "./seed-data/pharma-lesson-quizzes.js";
 
 /**
  * Сиды для локальной разработки (BACKLOG P0.3).
@@ -677,6 +678,52 @@ async function seedPharmaExam(courseId: string) {
   }
 }
 
+/** Задания к отдельным урокам (LESSON_QUIZ) — тип подобран под содержание урока. */
+async function seedPharmaLessonQuizzes(courseId: string) {
+  const lessons = await db.lesson.findMany({
+    where: { module: { courseId } },
+    select: { id: true, title: true },
+  });
+  for (const lq of PHARMA_LESSON_QUIZZES) {
+    const lesson = lessons.find((l) => l.title.includes(lq.lessonMatch));
+    if (!lesson) continue;
+    if (await db.quiz.findFirst({ where: { lessonId: lesson.id, kind: "LESSON_QUIZ" }, select: { id: true } })) continue;
+
+    const quiz = await db.quiz.create({
+      data: {
+        kind: "LESSON_QUIZ",
+        lessonId: lesson.id,
+        title: lq.title,
+        passScore: lq.passScore,
+        status: "PUBLISHED",
+      },
+    });
+    for (const [qi, q] of lq.questions.entries()) {
+      await db.question.create({
+        data: {
+          quizId: quiz.id,
+          type: q.type,
+          text: q.text,
+          explanation: q.explanation,
+          points: 1,
+          sortOrder: qi,
+          origin: "MANUAL",
+          validation: "VALIDATED",
+          validatedAt: new Date(),
+          options: {
+            create: q.options.map((o, oi) => ({
+              text: o.text,
+              isCorrect: o.correct,
+              sortOrder: oi,
+              pairKey: o.pairKey ?? null,
+            })),
+          },
+        },
+      });
+    }
+  }
+}
+
 /** Конспекты уроков (AiArtifact SUMMARY) по реальному содержанию видео. */
 async function seedPharmaSummaries(courseId: string) {
   const lessons = await db.lesson.findMany({
@@ -748,6 +795,7 @@ async function main() {
   }
   await seedPharmaSummaries(pharmaCourse.id);
   await seedPharmaExam(pharmaCourse.id);
+  await seedPharmaLessonQuizzes(pharmaCourse.id);
 
   // Отзывы для курса медпреда (VALIDATED — видны на лендинге)
   const existingReviews = await db.review.count({ where: { courseId: pharmaCourse.id } });

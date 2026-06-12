@@ -34,6 +34,7 @@ export default async function QuizPage({
       maxAttempts: true,
       status: true,
       course: { select: { slug: true, title: true } },
+      lesson: { select: { module: { select: { course: { select: { slug: true, title: true } } } } } },
       questions: {
         where: { validation: "VALIDATED" },
         orderBy: { sortOrder: "asc" },
@@ -53,9 +54,11 @@ export default async function QuizPage({
     },
   });
 
-  if (!quiz || quiz.status !== "PUBLISHED" || !quiz.course) notFound();
+  if (!quiz || quiz.status !== "PUBLISHED") notFound();
+  const courseInfo = quiz.course ?? quiz.lesson?.module.course;
+  if (!courseInfo) notFound();
 
-  const access = await canAccessCourse(userId, quiz.course.slug);
+  const access = await canAccessCourse(userId, courseInfo.slug);
   if (!access.ok) notFound();
 
   // Прошлые попытки — лучший результат + число использованных.
@@ -91,11 +94,11 @@ export default async function QuizPage({
   return (
     <main className="mx-auto max-w-2xl px-4 py-8">
       <Link
-        href={`/courses/${quiz.course.slug}`}
+        href={`/courses/${courseInfo.slug}`}
         className="inline-flex items-center gap-1.5 text-sm text-foreground/60 transition-colors hover:text-foreground"
       >
         <ArrowLeft className="size-4" />
-        {quiz.course.title}
+        {courseInfo.title}
       </Link>
       <h1 className="mt-3 text-2xl font-bold">{quiz.title}</h1>
       {quiz.description ? (

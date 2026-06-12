@@ -17,7 +17,9 @@ export type GradableType =
   | "ORDERING"
   | "FILL_BLANK"
   | "MATCHING"
-  | "CATEGORIZATION";
+  | "CATEGORIZATION"
+  | "PRACTICE"
+  | "SCENARIO";
 
 export interface OptionLike {
   id: string;
@@ -92,6 +94,19 @@ export function gradeQuestion(
       correct =
         answer.length === items.length &&
         items.every((it, i) => normalizeAnswer(answer[i] ?? "") === normalizeAnswer(it.pairKey ?? ""));
+      break;
+    }
+    case "PRACTICE": {
+      // Свободное упражнение «составьте сами»: автопроверки нет — зачёт за содержательную
+      // попытку (непустой развёрнутый ответ). Эталон и критерии ученик сверяет сам в разборе.
+      correct = (answer[0] ?? "").trim().length >= 10;
+      break;
+    }
+    case "SCENARIO": {
+      // Диалог: выбран один лучший вариант ответа — как SINGLE_CHOICE.
+      const selected = new Set(answer);
+      const correctIds = new Set(question.options.filter((o) => o.isCorrect).map((o) => o.id));
+      correct = selected.size === 1 && correctIds.has([...selected][0]!);
       break;
     }
     default: {

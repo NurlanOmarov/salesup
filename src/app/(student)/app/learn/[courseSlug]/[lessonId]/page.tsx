@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, LayoutGrid, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, LayoutGrid, CheckCircle2, GraduationCap } from "lucide-react";
 import { requireUser } from "@/lib/auth/guards";
 import { db } from "@/lib/db";
 import { canAccessLesson } from "@/lib/access";
@@ -72,6 +72,12 @@ export default async function LearnPage({
   const transcriptText =
     transcript && transcript.status === "CLEANED" ? transcript.cleanText : null;
 
+  // Задание к уроку (LESSON_QUIZ), если есть.
+  const lessonQuiz = await db.quiz.findFirst({
+    where: { lessonId, kind: "LESSON_QUIZ", status: "PUBLISHED" },
+    select: { id: true, title: true },
+  });
+
   // Оглавление + плоский порядок доступных уроков для prev/next.
   const flat: { id: string; title: string }[] = [];
   const modules: SidebarModule[] = course.modules.map((m) => ({
@@ -136,6 +142,25 @@ export default async function LearnPage({
             transcript={transcriptText}
           />
         </div>
+
+        {/* Задание к уроку */}
+        {lessonQuiz ? (
+          <Link
+            href={`/app/quiz/${lessonQuiz.id}`}
+            className="mt-5 flex items-center justify-between gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/[0.06] p-4 transition-colors hover:bg-amber-500/10"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex size-10 items-center justify-center rounded-xl bg-amber-500/15 text-amber-700">
+                <GraduationCap className="size-5" />
+              </div>
+              <div>
+                <p className="font-semibold">Проверь себя</p>
+                <p className="text-sm text-foreground/60">{lessonQuiz.title}</p>
+              </div>
+            </div>
+            <ChevronRight className="size-5 text-amber-700" />
+          </Link>
+        ) : null}
 
         {/* Навигация prev/next */}
         <div className="mt-6 flex items-center justify-between gap-3">

@@ -33,7 +33,9 @@ export const submitQuizAttempt = safeAction(
         passScore: true,
         maxAttempts: true,
         status: true,
+        // FINAL_EXAM привязан к курсу; LESSON_QUIZ — к уроку (курс через модуль).
         course: { select: { slug: true } },
+        lesson: { select: { module: { select: { course: { select: { slug: true } } } } } },
         questions: {
           where: { validation: "VALIDATED" },
           orderBy: { sortOrder: "asc" },
@@ -48,9 +50,10 @@ export const submitQuizAttempt = safeAction(
       },
     });
     if (!quiz || quiz.status !== "PUBLISHED") throw new Error("Тест недоступен");
-    if (!quiz.course) throw new Error("Тест не привязан к курсу");
+    const courseSlug = quiz.course?.slug ?? quiz.lesson?.module.course.slug;
+    if (!courseSlug) throw new Error("Тест не привязан к курсу");
 
-    const access = await canAccessCourse(userId, quiz.course.slug);
+    const access = await canAccessCourse(userId, courseSlug);
     if (!access.ok) throw new Error("Нет доступа к курсу");
 
     // Лимит пересдач
