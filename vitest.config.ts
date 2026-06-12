@@ -10,7 +10,7 @@ export default defineConfig({
   test: {
     environment: "node",
     globals: false,
-    include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    include: ["src/**/*.{test,spec}.{ts,tsx}", "scripts/**/*.{test,spec}.ts"],
     // e2e (Playwright) живут отдельно и запускаются через test:e2e
     exclude: ["node_modules", ".next", "e2e", "tests/e2e"],
   },

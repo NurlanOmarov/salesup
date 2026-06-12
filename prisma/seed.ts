@@ -34,6 +34,7 @@ type CourseSpec = {
   targetAudience: string[];
   faq: { q: string; a: string }[];
   modules: ModuleSpec[];
+  coverUrl?: string;
 };
 
 // ── Курс 1: Медицинский представитель (реальный YouTube-плейлист) ─────────────
@@ -187,6 +188,7 @@ const COURSES: CourseSpec[] = [
       },
     ],
     modules: PHARMA_MODULES,
+    coverUrl: "/images/courses/sales-pharma.png",
   },
   // ── Прочие курсы (каркасы, контент собирает фабрика) ──────────────────────
   {
@@ -230,6 +232,7 @@ const COURSES: CourseSpec[] = [
         ],
       },
     ],
+    coverUrl: "/images/courses/sales-tourism.png",
   },
   {
     slug: "sales-kitchens",
@@ -272,6 +275,7 @@ const COURSES: CourseSpec[] = [
         ],
       },
     ],
+    coverUrl: "/images/courses/sales-kitchens.png",
   },
   {
     slug: "sales-shoes",
@@ -313,6 +317,7 @@ const COURSES: CourseSpec[] = [
         ],
       },
     ],
+    coverUrl: "/images/courses/sales-shoes.png",
   },
   {
     slug: "sales-realty",
@@ -354,6 +359,7 @@ const COURSES: CourseSpec[] = [
         ],
       },
     ],
+    coverUrl: "/images/courses/sales-realty.png",
   },
   {
     slug: "sales-b2b",
@@ -396,6 +402,7 @@ const COURSES: CourseSpec[] = [
         ],
       },
     ],
+    coverUrl: "/images/courses/sales-b2b.png",
   },
 ];
 
@@ -414,6 +421,7 @@ async function upsertCourse(spec: CourseSpec) {
       learnPoints: spec.learnPoints,
       targetAudience: spec.targetAudience,
       faq: spec.faq,
+      coverUrl: spec.coverUrl ?? null,
     },
     create: {
       slug: spec.slug,
@@ -431,6 +439,7 @@ async function upsertCourse(spec: CourseSpec) {
       targetAudience: spec.targetAudience,
       faq: spec.faq,
       publishedAt: new Date("2026-01-01"),
+      coverUrl: spec.coverUrl ?? null,
     },
   });
 
