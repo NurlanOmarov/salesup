@@ -11,6 +11,7 @@ import {
   isLoginBlocked,
   recordLoginAttempt,
 } from "@/lib/auth/login-attempts";
+import { registerDevice } from "@/lib/antishare/devices";
 
 const schema = z.object({
   email: z.string().email("Введите корректный e-mail"),
@@ -61,8 +62,19 @@ export async function loginAction(
   // (middleware остаётся как защита для прямых заходов.)
   const user = await db.user.findUnique({
     where: { email },
-    select: { mustChangePassword: true },
+    select: { id: true, mustChangePassword: true },
   });
+
+  // Антишаринг (S6.1): фиксируем устройство для выявления раздачи аккаунта.
+  if (user) {
+    try {
+      const ua = (await headers()).get("user-agent") ?? "unknown";
+      await registerDevice(user.id, ua, ip);
+    } catch {
+      // учёт устройства не должен мешать входу
+    }
+  }
+
   if (user?.mustChangePassword) redirect("/change-password");
 
   const dest = callbackUrl && callbackUrl.startsWith("/") ? callbackUrl : "/app";
