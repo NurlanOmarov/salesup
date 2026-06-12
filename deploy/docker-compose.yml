@@ -1,0 +1,106 @@
+# SalesAcademy — единый стек на одном VPS (CLAUDE.md, принцип 2).
+# Запуск: docker compose --env-file ../.env up -d --build
+# Контекст сборки — корень репозитория (..), Dockerfile-ы в deploy/.
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-salesacademy}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?required}
+      POSTGRES_DB: ${POSTGRES_DB:-salesacademy}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-salesacademy}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # бюджет ресурсов VPS — требование (правило 10)
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+
+  app:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      AUTH_SECRET: ${AUTH_SECRET}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      EMBEDDINGS_API_KEY: ${EMBEDDINGS_API_KEY}
+      MEDIA_ROOT: /media
+      STORAGE_DRIVER: ${STORAGE_DRIVER:-fs}
+      VIDEO_SIGNING_SECRET: ${VIDEO_SIGNING_SECRET}
+      VIDEO_KEY_ENC_SECRET: ${VIDEO_KEY_ENC_SECRET}
+      AUTH_COOKIE_INSECURE: ${AUTH_COOKIE_INSECURE:-false} # true на временном VPS по IP (D-007)
+      EMAIL_ENABLED: ${EMAIL_ENABLED:-false}
+      OWNER_EMAIL: ${OWNER_EMAIL}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+    volumes:
+      - media:/media:ro # app только читает медиа; пишет фабрика по rsync
+    expose:
+      - "3000"
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+
+  worker:
+    build:
+      context: ..
+      dockerfile: deploy/worker.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      EMBEDDINGS_API_KEY: ${EMBEDDINGS_API_KEY}
+      MEDIA_ROOT: /media
+      STORAGE_DRIVER: ${STORAGE_DRIVER:-fs}
+      VIDEO_KEY_ENC_SECRET: ${VIDEO_KEY_ENC_SECRET}
+      EMAIL_ENABLED: ${EMAIL_ENABLED:-false}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      OWNER_EMAIL: ${OWNER_EMAIL}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+    volumes:
+      - media:/media
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # На временном VPS по IP заменить nginx.conf → nginx.http.conf (без TLS).
+      - ${NGINX_CONF:-./nginx.conf}:/etc/nginx/nginx.conf:ro
+      - ./proxy_params.conf:/etc/nginx/proxy_params.conf:ro
+      - media:/media:ro # X-Accel-Redirect раздаёт из /media (location internal)
+      - certbot-www:/var/www/certbot:ro
+      - certbot-certs:/etc/letsencrypt:ro
+
+volumes:
+  pgdata:
+  media:
+  certbot-www:
+  certbot-certs:
