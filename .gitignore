@@ -1,0 +1,28 @@
+# deps / build
+node_modules/
+.next/
+out/
+dist/
+*.tsbuildinfo
+
+# env & secrets (правило 7 CLAUDE.md)
+.env
+.env.*
+!.env.example
+
+# tests
+coverage/
+playwright-report/
+test-results/
+
+# media-артефакты фабрики (видео/HLS не коммитим)
+media/
+*.mp4
+*.ts.seg
+*.m3u8
+
+# misc
+.DS_Store
+*.log
+.idea/
+.vscode/
