@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
-import { PlayCircle, FileText, ScrollText } from "lucide-react";
+import { PlayCircle, FileText, ScrollText, Bot } from "lucide-react";
 import { SecurePlayer, type SubtitleTrackInfo } from "@/components/player/secure-player";
+import { TutorChat } from "@/components/learn/tutor-chat";
 
 /**
  * Вкладки урока (современный кабинет курса): Видео · Конспект · Транскрипт.
@@ -12,7 +13,7 @@ import { SecurePlayer, type SubtitleTrackInfo } from "@/components/player/secure
  * воспроизведение; конспект (markdown) и транскрипт скрываются/показываются.
  */
 
-type Tab = "video" | "summary" | "transcript";
+type Tab = "video" | "summary" | "transcript" | "tutor";
 
 export function LessonTabs({
   lessonId,
@@ -39,6 +40,7 @@ export function LessonTabs({
     { key: "video", label: "Видео", icon: PlayCircle, show: true },
     { key: "summary", label: "Конспект", icon: FileText, show: !!summary },
     { key: "transcript", label: "Транскрипт", icon: ScrollText, show: !!transcript },
+    { key: "tutor", label: "Наставник", icon: Bot, show: true },
   ];
 
   return (
@@ -105,6 +107,12 @@ export function LessonTabs({
             className="mt-4 max-h-[60vh] overflow-y-auto rounded-2xl border border-foreground/10 bg-background p-6 text-sm leading-relaxed text-foreground/80 [user-select:none]"
           >
             <Markdown text={transcript} />
+          </motion.div>
+        ) : null}
+
+        {tab === "tutor" ? (
+          <motion.div key="tutor" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
+            <TutorChat lessonId={lessonId} />
           </motion.div>
         ) : null}
       </AnimatePresence>
