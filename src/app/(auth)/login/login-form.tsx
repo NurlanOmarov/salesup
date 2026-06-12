@@ -1,7 +1,9 @@
 "use client";
 
 import { useActionState } from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
+import { ArrowLeft } from "lucide-react";
 import { loginAction, type LoginState } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,7 +30,25 @@ export function LoginForm({
       transition={{ duration: 0.25 }}
       className="w-full max-w-sm rounded-2xl border border-foreground/10 p-6 shadow-sm sm:p-8"
     >
-      <h1 className="text-2xl font-bold">Вход</h1>
+      <Link
+        href="/"
+        className="flex items-center gap-2 text-lg font-bold tracking-tight"
+      >
+        <svg viewBox="0 0 64 64" className="size-6" aria-hidden>
+          <rect width="64" height="64" rx="14" fill="#f59e0b" />
+          <path
+            d="M20 44 L32 20 L44 44"
+            fill="none"
+            stroke="#020617"
+            strokeWidth="6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+        SalesAcademy
+      </Link>
+
+      <h1 className="mt-6 text-2xl font-bold">Вход</h1>
       <p className="mt-1 text-sm text-foreground/60">
         Введите выданные администратором логин и пароль.
       </p>
@@ -82,6 +102,14 @@ export function LoginForm({
           <span>обратитесь к администратору</span>
         )}
       </p>
+
+      <Link
+        href="/"
+        className="mt-6 flex items-center justify-center gap-1.5 text-sm text-foreground/60 transition-colors hover:text-foreground"
+      >
+        <ArrowLeft className="size-4" />
+        На главную
+      </Link>
     </motion.div>
   );
 }
