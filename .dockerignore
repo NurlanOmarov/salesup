@@ -1,0 +1,34 @@
+# Build-context для образов app/worker (deploy/Dockerfile, deploy/worker.Dockerfile).
+# Не отправляем в Docker лишнее и СЕКРЕТЫ.
+.git
+.github
+node_modules
+.next
+out
+dist
+*.tsbuildinfo
+
+# секреты — НИКОГДА в образ (правило 7)
+.env
+.env.*
+!.env.example
+
+# медиа-артефакты фабрики (тянутся в том через rsync, не в образ)
+/media
+*.mp4
+*.m3u8
+*.ts.seg
+
+# тесты/артефакты
+coverage
+playwright-report
+test-results
+.playwright-mcp
+e2e
+
+# прочее
+.DS_Store
+*.log
+.idea
+.vscode
+docs

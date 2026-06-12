@@ -1,0 +1,107 @@
+# SalesAcademy — PRODUCTION (временный VPS DatabaseMart, доступ по IP:порту без домена).
+#
+# Отличия от deploy/docker-compose.yml (локальная сборка):
+#   • app/worker НЕ собираются на сервере — тянутся готовыми из GHCR (сборка в GitHub Actions).
+#     Сервер с ~1.6 ГБ RAM не должен строить Next.js (риск OOM для соседних проектов).
+#   • nginx публикуется на ОТДЕЛЬНЫЙ порт 8444 (80/443 заняты центральным labai-nginx).
+#     TLS нет → nginx.http.conf, AUTH_COOKIE_INSECURE=true (D-007).
+#   • Полностью изолирован: своя bridge-сеть, к labai-network НЕ подключается.
+#
+# Запуск (выполняет workflow deploy.yml):
+#   docker compose -f docker-compose.prod.yml --env-file .env pull
+#   docker compose -f docker-compose.prod.yml --env-file .env up -d
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-salesacademy}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?required}
+      POSTGRES_DB: ${POSTGRES_DB:-salesacademy}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-salesacademy}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 768m
+
+  app:
+    image: ${IMAGE_APP:-ghcr.io/nurlanomarov/salesup-app:latest}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      AUTH_SECRET: ${AUTH_SECRET}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      EMBEDDINGS_API_KEY: ${EMBEDDINGS_API_KEY}
+      MEDIA_ROOT: /media
+      STORAGE_DRIVER: ${STORAGE_DRIVER:-fs}
+      VIDEO_SIGNING_SECRET: ${VIDEO_SIGNING_SECRET}
+      VIDEO_KEY_ENC_SECRET: ${VIDEO_KEY_ENC_SECRET}
+      VIDEO_XACCEL: "true"                       # сегменты отдаёт nginx (X-Accel-Redirect)
+      AUTH_COOKIE_INSECURE: ${AUTH_COOKIE_INSECURE:-true}  # IP без TLS → cookie без Secure
+      EMAIL_ENABLED: ${EMAIL_ENABLED:-false}
+      OWNER_EMAIL: ${OWNER_EMAIL}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+    volumes:
+      - media:/media:ro                          # app только читает; пишет фабрика по rsync
+    expose:
+      - "3000"
+    deploy:
+      resources:
+        limits:
+          memory: 640m
+
+  worker:
+    image: ${IMAGE_WORKER:-ghcr.io/nurlanomarov/salesup-worker:latest}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      AUTH_SECRET: ${AUTH_SECRET}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      EMBEDDINGS_API_KEY: ${EMBEDDINGS_API_KEY}
+      MEDIA_ROOT: /media
+      STORAGE_DRIVER: ${STORAGE_DRIVER:-fs}
+      VIDEO_SIGNING_SECRET: ${VIDEO_SIGNING_SECRET}
+      VIDEO_KEY_ENC_SECRET: ${VIDEO_KEY_ENC_SECRET}
+      EMAIL_ENABLED: ${EMAIL_ENABLED:-false}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      OWNER_EMAIL: ${OWNER_EMAIL}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+    volumes:
+      - media:/media                             # worker (фабрика) пишет медиа
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "8444:80"                                # 80/443 заняты labai-nginx; наш внешний порт 8444
+    volumes:
+      - ./nginx.http.conf:/etc/nginx/nginx.conf:ro
+      - ./proxy_params.conf:/etc/nginx/proxy_params.conf:ro
+      - media:/media:ro                          # X-Accel-Redirect раздаёт из /media (internal)
+
+volumes:
+  pgdata:
+  media:

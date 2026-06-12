@@ -1,0 +1,126 @@
+name: Deploy
+
+# Сборка образов app/worker в GitHub Actions → push в GHCR → сервер только тянет и поднимает.
+# Сервер ( необходимый минимум RAM) НЕ собирает Next.js, чтобы не уронить соседние проекты (OOM).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  IMAGE_APP: ghcr.io/nurlanomarov/salesup-app
+  IMAGE_WORKER: ghcr.io/nurlanomarov/salesup-worker
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push app image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE_APP }}:latest
+            ${{ env.IMAGE_APP }}:${{ github.sha }}
+          # NEXT_PUBLIC_* инлайнятся в клиентский бандл на этапе build — передаём реальные значения
+          build-args: |
+            NEXT_PUBLIC_SITE_URL=${{ secrets.NEXT_PUBLIC_SITE_URL }}
+            NEXT_PUBLIC_SUPPORT_WHATSAPP=${{ secrets.NEXT_PUBLIC_SUPPORT_WHATSAPP }}
+            NEXT_PUBLIC_SUPPORT_TELEGRAM=${{ secrets.NEXT_PUBLIC_SUPPORT_TELEGRAM }}
+            NEXT_PUBLIC_SUPPORT_PHONE=${{ secrets.NEXT_PUBLIC_SUPPORT_PHONE }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build & push worker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/worker.Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE_WORKER }}:latest
+            ${{ env.IMAGE_WORKER }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Копируем только инфра-файлы деплоя в папку проекта на сервере.
+      # strip_components=1 убирает префикс deploy/ → файлы лягут в корень папки проекта.
+      - name: Copy deploy files to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          source: "deploy/docker-compose.prod.yml,deploy/nginx.http.conf,deploy/proxy_params.conf"
+          target: "/home/administrator/salesup"
+          strip_components: 1
+
+      - name: Pull images & (re)start on server
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            set -euo pipefail
+            cd /home/administrator/salesup
+
+            # .env генерируется из секретов на каждый деплой (не хранится в git).
+            umask 077
+            cat > .env <<EOF
+            POSTGRES_USER=salesacademy
+            POSTGRES_DB=salesacademy
+            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+            DATABASE_URL=postgresql://salesacademy:${{ secrets.POSTGRES_PASSWORD }}@db:5432/salesacademy
+            AUTH_SECRET=${{ secrets.AUTH_SECRET }}
+            ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
+            EMBEDDINGS_API_KEY=${{ secrets.EMBEDDINGS_API_KEY }}
+            VIDEO_SIGNING_SECRET=${{ secrets.VIDEO_SIGNING_SECRET }}
+            VIDEO_KEY_ENC_SECRET=${{ secrets.VIDEO_KEY_ENC_SECRET }}
+            STORAGE_DRIVER=fs
+            AUTH_COOKIE_INSECURE=true
+            EMAIL_ENABLED=false
+            OWNER_EMAIL=${{ secrets.OWNER_EMAIL }}
+            NEXT_PUBLIC_SITE_URL=${{ secrets.NEXT_PUBLIC_SITE_URL }}
+            IMAGE_APP=ghcr.io/nurlanomarov/salesup-app:${{ github.sha }}
+            IMAGE_WORKER=ghcr.io/nurlanomarov/salesup-worker:${{ github.sha }}
+            EOF
+            chmod 600 .env
+
+            # GHCR — приватный реестр: логинимся для pull (read:packages).
+            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin
+
+            COMPOSE="docker compose -f docker-compose.prod.yml --env-file .env"
+
+            $COMPOSE pull
+            $COMPOSE up -d db
+            # Миграции — через worker-образ (в нём есть prisma CLI и prisma/migrations).
+            $COMPOSE run --rm worker pnpm prisma migrate deploy
+            $COMPOSE up -d
+            docker image prune -f
+            docker logout ghcr.io || true

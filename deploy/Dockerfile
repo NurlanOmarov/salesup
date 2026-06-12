@@ -19,6 +19,30 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN pnpm prisma generate
 ENV NEXT_TELEMETRY_DISABLED=1
+
+# NEXT_PUBLIC_* инлайнятся в клиентский бандл на этапе build (env.ts/clientSchema) —
+# их РЕАЛЬНЫЕ значения передаются как build-args из CI (.github/workflows/deploy.yml).
+ARG NEXT_PUBLIC_SITE_URL=http://localhost:3000
+ARG NEXT_PUBLIC_SUPPORT_WHATSAPP=
+ARG NEXT_PUBLIC_SUPPORT_TELEGRAM=
+ARG NEXT_PUBLIC_SUPPORT_PHONE=
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL \
+    NEXT_PUBLIC_SUPPORT_WHATSAPP=$NEXT_PUBLIC_SUPPORT_WHATSAPP \
+    NEXT_PUBLIC_SUPPORT_TELEGRAM=$NEXT_PUBLIC_SUPPORT_TELEGRAM \
+    NEXT_PUBLIC_SUPPORT_PHONE=$NEXT_PUBLIC_SUPPORT_PHONE
+
+# Серверные секреты при сборке НЕ нужны (читаются из process.env в рантайме),
+# но env.ts валидирует их при импорте во время `next build` — даём фиктивные значения.
+# В рантайм-образ они НЕ попадают (это builder-стадия).
+ENV DATABASE_URL=postgresql://build:build@localhost:5432/build \
+    AUTH_SECRET=build_dummy_secret_min_16_chars \
+    ANTHROPIC_API_KEY=build-dummy \
+    EMBEDDINGS_API_KEY=build-dummy \
+    MEDIA_ROOT=/media \
+    VIDEO_SIGNING_SECRET=build_dummy_secret_min_16 \
+    VIDEO_KEY_ENC_SECRET=build_dummy_secret_min_16 \
+    OWNER_EMAIL=build@example.kz
+
 RUN pnpm build
 
 # ─── runner ───────────────────────────────────────────────────────────────────
