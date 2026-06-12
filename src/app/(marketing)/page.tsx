@@ -1,12 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import {
-  Award,
-  Bot,
-  CheckCircle2,
-  GraduationCap,
-  PlayCircle,
-} from "lucide-react";
+import Image from "next/image";
+import { Award, Bot, CheckCircle2, PlayCircle } from "lucide-react";
 import { db } from "@/lib/db";
 import { env } from "@/env";
 import { buttonVariants } from "@/components/ui/button";
@@ -20,6 +15,7 @@ import { StatCounter } from "@/components/landing/stat-counter";
 import { AnimatedTitle } from "@/components/landing/animated-title";
 import { IndustriesMarquee } from "@/components/landing/industries-marquee";
 import {
+  clients,
   faq,
   hero,
   industries,
@@ -209,18 +205,24 @@ export default async function LandingPage() {
       <section className="mx-auto max-w-6xl px-4 py-16 sm:py-20">
         <div className="grid items-center gap-10 lg:grid-cols-[1fr_1.2fr]">
           <Reveal>
-            {/* TODO(владелец): заменить плейсхолдер на реальное фото тренера (S6.4) */}
-            <div className="relative mx-auto flex aspect-[4/5] w-full max-w-sm items-end justify-center overflow-hidden rounded-3xl bg-gradient-to-b from-slate-800 to-slate-950">
-              <GraduationCap
-                className="absolute left-1/2 top-1/2 size-28 -translate-x-1/2 -translate-y-1/2 text-white/15"
-                aria-hidden
-              />
-              <div className="relative w-full p-5">
-                <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-4 backdrop-blur">
-                  <p className="text-sm font-semibold text-white">{trainer.label}</p>
-                  <p className="text-xs text-white/60">
-                    Фото и регалии — перед запуском
-                  </p>
+            <div className="relative mx-auto w-full max-w-sm">
+              {/* фото-cutout тренера на тёмном градиенте */}
+              <div className="relative aspect-[4/5] overflow-hidden rounded-3xl bg-gradient-to-b from-slate-700 via-slate-800 to-slate-950">
+                <Image
+                  src="/trainer.png"
+                  alt={`${trainer.name} — ${trainer.role}`}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 384px"
+                  className="object-contain object-bottom"
+                  priority={false}
+                />
+                <div className="absolute inset-x-0 bottom-0 p-5">
+                  <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-4 backdrop-blur">
+                    <p className="text-sm font-semibold text-white">
+                      {trainer.name}
+                    </p>
+                    <p className="text-xs text-white/60">{trainer.role}</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -230,7 +232,10 @@ export default async function LandingPage() {
               <span className="text-sm font-semibold uppercase tracking-wider text-amber-700">
                 {trainer.label}
               </span>
-              <h2 className="mt-2 text-3xl font-bold">{trainer.title}</h2>
+              <h2 className="mt-2 text-3xl font-bold">{trainer.name}</h2>
+              <p className="mt-1 font-medium text-foreground/60">
+                {trainer.role}
+              </p>
               <p className="mt-4 text-foreground/70">{trainer.text}</p>
             </Reveal>
             <ul className="mt-6 space-y-3">
@@ -245,6 +250,25 @@ export default async function LandingPage() {
             </ul>
           </div>
         </div>
+
+        {/* Полоса клиентов (реальные клиенты ACTIVE SALES) */}
+        <Reveal delay={0.1}>
+          <div className="mt-14 border-t border-foreground/10 pt-8">
+            <p className="text-center text-sm font-medium uppercase tracking-wider text-foreground/40">
+              Среди клиентов агентства
+            </p>
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
+              {clients.map((c) => (
+                <span
+                  key={c}
+                  className="text-lg font-semibold text-foreground/35 transition-colors hover:text-foreground/70"
+                >
+                  {c}
+                </span>
+              ))}
+            </div>
+          </div>
+        </Reveal>
       </section>
 
       {/* Методика */}
