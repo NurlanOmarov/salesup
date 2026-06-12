@@ -470,15 +470,38 @@ async function upsertCourse(spec: CourseSpec) {
   return course;
 }
 
-// ── Финальный экзамен медпред-курса (демо; в проде генерирует фабрика S3.3) ──
+// ── Финальный экзамен медпред-курса (вопросы по реальному содержанию видео) ──
+// Для ORDERING варианты заданы в правильном порядке (sortOrder = индекс), на клиенте
+// перемешиваются. Для FILL_BLANK options.text — эталонные ответы по порядку пропусков.
 type SeedQuestion = {
-  type: "SINGLE_CHOICE" | "MULTI_CHOICE" | "TRUE_FALSE";
+  type: "SINGLE_CHOICE" | "MULTI_CHOICE" | "TRUE_FALSE" | "ORDERING" | "FILL_BLANK";
   text: string;
   explanation: string;
   options: { text: string; correct: boolean }[];
 };
 
 const PHARMA_EXAM: SeedQuestion[] = [
+  {
+    type: "ORDERING",
+    text: "Расставьте типы вопросов методики СПИН в правильном порядке — от первого к последнему.",
+    explanation: "Последовательность СПИН: сначала узнаём ситуацию, затем выявляем проблемы, усиливаем их важность и подводим к решению.",
+    options: [
+      { text: "Ситуационные", correct: true },
+      { text: "Проблемные", correct: true },
+      { text: "Извлекающие", correct: true },
+      { text: "Направляющие", correct: true },
+    ],
+  },
+  {
+    type: "FILL_BLANK",
+    text: "Презентация препарата строится на трёх моментах. Впишите их по порядку (по одному слову).",
+    explanation: "«Презентация основывается на трёх моментах: факт, выгода, согласие».",
+    options: [
+      { text: "факт", correct: true },
+      { text: "выгода", correct: true },
+      { text: "согласие", correct: true },
+    ],
+  },
   {
     type: "SINGLE_CHOICE",
     text: "Какие три типа вопросов для выявления потребностей называет тренер в начале курса?",

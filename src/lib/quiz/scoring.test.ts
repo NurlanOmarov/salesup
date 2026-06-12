@@ -1,5 +1,62 @@
 import { describe, it, expect } from "vitest";
-import { gradeQuestion, scoreAttempt, type QuestionLike } from "./scoring.js";
+import { gradeQuestion, scoreAttempt, normalizeAnswer, type QuestionLike } from "./scoring.js";
+
+const ordering: QuestionLike = {
+  id: "qo",
+  type: "ORDERING",
+  points: 2,
+  options: [
+    { id: "s", isCorrect: true, sortOrder: 0 }, // ситуационные
+    { id: "p", isCorrect: true, sortOrder: 1 }, // проблемные
+    { id: "i", isCorrect: true, sortOrder: 2 }, // извлекающие
+    { id: "n", isCorrect: true, sortOrder: 3 }, // направляющие
+  ],
+};
+
+const fill: QuestionLike = {
+  id: "qf",
+  type: "FILL_BLANK",
+  points: 1,
+  options: [
+    { id: "b1", isCorrect: true, sortOrder: 0, text: "факт" },
+    { id: "b2", isCorrect: true, sortOrder: 1, text: "выгода" },
+    { id: "b3", isCorrect: true, sortOrder: 2, text: "согласие" },
+  ],
+};
+
+describe("gradeQuestion — ORDERING", () => {
+  it("правильный порядок → балл", () => {
+    expect(gradeQuestion(ordering, ["s", "p", "i", "n"])).toEqual({ correct: true, points: 2 });
+  });
+  it("неправильный порядок → 0", () => {
+    expect(gradeQuestion(ordering, ["p", "s", "i", "n"]).correct).toBe(false);
+  });
+  it("неполный ответ → 0", () => {
+    expect(gradeQuestion(ordering, ["s", "p", "i"]).correct).toBe(false);
+  });
+});
+
+describe("gradeQuestion — FILL_BLANK", () => {
+  it("точное совпадение → балл", () => {
+    expect(gradeQuestion(fill, ["факт", "выгода", "согласие"])).toEqual({ correct: true, points: 1 });
+  });
+  it("регистр и пунктуация игнорируются", () => {
+    expect(gradeQuestion(fill, ["Факт", " ВЫГОДА ", "согласие!"]).correct).toBe(true);
+  });
+  it("ё нормализуется к е", () => {
+    const q: QuestionLike = { id: "x", type: "FILL_BLANK", points: 1, options: [{ id: "a", isCorrect: true, sortOrder: 0, text: "приём" }] };
+    expect(gradeQuestion(q, ["прием"]).correct).toBe(true);
+  });
+  it("неверное слово → 0", () => {
+    expect(gradeQuestion(fill, ["факт", "цена", "согласие"]).correct).toBe(false);
+  });
+});
+
+describe("normalizeAnswer", () => {
+  it("приводит к нижнему регистру, убирает пунктуацию и лишние пробелы", () => {
+    expect(normalizeAnswer("  Факт, выгода!  ")).toBe("факт выгода");
+  });
+});
 
 const single: QuestionLike = {
   id: "q1",

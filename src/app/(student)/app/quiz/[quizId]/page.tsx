@@ -5,7 +5,8 @@ import { ArrowLeft } from "lucide-react";
 import { requireUser } from "@/lib/auth/guards";
 import { db } from "@/lib/db";
 import { canAccessCourse } from "@/lib/access";
-import { QuizRunner, type RunnerQuestion } from "./quiz-runner";
+import { ExamRunner } from "./exam-runner";
+import type { RunnerQuestion } from "@/components/quiz/types";
 
 export const metadata: Metadata = {
   title: "Тест",
@@ -65,12 +66,17 @@ export default async function QuizPage({
   const attemptsLeft =
     quiz.maxAttempts != null ? Math.max(0, quiz.maxAttempts - attempts.length) : null;
 
-  const questions: RunnerQuestion[] = quiz.questions.map((q) => ({
-    id: q.id,
-    type: q.type as RunnerQuestion["type"],
-    text: q.text,
-    options: q.options,
-  }));
+  const questions: RunnerQuestion[] = quiz.questions.map((q) => {
+    // Для ORDERING перемешиваем варианты — правильный порядок не должен быть виден.
+    const options =
+      q.type === "ORDERING" ? [...q.options].sort(() => Math.random() - 0.5) : q.options;
+    return {
+      id: q.id,
+      type: q.type as RunnerQuestion["type"],
+      text: q.text,
+      options,
+    };
+  });
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-8">
@@ -92,7 +98,7 @@ export default async function QuizPage({
       </p>
 
       <div className="mt-6">
-        <QuizRunner
+        <ExamRunner
           quizId={quiz.id}
           questions={questions}
           alreadyPassed={alreadyPassed}

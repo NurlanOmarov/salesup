@@ -20,10 +20,11 @@ import { c, log } from "./lib/log.js";
  * Эмбеддинги/чанки для RAG — отдельный шаг (S3.1 ext). Идемпотентно.
  */
 
-async function fetchSubsVtt(url: string, lang: string): Promise<string | null> {
+async function fetchSubsVtt(url: string, lang: string, cookies?: string): Promise<string | null> {
   const dir = await mkdtemp(join(tmpdir(), "salesup-subs-"));
   try {
     await run("yt-dlp", [
+      ...(cookies ? ["--cookies-from-browser", cookies] : []),
       "--write-auto-subs",
       "--sub-langs", lang,
       "--sub-format", "vtt",
@@ -45,7 +46,7 @@ async function fetchSubsVtt(url: string, lang: string): Promise<string | null> {
 
 async function processLesson(
   lesson: { id: string; title: string; youtubeUrl: string | null },
-  opts: { lang: string; force: boolean },
+  opts: { lang: string; force: boolean; raw: boolean; cookies?: string },
 ): Promise<{ ok: boolean; chars: number }> {
   if (!lesson.youtubeUrl) {
     log.warn(`«${lesson.title}»: нет youtubeUrl — пропуск`);
@@ -56,13 +57,14 @@ async function processLesson(
     where: { lessonId: lesson.id },
     select: { status: true },
   });
-  if (existing && existing.status === "CLEANED" && !opts.force) {
+  const readyStatus = opts.raw ? "FETCHED" : "CLEANED";
+  if (existing && existing.status === readyStatus && !opts.force) {
     log.warn(`«${lesson.title}»: транскрипт уже готов — пропуск (--force для пересборки)`);
     return { ok: true, chars: 0 };
   }
 
   log.step(`Субтитры: ${c.dim(lesson.youtubeUrl)}`);
-  const vtt = await fetchSubsVtt(lesson.youtubeUrl, opts.lang);
+  const vtt = await fetchSubsVtt(lesson.youtubeUrl, opts.lang, opts.cookies);
   if (!vtt) {
     log.err(`«${lesson.title}»: субтитры (${opts.lang}) недоступны`);
     await db.transcript.upsert({
@@ -76,15 +78,23 @@ async function processLesson(
   const rawText = cuesToRawText(parseVtt(vtt));
   log.info(`Сырой текст: ${rawText.length} символов`);
 
-  log.step("Очистка через Haiku…");
-  const cleanText = await complete({
-    model: "claude-haiku-4-5",
-    system: CLEAN_TRANSCRIPT_SYSTEM,
-    prompt: cleanTranscriptPrompt(rawText),
-    maxTokens: 4096,
-    temperature: 0.2,
-    operation: "transcript.clean",
-  });
+  // --raw: сохраняем сырой текст БЕЗ вызова API (ноль расходов). Очистку и весь
+  // контент по транскрипту делает оператор в Claude Code. Иначе — чистим Haiku.
+  let cleanText: string;
+  if (opts.raw) {
+    cleanText = rawText;
+    log.info("Режим --raw: без вызова LLM (очистку делаете в Claude Code)");
+  } else {
+    log.step("Очистка через Haiku…");
+    cleanText = await complete({
+      model: "claude-haiku-4-5",
+      system: CLEAN_TRANSCRIPT_SYSTEM,
+      prompt: cleanTranscriptPrompt(rawText),
+      maxTokens: 4096,
+      temperature: 0.2,
+      operation: "transcript.clean",
+    });
+  }
 
   await db.transcript.upsert({
     where: { lessonId: lesson.id },
@@ -94,12 +104,12 @@ async function processLesson(
       language: opts.lang,
       rawText,
       cleanText,
-      status: "CLEANED",
+      status: opts.raw ? "FETCHED" : "CLEANED",
     },
-    update: { rawText, cleanText, status: "CLEANED", error: null },
+    update: { rawText, cleanText, status: opts.raw ? "FETCHED" : "CLEANED", error: null },
   });
 
-  log.ok(`«${lesson.title}»: ${cleanText.length} символов`);
+  log.ok(`«${lesson.title}»: ${cleanText.length} символов${opts.raw ? " (сырой)" : ""}`);
   return { ok: true, chars: cleanText.length };
 }
 
@@ -107,6 +117,8 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   const lang = typeof args.options.lang === "string" ? args.options.lang : "ru";
   const force = args.options.force === true;
+  const raw = args.options.raw === true;
+  const cookies = typeof args.options.cookies === "string" ? args.options.cookies : undefined;
 
   await requireBinary("yt-dlp", "Установите: brew install yt-dlp");
 
@@ -134,7 +146,7 @@ async function main() {
   let totalChars = 0;
   for (const [i, l] of lessons.entries()) {
     console.log(`\n${c.bold(`[${i + 1}/${lessons.length}]`)} ${l.title}`);
-    const r = await processLesson(l, { lang, force });
+    const r = await processLesson(l, { lang, force, raw, cookies });
     if (r.ok) ok++;
     totalChars += r.chars;
   }

@@ -61,12 +61,12 @@ export const submitQuizAttempt = safeAction(
       if (used >= quiz.maxAttempts) throw new Error("Исчерпан лимит попыток");
     }
 
-    // Оценка (только choice-типы; прочие в MVP не используются в этом тесте)
+    // Оценка всех поддержанных типов (choice / ordering / fill_blank).
     const gradable: QuestionLike[] = quiz.questions.map((q) => ({
       id: q.id,
       type: q.type as GradableType,
       points: q.points,
-      options: q.options.map((o) => ({ id: o.id, isCorrect: o.isCorrect })),
+      options: q.options.map((o) => ({ id: o.id, isCorrect: o.isCorrect, sortOrder: o.sortOrder, text: o.text })),
     }));
     const result = scoreAttempt(gradable, answers, quiz.passScore);
 
@@ -106,13 +106,25 @@ export const submitQuizAttempt = safeAction(
       }
     }
 
-    // Разбор для показа после сдачи (правильные ответы раскрываются только теперь)
-    const review = quiz.questions.map((q) => ({
-      questionId: q.id,
-      correct: result.perQuestion.find((p) => p.questionId === q.id)?.correct ?? false,
-      explanation: q.explanation,
-      correctOptionIds: q.options.filter((o) => o.isCorrect).map((o) => o.id),
-    }));
+    // Разбор для показа после сдачи (правильные ответы раскрываются только теперь).
+    // ORDERING — id в правильном порядке (sortOrder); FILL_BLANK — эталонные тексты.
+    const review = quiz.questions.map((q) => {
+      const sorted = [...q.options].sort((a, b) => a.sortOrder - b.sortOrder);
+      const correctOptionIds =
+        q.type === "ORDERING"
+          ? sorted.map((o) => o.id)
+          : q.options.filter((o) => o.isCorrect).map((o) => o.id);
+      const correctTexts = q.type === "FILL_BLANK" ? sorted.map((o) => o.text) : undefined;
+      return {
+        questionId: q.id,
+        correct: result.perQuestion.find((p) => p.questionId === q.id)?.correct ?? false,
+        explanation: q.explanation,
+        correctOptionIds,
+        correctTexts,
+      };
+    });
+
+    const xpEarned = result.perQuestion.filter((p) => p.correct).length * 10;
 
     return {
       attemptId: attempt.id,
@@ -120,6 +132,7 @@ export const submitQuizAttempt = safeAction(
       passed: result.passed,
       passScore: quiz.passScore,
       certificateIssued,
+      xpEarned,
       review,
     };
   },
