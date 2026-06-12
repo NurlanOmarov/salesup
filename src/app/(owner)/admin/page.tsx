@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Users, Inbox, BookOpen } from "lucide-react";
+import { Users, Inbox, BookOpen, Coins } from "lucide-react";
 import { db } from "@/lib/db";
+import { formatUsd } from "@/lib/ai/pricing";
 
 export const metadata: Metadata = {
   title: "Консоль владельца",
@@ -11,16 +12,18 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function AdminHomePage() {
-  const [students, newLeads, courses] = await Promise.all([
+  const [students, newLeads, courses, llm] = await Promise.all([
     db.user.count({ where: { role: "STUDENT" } }),
     db.lead.count({ where: { status: "NEW" } }),
     db.course.count({ where: { status: "PUBLISHED" } }),
+    db.llmUsage.aggregate({ _sum: { costMicroUsd: true } }),
   ]);
 
   const cards = [
     { href: "/admin/students", icon: Users, label: "Ученики", value: students },
     { href: "/admin/leads", icon: Inbox, label: "Новые заявки", value: newLeads },
     { href: "/courses", icon: BookOpen, label: "Опубликовано курсов", value: courses },
+    { href: "/admin/usage", icon: Coins, label: "Расходы LLM", value: formatUsd(llm._sum.costMicroUsd ?? 0) },
   ];
 
   return (
@@ -30,7 +33,7 @@ export default async function AdminHomePage() {
         Создавайте учеников, выдавайте доступы, обрабатывайте заявки.
       </p>
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-3">
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {cards.map((c) => (
           <Link
             key={c.href}
