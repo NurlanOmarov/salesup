@@ -20,7 +20,11 @@ export function Reviews({ items }: { items: ReviewItem[] }) {
           key={r.id}
           className="w-[85%] shrink-0 snap-start rounded-2xl border border-foreground/10 p-6 sm:w-[360px]"
         >
-          <div className="flex gap-0.5" aria-label={`Оценка ${r.rating} из 5`}>
+          <div
+            className="flex gap-0.5"
+            role="img"
+            aria-label={`Оценка ${r.rating} из 5`}
+          >
             {Array.from({ length: 5 }).map((_, i) => (
               <Star
                 key={i}

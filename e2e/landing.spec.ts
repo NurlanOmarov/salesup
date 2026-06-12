@@ -12,7 +12,9 @@ test("заявка с формы создаёт Lead в БД", async ({ page }) 
   const contact = `+7 700 e2e-lead-${Date.now()}`;
 
   await page.goto("/");
-  await page.getByRole("link", { name: "Оставить заявку" }).click();
+  await page
+    .getByRole("link", { name: "Подобрать курс под мою отрасль" })
+    .click();
 
   // форма заявки в секции #zayavka
   await page.getByLabel("Имя").fill("E2E Заявка");

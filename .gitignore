@@ -27,3 +27,6 @@ media/
 *.log
 .idea/
 .vscode/
+
+# playwright-mcp артефакты (скриншоты/трейсы при ручной проверке)
+.playwright-mcp/

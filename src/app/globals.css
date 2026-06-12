@@ -18,8 +18,53 @@
   }
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
+}
+
+/* ── Анимации лендинга (все отключаются при prefers-reduced-motion) ── */
+
+/* медленно «дышащие» световые пятна в hero */
+@keyframes aurora-a {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(60px, 30px) scale(1.15); }
+}
+@keyframes aurora-b {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-50px, -20px) scale(1.1); }
+}
+.aurora-a { animation: aurora-a 14s ease-in-out infinite; }
+.aurora-b { animation: aurora-b 18s ease-in-out infinite; }
+
+/* плавающие карточки вокруг AI-демо */
+@keyframes float-y {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+.float-y { animation: float-y 5s ease-in-out infinite; }
+.float-y-delayed { animation: float-y 6.5s ease-in-out 1.2s infinite; }
+
+/* бегущая лента отраслей */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.marquee-track {
+  animation: marquee 28s linear infinite;
+}
+.marquee:hover .marquee-track {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .aurora-a, .aurora-b, .float-y, .float-y-delayed, .marquee-track {
+    animation: none;
+  }
 }

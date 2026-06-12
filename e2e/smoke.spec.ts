@@ -4,7 +4,10 @@ test("лендинг отвечает и рендерит hero + бренд", as
   await page.goto("/");
   await expect(page.getByRole("link", { name: "SalesAcademy" })).toBeVisible();
   await expect(
-    page.getByRole("heading", { level: 1, name: /Курсы по продажам/ }),
+    page.getByRole("heading", {
+      level: 1,
+      name: /Техники продаж, которые работают/,
+    }),
   ).toBeVisible();
 });
 

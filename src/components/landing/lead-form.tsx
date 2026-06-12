@@ -70,7 +70,13 @@ export function LeadForm({
         </p>
       ) : null}
 
-      <Button type="submit" size="lg" className="mt-4 w-full" disabled={isPending}>
+      <Button
+        type="submit"
+        size="lg"
+        variant="accent"
+        className="mt-4 w-full"
+        disabled={isPending}
+      >
         {isPending ? "Отправляем…" : "Оставить заявку"}
       </Button>
       <p className="mt-2 text-center text-xs text-foreground/50">
