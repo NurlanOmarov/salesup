@@ -5,8 +5,9 @@ import type { InputProps, ReviewProps } from "../types";
 
 /**
  * FILL_BLANK: вписать пропущенные слова. Вопрос содержит «___» для каждого пропуска;
- * порядок инпутов соответствует порядку пропусков (option.sortOrder). option.text —
- * подсказка-плейсхолдер. Ответ = массив введённых строк по порядку.
+ * порядок инпутов соответствует порядку пропусков (option.sortOrder). Эталонные ответы
+ * (option.text) на клиент НЕ приходят — иначе были бы видны в плейсхолдере/DOM.
+ * Ответ = массив введённых строк по порядку.
  */
 export function FillBlankInput({ question, answer, onChange }: InputProps) {
   const set = (i: number, v: string) => {
@@ -32,7 +33,7 @@ export function FillBlankInput({ question, answer, onChange }: InputProps) {
           <input
             value={answer[i] ?? ""}
             onChange={(e) => set(i, e.target.value)}
-            placeholder={o.text || "Введите ответ…"}
+            placeholder={`Слово ${i + 1}…`}
             className="flex-1 rounded-xl border border-foreground/15 bg-background px-4 py-3 outline-none transition-colors focus:border-amber-500"
           />
         </motion.div>

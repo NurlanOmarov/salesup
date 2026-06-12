@@ -144,10 +144,14 @@ export function QuizRunner({
       {error ? <p className="mt-4 text-sm text-red-600">{error}</p> : null}
 
       <div className="mt-6 flex items-center justify-between">
-        <Button variant="outline" size="sm" disabled={idx === 0} onClick={() => setIdx((i) => i - 1)}>
-          <ChevronLeft className="size-4" />
-          Назад
-        </Button>
+        {idx > 0 ? (
+          <Button variant="outline" size="sm" onClick={() => setIdx((i) => i - 1)}>
+            <ChevronLeft className="size-4" />
+            Пред. вопрос
+          </Button>
+        ) : (
+          <span />
+        )}
         {isLast ? (
           <Button variant="accent" disabled={!allAnswered || pending} onClick={submit}>
             {pending ? "Проверяем…" : "Завершить"}

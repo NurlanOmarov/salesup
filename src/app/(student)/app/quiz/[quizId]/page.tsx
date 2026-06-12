@@ -78,11 +78,28 @@ export default async function QuizPage({
   const attemptsLeft =
     quiz.maxAttempts != null ? Math.max(0, quiz.maxAttempts - attempts.length) : null;
 
+  // Типы, где ПОРЯДОК вариантов раскрывает ответ → перемешиваем перед отправкой.
+  // (В seed эталон часто стоит первым; без shuffle позиция = подсказка.)
+  // FILL_BLANK НЕ трогаем — там порядок = позиции пропусков; MATCHING/CATEGORIZATION
+  // не зависят от порядка левых элементов (связь скрыта в pairKey, который не уходит).
+  const SHUFFLE_OPTIONS = new Set([
+    "SINGLE_CHOICE",
+    "MULTI_CHOICE",
+    "TRUE_FALSE",
+    "SCENARIO",
+    "ORDERING",
+  ]);
+
   const questions: RunnerQuestion[] = quiz.questions.map((q) => {
-    // ORDERING — перемешиваем варианты (правильный порядок скрыт).
-    const ordered =
-      q.type === "ORDERING" ? [...q.options].sort(() => Math.random() - 0.5) : q.options;
-    const options = ordered.map((o) => ({ id: o.id, text: o.text }));
+    const ordered = SHUFFLE_OPTIONS.has(q.type)
+      ? [...q.options].sort(() => Math.random() - 0.5)
+      : q.options;
+    // FILL_BLANK: option.text — это ЭТАЛОННЫЙ ответ; на клиент его не отдаём,
+    // иначе ответы видны (placeholder/DOM). Шлём только id (= число полей).
+    const options = ordered.map((o) => ({
+      id: o.id,
+      text: q.type === "FILL_BLANK" ? "" : o.text,
+    }));
 
     // MATCHING — перемешанные правые элементы; CATEGORIZATION — уникальные категории.
     let choices: string[] | undefined;

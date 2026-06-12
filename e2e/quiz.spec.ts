@@ -60,6 +60,56 @@ test("правильные ответы не присутствуют в раз�
   // Маркеры правильности не должны попадать на клиент.
   expect(html).not.toContain("isCorrect");
   expect(html).not.toContain("correctOptionIds");
+
+  // FILL_BLANK: эталонные ответы (option.text) — это правильные слова. Они НЕ должны
+  // оказаться в плейсхолдере поля (старый баг: placeholder={o.text} показывал ответ).
+  // Проверяем фактические эталоны из БД против плейсхолдеров на самом вопросе.
+  const fillBlanks = await db.question.findMany({
+    where: { quizId: examId, type: "FILL_BLANK" },
+    select: { options: { select: { text: true } } },
+  });
+  const answers = new Set(
+    fillBlanks.flatMap((q) => q.options.map((o) => o.text.trim().toLowerCase())).filter(Boolean),
+  );
+  expect(answers.size).toBeGreaterThan(0); // тест осмыслен только если FILL_BLANK есть
+
+  // Проходим по вопросам; на каждом, где есть текстовые поля, проверяем плейсхолдеры.
+  const total = await db.question.count({ where: { quizId: examId, validation: "VALIDATED" } });
+  let checkedFillBlank = false;
+  for (let i = 0; i < total; i++) {
+    await page.waitForTimeout(300);
+    const inputs = page.locator('input[type="text"], input:not([type])');
+    const selects = page.locator("select");
+    const categories = page.locator("[data-quiz-category]");
+    const options = page.locator("[data-quiz-option]");
+    const nInputs = await inputs.count();
+    if (nInputs > 0) {
+      for (let k = 0; k < nInputs; k++) {
+        const ph = (await inputs.nth(k).getAttribute("placeholder")) ?? "";
+        expect(
+          answers.has(ph.trim().toLowerCase()),
+          `плейсхолдер «${ph}» не должен совпадать с эталоном FILL_BLANK`,
+        ).toBe(false);
+        await inputs.nth(k).fill("x"); // заполняем, чтобы пройти дальше
+      }
+      checkedFillBlank = true;
+    } else if ((await selects.count()) > 0) {
+      const n = await selects.count();
+      for (let k = 0; k < n; k++) await selects.nth(k).selectOption({ index: 1 });
+    } else if ((await categories.count()) > 0) {
+      const n = await categories.count();
+      for (let k = 0; k < n; k++) await categories.nth(k).click();
+    } else if ((await options.count()) > 0) {
+      await options.first().click();
+    }
+    const finish = page.getByRole("button", { name: "Завершить" });
+    if (await finish.isVisible().catch(() => false)) {
+      await finish.click();
+      break;
+    }
+    await page.getByRole("button", { name: "Далее" }).click();
+  }
+  expect(checkedFillBlank, "в экзамене должен быть хотя бы один FILL_BLANK").toBe(true);
 });
 
 test("провал по порогу → «Почти получилось» и доступна пересдача", async ({ page }) => {
