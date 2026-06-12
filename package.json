@@ -19,7 +19,8 @@
     "db:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
-    "db:generate": "prisma generate"
+    "db:generate": "prisma generate",
+    "factory:video": "tsx --env-file=.env scripts/factory/video.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
