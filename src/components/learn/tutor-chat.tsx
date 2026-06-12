@@ -28,10 +28,17 @@ export function TutorChat({ lessonId }: { lessonId: string }) {
   const [input, setInput] = useState("");
   const [pending, setPending] = useState(false);
   const [remaining, setRemaining] = useState<number | null>(null);
-  const endRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const lastMsgRef = useRef<HTMLDivElement>(null);
 
+  // Прокручиваем ТОЛЬКО внутренний контейнер (не страницу). Скроллим к НАЧАЛУ
+  // последнего сообщения, а не к самому низу — чтобы длинный ответ читался с верха.
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
+    const container = scrollRef.current;
+    const last = lastMsgRef.current;
+    if (!container) return;
+    if (last) container.scrollTop = Math.max(0, last.offsetTop - 12);
+    else container.scrollTop = container.scrollHeight;
   }, [messages, pending]);
 
   async function send(text: string) {
@@ -59,10 +66,11 @@ export function TutorChat({ lessonId }: { lessonId: string }) {
 
   return (
     <div className="flex h-[60vh] flex-col rounded-2xl border border-foreground/10 bg-background">
-      <div className="flex-1 space-y-4 overflow-y-auto p-4">
+      <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto p-4">
         {messages.map((m, i) => (
           <motion.div
             key={i}
+            ref={!pending && i === messages.length - 1 ? lastMsgRef : undefined}
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             className={`flex gap-2.5 ${m.role === "user" ? "flex-row-reverse" : ""}`}
@@ -81,7 +89,7 @@ export function TutorChat({ lessonId }: { lessonId: string }) {
           </motion.div>
         ))}
         {pending ? (
-          <div className="flex gap-2.5">
+          <div ref={lastMsgRef} className="flex gap-2.5">
             <div className="flex size-8 items-center justify-center rounded-full bg-slate-200 text-slate-600">
               <Bot className="size-4" />
             </div>
@@ -90,7 +98,6 @@ export function TutorChat({ lessonId }: { lessonId: string }) {
             </div>
           </div>
         ) : null}
-        <div ref={endRef} />
       </div>
 
       {/* Чипы быстрых вопросов */}

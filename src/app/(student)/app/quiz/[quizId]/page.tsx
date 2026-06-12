@@ -34,7 +34,7 @@ export default async function QuizPage({
       maxAttempts: true,
       status: true,
       course: { select: { slug: true, title: true } },
-      lesson: { select: { module: { select: { course: { select: { slug: true, title: true } } } } } },
+      lesson: { select: { id: true, title: true, module: { select: { course: { select: { slug: true, title: true } } } } } },
       questions: {
         where: { validation: "VALIDATED" },
         orderBy: { sortOrder: "asc" },
@@ -60,6 +60,13 @@ export default async function QuizPage({
 
   const access = await canAccessCourse(userId, courseInfo.slug);
   if (!access.ok) notFound();
+
+  // «Назад» — в кабинет (для итогового экзамена) или к уроку (для задания урока),
+  // НЕ на публичную страницу курса.
+  const backHref = quiz.lesson
+    ? `/app/learn/${courseInfo.slug}/${quiz.lesson.id}`
+    : "/app";
+  const backLabel = quiz.lesson ? quiz.lesson.title : "Моё обучение";
 
   // Прошлые попытки — лучший результат + число использованных.
   const attempts = await db.quizAttempt.findMany({
@@ -94,11 +101,11 @@ export default async function QuizPage({
   return (
     <main className="mx-auto max-w-2xl px-4 py-8">
       <Link
-        href={`/courses/${courseInfo.slug}`}
+        href={backHref}
         className="inline-flex items-center gap-1.5 text-sm text-foreground/60 transition-colors hover:text-foreground"
       >
         <ArrowLeft className="size-4" />
-        {courseInfo.title}
+        {backLabel}
       </Link>
       <h1 className="mt-3 text-2xl font-bold">{quiz.title}</h1>
       {quiz.description ? (
