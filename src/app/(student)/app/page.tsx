@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
-import { BookOpen, PlayCircle } from "lucide-react";
+import { BookOpen, PlayCircle, GraduationCap } from "lucide-react";
 import { requireUser } from "@/lib/auth/guards";
 import { db } from "@/lib/db";
 import { isEnrollmentActive } from "@/lib/access";
@@ -39,6 +39,11 @@ export default async function DashboardPage() {
               },
             },
           },
+          quizzes: {
+            where: { kind: "FINAL_EXAM", status: "PUBLISHED" },
+            select: { id: true },
+            take: 1,
+          },
         },
       },
     },
@@ -61,7 +66,12 @@ export default async function DashboardPage() {
       .map((l) => ({ id: l.id, completed: completedSet.has(l.id) }));
     const progress = courseProgress(lessons);
     const next = nextLesson(lessons);
-    return { ...e.course, progress, nextLessonId: next?.id ?? null };
+    return {
+      ...e.course,
+      progress,
+      nextLessonId: next?.id ?? null,
+      examId: e.course.quizzes[0]?.id ?? null,
+    };
   });
 
   return (
@@ -124,19 +134,28 @@ export default async function DashboardPage() {
                   </div>
                 </div>
 
-                {c.nextLessonId ? (
-                  <Link
-                    href={`/app/learn/${c.slug}/${c.nextLessonId}`}
-                    className="mt-4 inline-flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-slate-950 transition-colors hover:bg-amber-400"
-                  >
-                    <PlayCircle className="size-4" />
-                    {c.progress.completed > 0 ? "Продолжить" : "Начать обучение"}
-                  </Link>
-                ) : (
-                  <p className="mt-4 text-sm text-foreground/50">
-                    Уроки скоро появятся
-                  </p>
-                )}
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {c.nextLessonId ? (
+                    <Link
+                      href={`/app/learn/${c.slug}/${c.nextLessonId}`}
+                      className="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-slate-950 transition-colors hover:bg-amber-400"
+                    >
+                      <PlayCircle className="size-4" />
+                      {c.progress.completed > 0 ? "Продолжить" : "Начать обучение"}
+                    </Link>
+                  ) : (
+                    <p className="text-sm text-foreground/50">Уроки скоро появятся</p>
+                  )}
+                  {c.examId ? (
+                    <Link
+                      href={`/app/quiz/${c.examId}`}
+                      className="inline-flex items-center gap-2 rounded-lg border border-foreground/15 px-4 py-2 text-sm font-medium transition-colors hover:bg-foreground/5"
+                    >
+                      <GraduationCap className="size-4" />
+                      Итоговый тест
+                    </Link>
+                  ) : null}
+                </div>
               </div>
             </div>
           ))}
