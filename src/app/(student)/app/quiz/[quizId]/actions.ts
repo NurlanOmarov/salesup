@@ -6,6 +6,8 @@ import { db } from "@/lib/db";
 import { canAccessCourse } from "@/lib/access";
 import { scoreAttempt, type QuestionLike, type GradableType } from "@/lib/quiz/scoring";
 import { issueCertificateIfEligible } from "@/lib/certificates/issue";
+import { awardXp, awardBadge } from "@/lib/gamification/award";
+import { XP_REWARDS } from "@/lib/gamification/levels";
 
 /**
  * Приём и оценка попытки теста (S4.1). Правильные ответы НЕ покидают сервер до сдачи:
@@ -106,6 +108,20 @@ export const submitQuizAttempt = safeAction(
         certificateIssued = r.issued;
       } catch (e) {
         console.error("Не удалось выдать сертификат:", e);
+      }
+    }
+
+    // Геймификация — сдержанно, за реальные достижения. Не критично к ответу.
+    if (result.passed) {
+      try {
+        await awardXp(userId, quiz.kind === "FINAL_EXAM" ? XP_REWARDS.examPassed : XP_REWARDS.quizPassed);
+        if (quiz.kind === "FINAL_EXAM" && result.scorePct === 100) await awardBadge(userId, "perfect-exam");
+        if (certificateIssued) {
+          await awardXp(userId, XP_REWARDS.certificate);
+          await awardBadge(userId, "course-complete");
+        }
+      } catch (e) {
+        console.error("Награды за тест не начислены:", e);
       }
     }
 

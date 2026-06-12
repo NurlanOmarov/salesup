@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { isEnrollmentActive } from "@/lib/access";
 import { courseProgress, nextLesson } from "@/lib/learn/progress";
 import { LogoutButton } from "@/components/logout-button";
+import { ProgressPanel, type BadgeView } from "@/components/gamification/progress-panel";
 
 export const metadata: Metadata = {
   title: "Моё обучение",
@@ -74,6 +75,15 @@ export default async function DashboardPage() {
     };
   });
 
+  // Геймификация (сдержанно): профиль + бейджи.
+  const [profile, allBadges, earnedBadges] = await Promise.all([
+    db.gamificationProfile.findUnique({ where: { userId }, select: { xp: true, streakDays: true } }),
+    db.badge.findMany({ orderBy: { id: "asc" }, select: { code: true, title: true, description: true } }),
+    db.userBadge.findMany({ where: { userId }, select: { badge: { select: { code: true } } } }),
+  ]);
+  const earnedCodes = new Set(earnedBadges.map((b) => b.badge.code));
+  const badgeViews: BadgeView[] = allBadges.map((b) => ({ ...b, earned: earnedCodes.has(b.code) }));
+
   return (
     <main className="mx-auto max-w-5xl px-4 py-10">
       <div className="flex items-center justify-between">
@@ -99,6 +109,13 @@ export default async function DashboardPage() {
           <LogoutButton />
         </div>
       </div>
+
+      {/* Сдержанный блок прогресса (показываем, если есть курсы) */}
+      {courses.length > 0 ? (
+        <div className="mt-6">
+          <ProgressPanel xp={profile?.xp ?? 0} streakDays={profile?.streakDays ?? 0} badges={badgeViews} />
+        </div>
+      ) : null}
 
       {courses.length === 0 ? (
         <div className="mt-10 rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-10 text-center">

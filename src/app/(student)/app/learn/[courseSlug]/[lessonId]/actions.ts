@@ -4,6 +4,8 @@ import { z } from "zod";
 import { safeAction } from "@/lib/safe-action";
 import { db } from "@/lib/db";
 import { canAccessLesson } from "@/lib/access";
+import { awardXp, awardBadge, touchStreak } from "@/lib/gamification/award";
+import { XP_REWARDS } from "@/lib/gamification/levels";
 
 /**
  * Сохранение прогресса просмотра урока (S2.2/S4.2): upsert LessonProgress каждые
@@ -25,12 +27,16 @@ export const saveLessonProgress = safeAction(
     const access = await canAccessLesson(userId, lessonId);
     if (!access.ok) throw new Error("Нет доступа к уроку");
 
-    const lesson = await db.lesson.findUnique({
-      where: { id: lessonId },
-      select: { durationSec: true },
-    });
+    const [lesson, existing] = await Promise.all([
+      db.lesson.findUnique({ where: { id: lessonId }, select: { durationSec: true } }),
+      db.lessonProgress.findUnique({
+        where: { userId_lessonId: { userId, lessonId } },
+        select: { completedAt: true },
+      }),
+    ]);
     const duration = lesson?.durationSec ?? 0;
     const completed = duration > 0 && positionSec >= duration * 0.9;
+    const justCompleted = completed && !existing?.completedAt;
 
     await db.lessonProgress.upsert({
       where: { userId_lessonId: { userId, lessonId } },
@@ -47,6 +53,18 @@ export const saveLessonProgress = safeAction(
         ...(completed ? { completedAt: new Date() } : {}),
       },
     });
+
+    // Геймификация — только при ПЕРВОМ завершении урока. Не критично к основному потоку.
+    if (justCompleted) {
+      try {
+        await awardXp(userId, XP_REWARDS.lessonCompleted);
+        await awardBadge(userId, "first-lesson");
+        const streak = await touchStreak(userId);
+        if (streak >= 7) await awardBadge(userId, "streak-7");
+      } catch (e) {
+        console.error("Награды за урок не начислены:", e);
+      }
+    }
 
     return { completed };
   },
