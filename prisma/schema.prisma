@@ -343,6 +343,8 @@ enum QuestionType {
   TRUE_FALSE
   ORDERING
   FILL_BLANK
+  MATCHING       // сопоставить пары: левый элемент ↔ правый (option.text ↔ option.pairKey)
+  CATEGORIZATION // распределить элементы по категориям (option.text → option.pairKey)
   OPEN_TEXT // проверяет LLM по rubric; фоллбэк — повтор более сильной моделью (НЕ человек)
   SCALE
 }
@@ -396,10 +398,12 @@ model Question {
 
 model QuestionOption {
   id         String   @id @default(cuid())
-  questionId String
   text       String
   isCorrect  Boolean  @default(false)
   sortOrder  Int      @default(0) // для ORDERING — правильная позиция
+  // MATCHING — правый элемент пары (text = левый); CATEGORIZATION — правильная категория
+  pairKey    String?
+  questionId String
   question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
 }
 

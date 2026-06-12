@@ -15,13 +15,16 @@ export type GradableType =
   | "MULTI_CHOICE"
   | "TRUE_FALSE"
   | "ORDERING"
-  | "FILL_BLANK";
+  | "FILL_BLANK"
+  | "MATCHING"
+  | "CATEGORIZATION";
 
 export interface OptionLike {
   id: string;
   isCorrect: boolean;
-  sortOrder?: number; // ORDERING: правильная позиция; FILL_BLANK: порядок пропуска
-  text?: string; // FILL_BLANK: эталонный ответ
+  sortOrder?: number; // ORDERING: правильная позиция; FILL_BLANK/MATCHING/CATEGORIZATION: порядок элемента
+  text?: string; // FILL_BLANK: эталонный ответ; MATCHING/CATEGORIZATION: левый элемент
+  pairKey?: string | null; // MATCHING: правый элемент пары; CATEGORIZATION: правильная категория
 }
 
 export interface QuestionLike {
@@ -77,6 +80,18 @@ export function gradeQuestion(
       correct =
         answer.length === blanks.length &&
         blanks.every((b, i) => normalizeAnswer(answer[i] ?? "") === normalizeAnswer(b.text ?? ""));
+      break;
+    }
+    case "MATCHING":
+    case "CATEGORIZATION": {
+      // answer — выбранный правый/категория для каждого левого элемента (по порядку).
+      // Сверка нормализованная: answer[i] соответствует pairKey элемента i.
+      const items = [...question.options].sort(
+        (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0),
+      );
+      correct =
+        answer.length === items.length &&
+        items.every((it, i) => normalizeAnswer(answer[i] ?? "") === normalizeAnswer(it.pairKey ?? ""));
       break;
     }
     default: {

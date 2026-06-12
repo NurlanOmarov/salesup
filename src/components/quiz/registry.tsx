@@ -2,6 +2,8 @@ import type { QuestionKind, QuestionTypeDef } from "./types";
 import { ChoiceInput, ChoiceReview } from "./inputs/choice-input";
 import { OrderingInput, OrderingReview } from "./inputs/ordering-input";
 import { FillBlankInput, FillBlankReview } from "./inputs/fill-blank-input";
+import { MatchingInput, MatchingReview } from "./inputs/matching-input";
+import { CategorizationInput, CategorizationReview } from "./inputs/categorization-input";
 
 /**
  * Реестр типов заданий (расширяемый движок). Новый тип = добавить запись сюда +
@@ -36,5 +38,17 @@ export const QUESTION_TYPES: Record<QuestionKind, QuestionTypeDef> = {
     Review: FillBlankReview,
     isAnswered: (a, q) => q.options.every((_, i) => (a[i] ?? "").trim().length > 0),
     hint: "Впишите пропущенные слова",
+  },
+  MATCHING: {
+    Input: MatchingInput,
+    Review: MatchingReview,
+    isAnswered: (a, q) => q.options.every((_, i) => (a[i] ?? "").length > 0),
+    hint: "Сопоставьте элементы слева с вариантами справа",
+  },
+  CATEGORIZATION: {
+    Input: CategorizationInput,
+    Review: CategorizationReview,
+    isAnswered: (a, q) => q.options.every((_, i) => (a[i] ?? "").length > 0),
+    hint: "Распределите элементы по категориям",
   },
 };

@@ -73,12 +73,20 @@ test("провал по порогу → «Почти получилось» и 
   for (let i = 0; i < total; i++) {
     await page.waitForTimeout(300); // дать AnimatePresence завершить переход
     const inputs = page.locator('input[type="text"], input:not([type])');
+    const selects = page.locator("select");
+    const categories = page.locator("[data-quiz-category]");
     const options = page.locator("[data-quiz-option]");
     if ((await inputs.count()) > 0) {
       const n = await inputs.count();
       for (let k = 0; k < n; k++) await inputs.nth(k).fill("неверно");
+    } else if ((await selects.count()) > 0) {
+      const n = await selects.count(); // MATCHING
+      for (let k = 0; k < n; k++) await selects.nth(k).selectOption({ index: 1 });
+    } else if ((await categories.count()) > 0) {
+      const n = await categories.count(); // CATEGORIZATION — клик по каждой кнопке (категория проставится)
+      for (let k = 0; k < n; k++) await categories.nth(k).click();
     } else if ((await options.count()) > 0) {
-      await options.first().click(); // choice: первый вариант (в основном неверный)
+      await options.first().click(); // choice
     }
     // ORDERING: порядок уже задан, ответ заполнен автоматически — просто идём дальше.
     const finish = page.getByRole("button", { name: "Завершить" });
