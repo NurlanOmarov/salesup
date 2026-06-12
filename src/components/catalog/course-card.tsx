@@ -26,11 +26,16 @@ export type CourseCardData = {
   _count: { modules: number };
 };
 
+// Единственный готовый курс — остальные пока в разработке.
+const READY_COURSE_SLUG = "sales-pharma";
+
 export function CourseCard({ course }: { course: CourseCardData }) {
   const gradient =
     course.industry && industryGradients[course.industry]
       ? industryGradients[course.industry]
       : "from-slate-700 via-slate-800 to-slate-900";
+
+  const inDevelopment = course.slug !== READY_COURSE_SLUG;
 
   return (
     <Link
@@ -47,6 +52,11 @@ export function CourseCard({ course }: { course: CourseCardData }) {
             className="object-cover"
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           />
+        ) : null}
+        {inDevelopment ? (
+          <span className="absolute right-3 top-3 rounded-full bg-amber-500/90 px-2.5 py-0.5 text-xs font-semibold text-slate-900 shadow-sm backdrop-blur">
+            В разработке
+          </span>
         ) : null}
         <div className="absolute inset-0 flex items-end p-4">
           {course.industry ? (
