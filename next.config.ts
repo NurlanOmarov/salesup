@@ -7,7 +7,6 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   // argon2 — нативный модуль; не бандлить на сервере (Sprint 1)
   serverExternalPackages: ["@node-rs/argon2", "argon2", "pino"],
-  typedRoutes: true,
 };
 
 export default nextConfig;
