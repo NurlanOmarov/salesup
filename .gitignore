@@ -16,8 +16,10 @@ coverage/
 playwright-report/
 test-results/
 
-# media-артефакты фабрики (видео/HLS не коммитим)
-media/
+# media-артефакты фабрики (видео/HLS не коммитим) — только корневой каталог,
+# чтобы не задеть код вроде src/app/api/video/media/
+/media/
+/out/
 *.mp4
 *.ts.seg
 *.m3u8

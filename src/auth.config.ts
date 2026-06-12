@@ -108,6 +108,15 @@ export const authConfig = {
         return true;
       }
 
+      // API-маршруты отвечают кодами (JSON), а не редиректом на HTML-логин.
+      // Тонкую проверку доступа/роли делает сам роут через lib/access.
+      if (pathname.startsWith("/api/")) {
+        if (!isLoggedIn) {
+          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+        return true;
+      }
+
       // приватные зоны
       if (!isLoggedIn) {
         const url = new URL("/login", request.nextUrl);

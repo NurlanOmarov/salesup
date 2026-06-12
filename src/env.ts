@@ -25,6 +25,9 @@ const serverSchema = z.object({
   STORAGE_DRIVER: z.enum(["fs", "s3"]).default("fs"),
   VIDEO_SIGNING_SECRET: z.string().min(16),
   VIDEO_KEY_ENC_SECRET: z.string().min(16),
+  // true на VPS: сегменты отдаёт nginx через X-Accel-Redirect (internal location).
+  // false в локальной разработке без nginx: сегмент стримится приложением напрямую.
+  VIDEO_XACCEL: bool.default("false"),
 
   // true ТОЛЬКО на временном VPS по IP без TLS — снимает флаг Secure с cookie сессии.
   // На боевом домене с HTTPS обязан быть false (D-007). Используется в lib/auth (Sprint 1).

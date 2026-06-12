@@ -7,6 +7,15 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   // argon2 — нативный модуль; не бандлить на сервере (Sprint 1)
   serverExternalPackages: ["@node-rs/argon2", "argon2", "pino"],
+  // Резолв ESM-style `.js`-импортов в TS-исходниках (lib/storage и др.):
+  // webpack по умолчанию не сопоставляет .js → .ts, как это делает tsx/node ESM.
+  webpack: (config) => {
+    config.resolve.extensionAlias = {
+      ".js": [".ts", ".tsx", ".js"],
+      ".mjs": [".mts", ".mjs"],
+    };
+    return config;
+  },
 };
 
 export default nextConfig;

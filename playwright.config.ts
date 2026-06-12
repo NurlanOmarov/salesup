@@ -22,7 +22,7 @@ export default defineConfig({
     {
       name: "mobile",
       use: { ...devices["iPhone 13"] },
-      testIgnore: ["**/auth.spec.ts"],
+      testIgnore: ["**/auth.spec.ts", "**/video-access.spec.ts"],
     },
   ],
   webServer: {
