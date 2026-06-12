@@ -4,7 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import { PlayCircle, FileText, ScrollText } from "lucide-react";
-import { SecurePlayer } from "@/components/player/secure-player";
+import { SecurePlayer, type SubtitleTrackInfo } from "@/components/player/secure-player";
 
 /**
  * Вкладки урока (современный кабинет курса): Видео · Конспект · Транскрипт.
@@ -21,6 +21,8 @@ export function LessonTabs({
   startPositionSec,
   summary,
   transcript,
+  subtitles = [],
+  defaultSubtitleLang = null,
 }: {
   lessonId: string;
   videoReady: boolean;
@@ -28,6 +30,8 @@ export function LessonTabs({
   startPositionSec: number;
   summary: string | null;
   transcript: string | null;
+  subtitles?: SubtitleTrackInfo[];
+  defaultSubtitleLang?: string | null;
 }) {
   const [tab, setTab] = useState<Tab>("video");
 
@@ -65,7 +69,13 @@ export function LessonTabs({
       {/* Видео — всегда смонтировано, скрывается через display */}
       <div className={`mt-4 ${tab === "video" ? "block" : "hidden"}`}>
         {videoReady ? (
-          <SecurePlayer lessonId={lessonId} watermark={watermark} startPositionSec={startPositionSec} />
+          <SecurePlayer
+            lessonId={lessonId}
+            watermark={watermark}
+            startPositionSec={startPositionSec}
+            subtitles={subtitles}
+            defaultSubtitleLang={defaultSubtitleLang}
+          />
         ) : (
           <div className="flex aspect-video items-center justify-center rounded-2xl border border-foreground/10 bg-foreground/[0.03] text-foreground/50">
             Видео готовится — загляните позже.

@@ -78,6 +78,20 @@ export default async function LearnPage({
     select: { id: true, title: true },
   });
 
+  // Доступные дорожки субтитров + язык по умолчанию из профиля.
+  const [subtitleTracks, viewer] = await Promise.all([
+    db.subtitleTrack.findMany({
+      where: { lessonId, validation: "VALIDATED" },
+      select: { lang: true },
+    }),
+    db.user.findUnique({ where: { id: userId }, select: { subtitleLang: true } }),
+  ]);
+  const LANG_LABELS: Record<string, string> = { RU: "Русский", KK: "Қазақша", EN: "English", UZ: "Oʻzbekcha" };
+  const langOrder = ["RU", "KK", "EN", "UZ"];
+  const subtitles = subtitleTracks
+    .map((t) => ({ lang: t.lang as "RU" | "KK" | "EN" | "UZ", label: LANG_LABELS[t.lang] ?? t.lang }))
+    .sort((a, b) => langOrder.indexOf(a.lang) - langOrder.indexOf(b.lang));
+
   // Оглавление + плоский порядок доступных уроков для prev/next.
   const flat: { id: string; title: string }[] = [];
   const modules: SidebarModule[] = course.modules.map((m) => ({
@@ -140,6 +154,8 @@ export default async function LearnPage({
             startPositionSec={lessonPos?.lastPositionSec ?? 0}
             summary={summary}
             transcript={transcriptText}
+            subtitles={subtitles}
+            defaultSubtitleLang={viewer?.subtitleLang ?? null}
           />
         </div>
 

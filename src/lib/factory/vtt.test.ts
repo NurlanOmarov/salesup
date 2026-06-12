@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseTimestamp, parseVtt, cuesToRawText, fmtTimecode } from "./vtt.js";
+import { parseTimestamp, parseVtt, cuesToRawText, fmtTimecode, aggregateCues, cuesToVtt, vttTimestamp } from "./vtt.js";
 
 describe("parseTimestamp", () => {
   it("часы:минуты:секунды", () => {
@@ -70,5 +70,45 @@ describe("fmtTimecode", () => {
     expect(fmtTimecode(0)).toBe("0:00");
     expect(fmtTimecode(75)).toBe("1:15");
     expect(fmtTimecode(605)).toBe("10:05");
+  });
+});
+
+describe("vttTimestamp", () => {
+  it("форматирует время VTT", () => {
+    expect(vttTimestamp(0)).toBe("00:00:00.000");
+    expect(vttTimestamp(75.5)).toBe("00:01:15.500");
+    expect(vttTimestamp(3661.25)).toBe("01:01:01.250");
+  });
+});
+
+describe("aggregateCues", () => {
+  it("склеивает прокручивающиеся реплики в сегменты с интервалами", () => {
+    const cues = [
+      { startSec: 0, text: "Здравствуйте коллеги" },
+      { startSec: 2, text: "Здравствуйте коллеги сегодня говорим" },
+      { startSec: 4, text: "сегодня говорим о продажах" },
+    ];
+    const agg = aggregateCues(cues, { maxChars: 1000, maxDurSec: 1000 });
+    expect(agg.length).toBeGreaterThan(0);
+    const all = agg.map((c) => c.text).join(" ");
+    expect(all).toContain("Здравствуйте коллеги");
+    expect(all).toContain("о продажах");
+    // без дубля
+    expect(all.match(/Здравствуйте коллеги/g)?.length).toBe(1);
+  });
+
+  it("разбивает по maxChars", () => {
+    const cues = Array.from({ length: 10 }, (_, i) => ({ startSec: i, text: `слово${i}` }));
+    const agg = aggregateCues(cues, { maxChars: 12, maxDurSec: 1000 });
+    expect(agg.length).toBeGreaterThan(1);
+  });
+});
+
+describe("cuesToVtt", () => {
+  it("генерирует валидный VTT", () => {
+    const vtt = cuesToVtt([{ startSec: 0, endSec: 3, text: "Привет" }]);
+    expect(vtt.startsWith("WEBVTT")).toBe(true);
+    expect(vtt).toContain("00:00:00.000 --> 00:00:03.000");
+    expect(vtt).toContain("Привет");
   });
 });
