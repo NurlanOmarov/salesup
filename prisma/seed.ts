@@ -111,10 +111,26 @@ async function main() {
     }
   }
 
+  // ── Отзывы (VALIDATED — видны на лендинге) ────────────────────────────────────
+  const reviews = [
+    { userName: "Айгерим, турагент", rating: 5, text: "Симулятор клиента — это огонь. Отработала возражение «дорого» десятки раз, на реальной продаже уже не растерялась." },
+    { userName: "Данияр, мебельный салон", rating: 5, text: "AI-наставник отвечает прямо по уроку и даёт таймкод. Удобно, что можно учиться вечером с телефона." },
+    { userName: "Марат, недвижимость", rating: 4, text: "Тесты с разбором ошибок реально заходят. Сертификат добавил в профиль — клиенты стали больше доверять." },
+  ];
+  const existingReviews = await db.review.count({ where: { courseId: course.id } });
+  if (existingReviews === 0) {
+    for (const r of reviews) {
+      await db.review.create({
+        data: { courseId: course.id, autoModeration: "VALIDATED", ...r },
+      });
+    }
+  }
+
   console.log("✅ Сиды применены:");
   console.log(`   владелец:  ${owner.email} (пароль из SEED_OWNER_PASSWORD)`);
   console.log(`   ученик:    ${student.email} (mustChangePassword=true)`);
   console.log(`   курс:      ${course.slug} (DRAFT, 2 модуля, 4 урока)`);
+  console.log(`   отзывы:    ${reviews.length} (VALIDATED)`);
   console.log(`   бейджи:    ${BADGES.length}`);
 }
 

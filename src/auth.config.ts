@@ -18,7 +18,14 @@ type AppToken = {
  */
 const cookieInsecure = process.env.AUTH_COOKIE_INSECURE === "true";
 
-const PUBLIC_PREFIXES = ["/login", "/courses", "/verify", "/api/health"];
+const PUBLIC_PREFIXES = [
+  "/login",
+  "/courses",
+  "/verify",
+  "/offer",
+  "/privacy",
+  "/api/health",
+];
 const PUBLIC_EXACT = ["/"];
 
 function isPublicPath(pathname: string): boolean {
