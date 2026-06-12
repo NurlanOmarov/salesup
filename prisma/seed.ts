@@ -17,6 +17,7 @@ const STUDENT_PASSWORD = process.env.SEED_STUDENT_PASSWORD ?? "student-dev-pass-
 const BADGES = [
   { code: "first-lesson", title: "Первый урок", description: "Пройден первый урок" },
   { code: "streak-7", title: "7 дней подряд", description: "Неделя обучения без перерыва" },
+  { code: "course-complete", title: "Курс пройден", description: "Пройден весь курс и сдан итоговый экзамен" },
   { code: "first-ai-client", title: "Первая сделка с ИИ-клиентом", description: "Завершена первая симуляция продажи" },
   { code: "perfect-exam", title: "100% по итоговому тесту", description: "Идеальный результат финального экзамена" },
 ];
