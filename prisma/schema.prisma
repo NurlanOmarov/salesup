@@ -65,6 +65,7 @@ model User {
   aiUsage         AiUsageDay[]
   reviews         Review[]
   events          Event[]
+  llmUsage        LlmUsage[]
 }
 
 // Auth.js v5
@@ -722,6 +723,27 @@ model AiUsageDay {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, day])
+}
+
+// Лог каждого LLM-вызова — источник истины для учёта расходов в админке.
+// userId = null для системных/фабричных вызовов (генерация курса, переводы, критик),
+// заполнен для per-ученик операций (AI-наставник, проверка OPEN_TEXT). Стоимость
+// фиксируется при записи по тарифу (lib/ai/pricing) в microUSD (1 USD = 1e6), Int —
+// чтобы не плодить ошибки округления (как деньги в tiyn).
+model LlmUsage {
+  id           String   @id @default(cuid())
+  model        String // напр. claude-haiku-4-5, voyage-3
+  operation    String // chat | critic | translate | generate | embed | open_check | ...
+  userId       String? // null = системный/фабричный вызов
+  inputTokens  Int      @default(0)
+  outputTokens Int      @default(0)
+  costMicroUsd Int      @default(0)
+  createdAt    DateTime @default(now())
+  user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([model])
 }
 
 // Журнал «пробелов контента»: вопросы учеников, на которые RAG не нашёл ответа в материалах.

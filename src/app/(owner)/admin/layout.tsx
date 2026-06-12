@@ -30,6 +30,12 @@ export default async function AdminLayout({
             >
               Заявки
             </Link>
+            <Link
+              href="/admin/usage"
+              className="rounded-md px-3 py-1.5 text-foreground/70 transition-colors hover:bg-foreground/5 hover:text-foreground"
+            >
+              Расходы LLM
+            </Link>
           </nav>
           <LogoutButton />
         </div>
