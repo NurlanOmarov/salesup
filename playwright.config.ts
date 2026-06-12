@@ -28,6 +28,7 @@ export default defineConfig({
         "**/admin-students.spec.ts",
         "**/quiz.spec.ts",
         "**/certificate.spec.ts",
+        "**/settings.spec.ts",
       ],
     },
   ],

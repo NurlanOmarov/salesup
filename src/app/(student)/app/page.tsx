@@ -90,6 +90,12 @@ export default async function DashboardPage() {
           >
             Сертификаты
           </Link>
+          <Link
+            href="/app/settings"
+            className="text-sm font-medium text-foreground/70 transition-colors hover:text-foreground"
+          >
+            Настройки
+          </Link>
           <LogoutButton />
         </div>
       </div>
