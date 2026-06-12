@@ -4,6 +4,8 @@ import { OrderingInput, OrderingReview } from "./inputs/ordering-input";
 import { FillBlankInput, FillBlankReview } from "./inputs/fill-blank-input";
 import { MatchingInput, MatchingReview } from "./inputs/matching-input";
 import { CategorizationInput, CategorizationReview } from "./inputs/categorization-input";
+import { PracticeInput, PracticeReview } from "./inputs/practice-input";
+import { ScenarioInput, ScenarioReview } from "./inputs/scenario-input";
 
 /**
  * Реестр типов заданий (расширяемый движок). Новый тип = добавить запись сюда +
@@ -50,5 +52,16 @@ export const QUESTION_TYPES: Record<QuestionKind, QuestionTypeDef> = {
     Review: CategorizationReview,
     isAnswered: (a, q) => q.options.every((_, i) => (a[i] ?? "").length > 0),
     hint: "Распределите элементы по категориям",
+  },
+  PRACTICE: {
+    Input: PracticeInput,
+    Review: PracticeReview,
+    isAnswered: (a) => (a[0] ?? "").trim().length >= 10,
+    hint: "Выполните упражнение и сверьтесь с эталоном",
+  },
+  SCENARIO: {
+    Input: ScenarioInput,
+    Review: ScenarioReview,
+    isAnswered: (a) => a.length === 1,
   },
 };

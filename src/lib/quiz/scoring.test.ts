@@ -99,6 +99,38 @@ describe("gradeQuestion — CATEGORIZATION", () => {
   });
 });
 
+const practice: QuestionLike = { id: "qp", type: "PRACTICE", points: 1, options: [] };
+
+describe("gradeQuestion — PRACTICE", () => {
+  it("содержательный ответ → зачёт за попытку", () => {
+    expect(gradeQuestion(practice, ["Как часто к вам обращаются с этими симптомами?"]).correct).toBe(true);
+  });
+  it("пустой/слишком короткий ответ → не зачтено", () => {
+    expect(gradeQuestion(practice, [""]).correct).toBe(false);
+    expect(gradeQuestion(practice, ["ок"]).correct).toBe(false);
+  });
+});
+
+const scenario: QuestionLike = {
+  id: "qs",
+  type: "SCENARIO",
+  points: 1,
+  options: [
+    { id: "a", isCorrect: false },
+    { id: "b", isCorrect: true },
+    { id: "c", isCorrect: false },
+  ],
+};
+
+describe("gradeQuestion — SCENARIO", () => {
+  it("выбран лучший ответ → балл", () => {
+    expect(gradeQuestion(scenario, ["b"])).toEqual({ correct: true, points: 1 });
+  });
+  it("выбран неудачный ответ → 0", () => {
+    expect(gradeQuestion(scenario, ["a"]).correct).toBe(false);
+  });
+});
+
 const single: QuestionLike = {
   id: "q1",
   type: "SINGLE_CHOICE",

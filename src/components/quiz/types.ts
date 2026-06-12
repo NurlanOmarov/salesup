@@ -14,7 +14,9 @@ export type QuestionKind =
   | "ORDERING"
   | "FILL_BLANK"
   | "MATCHING"
-  | "CATEGORIZATION";
+  | "CATEGORIZATION"
+  | "PRACTICE"
+  | "SCENARIO";
 
 export interface QuizOption {
   id: string;
