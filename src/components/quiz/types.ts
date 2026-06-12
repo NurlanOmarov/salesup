@@ -12,7 +12,9 @@ export type QuestionKind =
   | "MULTI_CHOICE"
   | "TRUE_FALSE"
   | "ORDERING"
-  | "FILL_BLANK";
+  | "FILL_BLANK"
+  | "MATCHING"
+  | "CATEGORIZATION";
 
 export interface QuizOption {
   id: string;
@@ -23,7 +25,9 @@ export interface RunnerQuestion {
   id: string;
   type: QuestionKind;
   text: string;
-  options: QuizOption[]; // для FILL_BLANK — пропуски по порядку (text = подсказка/плейсхолдер)
+  options: QuizOption[]; // FILL_BLANK — пропуски; MATCHING/CATEGORIZATION — левые элементы (по порядку)
+  // MATCHING — перемешанные правые элементы; CATEGORIZATION — список категорий
+  choices?: string[];
 }
 
 /** Разбор одного вопроса после сдачи (правильные ответы приходят только теперь). */
@@ -33,6 +37,7 @@ export interface QuestionReview {
   explanation: string | null;
   correctOptionIds: string[]; // для ORDERING — id в правильном порядке; для FILL_BLANK — пусто
   correctTexts?: string[]; // FILL_BLANK: эталонные ответы по порядку
+  correctPairs?: { left: string; right: string }[]; // MATCHING/CATEGORIZATION: правильные соответствия
 }
 
 export interface InputProps {

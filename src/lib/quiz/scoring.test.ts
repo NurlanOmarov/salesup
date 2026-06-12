@@ -58,6 +58,47 @@ describe("normalizeAnswer", () => {
   });
 });
 
+const matching: QuestionLike = {
+  id: "qm",
+  type: "MATCHING",
+  points: 2,
+  options: [
+    { id: "a", isCorrect: true, sortOrder: 0, text: "Язык пользы", pairKey: "меньше риск инсульта" },
+    { id: "b", isCorrect: true, sortOrder: 1, text: "Визуализация", pairKey: "графики и таблицы" },
+  ],
+};
+
+const categorization: QuestionLike = {
+  id: "qc",
+  type: "CATEGORIZATION",
+  points: 2,
+  options: [
+    { id: "a", isCorrect: true, sortOrder: 0, text: "Подводи к действию", pairKey: "Делай" },
+    { id: "b", isCorrect: true, sortOrder: 1, text: "Спрашивай в лоб", pairKey: "Не делай" },
+  ],
+};
+
+describe("gradeQuestion — MATCHING", () => {
+  it("все пары верны → балл", () => {
+    expect(gradeQuestion(matching, ["меньше риск инсульта", "графики и таблицы"])).toEqual({ correct: true, points: 2 });
+  });
+  it("одна пара неверна → 0", () => {
+    expect(gradeQuestion(matching, ["графики и таблицы", "меньше риск инсульта"]).correct).toBe(false);
+  });
+  it("нормализация (регистр/пунктуация)", () => {
+    expect(gradeQuestion(matching, ["Меньше риск инсульта!", "Графики и таблицы"]).correct).toBe(true);
+  });
+});
+
+describe("gradeQuestion — CATEGORIZATION", () => {
+  it("все категории верны → балл", () => {
+    expect(gradeQuestion(categorization, ["Делай", "Не делай"])).toEqual({ correct: true, points: 2 });
+  });
+  it("перепутаны категории → 0", () => {
+    expect(gradeQuestion(categorization, ["Не делай", "Делай"]).correct).toBe(false);
+  });
+});
+
 const single: QuestionLike = {
   id: "q1",
   type: "SINGLE_CHOICE",

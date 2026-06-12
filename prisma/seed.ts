@@ -475,10 +475,11 @@ async function upsertCourse(spec: CourseSpec) {
 // Для ORDERING варианты заданы в правильном порядке (sortOrder = индекс), на клиенте
 // перемешиваются. Для FILL_BLANK options.text — эталонные ответы по порядку пропусков.
 type SeedQuestion = {
-  type: "SINGLE_CHOICE" | "MULTI_CHOICE" | "TRUE_FALSE" | "ORDERING" | "FILL_BLANK";
+  type: "SINGLE_CHOICE" | "MULTI_CHOICE" | "TRUE_FALSE" | "ORDERING" | "FILL_BLANK" | "MATCHING" | "CATEGORIZATION";
   text: string;
   explanation: string;
-  options: { text: string; correct: boolean }[];
+  // MATCHING — text=левый, pairKey=правый; CATEGORIZATION — text=элемент, pairKey=категория
+  options: { text: string; correct: boolean; pairKey?: string }[];
 };
 
 const PHARMA_EXAM: SeedQuestion[] = [
@@ -501,6 +502,28 @@ const PHARMA_EXAM: SeedQuestion[] = [
       { text: "факт", correct: true },
       { text: "выгода", correct: true },
       { text: "согласие", correct: true },
+    ],
+  },
+  {
+    type: "MATCHING",
+    text: "Сопоставьте технику убеждения с её сутью.",
+    explanation: "5 техник убеждения: «боль—решение—результат», язык пользы, визуализация, УТП, сравнение с аналогами.",
+    options: [
+      { text: "Язык пользы", correct: true, pairKey: "меньше риск инсульта вместо «−10 мм рт. ст.»" },
+      { text: "Визуализация", correct: true, pairKey: "графики, таблицы, упаковки" },
+      { text: "Сравнение с аналогами", correct: true, pairKey: "корректно: «меньше побочных, проще режим»" },
+      { text: "УТП", correct: true, pairKey: "чем препарат лучше конкурентов и как подтверждено" },
+    ],
+  },
+  {
+    type: "CATEGORIZATION",
+    text: "Распределите действия медпреда по «золотым правилам»: что делать, а что — нет.",
+    explanation: "Делай: подводи к действию без давления, упоминай других врачей, фиксируй мостик. Не делай: спрашивать в лоб про назначение, спорить агрессивно, уходить без следующего шага.",
+    options: [
+      { text: "Подводить к действию, не давить", correct: true, pairKey: "Делай" },
+      { text: "Упоминать других врачей с данными", correct: true, pairKey: "Делай" },
+      { text: "Спрашивать в лоб «будете назначать?»", correct: true, pairKey: "Не делай" },
+      { text: "Спорить и переубеждать агрессивно", correct: true, pairKey: "Не делай" },
     ],
   },
   {
@@ -646,6 +669,7 @@ async function seedPharmaExam(courseId: string) {
             text: o.text,
             isCorrect: o.correct,
             sortOrder: oi,
+            pairKey: o.pairKey ?? null,
           })),
         },
       },

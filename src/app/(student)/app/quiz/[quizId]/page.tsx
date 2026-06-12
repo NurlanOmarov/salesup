@@ -38,13 +38,15 @@ export default async function QuizPage({
         where: { validation: "VALIDATED" },
         orderBy: { sortOrder: "asc" },
         // ВАЖНО: isCorrect НЕ выбираем — правильные ответы не уходят на клиент.
+        // pairKey берём только для формирования перемешанных вариантов (choices),
+        // привязку left→right клиенту не раскрываем.
         select: {
           id: true,
           type: true,
           text: true,
           options: {
             orderBy: { sortOrder: "asc" },
-            select: { id: true, text: true },
+            select: { id: true, text: true, pairKey: true },
           },
         },
       },
@@ -67,15 +69,23 @@ export default async function QuizPage({
     quiz.maxAttempts != null ? Math.max(0, quiz.maxAttempts - attempts.length) : null;
 
   const questions: RunnerQuestion[] = quiz.questions.map((q) => {
-    // Для ORDERING перемешиваем варианты — правильный порядок не должен быть виден.
-    const options =
+    // ORDERING — перемешиваем варианты (правильный порядок скрыт).
+    const ordered =
       q.type === "ORDERING" ? [...q.options].sort(() => Math.random() - 0.5) : q.options;
-    return {
-      id: q.id,
-      type: q.type as RunnerQuestion["type"],
-      text: q.text,
-      options,
-    };
+    const options = ordered.map((o) => ({ id: o.id, text: o.text }));
+
+    // MATCHING — перемешанные правые элементы; CATEGORIZATION — уникальные категории.
+    let choices: string[] | undefined;
+    if (q.type === "MATCHING") {
+      choices = q.options
+        .map((o) => o.pairKey ?? "")
+        .filter(Boolean)
+        .sort(() => Math.random() - 0.5);
+    } else if (q.type === "CATEGORIZATION") {
+      choices = [...new Set(q.options.map((o) => o.pairKey ?? "").filter(Boolean))];
+    }
+
+    return { id: q.id, type: q.type as RunnerQuestion["type"], text: q.text, options, choices };
   });
 
   return (

@@ -42,7 +42,7 @@ export const submitQuizAttempt = safeAction(
             type: true,
             points: true,
             explanation: true,
-            options: { select: { id: true, isCorrect: true, text: true, sortOrder: true } },
+            options: { select: { id: true, isCorrect: true, text: true, sortOrder: true, pairKey: true } },
           },
         },
       },
@@ -66,7 +66,7 @@ export const submitQuizAttempt = safeAction(
       id: q.id,
       type: q.type as GradableType,
       points: q.points,
-      options: q.options.map((o) => ({ id: o.id, isCorrect: o.isCorrect, sortOrder: o.sortOrder, text: o.text })),
+      options: q.options.map((o) => ({ id: o.id, isCorrect: o.isCorrect, sortOrder: o.sortOrder, text: o.text, pairKey: o.pairKey })),
     }));
     const result = scoreAttempt(gradable, answers, quiz.passScore);
 
@@ -115,12 +115,17 @@ export const submitQuizAttempt = safeAction(
           ? sorted.map((o) => o.id)
           : q.options.filter((o) => o.isCorrect).map((o) => o.id);
       const correctTexts = q.type === "FILL_BLANK" ? sorted.map((o) => o.text) : undefined;
+      const correctPairs =
+        q.type === "MATCHING" || q.type === "CATEGORIZATION"
+          ? sorted.map((o) => ({ left: o.text, right: o.pairKey ?? "" }))
+          : undefined;
       return {
         questionId: q.id,
         correct: result.perQuestion.find((p) => p.questionId === q.id)?.correct ?? false,
         explanation: q.explanation,
         correctOptionIds,
         correctTexts,
+        correctPairs,
       };
     });
 
