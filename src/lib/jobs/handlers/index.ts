@@ -29,9 +29,16 @@ export const handlers: Record<string, JobHandler> = {
     log.info({ to, subject }, "email.send: отправка (заглушка)");
   },
 
-  // Еженедельный дайджест владельцу (S6.2) — полноценная сборка данных позже.
+  // Еженедельный дайджест владельцу (S6.2): собираем сводку, при EMAIL_ENABLED
+  // отправляем письмо (S5.5), иначе она доступна на странице /admin/digest.
   "digest.weekly": async () => {
-    log.info("digest.weekly: формирование дайджеста (заглушка до S6.2)");
+    const { buildDigest } = await import("@/lib/digest/build.js");
+    const d = await buildDigest(7);
+    log.info(
+      { newStudents: d.newStudents, active: d.activeStudents, certs: d.certificatesIssued, llmUsd: d.llmCostUsd },
+      "digest.weekly собран",
+    );
+    // TODO(S5.5): при env.EMAIL_ENABLED отправить владельцу письмом.
   },
 
   // Ежедневное обслуживание (диск/БД, антишаринг-эвристики) — S6.1/S6.3.
