@@ -5,6 +5,7 @@ import { safeAction } from "@/lib/safe-action";
 import { db } from "@/lib/db";
 import { canAccessCourse } from "@/lib/access";
 import { scoreAttempt, type QuestionLike, type GradableType } from "@/lib/quiz/scoring";
+import { issueCertificateIfEligible } from "@/lib/certificates/issue";
 
 /**
  * Приём и оценка попытки теста (S4.1). Правильные ответы НЕ покидают сервер до сдачи:
@@ -27,6 +28,8 @@ export const submitQuizAttempt = safeAction(
       where: { id: quizId },
       select: {
         id: true,
+        kind: true,
+        courseId: true,
         passScore: true,
         maxAttempts: true,
         status: true,
@@ -91,6 +94,18 @@ export const submitQuizAttempt = safeAction(
       select: { id: true },
     });
 
+    // Сдан итоговый экзамен → пробуем выдать сертификат (идемпотентно).
+    // Ошибки генерации PDF не должны ронять ответ: тест уже зачтён.
+    let certificateIssued = false;
+    if (result.passed && quiz.kind === "FINAL_EXAM" && quiz.courseId) {
+      try {
+        const r = await issueCertificateIfEligible(userId, quiz.courseId);
+        certificateIssued = r.issued;
+      } catch (e) {
+        console.error("Не удалось выдать сертификат:", e);
+      }
+    }
+
     // Разбор для показа после сдачи (правильные ответы раскрываются только теперь)
     const review = quiz.questions.map((q) => ({
       questionId: q.id,
@@ -104,6 +119,7 @@ export const submitQuizAttempt = safeAction(
       scorePct: result.scorePct,
       passed: result.passed,
       passScore: quiz.passScore,
+      certificateIssued,
       review,
     };
   },

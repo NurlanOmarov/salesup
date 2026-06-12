@@ -27,6 +27,7 @@ export default defineConfig({
         "**/video-access.spec.ts",
         "**/admin-students.spec.ts",
         "**/quiz.spec.ts",
+        "**/certificate.spec.ts",
       ],
     },
   ],

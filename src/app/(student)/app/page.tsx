@@ -83,7 +83,15 @@ export default async function DashboardPage() {
             Здравствуйте, {session.user.name ?? session.user.email}
           </p>
         </div>
-        <LogoutButton />
+        <div className="flex items-center gap-3">
+          <Link
+            href="/app/certificates"
+            className="text-sm font-medium text-foreground/70 transition-colors hover:text-foreground"
+          >
+            Сертификаты
+          </Link>
+          <LogoutButton />
+        </div>
       </div>
 
       {courses.length === 0 ? (
