@@ -28,7 +28,6 @@ test.describe.configure({ mode: "serial" });
 test.use({ extraHTTPHeaders: { "x-forwarded-for": "10.99.0.7" } });
 
 test.beforeAll(async () => {
-  await db.loginAttempt.deleteMany({});
   await db.user.deleteMany({ where: { email: STUDENT_EMAIL } });
   await db.user.create({
     data: {
