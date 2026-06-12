@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle2, XCircle, ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
+import Link from "next/link";
+import { CheckCircle2, XCircle, ChevronLeft, ChevronRight, RotateCcw, Award } from "lucide-react";
 import { submitQuizAttempt } from "./actions";
 import { Button } from "@/components/ui/button";
 
@@ -24,6 +25,7 @@ interface Result {
   scorePct: number;
   passed: boolean;
   passScore: number;
+  certificateIssued: boolean;
   review: ReviewItem[];
 }
 
@@ -95,6 +97,16 @@ export function QuizRunner({
             Правильных ответов: {correctCount} из {result.review.length} · проходной {result.passScore}%
           </p>
         </motion.div>
+
+        {result.certificateIssued ? (
+          <Link
+            href="/app/certificates"
+            className="mt-4 flex items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3 font-semibold text-amber-800 transition-colors hover:bg-amber-500/10"
+          >
+            <Award className="size-5" />
+            Сертификат сформирован — открыть
+          </Link>
+        ) : null}
 
         {/* Разбор */}
         <div className="mt-6 space-y-3">
