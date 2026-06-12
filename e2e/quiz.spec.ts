@@ -62,26 +62,36 @@ test("правильные ответы не присутствуют в раз�
   expect(html).not.toContain("correctOptionIds");
 });
 
-test("провал по порогу → «Тест не сдан» и доступна пересдача", async ({ page }) => {
+test("провал по порогу → «Почти получилось» и доступна пересдача", async ({ page }) => {
   await login(page);
   await page.goto(`/app/quiz/${examId}`);
 
-  // Выбираем первый вариант на каждом вопросе (заведомо в основном неверно).
-  // 6 вопросов: проходим по одному.
-  for (let i = 0; i < 6; i++) {
-    await page.locator('label').first().click();
-    const next = page.getByRole("button", { name: "Далее" });
-    if (await next.isVisible()) {
-      await next.click();
-    } else {
-      await page.getByRole("button", { name: "Завершить тест" }).click();
+  const total = await db.question.count({ where: { quizId: examId, validation: "VALIDATED" } });
+
+  // Универсальный проход по всем типам заданий заведомо неверными ответами:
+  // FILL_BLANK — мусор в инпуты; choice — первый вариант; ORDERING — порядок как есть.
+  for (let i = 0; i < total; i++) {
+    await page.waitForTimeout(300); // дать AnimatePresence завершить переход
+    const inputs = page.locator('input[type="text"], input:not([type])');
+    const options = page.locator("[data-quiz-option]");
+    if ((await inputs.count()) > 0) {
+      const n = await inputs.count();
+      for (let k = 0; k < n; k++) await inputs.nth(k).fill("неверно");
+    } else if ((await options.count()) > 0) {
+      await options.first().click(); // choice: первый вариант (в основном неверный)
     }
+    // ORDERING: порядок уже задан, ответ заполнен автоматически — просто идём дальше.
+    const finish = page.getByRole("button", { name: "Завершить" });
+    if (await finish.isVisible().catch(() => false)) {
+      await finish.click();
+      break;
+    }
+    await page.getByRole("button", { name: "Далее" }).click();
   }
 
-  await expect(page.getByText("Тест не сдан")).toBeVisible();
+  await expect(page.getByText("Почти получилось")).toBeVisible();
   await expect(page.getByRole("button", { name: "Пройти заново" })).toBeVisible();
 
-  // В БД зафиксирована попытка со статусом FAILED.
   const attempt = await db.quizAttempt.findFirst({
     where: { quizId: examId, user: { email: EMAIL } },
     orderBy: { finishedAt: "desc" },

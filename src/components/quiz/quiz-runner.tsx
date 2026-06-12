@@ -41,7 +41,14 @@ export function QuizRunner({
   xpPerQuestion = 10,
 }: QuizRunnerProps) {
   const [idx, setIdx] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, string[]>>({});
+  // ORDERING предзаполняем начальным порядком — ответ есть сразу (можно идти дальше).
+  const [answers, setAnswers] = useState<Record<string, string[]>>(() => {
+    const init: Record<string, string[]> = {};
+    for (const q of questions) {
+      if (q.type === "ORDERING") init[q.id] = q.options.map((o) => o.id);
+    }
+    return init;
+  });
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Result | null>(null);
