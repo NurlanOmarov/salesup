@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, LayoutGrid } from "lucide-react";
+import { ChevronLeft, ChevronRight, LayoutGrid, CheckCircle2 } from "lucide-react";
 import { requireUser } from "@/lib/auth/guards";
 import { db } from "@/lib/db";
 import { canAccessLesson } from "@/lib/access";
-import { SecurePlayer } from "@/components/player/secure-player";
+import { LessonTabs } from "@/components/learn/lesson-tabs";
 import { LessonSidebar, type SidebarModule } from "@/components/learn/lesson-sidebar";
 
 export const metadata: Metadata = {
@@ -54,8 +54,23 @@ export default async function LearnPage({
 
   const lessonPos = await db.lessonProgress.findUnique({
     where: { userId_lessonId: { userId, lessonId } },
-    select: { lastPositionSec: true },
+    select: { lastPositionSec: true, completedAt: true },
   });
+
+  // Конспект (AiArtifact SUMMARY) и транскрипт урока.
+  const [summaryArtifact, transcript] = await Promise.all([
+    db.aiArtifact.findUnique({
+      where: { lessonId_type: { lessonId, type: "SUMMARY" } },
+      select: { content: true, validation: true },
+    }),
+    db.transcript.findUnique({
+      where: { lessonId },
+      select: { cleanText: true, status: true },
+    }),
+  ]);
+  const summary = summaryArtifact?.validation === "VALIDATED" ? summaryArtifact.content : null;
+  const transcriptText =
+    transcript && transcript.status === "CLEANED" ? transcript.cleanText : null;
 
   // Оглавление + плоский порядок доступных уроков для prev/next.
   const flat: { id: string; title: string }[] = [];
@@ -101,20 +116,25 @@ export default async function LearnPage({
 
       {/* Урок */}
       <main className="min-w-0">
-        <h1 className="text-xl font-bold sm:text-2xl">{current.title}</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-xl font-bold sm:text-2xl">{current.title}</h1>
+          {lessonPos?.completedAt ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-700">
+              <CheckCircle2 className="size-3.5" />
+              Пройден
+            </span>
+          ) : null}
+        </div>
 
         <div className="mt-4">
-          {current.videoStatus === "READY" ? (
-            <SecurePlayer
-              lessonId={lessonId}
-              watermark={session.user.email ?? userId}
-              startPositionSec={lessonPos?.lastPositionSec ?? 0}
-            />
-          ) : (
-            <div className="flex aspect-video items-center justify-center rounded-2xl border border-foreground/10 bg-foreground/[0.03] text-foreground/50">
-              Видео готовится — загляните позже.
-            </div>
-          )}
+          <LessonTabs
+            lessonId={lessonId}
+            videoReady={current.videoStatus === "READY"}
+            watermark={session.user.email ?? userId}
+            startPositionSec={lessonPos?.lastPositionSec ?? 0}
+            summary={summary}
+            transcript={transcriptText}
+          />
         </div>
 
         {/* Навигация prev/next */}

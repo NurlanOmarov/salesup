@@ -63,11 +63,12 @@ async function loadLesson(lessonId: string): Promise<LessonRow> {
   };
 }
 
-/** Скачать исходник YouTube в mp4 (yt-dlp). */
-async function downloadSource(url: string, dest: string): Promise<void> {
+/** Скачать исходник YouTube в mp4 (yt-dlp). cookies — браузер для age-restricted. */
+async function downloadSource(url: string, dest: string, cookies?: string): Promise<void> {
   await run(
     "yt-dlp",
     [
+      ...(cookies ? ["--cookies-from-browser", cookies] : []),
       "-f", "bv*[height<=1080]+ba/b[height<=1080]/b",
       "--merge-output-format", "mp4",
       "--no-playlist",
@@ -95,7 +96,7 @@ async function uploadHls(localDir: string, prefix: string): Promise<void> {
 
 async function processLesson(
   lesson: LessonRow,
-  opts: { url: string; segmentSec: number; keep: boolean; force: boolean },
+  opts: { url: string; segmentSec: number; keep: boolean; force: boolean; cookies?: string },
 ): Promise<{ sizeBytes: number; durationSec: number; qualities: string[] }> {
   if (lesson.videoStatus === "READY" && !opts.force) {
     log.warn(`Урок «${lesson.title}» уже READY — пропуск (--force для перекодирования)`);
@@ -111,7 +112,7 @@ async function processLesson(
     // 1. Скачать исходник
     log.step(`Скачиваю исходник: ${c.dim(opts.url)}`);
     const source = join(workDir, "source.mp4");
-    await downloadSource(opts.url, source);
+    await downloadSource(opts.url, source, opts.cookies);
 
     // 2. Зондировать
     const [height, durationSec] = await Promise.all([
@@ -184,6 +185,7 @@ async function main() {
   const segmentSec = Number(args.options.segment ?? SEGMENT_DEFAULT);
   const keep = args.options.keep === true;
   const force = args.options.force === true;
+  const cookies = typeof args.options.cookies === "string" ? args.options.cookies : undefined;
 
   await requireBinary("yt-dlp", "Установите: brew install yt-dlp");
   await requireBinary("ffmpeg", "Установите: brew install ffmpeg");
@@ -221,7 +223,7 @@ async function main() {
       console.log(`\n${c.bold(`[${i + 1}/${lessons.length}]`)} ${l.title}`);
       try {
         const lesson = await loadLesson(l.id);
-        const r = await processLesson(lesson, { url: l.youtubeUrl!, segmentSec, keep, force });
+        const r = await processLesson(lesson, { url: l.youtubeUrl!, segmentSec, keep, force, cookies });
         totalBytes += r.sizeBytes;
         totalSec += r.durationSec;
         if (r.qualities.length) processed++;
@@ -237,7 +239,7 @@ async function main() {
     const url = args.positionals[0];
     if (!url) throw new Error("Не задан URL видео (первый позиционный аргумент)");
     const lesson = await loadLesson(lessonId);
-    const r = await processLesson(lesson, { url, segmentSec, keep, force });
+    const r = await processLesson(lesson, { url, segmentSec, keep, force, cookies });
     totalBytes += r.sizeBytes;
     totalSec += r.durationSec;
     if (r.qualities.length) processed++;

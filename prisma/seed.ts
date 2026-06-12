@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { hashPassword } from "../src/lib/auth/password.js";
+import { PHARMA_SUMMARIES } from "./seed-data/pharma-summaries.js";
 
 /**
  * Сиды для локальной разработки (BACKLOG P0.3).
@@ -470,15 +471,38 @@ async function upsertCourse(spec: CourseSpec) {
   return course;
 }
 
-// ── Финальный экзамен медпред-курса (демо; в проде генерирует фабрика S3.3) ──
+// ── Финальный экзамен медпред-курса (вопросы по реальному содержанию видео) ──
+// Для ORDERING варианты заданы в правильном порядке (sortOrder = индекс), на клиенте
+// перемешиваются. Для FILL_BLANK options.text — эталонные ответы по порядку пропусков.
 type SeedQuestion = {
-  type: "SINGLE_CHOICE" | "MULTI_CHOICE" | "TRUE_FALSE";
+  type: "SINGLE_CHOICE" | "MULTI_CHOICE" | "TRUE_FALSE" | "ORDERING" | "FILL_BLANK";
   text: string;
   explanation: string;
   options: { text: string; correct: boolean }[];
 };
 
 const PHARMA_EXAM: SeedQuestion[] = [
+  {
+    type: "ORDERING",
+    text: "Расставьте типы вопросов методики СПИН в правильном порядке — от первого к последнему.",
+    explanation: "Последовательность СПИН: сначала узнаём ситуацию, затем выявляем проблемы, усиливаем их важность и подводим к решению.",
+    options: [
+      { text: "Ситуационные", correct: true },
+      { text: "Проблемные", correct: true },
+      { text: "Извлекающие", correct: true },
+      { text: "Направляющие", correct: true },
+    ],
+  },
+  {
+    type: "FILL_BLANK",
+    text: "Презентация препарата строится на трёх моментах. Впишите их по порядку (по одному слову).",
+    explanation: "«Презентация основывается на трёх моментах: факт, выгода, согласие».",
+    options: [
+      { text: "факт", correct: true },
+      { text: "выгода", correct: true },
+      { text: "согласие", correct: true },
+    ],
+  },
   {
     type: "SINGLE_CHOICE",
     text: "Какие три типа вопросов для выявления потребностей называет тренер в начале курса?",
@@ -629,6 +653,23 @@ async function seedPharmaExam(courseId: string) {
   }
 }
 
+/** Конспекты уроков (AiArtifact SUMMARY) по реальному содержанию видео. */
+async function seedPharmaSummaries(courseId: string) {
+  const lessons = await db.lesson.findMany({
+    where: { module: { courseId } },
+    select: { id: true, title: true },
+  });
+  for (const ls of PHARMA_SUMMARIES) {
+    const lesson = lessons.find((l) => l.title.includes(ls.titleMatch));
+    if (!lesson) continue;
+    await db.aiArtifact.upsert({
+      where: { lessonId_type: { lessonId: lesson.id, type: "SUMMARY" } },
+      create: { lessonId: lesson.id, type: "SUMMARY", content: ls.summary, validation: "VALIDATED", criticScore: 100 },
+      update: { content: ls.summary, validation: "VALIDATED" },
+    });
+  }
+}
+
 async function main() {
   const owner = await db.user.upsert({
     where: { email: OWNER_EMAIL },
@@ -666,8 +707,22 @@ async function main() {
     courses.push(await upsertCourse(spec));
   }
 
-  // Финальный экзамен медпред-курса (демо-вопросы; в проде — фабрика S3.3)
+  // Медпред-курс собран полностью: публикуем все уроки, конспекты, экзамен.
   const pharmaCourse = courses.find((c) => c.slug === "sales-pharma")!;
+  await db.lesson.updateMany({
+    where: { module: { courseId: pharmaCourse.id }, videoStatus: "READY" },
+    data: { status: "PUBLISHED" },
+  });
+  // Первый урок — бесплатное превью
+  const firstLesson = await db.lesson.findFirst({
+    where: { module: { courseId: pharmaCourse.id } },
+    orderBy: [{ module: { sortOrder: "asc" } }, { sortOrder: "asc" }],
+    select: { id: true },
+  });
+  if (firstLesson) {
+    await db.lesson.update({ where: { id: firstLesson.id }, data: { isFreePreview: true } });
+  }
+  await seedPharmaSummaries(pharmaCourse.id);
   await seedPharmaExam(pharmaCourse.id);
 
   // Отзывы для курса медпреда (VALIDATED — видны на лендинге)
