@@ -62,7 +62,7 @@ export async function loginAction(
   // (middleware остаётся как защита для прямых заходов.)
   const user = await db.user.findUnique({
     where: { email },
-    select: { id: true, mustChangePassword: true },
+    select: { id: true, role: true, mustChangePassword: true },
   });
 
   // Антишаринг (S6.1): фиксируем устройство для выявления раздачи аккаунта.
@@ -77,6 +77,11 @@ export async function loginAction(
 
   if (user?.mustChangePassword) redirect("/change-password");
 
+  // Назначение по роли: владелец → консоль, ученик → кабинет (или callbackUrl).
+  if (user?.role === "OWNER") {
+    const ownerDest = callbackUrl && callbackUrl.startsWith("/admin") ? callbackUrl : "/admin";
+    redirect(ownerDest);
+  }
   const dest = callbackUrl && callbackUrl.startsWith("/") ? callbackUrl : "/app";
   redirect(dest);
 }

@@ -98,11 +98,13 @@ export const authConfig = {
 
       // статика и публичные страницы — всегда
       if (isPublicPath(pathname)) {
-        // залогиненного со страницы /login уводим в кабинет
+        // залогиненного со страницы /login уводим по назначению (роль учитывается)
         if (isLoggedIn && pathname === "/login") {
           const dest = auth!.user.mustChangePassword
             ? "/change-password"
-            : "/app";
+            : auth!.user.role === "OWNER"
+              ? "/admin"
+              : "/app";
           return NextResponse.redirect(new URL(dest, request.nextUrl));
         }
         return true;
