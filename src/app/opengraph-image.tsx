@@ -59,7 +59,7 @@ export default function OgImage() {
           AI Sales Training
         </div>
         <div style={{ marginTop: 24, color: "rgba(255,255,255,0.65)" }}>
-          Vitaly Dubovik · ACTIVE SALES · Astana · Almaty
+          Video courses + AI client simulator · Astana · Almaty
         </div>
         <div
           style={{

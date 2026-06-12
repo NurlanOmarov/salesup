@@ -251,11 +251,11 @@ export default async function LandingPage() {
           </div>
         </div>
 
-        {/* Полоса клиентов (реальные клиенты ACTIVE SALES) */}
+        {/* Полоса доверия: компании, где обучал тренер (не клиенты платформы) */}
         <Reveal delay={0.1}>
           <div className="mt-14 border-t border-foreground/10 pt-8">
             <p className="text-center text-sm font-medium uppercase tracking-wider text-foreground/40">
-              Среди клиентов агентства
+              Тренер обучал команды компаний
             </p>
             <div className="mt-5 flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
               {clients.map((c) => (
