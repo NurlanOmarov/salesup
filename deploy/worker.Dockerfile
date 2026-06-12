@@ -9,5 +9,5 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 RUN pnpm prisma generate
 ENV NODE_ENV=production
-# Точка входа воркера появится в S5.4 (src/worker/index.ts)
-CMD ["pnpm", "tsx", "src/worker/index.ts"]
+# Точка входа воркера (S5.4): цикл обработки Job + node-cron расписания.
+CMD ["pnpm", "tsx", "scripts/worker.ts"]
