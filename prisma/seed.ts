@@ -470,6 +470,122 @@ async function upsertCourse(spec: CourseSpec) {
   return course;
 }
 
+// ── Финальный экзамен медпред-курса (демо; в проде генерирует фабрика S3.3) ──
+type SeedQuestion = {
+  type: "SINGLE_CHOICE" | "MULTI_CHOICE" | "TRUE_FALSE";
+  text: string;
+  explanation: string;
+  options: { text: string; correct: boolean }[];
+};
+
+const PHARMA_EXAM: SeedQuestion[] = [
+  {
+    type: "SINGLE_CHOICE",
+    text: "Сколько вопросов входит в базовую технику выявления потребностей клиента?",
+    explanation: "В курсе разбирается техника «7 вопросов для выявления потребностей».",
+    options: [
+      { text: "3", correct: false },
+      { text: "5", correct: false },
+      { text: "7", correct: true },
+      { text: "10", correct: false },
+    ],
+  },
+  {
+    type: "SINGLE_CHOICE",
+    text: "Что описывает методика СПИН?",
+    explanation: "СПИН — последовательность типов вопросов для формирования потребности клиента.",
+    options: [
+      { text: "Этапы оформления заказа в аптеке", correct: false },
+      { text: "Типы вопросов: ситуационные, проблемные, извлекающие, направляющие", correct: true },
+      { text: "Систему скидок для врачей", correct: false },
+      { text: "Способ расчёта бонусов медпреда", correct: false },
+    ],
+  },
+  {
+    type: "TRUE_FALSE",
+    text: "При возражении клиента «дорого» правильнее всего сразу предложить скидку.",
+    explanation: "Скидка — последний инструмент. Сначала возвращают разговор к ценности.",
+    options: [
+      { text: "Верно", correct: false },
+      { text: "Неверно", correct: true },
+    ],
+  },
+  {
+    type: "MULTI_CHOICE",
+    text: "Какие действия помогают забрать клиента у конкурента? (несколько вариантов)",
+    explanation: "В уроке «Как забрать клиента от конкурента: 7 шагов» разбираются отстройка и выявление неудовлетворённых потребностей.",
+    options: [
+      { text: "Выявить, чем клиент недоволен у текущего поставщика", correct: true },
+      { text: "Показать отличие вашего препарата (отстройка)", correct: true },
+      { text: "Сразу обесценить конкурента в глазах клиента", correct: false },
+      { text: "Предложить решение под выявленную потребность", correct: true },
+    ],
+  },
+  {
+    type: "SINGLE_CHOICE",
+    text: "Сколько «золотых правил» медицинского представителя выделяется в курсе?",
+    explanation: "Урок «3 золотых правила в работе медицинского представителя».",
+    options: [
+      { text: "1", correct: false },
+      { text: "3", correct: true },
+      { text: "5", correct: false },
+      { text: "7", correct: false },
+    ],
+  },
+  {
+    type: "SINGLE_CHOICE",
+    text: "Зачем закреплять договорённости в конце визита?",
+    explanation: "Урок «Как закрепить договорённости с клиентом»: фиксация снижает риск отката решения.",
+    options: [
+      { text: "Чтобы клиент не передумал и помнил о следующем шаге", correct: true },
+      { text: "Чтобы заполнить отчёт для руководителя", correct: false },
+      { text: "Это формальность без влияния на результат", correct: false },
+    ],
+  },
+];
+
+async function seedPharmaExam(courseId: string) {
+  const existing = await db.quiz.findFirst({
+    where: { courseId, kind: "FINAL_EXAM" },
+    select: { id: true },
+  });
+  if (existing) return;
+
+  const quiz = await db.quiz.create({
+    data: {
+      kind: "FINAL_EXAM",
+      courseId,
+      title: "Итоговый экзамен курса",
+      description: "Проверка знаний по техникам продаж для медицинских представителей.",
+      passScore: 80,
+      status: "PUBLISHED",
+    },
+  });
+
+  for (const [qi, q] of PHARMA_EXAM.entries()) {
+    await db.question.create({
+      data: {
+        quizId: quiz.id,
+        type: q.type,
+        text: q.text,
+        explanation: q.explanation,
+        points: 1,
+        sortOrder: qi,
+        origin: "MANUAL",
+        validation: "VALIDATED",
+        validatedAt: new Date(),
+        options: {
+          create: q.options.map((o, oi) => ({
+            text: o.text,
+            isCorrect: o.correct,
+            sortOrder: oi,
+          })),
+        },
+      },
+    });
+  }
+}
+
 async function main() {
   const owner = await db.user.upsert({
     where: { email: OWNER_EMAIL },
@@ -507,8 +623,11 @@ async function main() {
     courses.push(await upsertCourse(spec));
   }
 
-  // Отзывы для курса медпреда (VALIDATED — видны на лендинге)
+  // Финальный экзамен медпред-курса (демо-вопросы; в проде — фабрика S3.3)
   const pharmaCourse = courses.find((c) => c.slug === "sales-pharma")!;
+  await seedPharmaExam(pharmaCourse.id);
+
+  // Отзывы для курса медпреда (VALIDATED — видны на лендинге)
   const existingReviews = await db.review.count({ where: { courseId: pharmaCourse.id } });
   if (existingReviews === 0) {
     const reviews = [
