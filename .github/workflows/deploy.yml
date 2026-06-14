@@ -8,6 +8,12 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Деплои выполняются строго поочерёдно. Новый пуш встаёт в очередь и ждёт завершения
+# текущего, а не отменяет его — иначе можно оборвать деплой до `prisma migrate deploy`.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
 env:
   IMAGE_APP: ghcr.io/nurlanomarov/salesup-app
   IMAGE_WORKER: ghcr.io/nurlanomarov/salesup-worker
