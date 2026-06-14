@@ -151,6 +151,8 @@ enum PublishStatus {
 
 enum AccessDuration {
   LIFETIME
+  MONTHS_1
+  MONTHS_3
   MONTHS_6
   MONTHS_12
 }

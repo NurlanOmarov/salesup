@@ -8,7 +8,36 @@ import {
   resetPasswordAction,
   toggleBlockAction,
 } from "../actions";
+import { ACCESS_DURATIONS, ACCESS_DURATION_LABELS } from "@/lib/admin/enrollment";
 import { Button } from "@/components/ui/button";
+
+/** Селект периода доступа. Пустое значение = по тарифу курса. */
+function DurationSelect({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      disabled={disabled}
+      className="rounded-md border border-foreground/15 bg-background px-2 py-2 text-sm"
+      aria-label="Срок доступа"
+    >
+      <option value="">По тарифу курса</option>
+      {ACCESS_DURATIONS.map((d) => (
+        <option key={d} value={d}>
+          {ACCESS_DURATION_LABELS[d]}
+        </option>
+      ))}
+    </select>
+  );
+}
 
 interface EnrollmentView {
   courseId: string;
@@ -33,6 +62,7 @@ export function EnrollmentManager({
 }) {
   const [pending, start] = useTransition();
   const [selected, setSelected] = useState("");
+  const [duration, setDuration] = useState("");
 
   return (
     <section className="rounded-2xl border border-foreground/10 bg-background p-5">
@@ -43,53 +73,17 @@ export function EnrollmentManager({
       ) : (
         <ul className="mt-3 divide-y divide-foreground/5">
           {enrollments.map((e) => (
-            <li key={e.courseId} className="flex items-center justify-between gap-3 py-2.5">
-              <div>
-                <p className="text-sm font-medium">{e.title}</p>
-                <p className="text-xs text-foreground/50">
-                  {e.status === "active" && (e.expiresAt ? `до ${e.expiresAt}` : "бессрочно")}
-                  {e.status === "revoked" && "доступ отозван"}
-                  {e.status === "expired" && "срок истёк"}
-                </p>
-              </div>
-              {e.status === "active" ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={pending}
-                  onClick={() =>
-                    start(async () => {
-                      await revokeEnrollmentAction({ userId, courseId: e.courseId });
-                    })
-                  }
-                >
-                  Отозвать
-                </Button>
-              ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={pending}
-                  onClick={() =>
-                    start(async () => {
-                      await grantEnrollmentAction({ userId, courseId: e.courseId });
-                    })
-                  }
-                >
-                  Выдать снова
-                </Button>
-              )}
-            </li>
+            <EnrollmentRow key={e.courseId} userId={userId} enrollment={e} pending={pending} start={start} />
           ))}
         </ul>
       )}
 
       {grantable.length > 0 ? (
-        <div className="mt-4 flex items-center gap-2 border-t border-foreground/10 pt-4">
+        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-foreground/10 pt-4">
           <select
             value={selected}
             onChange={(e) => setSelected(e.target.value)}
-            className="flex-1 rounded-md border border-foreground/15 bg-background px-3 py-2 text-sm"
+            className="min-w-0 flex-1 rounded-md border border-foreground/15 bg-background px-3 py-2 text-sm"
           >
             <option value="">Выберите курс для выдачи…</option>
             {grantable.map((c) => (
@@ -98,14 +92,20 @@ export function EnrollmentManager({
               </option>
             ))}
           </select>
+          <DurationSelect value={duration} onChange={setDuration} disabled={pending} />
           <Button
             variant="accent"
             size="sm"
             disabled={pending || !selected}
             onClick={() =>
               start(async () => {
-                await grantEnrollmentAction({ userId, courseId: selected });
+                await grantEnrollmentAction({
+                  userId,
+                  courseId: selected,
+                  accessDuration: duration || undefined,
+                });
                 setSelected("");
+                setDuration("");
               })
             }
           >
@@ -114,6 +114,68 @@ export function EnrollmentManager({
         </div>
       ) : null}
     </section>
+  );
+}
+
+/** Строка одного доступа: статус + отзыв (активный) или повторная выдача с выбором срока. */
+function EnrollmentRow({
+  userId,
+  enrollment: e,
+  pending,
+  start,
+}: {
+  userId: string;
+  enrollment: EnrollmentView;
+  pending: boolean;
+  start: (cb: () => Promise<void>) => void;
+}) {
+  const [duration, setDuration] = useState("");
+
+  return (
+    <li className="flex flex-wrap items-center justify-between gap-3 py-2.5">
+      <div>
+        <p className="text-sm font-medium">{e.title}</p>
+        <p className="text-xs text-foreground/50">
+          {e.status === "active" && (e.expiresAt ? `до ${e.expiresAt}` : "бессрочно")}
+          {e.status === "revoked" && "доступ отозван"}
+          {e.status === "expired" && "срок истёк"}
+        </p>
+      </div>
+      {e.status === "active" ? (
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={pending}
+          onClick={() =>
+            start(async () => {
+              await revokeEnrollmentAction({ userId, courseId: e.courseId });
+            })
+          }
+        >
+          Отозвать
+        </Button>
+      ) : (
+        <div className="flex items-center gap-2">
+          <DurationSelect value={duration} onChange={setDuration} disabled={pending} />
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={pending}
+            onClick={() =>
+              start(async () => {
+                await grantEnrollmentAction({
+                  userId,
+                  courseId: e.courseId,
+                  accessDuration: duration || undefined,
+                });
+              })
+            }
+          >
+            Выдать снова
+          </Button>
+        </div>
+      )}
+    </li>
   );
 }
 

@@ -1,8 +1,8 @@
 import type { AccessDuration } from "@prisma/client";
 
 /**
- * Расчёт даты окончания доступа по тарифу курса (S5.1). LIFETIME → бессрочно (null);
- * MONTHS_6 / MONTHS_12 → from + N месяцев. Чистая функция — юнит-тестируемая.
+ * Расчёт даты окончания доступа (S5.1). LIFETIME → бессрочно (null);
+ * MONTHS_N → from + N месяцев. Чистая функция — юнит-тестируемая.
  */
 export function computeExpiry(
   duration: AccessDuration,
@@ -11,6 +11,10 @@ export function computeExpiry(
   switch (duration) {
     case "LIFETIME":
       return null;
+    case "MONTHS_1":
+      return addMonths(from, 1);
+    case "MONTHS_3":
+      return addMonths(from, 3);
     case "MONTHS_6":
       return addMonths(from, 6);
     case "MONTHS_12":
@@ -19,6 +23,24 @@ export function computeExpiry(
       return null;
   }
 }
+
+/** Допустимые периоды доступа, которые админ выбирает при выдаче (порядок = порядок в UI). */
+export const ACCESS_DURATIONS = [
+  "MONTHS_1",
+  "MONTHS_3",
+  "MONTHS_6",
+  "MONTHS_12",
+  "LIFETIME",
+] as const satisfies readonly AccessDuration[];
+
+/** Подписи периодов для админ-интерфейса. */
+export const ACCESS_DURATION_LABELS: Record<AccessDuration, string> = {
+  MONTHS_1: "1 месяц",
+  MONTHS_3: "3 месяца",
+  MONTHS_6: "6 месяцев",
+  MONTHS_12: "1 год",
+  LIFETIME: "Бессрочно",
+};
 
 /** Прибавить календарные месяцы, корректно обрабатывая переполнение дня месяца. */
 export function addMonths(date: Date, months: number): Date {

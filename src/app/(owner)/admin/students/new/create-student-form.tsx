@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Check, Copy } from "lucide-react";
 import { createStudentAction } from "../actions";
+import { ACCESS_DURATIONS, ACCESS_DURATION_LABELS } from "@/lib/admin/enrollment";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,6 +36,7 @@ export function CreateStudentForm({
   const [created, setCreated] = useState<Created | null>(null);
   const [copied, setCopied] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [accessDuration, setAccessDuration] = useState("");
 
   const toggle = (id: string) => {
     setSelected((prev) => {
@@ -55,6 +57,7 @@ export function CreateStudentForm({
       phone: formData.get("phone"),
       industry: formData.get("industry"),
       courseIds: Array.from(selected),
+      accessDuration: accessDuration || undefined,
     });
     setPending(false);
     if (res.ok) {
@@ -169,6 +172,25 @@ export function CreateStudentForm({
                 ) : null}
               </label>
             ))}
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="accessDuration">Срок доступа</Label>
+            <select
+              id="accessDuration"
+              value={accessDuration}
+              onChange={(e) => setAccessDuration(e.target.value)}
+              className="w-full rounded-md border border-foreground/15 bg-background px-3 py-2 text-sm"
+            >
+              <option value="">По тарифу курса</option>
+              {ACCESS_DURATIONS.map((d) => (
+                <option key={d} value={d}>
+                  {ACCESS_DURATION_LABELS[d]}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-foreground/40">
+              Применяется ко всем выбранным курсам. Отсчёт — с момента создания.
+            </p>
           </div>
         </fieldset>
       ) : null}

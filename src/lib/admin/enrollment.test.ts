@@ -8,6 +8,14 @@ describe("computeExpiry", () => {
     expect(computeExpiry("LIFETIME", FROM)).toBeNull();
   });
 
+  it("MONTHS_1 → +1 месяц", () => {
+    expect(computeExpiry("MONTHS_1", FROM)?.toISOString()).toBe("2026-02-15T10:00:00.000Z");
+  });
+
+  it("MONTHS_3 → +3 месяца", () => {
+    expect(computeExpiry("MONTHS_3", FROM)?.toISOString()).toBe("2026-04-15T10:00:00.000Z");
+  });
+
   it("MONTHS_6 → +6 месяцев", () => {
     expect(computeExpiry("MONTHS_6", FROM)?.toISOString()).toBe("2026-07-15T10:00:00.000Z");
   });

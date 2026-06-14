@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 import { hashPassword } from "@/lib/auth/password";
 import { generateTempPassword } from "@/lib/auth/temp-password";
 import { writeAdminLog } from "@/lib/admin/log";
-import { computeExpiry } from "@/lib/admin/enrollment";
+import { computeExpiry, ACCESS_DURATIONS } from "@/lib/admin/enrollment";
 
 /**
  * Управление учениками и доступами (S5.1). Все действия — только OWNER (safeAction),
@@ -15,6 +15,9 @@ import { computeExpiry } from "@/lib/admin/enrollment";
  */
 
 const emailSchema = z.string().email("Введите корректный e-mail").toLowerCase();
+
+/** Период доступа, выбранный админом. Опционален — без него берётся тариф курса (accessDuration). */
+const accessDurationSchema = z.enum(ACCESS_DURATIONS).optional();
 
 /** Создать ученика и сразу выдать доступы к выбранным курсам. Возвращает временный пароль (показать один раз). */
 export const createStudentAction = safeAction(
@@ -25,10 +28,11 @@ export const createStudentAction = safeAction(
       phone: z.string().trim().optional(),
       industry: z.string().trim().optional(),
       courseIds: z.array(z.string()).default([]),
+      accessDuration: accessDurationSchema,
     }),
     auth: "owner",
   },
-  async ({ email, name, phone, industry, courseIds }, { session }) => {
+  async ({ email, name, phone, industry, courseIds, accessDuration }, { session }) => {
     const actorId = session!.user.id;
 
     const existing = await db.user.findUnique({ where: { email }, select: { id: true } });
@@ -65,7 +69,7 @@ export const createStudentAction = safeAction(
             courseId: c.id,
             source: "MANUAL",
             startsAt: now,
-            expiresAt: computeExpiry(c.accessDuration, now),
+            expiresAt: computeExpiry(accessDuration ?? c.accessDuration, now),
           },
         });
       }
@@ -74,7 +78,7 @@ export const createStudentAction = safeAction(
         actorId,
         action: "student.create",
         targetUserId: user.id,
-        meta: { email, courseIds: courses.map((c) => c.id) },
+        meta: { email, courseIds: courses.map((c) => c.id), accessDuration: accessDuration ?? null },
         tx,
       });
 
@@ -89,17 +93,23 @@ export const createStudentAction = safeAction(
 /** Выдать доступ к курсу существующему ученику. */
 export const grantEnrollmentAction = safeAction(
   {
-    schema: z.object({ userId: z.string().min(1), courseId: z.string().min(1) }),
+    schema: z.object({
+      userId: z.string().min(1),
+      courseId: z.string().min(1),
+      accessDuration: accessDurationSchema,
+    }),
     auth: "owner",
   },
-  async ({ userId, courseId }, { session }) => {
+  async ({ userId, courseId, accessDuration }, { session }) => {
     const course = await db.course.findUnique({
       where: { id: courseId },
       select: { accessDuration: true },
     });
     if (!course) throw new Error("Курс не найден");
 
+    const duration = accessDuration ?? course.accessDuration;
     const now = new Date();
+    const expiresAt = computeExpiry(duration, now);
     await db.enrollment.upsert({
       where: { userId_courseId: { userId, courseId } },
       create: {
@@ -107,13 +117,13 @@ export const grantEnrollmentAction = safeAction(
         courseId,
         source: "MANUAL",
         startsAt: now,
-        expiresAt: computeExpiry(course.accessDuration, now),
+        expiresAt,
       },
       // повторная выдача снимает прежний отзыв и продлевает от текущего момента
       update: {
         revokedAt: null,
         startsAt: now,
-        expiresAt: computeExpiry(course.accessDuration, now),
+        expiresAt,
       },
     });
 
@@ -121,7 +131,7 @@ export const grantEnrollmentAction = safeAction(
       actorId: session!.user.id,
       action: "enrollment.grant",
       targetUserId: userId,
-      meta: { courseId },
+      meta: { courseId, accessDuration: duration },
     });
 
     revalidatePath(`/admin/students/${userId}`);
