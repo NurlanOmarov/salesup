@@ -68,6 +68,36 @@ export default async function QuizPage({
     : "/app";
   const backLabel = quiz.lesson ? quiz.lesson.title : "Моё обучение";
 
+  // «Куда дальше» на экране результата: для задания урока — следующий доступный
+  // урок (или кабинет, если этот был последним); для итогового экзамена — кабинет.
+  let continueHref = "/app";
+  let continueLabel = "Моё обучение";
+  if (quiz.lesson) {
+    const courseLessons = await db.course.findUnique({
+      where: { slug: courseInfo.slug },
+      select: {
+        modules: {
+          orderBy: { sortOrder: "asc" },
+          select: {
+            lessons: {
+              orderBy: { sortOrder: "asc" },
+              select: { id: true, status: true },
+            },
+          },
+        },
+      },
+    });
+    const flat = (courseLessons?.modules ?? [])
+      .flatMap((m) => m.lessons)
+      .filter((l) => l.status === "PUBLISHED");
+    const curIdx = flat.findIndex((l) => l.id === quiz.lesson!.id);
+    const nextLesson = curIdx >= 0 ? flat[curIdx + 1] : null;
+    if (nextLesson) {
+      continueHref = `/app/learn/${courseInfo.slug}/${nextLesson.id}`;
+      continueLabel = "Следующий урок";
+    }
+  }
+
   // Прошлые попытки — лучший результат + число использованных.
   const attempts = await db.quizAttempt.findMany({
     where: { quizId, userId, status: { in: ["PASSED", "FAILED"] } },
@@ -140,6 +170,8 @@ export default async function QuizPage({
           questions={questions}
           alreadyPassed={alreadyPassed}
           attemptsLeft={attemptsLeft}
+          continueHref={continueHref}
+          continueLabel={continueLabel}
         />
       </div>
     </main>

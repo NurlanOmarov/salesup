@@ -13,17 +13,23 @@ export function ExamRunner({
   questions,
   alreadyPassed,
   attemptsLeft,
+  continueHref,
+  continueLabel,
 }: {
   quizId: string;
   questions: RunnerQuestion[];
   alreadyPassed: boolean;
   attemptsLeft: number | null;
+  continueHref: string;
+  continueLabel: string;
 }) {
   return (
     <QuizRunner
       questions={questions}
       alreadyPassed={alreadyPassed}
       attemptsLeft={attemptsLeft}
+      continueHref={continueHref}
+      continueLabel={continueLabel}
       onSubmit={async (answers) => {
         const res = await submitQuizAttempt({ quizId, answers });
         if (!res.ok) throw new Error(res.error);

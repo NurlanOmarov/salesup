@@ -31,6 +31,9 @@ export interface QuizRunnerProps {
   onSubmit: (answers: Record<string, string[]>) => Promise<Result>;
   /** XP за один правильный ответ (для анимации). */
   xpPerQuestion?: number;
+  /** Куда вести после прохождения (следующий урок / кабинет). */
+  continueHref: string;
+  continueLabel: string;
 }
 
 export function QuizRunner({
@@ -39,6 +42,8 @@ export function QuizRunner({
   attemptsLeft,
   onSubmit,
   xpPerQuestion = 10,
+  continueHref,
+  continueLabel,
 }: QuizRunnerProps) {
   const [idx, setIdx] = useState(0);
   // ORDERING предзаполняем начальным порядком — ответ есть сразу (можно идти дальше).
@@ -83,7 +88,7 @@ export function QuizRunner({
   }
 
   if (result) {
-    return <ResultScreen result={result} questions={questions} answers={answers} onReset={reset} canRetry={!noAttempts} xpPerQuestion={xpPerQuestion} />;
+    return <ResultScreen result={result} questions={questions} answers={answers} onReset={reset} canRetry={!noAttempts} xpPerQuestion={xpPerQuestion} continueHref={continueHref} continueLabel={continueLabel} />;
   }
 
   if (questions.length === 0) return <p className="text-foreground/50">В задании пока нет вопросов.</p>;
@@ -174,6 +179,8 @@ function ResultScreen({
   onReset,
   canRetry,
   xpPerQuestion,
+  continueHref,
+  continueLabel,
 }: {
   result: Result;
   questions: RunnerQuestion[];
@@ -181,6 +188,8 @@ function ResultScreen({
   onReset: () => void;
   canRetry: boolean;
   xpPerQuestion: number;
+  continueHref: string;
+  continueLabel: string;
 }) {
   const correctCount = result.review.filter((r) => r.correct).length;
   const xp = result.xpEarned ?? correctCount * xpPerQuestion;
@@ -266,12 +275,27 @@ function ResultScreen({
         })}
       </div>
 
-      {!result.passed && canRetry ? (
-        <Button onClick={onReset} variant="accent" size="lg" className="mt-6">
-          <RotateCcw className="size-4" />
-          Пройти заново
-        </Button>
-      ) : null}
+      {/* Навигация «куда дальше» */}
+      <div className="mt-6 flex flex-wrap items-center gap-3">
+        {!result.passed && canRetry ? (
+          <Button onClick={onReset} variant="accent" size="lg">
+            <RotateCcw className="size-4" />
+            Пройти заново
+          </Button>
+        ) : null}
+        <Link
+          href={continueHref}
+          className={[
+            "inline-flex items-center justify-center gap-1.5 rounded-lg px-5 text-sm font-semibold transition-colors h-11",
+            result.passed
+              ? "bg-amber-500 text-slate-950 hover:bg-amber-400"
+              : "border border-foreground/15 text-foreground/80 hover:bg-foreground/5",
+          ].join(" ")}
+        >
+          {continueLabel}
+          <ChevronRight className="size-4" />
+        </Link>
+      </div>
     </div>
   );
 }
