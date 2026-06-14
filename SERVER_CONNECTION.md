@@ -84,9 +84,9 @@ docker compose -f docker-compose.prod.yml --env-file .env \
 | `VIDEO_KEY_ENC_SECRET` | Шифрование AES-ключей HLS в БД |
 | `OWNER_EMAIL` | E-mail владельца |
 | `NEXT_PUBLIC_SITE_URL` | `http://69.197.178.118:8444` (инлайнится в клиент при сборке!) |
-| `NEXT_PUBLIC_SUPPORT_WHATSAPP` | Ссылка wa.me (публичная, инлайнится при сборке) |
-| `NEXT_PUBLIC_SUPPORT_TELEGRAM` | Ссылка t.me (публичная) |
-| `NEXT_PUBLIC_SUPPORT_PHONE` | Телефон поддержки (публичный) |
+| `NEXT_PUBLIC_SUPPORT_WHATSAPP` | `https://wa.me/77077721707` (публичная, инлайнится при сборке) |
+| `NEXT_PUBLIC_SUPPORT_TELEGRAM` | `https://t.me/salesacademy_kz` (публичная) |
+| `NEXT_PUBLIC_SUPPORT_PHONE` | `+7 707 772 17 07` (публичный) |
 
 > `GITHUB_TOKEN` для push образов в GHCR создаётся автоматически (`packages: write`) — отдельный секрет не нужен.
 
