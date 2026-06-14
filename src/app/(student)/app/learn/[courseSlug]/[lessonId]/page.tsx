@@ -6,7 +6,8 @@ import { requireUser } from "@/lib/auth/guards";
 import { db } from "@/lib/db";
 import { canAccessLesson } from "@/lib/access";
 import { LessonTabs } from "@/components/learn/lesson-tabs";
-import { LessonSidebar, type SidebarModule } from "@/components/learn/lesson-sidebar";
+import { type SidebarModule } from "@/components/learn/lesson-sidebar";
+import { CourseOutline } from "@/components/learn/course-outline";
 import { parseDeck } from "@/lib/slides";
 
 export const metadata: Metadata = {
@@ -124,7 +125,7 @@ export default async function LearnPage({
 
   return (
     <div className="mx-auto grid max-w-6xl gap-8 px-4 py-6 lg:grid-cols-[260px_1fr]">
-      {/* Сайдбар-оглавление */}
+      {/* Сайдбар-оглавление (на мобильном — свёрнутая плашка над уроком) */}
       <aside className="lg:sticky lg:top-6 lg:h-fit">
         <Link
           href="/app"
@@ -133,11 +134,12 @@ export default async function LearnPage({
           <LayoutGrid className="size-4" />
           Моё обучение
         </Link>
-        <LessonSidebar
+        <CourseOutline
           courseSlug={courseSlug}
           courseTitle={course.title}
           modules={modules}
           currentLessonId={lessonId}
+          position={{ index: idx + 1, total: flat.length }}
         />
       </aside>
 

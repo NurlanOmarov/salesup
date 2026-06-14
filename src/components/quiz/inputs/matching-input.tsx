@@ -28,12 +28,12 @@ export function MatchingInput({ question, answer, onChange }: InputProps) {
           transition={{ delay: i * 0.05 }}
           className="flex items-center gap-2 rounded-xl border border-foreground/15 bg-background p-2.5"
         >
-          <span className="flex-1 px-1.5 text-sm font-medium">{o.text}</span>
+          <span className="min-w-0 flex-1 px-1.5 text-sm font-medium">{o.text}</span>
           <ArrowRight className="size-4 shrink-0 text-foreground/30" />
           <select
             value={answer[i] ?? ""}
             onChange={(e) => set(i, e.target.value)}
-            className="flex-1 rounded-lg border border-foreground/15 bg-background px-2.5 py-2 text-sm outline-none focus:border-amber-500"
+            className="min-w-0 flex-1 truncate rounded-lg border border-foreground/15 bg-background px-2.5 py-2 text-sm outline-none focus:border-amber-500"
           >
             <option value="">— выберите —</option>
             {choices.map((c) => (
