@@ -43,6 +43,12 @@ export default async function AdminLayout({
               Дайджест
             </Link>
             <Link
+              href="/admin/certificates"
+              className="rounded-md px-3 py-1.5 text-foreground/70 transition-colors hover:bg-foreground/5 hover:text-foreground"
+            >
+              Сертификат
+            </Link>
+            <Link
               href="/admin/flags"
               className="rounded-md px-3 py-1.5 text-foreground/70 transition-colors hover:bg-foreground/5 hover:text-foreground"
             >
