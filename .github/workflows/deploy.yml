@@ -132,5 +132,8 @@ jobs:
             # Миграции — через worker-образ (в нём есть prisma CLI и prisma/migrations).
             $COMPOSE run --rm worker pnpm prisma migrate deploy
             $COMPOSE up -d
+            # app при обновлении образа получает новый IP, а nginx кеширует адрес
+            # апстрима с момента старта → перезапуск nginx пере-резолвит app (иначе 502).
+            $COMPOSE restart nginx
             docker image prune -f
             docker logout ghcr.io || true
