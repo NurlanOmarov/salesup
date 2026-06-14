@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
-import { PlayCircle, FileText, ScrollText, Bot } from "lucide-react";
+import { PlayCircle, FileText, ScrollText, Bot, Presentation } from "lucide-react";
 import { SecurePlayer, type SubtitleTrackInfo } from "@/components/player/secure-player";
 import { TutorChat } from "@/components/learn/tutor-chat";
+import { SlideDeck } from "@/components/learn/slide-deck";
+import type { SlideDeckData } from "@/lib/slides";
 
 /**
  * Вкладки урока (современный кабинет курса): Видео · Конспект · Транскрипт.
@@ -13,7 +15,7 @@ import { TutorChat } from "@/components/learn/tutor-chat";
  * воспроизведение; конспект (markdown) и транскрипт скрываются/показываются.
  */
 
-type Tab = "video" | "summary" | "transcript" | "tutor";
+type Tab = "video" | "slides" | "summary" | "transcript" | "tutor";
 
 export function LessonTabs({
   lessonId,
@@ -22,6 +24,7 @@ export function LessonTabs({
   startPositionSec,
   summary,
   transcript,
+  slides = null,
   subtitles = [],
   defaultSubtitleLang = null,
 }: {
@@ -31,6 +34,7 @@ export function LessonTabs({
   startPositionSec: number;
   summary: string | null;
   transcript: string | null;
+  slides?: SlideDeckData | null;
   subtitles?: SubtitleTrackInfo[];
   defaultSubtitleLang?: string | null;
 }) {
@@ -38,6 +42,7 @@ export function LessonTabs({
 
   const tabs: { key: Tab; label: string; icon: typeof PlayCircle; show: boolean }[] = [
     { key: "video", label: "Видео", icon: PlayCircle, show: true },
+    { key: "slides", label: "Презентация", icon: Presentation, show: !!slides },
     { key: "summary", label: "Конспект", icon: FileText, show: !!summary },
     { key: "transcript", label: "Транскрипт", icon: ScrollText, show: !!transcript },
     { key: "tutor", label: "Наставник", icon: Bot, show: true },
@@ -45,13 +50,13 @@ export function LessonTabs({
 
   return (
     <div>
-      {/* Переключатель вкладок */}
-      <div className="flex gap-1 rounded-xl bg-foreground/[0.04] p-1">
+      {/* Переключатель вкладок — на узких экранах прокручивается по горизонтали */}
+      <div className="flex gap-1 overflow-x-auto rounded-xl bg-foreground/[0.04] p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {tabs.filter((t) => t.show).map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className="relative flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors"
+            className="relative flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition-colors sm:flex-1"
           >
             {tab === t.key ? (
               <motion.span
@@ -86,6 +91,18 @@ export function LessonTabs({
       </div>
 
       <AnimatePresence mode="wait">
+        {tab === "slides" && slides ? (
+          <motion.div
+            key="slides"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="mt-4"
+          >
+            <SlideDeck deck={slides} />
+          </motion.div>
+        ) : null}
+
         {tab === "summary" && summary ? (
           <motion.div
             key="summary"

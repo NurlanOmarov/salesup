@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { hashPassword } from "../src/lib/auth/password.js";
 import { PHARMA_SUMMARIES } from "./seed-data/pharma-summaries.js";
+import { PHARMA_SLIDES } from "./seed-data/pharma-slides.js";
 import { PHARMA_LESSON_QUIZZES } from "./seed-data/pharma-lesson-quizzes.js";
 
 /**
@@ -742,6 +743,24 @@ async function seedPharmaSummaries(courseId: string) {
   }
 }
 
+/** Презентации уроков (AiArtifact SLIDES) — JSON-колоды для просмотрщика. */
+async function seedPharmaSlides(courseId: string) {
+  const lessons = await db.lesson.findMany({
+    where: { module: { courseId } },
+    select: { id: true, title: true },
+  });
+  for (const ds of PHARMA_SLIDES) {
+    const lesson = lessons.find((l) => l.title.includes(ds.titleMatch));
+    if (!lesson) continue;
+    const content = JSON.stringify(ds.deck);
+    await db.aiArtifact.upsert({
+      where: { lessonId_type: { lessonId: lesson.id, type: "SLIDES" } },
+      create: { lessonId: lesson.id, type: "SLIDES", content, validation: "VALIDATED", criticScore: 100 },
+      update: { content, validation: "VALIDATED" },
+    });
+  }
+}
+
 async function main() {
   const owner = await db.user.upsert({
     where: { email: OWNER_EMAIL },
@@ -795,6 +814,7 @@ async function main() {
     await db.lesson.update({ where: { id: firstLesson.id }, data: { isFreePreview: true } });
   }
   await seedPharmaSummaries(pharmaCourse.id);
+  await seedPharmaSlides(pharmaCourse.id);
   await seedPharmaExam(pharmaCourse.id);
   await seedPharmaLessonQuizzes(pharmaCourse.id);
 

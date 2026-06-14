@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { canAccessLesson } from "@/lib/access";
 import { LessonTabs } from "@/components/learn/lesson-tabs";
 import { LessonSidebar, type SidebarModule } from "@/components/learn/lesson-sidebar";
+import { parseDeck } from "@/lib/slides";
 
 export const metadata: Metadata = {
   title: "Урок",
@@ -57,10 +58,14 @@ export default async function LearnPage({
     select: { lastPositionSec: true, completedAt: true },
   });
 
-  // Конспект (AiArtifact SUMMARY) и транскрипт урока.
-  const [summaryArtifact, transcript] = await Promise.all([
+  // Конспект (SUMMARY), презентация (SLIDES) и транскрипт урока.
+  const [summaryArtifact, slidesArtifact, transcript] = await Promise.all([
     db.aiArtifact.findUnique({
       where: { lessonId_type: { lessonId, type: "SUMMARY" } },
+      select: { content: true, validation: true },
+    }),
+    db.aiArtifact.findUnique({
+      where: { lessonId_type: { lessonId, type: "SLIDES" } },
       select: { content: true, validation: true },
     }),
     db.transcript.findUnique({
@@ -69,6 +74,8 @@ export default async function LearnPage({
     }),
   ]);
   const summary = summaryArtifact?.validation === "VALIDATED" ? summaryArtifact.content : null;
+  const slides =
+    slidesArtifact?.validation === "VALIDATED" ? parseDeck(slidesArtifact.content) : null;
   const transcriptText =
     transcript && transcript.status === "CLEANED" ? transcript.cleanText : null;
 
@@ -154,6 +161,7 @@ export default async function LearnPage({
             startPositionSec={lessonPos?.lastPositionSec ?? 0}
             summary={summary}
             transcript={transcriptText}
+            slides={slides}
             subtitles={subtitles}
             defaultSubtitleLang={viewer?.subtitleLang ?? null}
           />

@@ -700,6 +700,7 @@ enum AiArtifactType {
   CHECKLIST
   FLASHCARDS
   BLOG_DRAFT
+  SLIDES // JSON-колода слайдов презентации урока (рендерится просмотрщиком)
 }
 
 model AiArtifact {
