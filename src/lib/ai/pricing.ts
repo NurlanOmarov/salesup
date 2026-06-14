@@ -20,8 +20,9 @@ export const MODEL_PRICES: Record<string, ModelPrice> = {
   "claude-haiku-4-5": { inPerMillion: 1.0, outPerMillion: 5.0 },
   "claude-sonnet-4-6": { inPerMillion: 3.0, outPerMillion: 15.0 },
   "claude-opus-4-8": { inPerMillion: 15.0, outPerMillion: 75.0 },
-  // Voyage embeddings (только вход)
-  "voyage-3": { inPerMillion: 0.06, outPerMillion: 0 },
+  // Embeddings (только вход)
+  "text-embedding-3-small": { inPerMillion: 0.02, outPerMillion: 0 }, // OpenAI (D-001)
+  "voyage-3": { inPerMillion: 0.06, outPerMillion: 0 }, // legacy — оставлен для исторических записей
 };
 
 /** Фоллбэк-прайс для неизвестной модели (консервативно — как Sonnet). */

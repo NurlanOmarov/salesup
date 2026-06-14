@@ -5,21 +5,18 @@ import { parseArgs } from "./lib/args.js";
 import { c, log } from "./lib/log.js";
 
 /**
- * CLI: генерация векторных эмбеддингов (Voyage voyage-3, 1024 изм. — D-001) для чанков
- * транскриптов, у которых embedding ещё не заполнен. Идемпотентно: обрабатывает только
- * NULL-эмбеддинги, поэтому безопасно перезапускать.
+ * CLI: генерация векторных эмбеддингов (OpenAI text-embedding-3-small, 1024 изм. — D-001)
+ * для чанков транскриптов. По умолчанию обрабатывает только NULL-эмбеддинги (идемпотентно).
  *
  *   pnpm factory:embed --course <slug>     # только указанный курс
  *   pnpm factory:embed --all               # все курсы
- *   --batch <n>   размер батча (по умолчанию 4 — под free tier Voyage 10K TPM)
- *   --delay <ms>  пауза между запросами (по умолчанию 21000 — под free tier 3 RPM)
+ *   --reembed     обнулить существующие эмбеддинги в скоупе и пересчитать (смена модели)
+ *   --batch <n>   размер батча (по умолчанию 64)
+ *   --delay <ms>  пауза между запросами (по умолчанию 0; лимиты OpenAI щедрые)
  *
- * Free tier Voyage без карты: 3 запроса/мин и 10K токенов/мин. Дефолты под него.
- * С привязанной картой можно ускорить: --batch 64 --delay 0.
- *
- * На сервере (worker-контейнер, ключ Voyage уже в env):
+ * На сервере (worker-контейнер, ключ OpenAI в EMBEDDINGS_API_KEY):
  *   docker compose -f docker-compose.prod.yml --env-file .env \
- *     run --rm worker pnpm tsx scripts/factory/embed.ts --course <slug>
+ *     run --rm worker pnpm tsx scripts/factory/embed.ts --course <slug> --reembed
  */
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -28,8 +25,9 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   const courseSlug = typeof args.options.course === "string" ? args.options.course : null;
   const all = args.options.all === true;
-  const batchSize = typeof args.options.batch === "string" ? Math.max(1, parseInt(args.options.batch, 10)) : 4;
-  const delayMs = typeof args.options.delay === "string" ? Math.max(0, parseInt(args.options.delay, 10)) : 21000;
+  const reembed = args.options.reembed === true;
+  const batchSize = typeof args.options.batch === "string" ? Math.max(1, parseInt(args.options.batch, 10)) : 64;
+  const delayMs = typeof args.options.delay === "string" ? Math.max(0, parseInt(args.options.delay, 10)) : 0;
 
   if (!courseSlug && !all) {
     throw new Error("Укажите --course <slug> или --all");
@@ -40,6 +38,14 @@ async function main() {
     const course = await db.course.findUnique({ where: { slug: courseSlug }, select: { id: true } });
     if (!course) throw new Error(`Курс ${courseSlug} не найден`);
     courseFilter = Prisma.sql`AND "courseId" = ${course.id}`;
+  }
+
+  // Смена модели эмбеддингов: старые векторы несопоставимы — обнуляем перед пересчётом.
+  if (reembed) {
+    const cleared = await db.$executeRaw(Prisma.sql`
+      UPDATE "TranscriptChunk" SET embedding = NULL WHERE embedding IS NOT NULL ${courseFilter}
+    `);
+    log.warn(`--reembed: обнулено эмбеддингов: ${cleared}`);
   }
 
   const rows = await db.$queryRaw<{ id: string; text: string }[]>(Prisma.sql`
@@ -54,7 +60,7 @@ async function main() {
     return;
   }
 
-  log.step(`Векторизую ${rows.length} чанков (Voyage voyage-3, батч ${batchSize}, пауза ${delayMs}мс)…`);
+  log.step(`Векторизую ${rows.length} чанков (OpenAI text-embedding-3-small, батч ${batchSize}, пауза ${delayMs}мс)…`);
 
   let done = 0;
   for (let i = 0; i < rows.length; i += batchSize) {

@@ -19,6 +19,7 @@ const serverSchema = z.object({
   AUTH_SECRET: z.string().min(16),
 
   ANTHROPIC_API_KEY: z.string().min(1),
+  // Ключ провайдера эмбеддингов. Сейчас — OpenAI (text-embedding-3-small, D-001).
   EMBEDDINGS_API_KEY: z.string().min(1),
 
   MEDIA_ROOT: z.string().min(1),
