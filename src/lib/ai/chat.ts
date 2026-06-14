@@ -1,12 +1,13 @@
 import { db } from "@/lib/db";
 import { complete } from "./anthropic.js";
 import { searchChunks } from "./rag.js";
+import { embedQuery } from "./embeddings.js";
 import { TUTOR_SYSTEM, tutorPrompt, NO_ANSWER_MARKER } from "./prompts/tutor.js";
 
 /**
  * AI-наставник (S7.1). Отвечает на вопрос ученика по материалам урока/курса:
- * RAG (полнотекстовый поиск) → Haiku генерация строго из контекста. При отсутствии
- * релевантного контекста — честный ответ + запись ContentGap (дайджест владельцу).
+ * гибридный RAG (полнотекст + векторы Voyage) → Haiku генерация строго из контекста.
+ * При отсутствии релевантного контекста — честный ответ + запись ContentGap (дайджест).
  * Лимит сообщений в день (AiUsageDay) защищает от перерасхода.
  */
 
@@ -44,10 +45,14 @@ export async function askTutor(
     return { answer: "Дневной лимит вопросов исчерпан. Возвращайтесь завтра.", sources: [], limited: true, remaining: 0 };
   }
 
+  // Эмбеддинг запроса считаем один раз и переиспользуем для обоих скоупов
+  // (мягко: при недоступности Voyage → null, RAG деградирует до полнотекста).
+  const queryEmbedding = await embedQuery(message);
+
   // RAG: сначала в рамках урока, при недостатке — по всему курсу.
-  let chunks = await searchChunks(message, { courseIds: [courseId], lessonId }, 5);
+  let chunks = await searchChunks(message, { courseIds: [courseId], lessonId }, 5, { queryEmbedding });
   if (chunks.length < 2) {
-    chunks = await searchChunks(message, { courseIds: [courseId] }, 6);
+    chunks = await searchChunks(message, { courseIds: [courseId] }, 6, { queryEmbedding });
   }
 
   if (chunks.length === 0) {
