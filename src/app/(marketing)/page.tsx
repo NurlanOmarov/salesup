@@ -5,7 +5,7 @@ import { Award, Bot, CheckCircle2, PlayCircle } from "lucide-react";
 import { db } from "@/lib/db";
 import { env } from "@/env";
 import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { cn, buildSafe } from "@/lib/utils";
 import { Reveal } from "@/components/landing/reveal";
 import { Faq } from "@/components/landing/faq";
 import { Reviews, type ReviewItem } from "@/components/landing/reviews";
@@ -45,13 +45,16 @@ const stepIcons = {
 } as const;
 
 async function getReviews(): Promise<ReviewItem[]> {
-  const rows = await db.review.findMany({
-    where: { autoModeration: "VALIDATED" },
-    orderBy: { createdAt: "desc" },
-    take: 8,
-    select: { id: true, userName: true, rating: true, text: true },
-  });
-  return rows;
+  return buildSafe(
+    () =>
+      db.review.findMany({
+        where: { autoModeration: "VALIDATED" },
+        orderBy: { createdAt: "desc" },
+        take: 8,
+        select: { id: true, userName: true, rating: true, text: true },
+      }),
+    [],
+  );
 }
 
 export default async function LandingPage() {

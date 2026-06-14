@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { db } from "@/lib/db";
 import { env } from "@/env";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, buildSafe } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 import { Reveal } from "@/components/landing/reveal";
@@ -75,11 +75,13 @@ export async function generateMetadata({
 }
 
 export async function generateStaticParams() {
-  const courses = await db.course.findMany({
-    where: { status: "PUBLISHED" },
-    select: { slug: true },
-  });
-  return courses.map((c) => ({ slug: c.slug }));
+  return buildSafe(async () => {
+    const courses = await db.course.findMany({
+      where: { status: "PUBLISHED" },
+      select: { slug: true },
+    });
+    return courses.map((c) => ({ slug: c.slug }));
+  }, [] as { slug: string }[]);
 }
 
 export default async function CoursePage({

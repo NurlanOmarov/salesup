@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { db } from "@/lib/db";
 import { env } from "@/env";
+import { buildSafe } from "@/lib/utils";
 
 export const revalidate = 3600;
 
@@ -14,11 +15,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${base}/privacy`, changeFrequency: "yearly", priority: 0.3 },
   ];
 
-  // только опубликованные курсы
-  const courses = await db.course.findMany({
-    where: { status: "PUBLISHED" },
-    select: { slug: true, updatedAt: true },
-  });
+  // только опубликованные курсы (на сборке без БД — пустой список)
+  const courses = await buildSafe(
+    () =>
+      db.course.findMany({
+        where: { status: "PUBLISHED" },
+        select: { slug: true, updatedAt: true },
+      }),
+    [] as { slug: string; updatedAt: Date }[],
+  );
   const coursePages: MetadataRoute.Sitemap = courses.map((c) => ({
     url: `${base}/courses/${c.slug}`,
     lastModified: c.updatedAt,

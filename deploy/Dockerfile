@@ -31,19 +31,18 @@ ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL \
     NEXT_PUBLIC_SUPPORT_TELEGRAM=$NEXT_PUBLIC_SUPPORT_TELEGRAM \
     NEXT_PUBLIC_SUPPORT_PHONE=$NEXT_PUBLIC_SUPPORT_PHONE
 
-# Серверные секреты при сборке НЕ нужны (читаются из process.env в рантайме),
-# но env.ts валидирует их при импорте во время `next build` — даём фиктивные значения.
-# В рантайм-образ они НЕ попадают (это builder-стадия).
-ENV DATABASE_URL=postgresql://build:build@localhost:5432/build \
+# Серверные секреты при сборке НЕ нужны (читаются из process.env в рантайме), но
+# env.ts валидирует их при импорте во время `next build` — даём фиктивные значения
+# ПРЯМО в команде (не ENV-слой → не попадают в образ и не триггерят сканер секретов).
+RUN DATABASE_URL=postgresql://build:build@localhost:5432/build \
     AUTH_SECRET=build_dummy_secret_min_16_chars \
     ANTHROPIC_API_KEY=build-dummy \
     EMBEDDINGS_API_KEY=build-dummy \
     MEDIA_ROOT=/media \
     VIDEO_SIGNING_SECRET=build_dummy_secret_min_16 \
     VIDEO_KEY_ENC_SECRET=build_dummy_secret_min_16 \
-    OWNER_EMAIL=build@example.kz
-
-RUN pnpm build
+    OWNER_EMAIL=build@example.kz \
+    pnpm build
 
 # ─── runner ───────────────────────────────────────────────────────────────────
 FROM node:22-slim AS runner
@@ -53,13 +52,14 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN groupadd --system --gid 1001 nodejs && useradd --system --uid 1001 --gid nodejs nextjs
 
-# standalone-сборка + статика + Prisma-схема (для миграций при старте)
+# standalone-сборка + статика + Prisma-схема (схема — для справки/CMD-обёрток).
+# Prisma client и query-engine уже включены Next-ом в .next/standalone через output
+# file tracing (под pnpm они лежат в node_modules/.pnpm/... — ручной COPY .prisma/@prisma
+# не нужен и ломается на pnpm-симлинках).
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
 USER nextjs
 EXPOSE 3000

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { BookOpen } from "lucide-react";
 import { db } from "@/lib/db";
+import { buildSafe } from "@/lib/utils";
 import { Reveal } from "@/components/landing/reveal";
 import { CourseCard, type CourseCardData } from "@/components/catalog/course-card";
 
@@ -19,21 +20,25 @@ export const metadata: Metadata = {
 };
 
 async function getCourses(): Promise<CourseCardData[]> {
-  return db.course.findMany({
-    where: { status: "PUBLISHED" },
-    orderBy: [{ sortOrder: "asc" }, { publishedAt: "desc" }],
-    select: {
-      slug: true,
-      title: true,
-      subtitle: true,
-      industry: true,
-      coverUrl: true,
-      priceTiyn: true,
-      oldPriceTiyn: true,
-      hoursLabel: true,
-      _count: { select: { modules: true } },
-    },
-  });
+  return buildSafe(
+    () =>
+      db.course.findMany({
+        where: { status: "PUBLISHED" },
+        orderBy: [{ sortOrder: "asc" }, { publishedAt: "desc" }],
+        select: {
+          slug: true,
+          title: true,
+          subtitle: true,
+          industry: true,
+          coverUrl: true,
+          priceTiyn: true,
+          oldPriceTiyn: true,
+          hoursLabel: true,
+          _count: { select: { modules: true } },
+        },
+      }),
+    [],
+  );
 }
 
 export default async function CoursesPage() {
