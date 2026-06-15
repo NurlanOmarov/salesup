@@ -6,8 +6,8 @@ import { requireUser } from "@/lib/auth/guards";
 import { db } from "@/lib/db";
 import { isEnrollmentActive } from "@/lib/access";
 import { courseProgress, nextLesson } from "@/lib/learn/progress";
-import { LogoutButton } from "@/components/logout-button";
 import { ProgressPanel, type BadgeView } from "@/components/gamification/progress-panel";
+import { buttonVariants } from "@/components/ui/button";
 
 export const metadata: Metadata = {
   title: "Моё обучение",
@@ -107,36 +107,16 @@ export default async function DashboardPage() {
   const earnedCodes = new Set(earnedBadges.map((b) => b.badge.code));
   const badgeViews: BadgeView[] = allBadges.map((b) => ({ ...b, earned: earnedCodes.has(b.code) }));
 
+  // Курс пройден на 100% (для корректной метрики «до сертификата»).
+  const hasCompletedCourse = courses.some((c) => c.progress.total > 0 && c.progress.percent === 100);
+
   return (
-    <main className="mx-auto max-w-5xl px-4 py-10">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Моё обучение</h1>
-          <p className="mt-1 text-foreground/60">
-            Здравствуйте, {session.user.name ?? session.user.email}
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Link
-            href="/app/achievements"
-            className="text-sm font-medium text-foreground/70 transition-colors hover:text-foreground"
-          >
-            Достижения
-          </Link>
-          <Link
-            href="/app/certificates"
-            className="text-sm font-medium text-foreground/70 transition-colors hover:text-foreground"
-          >
-            Сертификаты
-          </Link>
-          <Link
-            href="/app/settings"
-            className="text-sm font-medium text-foreground/70 transition-colors hover:text-foreground"
-          >
-            Настройки
-          </Link>
-          <LogoutButton />
-        </div>
+    <main className="mx-auto max-w-5xl px-4 py-8">
+      <div>
+        <h1 className="text-2xl font-bold">Моё обучение</h1>
+        <p className="mt-1 text-foreground/60">
+          Здравствуйте, {session.user.name ?? session.user.email}
+        </p>
       </div>
 
       {/* Герой «Продолжить обучение» — туда, где остановился ученик */}
@@ -160,7 +140,14 @@ export default async function DashboardPage() {
               <p className="mt-0.5 truncate text-sm text-foreground/60">Дальше: {resume.nextLessonTitle}</p>
             ) : null}
             <div className="mt-3 flex items-center gap-3">
-              <div className="h-2 w-full max-w-[220px] overflow-hidden rounded-full bg-foreground/10">
+              <div
+                className="h-2 w-full max-w-[220px] overflow-hidden rounded-full bg-foreground/10"
+                role="progressbar"
+                aria-valuenow={resume.progress.percent}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label={`Прогресс по курсу «${resume.title}»`}
+              >
                 <div className="h-full rounded-full bg-amber-500" style={{ width: `${resume.progress.percent}%` }} />
               </div>
               <span className="shrink-0 text-xs text-foreground/60">{resume.progress.percent}%</span>
@@ -175,29 +162,33 @@ export default async function DashboardPage() {
 
       {/* Сводка прогресса: уроки за неделю · активные курсы · ближайший сертификат */}
       {courses.length > 0 ? (
-        <div className="mt-5 grid grid-cols-3 gap-3">
-          <div className="rounded-2xl border border-foreground/10 bg-background p-4">
+        <div className="mt-5 grid grid-cols-3 gap-2.5 sm:gap-3">
+          <div className="rounded-2xl border border-foreground/10 bg-background p-3 sm:p-4">
             <CalendarCheck className="size-5 text-emerald-600" />
-            <p className="mt-2 text-2xl font-bold">{weeklyDone}</p>
-            <p className="text-xs text-foreground/55">уроков за неделю</p>
+            <p className="mt-2 text-xl font-bold sm:text-2xl">{weeklyDone}</p>
+            <p className="text-xs text-foreground/60">уроков за неделю</p>
           </div>
-          <div className="rounded-2xl border border-foreground/10 bg-background p-4">
+          <div className="rounded-2xl border border-foreground/10 bg-background p-3 sm:p-4">
             <Layers className="size-5 text-sky-600" />
-            <p className="mt-2 text-2xl font-bold">{courses.length}</p>
-            <p className="text-xs text-foreground/55">{courses.length === 1 ? "активный курс" : "активных курсов"}</p>
+            <p className="mt-2 text-xl font-bold sm:text-2xl">{courses.length}</p>
+            <p className="text-xs text-foreground/60">{courses.length === 1 ? "активный курс" : "активных курсов"}</p>
           </div>
-          <div className="rounded-2xl border border-foreground/10 bg-background p-4">
+          <div className="rounded-2xl border border-foreground/10 bg-background p-3 sm:p-4">
             <Trophy className="size-5 text-amber-600" />
-            <p className="mt-2 text-2xl font-bold">{closest ? `${closest.progress.percent}%` : "—"}</p>
-            <p className="text-xs text-foreground/55">{closest ? "до сертификата" : "сертификат получен"}</p>
+            <p className="mt-2 text-xl font-bold sm:text-2xl">
+              {closest ? `${closest.progress.percent}%` : hasCompletedCourse ? "✓" : "—"}
+            </p>
+            <p className="text-xs text-foreground/60">
+              {closest ? "до сертификата" : hasCompletedCourse ? "курс пройден" : "продолжайте учиться"}
+            </p>
           </div>
         </div>
       ) : null}
 
-      {/* Сдержанный блок прогресса (показываем, если есть курсы) */}
+      {/* Сдержанный блок прогресса (компактно; полная версия — в «Достижениях») */}
       {courses.length > 0 ? (
         <div className="mt-5">
-          <ProgressPanel xp={profile?.xp ?? 0} streakDays={profile?.streakDays ?? 0} badges={badgeViews} />
+          <ProgressPanel xp={profile?.xp ?? 0} streakDays={profile?.streakDays ?? 0} badges={badgeViews} compact />
         </div>
       ) : null}
 
@@ -241,7 +232,14 @@ export default async function DashboardPage() {
                     </span>
                     <span>{c.progress.percent}%</span>
                   </div>
-                  <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-foreground/10">
+                  <div
+                    className="mt-1.5 h-2 overflow-hidden rounded-full bg-foreground/10"
+                    role="progressbar"
+                    aria-valuenow={c.progress.percent}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-label={`Прогресс по курсу «${c.title}»`}
+                  >
                     <div
                       className="h-full rounded-full bg-amber-500 transition-all"
                       style={{ width: `${c.progress.percent}%` }}
@@ -253,18 +251,18 @@ export default async function DashboardPage() {
                   {c.nextLessonId ? (
                     <Link
                       href={`/app/learn/${c.slug}/${c.nextLessonId}`}
-                      className="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-slate-950 transition-colors hover:bg-amber-400"
+                      className={buttonVariants({ variant: "accent", size: "sm" })}
                     >
                       <PlayCircle className="size-4" />
                       {c.progress.completed > 0 ? "Продолжить" : "Начать обучение"}
                     </Link>
                   ) : (
-                    <p className="text-sm text-foreground/50">Уроки скоро появятся</p>
+                    <p className="text-sm text-foreground/60">Уроки скоро появятся</p>
                   )}
                   {c.examId ? (
                     <Link
                       href={`/app/quiz/${c.examId}`}
-                      className="inline-flex items-center gap-2 rounded-lg border border-foreground/15 px-4 py-2 text-sm font-medium transition-colors hover:bg-foreground/5"
+                      className={buttonVariants({ variant: "outline", size: "sm" })}
                     >
                       <GraduationCap className="size-4" />
                       Итоговый тест

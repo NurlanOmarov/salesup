@@ -1,4 +1,5 @@
-import { Flame, Lock } from "lucide-react";
+import Link from "next/link";
+import { Flame, Lock, ChevronRight } from "lucide-react";
 import { levelProgress } from "@/lib/gamification/levels";
 
 /**
@@ -17,10 +18,13 @@ export function ProgressPanel({
   xp,
   streakDays,
   badges,
+  compact = false,
 }: {
   xp: number;
   streakDays: number;
   badges: BadgeView[];
+  /** Компактный вид для дашборда: без сетки бейджей, со ссылкой на «Достижения». */
+  compact?: boolean;
 }) {
   const p = levelProgress(xp);
   const earnedCount = badges.filter((b) => b.earned).length;
@@ -34,7 +38,7 @@ export function ProgressPanel({
           </div>
           <div>
             <p className="text-sm font-semibold">Уровень {p.level}</p>
-            <p className="text-xs text-foreground/50">{p.xp} XP · до уровня {p.level + 1} осталось {p.nextLevelAt - p.xp}</p>
+            <p className="text-xs text-foreground/55">{p.xp} XP · до уровня {p.level + 1} осталось {p.nextLevelAt - p.xp}</p>
           </div>
         </div>
         {streakDays > 0 ? (
@@ -46,12 +50,29 @@ export function ProgressPanel({
       </div>
 
       {/* XP-прогресс до следующего уровня */}
-      <div className="mt-3 h-2 overflow-hidden rounded-full bg-foreground/10">
+      <div
+        className="mt-3 h-2 overflow-hidden rounded-full bg-foreground/10"
+        role="progressbar"
+        aria-valuenow={p.percent}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={`Прогресс до уровня ${p.level + 1}`}
+      >
         <div className="h-full rounded-full bg-amber-500 transition-all" style={{ width: `${p.percent}%` }} />
       </div>
 
-      {/* Бейджи */}
-      {badges.length > 0 ? (
+      {/* Компактно: только ссылка на достижения; полная сетка бейджей — на /app/achievements */}
+      {compact ? (
+        <Link
+          href="/app/achievements"
+          className="mt-4 flex items-center justify-between rounded-xl border border-foreground/10 bg-foreground/[0.02] px-4 py-2.5 text-sm transition-colors hover:bg-foreground/5"
+        >
+          <span className="font-medium">
+            Достижения · {earnedCount} из {badges.length}
+          </span>
+          <ChevronRight className="size-4 text-foreground/40" />
+        </Link>
+      ) : badges.length > 0 ? (
         <div className="mt-5">
           <p className="text-xs font-medium uppercase tracking-wide text-foreground/40">
             Достижения · {earnedCount} из {badges.length}

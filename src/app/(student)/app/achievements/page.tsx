@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Flame, Trophy, BookCheck, GraduationCap, Award, Medal, Lock, Star } from "lucide-react";
 import { requireUser } from "@/lib/auth/guards";
 import { db } from "@/lib/db";
@@ -67,13 +66,8 @@ export default async function AchievementsPage() {
   ];
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-10">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Достижения</h1>
-        <Link href="/app" className="text-sm text-foreground/60 hover:text-foreground">
-          ← Моё обучение
-        </Link>
-      </div>
+    <main className="mx-auto max-w-3xl px-4 py-8">
+      <h1 className="text-2xl font-bold">Достижения</h1>
 
       {/* Уровень и XP */}
       <section className="mt-6 rounded-2xl border border-foreground/10 bg-gradient-to-br from-amber-500/[0.08] to-transparent p-6">
@@ -96,7 +90,14 @@ export default async function AchievementsPage() {
             </div>
           ) : null}
         </div>
-        <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-foreground/10">
+        <div
+          className="mt-4 h-2.5 overflow-hidden rounded-full bg-foreground/10"
+          role="progressbar"
+          aria-valuenow={p.percent}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label={`Прогресс до уровня ${p.level + 1}`}
+        >
           <div className="h-full rounded-full bg-amber-500 transition-all" style={{ width: `${p.percent}%` }} />
         </div>
       </section>

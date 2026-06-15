@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { requireUser } from "@/lib/auth/guards";
 import { db } from "@/lib/db";
 import { ProfileForm, PasswordForm, type ProfileInitial } from "./settings-forms";
@@ -27,13 +26,8 @@ export default async function SettingsPage() {
   };
 
   return (
-    <main className="mx-auto max-w-2xl px-4 py-10">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Настройки</h1>
-        <Link href="/app" className="text-sm text-foreground/60 hover:text-foreground">
-          ← Моё обучение
-        </Link>
-      </div>
+    <main className="mx-auto max-w-2xl px-4 py-8">
+      <h1 className="text-2xl font-bold">Настройки</h1>
 
       <section className="mt-6 rounded-2xl border border-foreground/10 bg-background p-6">
         <h2 className="font-semibold">Профиль</h2>

@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, LayoutGrid, CheckCircle2, GraduationCap } from "lucide-react";
+import { ChevronLeft, ChevronRight, LayoutGrid, CheckCircle2, GraduationCap, Info } from "lucide-react";
 import { requireUser } from "@/lib/auth/guards";
+import { buttonVariants } from "@/components/ui/button";
 import { db } from "@/lib/db";
 import { canAccessLesson } from "@/lib/access";
 import { LessonTabs } from "@/components/learn/lesson-tabs";
@@ -180,7 +181,7 @@ export default async function LearnPage({
   return (
     <div className="mx-auto grid max-w-6xl gap-8 px-4 py-6 lg:grid-cols-[260px_1fr]">
       {/* Сайдбар-оглавление (на мобильном — свёрнутая плашка над уроком) */}
-      <aside className="lg:sticky lg:top-6 lg:h-fit">
+      <aside className="lg:sticky lg:top-20 lg:h-fit">
         <Link
           href="/app"
           className="mb-4 inline-flex items-center gap-1.5 px-3 text-sm text-foreground/60 transition-colors hover:text-foreground"
@@ -232,6 +233,14 @@ export default async function LearnPage({
           />
         </div>
 
+        {/* Подсказка об автозачёте прогресса (пока урок не пройден и есть видео) */}
+        {!lessonPos?.completedAt && current.videoStatus === "READY" ? (
+          <p className="mt-3 flex items-center gap-1.5 text-xs text-foreground/55">
+            <Info className="size-3.5 shrink-0" />
+            Урок отметится пройденным автоматически после просмотра ≥90% видео.
+          </p>
+        ) : null}
+
         {/* Задание к уроку */}
         {lessonQuiz ? (
           <Link
@@ -256,7 +265,7 @@ export default async function LearnPage({
           {prev ? (
             <Link
               href={`/app/learn/${courseSlug}/${prev.id}`}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-foreground/15 px-4 py-2 text-sm transition-colors hover:bg-foreground/5"
+              className={buttonVariants({ variant: "outline", size: "sm" })}
             >
               <ChevronLeft className="size-4" />
               Назад
@@ -267,7 +276,7 @@ export default async function LearnPage({
           {next ? (
             <Link
               href={`/app/learn/${courseSlug}/${next.id}`}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-slate-950 transition-colors hover:bg-amber-400"
+              className={buttonVariants({ variant: "accent", size: "sm" })}
             >
               Следующий урок
               <ChevronRight className="size-4" />

@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Award, Download, ExternalLink } from "lucide-react";
 import { requireUser } from "@/lib/auth/guards";
 import { db } from "@/lib/db";
 import { env } from "@/env";
+import { buttonVariants } from "@/components/ui/button";
 
 export const metadata: Metadata = {
   title: "Мои сертификаты",
@@ -30,13 +30,8 @@ export default async function CertificatesPage() {
   });
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-10">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Мои сертификаты</h1>
-        <Link href="/app" className="text-sm text-foreground/60 hover:text-foreground">
-          ← Моё обучение
-        </Link>
-      </div>
+    <main className="mx-auto max-w-3xl px-4 py-8">
+      <h1 className="text-2xl font-bold">Мои сертификаты</h1>
 
       {certs.length === 0 ? (
         <div className="mt-8 rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-10 text-center">
@@ -71,7 +66,7 @@ export default async function CertificatesPage() {
                   href={`/api/certificate/${c.id}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-2 text-sm font-semibold text-slate-950 transition-colors hover:bg-amber-400"
+                  className={buttonVariants({ variant: "accent", size: "sm" })}
                 >
                   <Download className="size-4" />
                   Скачать PDF
@@ -80,7 +75,7 @@ export default async function CertificatesPage() {
                   href={`${env.NEXT_PUBLIC_SITE_URL}/verify/${c.verifyHash}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-foreground/15 px-3 py-2 text-sm font-medium transition-colors hover:bg-foreground/5"
+                  className={buttonVariants({ variant: "outline", size: "sm" })}
                 >
                   <ExternalLink className="size-4" />
                   Проверка
