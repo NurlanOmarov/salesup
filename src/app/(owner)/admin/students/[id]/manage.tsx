@@ -7,6 +7,7 @@ import {
   revokeEnrollmentAction,
   resetPasswordAction,
   toggleBlockAction,
+  setDeviceLimitAction,
 } from "../actions";
 import { ACCESS_DURATIONS, ACCESS_DURATION_LABELS } from "@/lib/admin/enrollment";
 import { Button } from "@/components/ui/button";
@@ -176,6 +177,104 @@ function EnrollmentRow({
         </div>
       )}
     </li>
+  );
+}
+
+/** Лимит одновременных устройств ученика: стандарт / безлимит / своё число. */
+export function DeviceLimitForm({
+  userId,
+  deviceLimit,
+}: {
+  userId: string;
+  deviceLimit: number | null;
+}) {
+  const initialMode: "default" | "unlimited" | "custom" =
+    deviceLimit === null ? "default" : deviceLimit <= 0 ? "unlimited" : "custom";
+  const [mode, setMode] = useState<"default" | "unlimited" | "custom">(initialMode);
+  const [limit, setLimit] = useState<number>(deviceLimit && deviceLimit > 0 ? deviceLimit : 2);
+  const [pending, start] = useTransition();
+  const [saved, setSaved] = useState(false);
+
+  const options: { value: typeof mode; label: string; hint: string }[] = [
+    { value: "default", label: "Стандарт (2)", hint: "Лимит по умолчанию" },
+    { value: "custom", label: "Своё число", hint: "Точное число устройств" },
+    { value: "unlimited", label: "Безлимит", hint: "Без ограничения" },
+  ];
+
+  return (
+    <section className="rounded-2xl border border-foreground/10 bg-background p-5">
+      <h2 className="font-semibold">Лимит устройств</h2>
+      <p className="mt-0.5 text-sm text-foreground/55">
+        Сколько устройств может одновременно пользоваться аккаунтом. Новое устройство сверх лимита не пустит на вход.
+      </p>
+
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        {options.map((o) => (
+          <button
+            key={o.value}
+            type="button"
+            onClick={() => {
+              setMode(o.value);
+              setSaved(false);
+            }}
+            className={[
+              "rounded-xl border p-3 text-left transition-colors",
+              mode === o.value
+                ? "border-amber-500/50 bg-amber-500/[0.07]"
+                : "border-foreground/15 hover:bg-foreground/[0.03]",
+            ].join(" ")}
+          >
+            <span className="block text-sm font-medium">{o.label}</span>
+            <span className="mt-0.5 block text-xs text-foreground/50">{o.hint}</span>
+          </button>
+        ))}
+      </div>
+
+      {mode === "custom" ? (
+        <div className="mt-3 flex items-center gap-2">
+          <label htmlFor="device-limit" className="text-sm text-foreground/60">
+            Устройств:
+          </label>
+          <input
+            id="device-limit"
+            type="number"
+            min={1}
+            max={50}
+            value={limit}
+            onChange={(e) => {
+              setLimit(Math.max(1, Math.min(50, Number(e.target.value) || 1)));
+              setSaved(false);
+            }}
+            className="h-10 w-24 rounded-lg border border-foreground/20 bg-background px-3 text-sm"
+          />
+        </div>
+      ) : null}
+
+      <div className="mt-4 flex items-center gap-3">
+        <Button
+          variant="accent"
+          size="sm"
+          disabled={pending}
+          onClick={() =>
+            start(async () => {
+              const res = await setDeviceLimitAction({
+                userId,
+                mode,
+                ...(mode === "custom" ? { limit } : {}),
+              });
+              if (res.ok) setSaved(true);
+            })
+          }
+        >
+          {pending ? "Сохраняем…" : "Сохранить"}
+        </Button>
+        {saved ? (
+          <span className="flex items-center gap-1 text-sm text-emerald-600">
+            <Check className="size-4" /> Сохранено
+          </span>
+        ) : null}
+      </div>
+    </section>
   );
 }
 

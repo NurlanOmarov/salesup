@@ -9,6 +9,15 @@ import { LessonTabs } from "@/components/learn/lesson-tabs";
 import { type SidebarModule } from "@/components/learn/lesson-sidebar";
 import { CourseOutline } from "@/components/learn/course-outline";
 import { parseDeck } from "@/lib/slides";
+import {
+  parseFlashcards,
+  parseObjections,
+  parseChecklist,
+  parseScriptBuilder,
+  parseDialogueAudit,
+  parseHotspot,
+} from "@/lib/interactive";
+import { loadScenario } from "@/lib/ai/simulate";
 
 export const metadata: Metadata = {
   title: "Урок",
@@ -39,7 +48,7 @@ export default async function LearnPage({
           title: true,
           lessons: {
             orderBy: { sortOrder: "asc" },
-            select: { id: true, title: true, status: true, videoStatus: true },
+            select: { id: true, title: true, status: true, videoStatus: true, audioKey: true },
           },
         },
       },
@@ -59,24 +68,69 @@ export default async function LearnPage({
     select: { lastPositionSec: true, completedAt: true },
   });
 
-  // Конспект (SUMMARY), презентация (SLIDES) и транскрипт урока.
-  const [summaryArtifact, slidesArtifact, transcript] = await Promise.all([
-    db.aiArtifact.findUnique({
-      where: { lessonId_type: { lessonId, type: "SUMMARY" } },
-      select: { content: true, validation: true },
-    }),
-    db.aiArtifact.findUnique({
-      where: { lessonId_type: { lessonId, type: "SLIDES" } },
-      select: { content: true, validation: true },
-    }),
-    db.transcript.findUnique({
-      where: { lessonId },
-      select: { cleanText: true, status: true },
-    }),
-  ]);
+  // Конспект (SUMMARY), презентация (SLIDES), карточки (FLASHCARDS),
+  // тренажёр возражений (OBJECTIONS) и транскрипт урока.
+  const [summaryArtifact, slidesArtifact, flashcardsArtifact, objectionsArtifact, transcript] =
+    await Promise.all([
+      db.aiArtifact.findUnique({
+        where: { lessonId_type: { lessonId, type: "SUMMARY" } },
+        select: { content: true, validation: true },
+      }),
+      db.aiArtifact.findUnique({
+        where: { lessonId_type: { lessonId, type: "SLIDES" } },
+        select: { content: true, validation: true },
+      }),
+      db.aiArtifact.findUnique({
+        where: { lessonId_type: { lessonId, type: "FLASHCARDS" } },
+        select: { content: true, validation: true },
+      }),
+      db.aiArtifact.findUnique({
+        where: { lessonId_type: { lessonId, type: "OBJECTIONS" } },
+        select: { content: true, validation: true },
+      }),
+      db.transcript.findUnique({
+        where: { lessonId },
+        select: { cleanText: true, status: true },
+      }),
+    ]);
+
+  // Новые интерактивы (чек-лист, скрипт, «найди ошибку», hotspot) + сценарий симулятора.
+  const [checklistArtifact, scriptArtifact, auditArtifact, hotspotArtifact, simulation] =
+    await Promise.all([
+      db.aiArtifact.findUnique({
+        where: { lessonId_type: { lessonId, type: "CHECKLIST" } },
+        select: { content: true, validation: true },
+      }),
+      db.aiArtifact.findUnique({
+        where: { lessonId_type: { lessonId, type: "SCRIPT_BUILDER" } },
+        select: { content: true, validation: true },
+      }),
+      db.aiArtifact.findUnique({
+        where: { lessonId_type: { lessonId, type: "DIALOGUE_AUDIT" } },
+        select: { content: true, validation: true },
+      }),
+      db.aiArtifact.findUnique({
+        where: { lessonId_type: { lessonId, type: "HOTSPOT" } },
+        select: { content: true, validation: true },
+      }),
+      loadScenario(lessonId),
+    ]);
+
   const summary = summaryArtifact?.validation === "VALIDATED" ? summaryArtifact.content : null;
   const slides =
     slidesArtifact?.validation === "VALIDATED" ? parseDeck(slidesArtifact.content) : null;
+  const flashcards =
+    flashcardsArtifact?.validation === "VALIDATED" ? parseFlashcards(flashcardsArtifact.content) : null;
+  const objections =
+    objectionsArtifact?.validation === "VALIDATED" ? parseObjections(objectionsArtifact.content) : null;
+  const checklist =
+    checklistArtifact?.validation === "VALIDATED" ? parseChecklist(checklistArtifact.content) : null;
+  const script =
+    scriptArtifact?.validation === "VALIDATED" ? parseScriptBuilder(scriptArtifact.content) : null;
+  const audit =
+    auditArtifact?.validation === "VALIDATED" ? parseDialogueAudit(auditArtifact.content) : null;
+  const hotspot =
+    hotspotArtifact?.validation === "VALIDATED" ? parseHotspot(hotspotArtifact.content) : null;
   const transcriptText =
     transcript && transcript.status === "CLEANED" ? transcript.cleanText : null;
 
@@ -159,11 +213,19 @@ export default async function LearnPage({
           <LessonTabs
             lessonId={lessonId}
             videoReady={current.videoStatus === "READY"}
+            hasAudio={!!current.audioKey}
             watermark={session.user.email ?? userId}
             startPositionSec={lessonPos?.lastPositionSec ?? 0}
             summary={summary}
             transcript={transcriptText}
             slides={slides}
+            flashcards={flashcards}
+            objections={objections}
+            checklist={checklist}
+            script={script}
+            audit={audit}
+            hotspot={hotspot}
+            simulation={simulation}
             subtitles={subtitles}
             defaultSubtitleLang={viewer?.subtitleLang ?? null}
           />

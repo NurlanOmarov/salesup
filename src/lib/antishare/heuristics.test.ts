@@ -5,6 +5,7 @@ import {
   suspiciousWatch,
   tooManyCities,
   evaluateFlags,
+  effectiveDeviceLimit,
   DEVICE_LIMIT,
 } from "./heuristics.js";
 
@@ -61,5 +62,26 @@ describe("evaluateFlags", () => {
   });
   it("норма → пусто", () => {
     expect(evaluateFlags({ activeDevices: 1, maxWatchedSec: 90, maxLessonDurationSec: 100, distinctCities: 1 })).toEqual([]);
+  });
+  it("безлимит (deviceLimit=null) не флагует по устройствам", () => {
+    const r = evaluateFlags({ activeDevices: 9, maxWatchedSec: 0, maxLessonDurationSec: 0, distinctCities: 1, deviceLimit: null });
+    expect(r).not.toContain("MANY_DEVICES");
+  });
+  it("персональный лимит учитывается", () => {
+    const r = evaluateFlags({ activeDevices: 4, maxWatchedSec: 0, maxLessonDurationSec: 0, distinctCities: 1, deviceLimit: 5 });
+    expect(r).not.toContain("MANY_DEVICES");
+  });
+});
+
+describe("effectiveDeviceLimit", () => {
+  it("null → стандартный лимит", () => {
+    expect(effectiveDeviceLimit(null)).toBe(DEVICE_LIMIT);
+    expect(effectiveDeviceLimit(undefined)).toBe(DEVICE_LIMIT);
+  });
+  it("0 → безлимит (null)", () => {
+    expect(effectiveDeviceLimit(0)).toBeNull();
+  });
+  it("N>0 → N", () => {
+    expect(effectiveDeviceLimit(3)).toBe(3);
   });
 });

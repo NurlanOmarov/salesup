@@ -211,3 +211,33 @@ export const toggleBlockAction = safeAction(
     return { blocked };
   },
 );
+
+/**
+ * Установить лимит одновременных устройств ученика.
+ *   mode=default → стандартный лимит (null), unlimited → безлимит (0), custom → N≥1.
+ * Новое устройство сверх лимита не пускается на вход (см. lib/antishare/devices).
+ */
+export const setDeviceLimitAction = safeAction(
+  {
+    schema: z.object({
+      userId: z.string().min(1),
+      mode: z.enum(["default", "unlimited", "custom"]),
+      limit: z.coerce.number().int().min(1).max(50).optional(),
+    }),
+    auth: "owner",
+  },
+  async ({ userId, mode, limit }, { session }) => {
+    const value = mode === "default" ? null : mode === "unlimited" ? 0 : (limit ?? 2);
+    await db.user.update({ where: { id: userId }, data: { deviceLimit: value } });
+
+    await writeAdminLog({
+      actorId: session!.user.id,
+      action: "student.device_limit",
+      targetUserId: userId,
+      meta: { deviceLimit: value },
+    });
+
+    revalidatePath(`/admin/students/${userId}`);
+    return { deviceLimit: value };
+  },
+);
