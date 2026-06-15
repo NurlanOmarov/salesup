@@ -1,7 +1,22 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
-import { Award, Bot, CheckCircle2, PlayCircle } from "lucide-react";
+import {
+  Award,
+  Bot,
+  CheckCircle2,
+  PlayCircle,
+  Podcast,
+  Headphones,
+  FileText,
+  Layers,
+  MessageSquareWarning,
+  MessagesSquare,
+  ListOrdered,
+  SearchCheck,
+  Flame,
+  Trophy,
+} from "lucide-react";
 import { db } from "@/lib/db";
 import { env } from "@/env";
 import { buttonVariants } from "@/components/ui/button";
@@ -17,6 +32,7 @@ import { IndustriesMarquee } from "@/components/landing/industries-marquee";
 import {
   clients,
   faq,
+  formats,
   hero,
   industries,
   methodology,
@@ -42,6 +58,18 @@ const stepIcons = {
   bot: Bot,
   check: CheckCircle2,
   award: Award,
+} as const;
+
+const formatIcons = {
+  play: PlayCircle,
+  podcast: Podcast,
+  headphones: Headphones,
+  file: FileText,
+  cards: Layers,
+  objections: MessageSquareWarning,
+  simulation: MessagesSquare,
+  script: ListOrdered,
+  audit: SearchCheck,
 } as const;
 
 async function getReviews(): Promise<ReviewItem[]> {
@@ -182,6 +210,49 @@ export default async function LandingPage() {
               </Reveal>
             );
           })}
+        </div>
+      </section>
+
+      {/* Что внутри каждого урока — форматы обучения */}
+      <section>
+        <div className="mx-auto max-w-6xl px-4 pb-16 sm:pb-20 sm:pt-4">
+          <Reveal>
+            <h2 className="text-center text-3xl font-bold">{formats.title}</h2>
+            <p className="mx-auto mt-3 max-w-2xl text-center text-foreground/70">
+              {formats.subtitle}
+            </p>
+          </Reveal>
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {formats.items.map((f, i) => {
+              const Icon = formatIcons[f.icon];
+              return (
+                <Reveal key={f.title} delay={(i % 3) * 0.05}>
+                  <div className="group h-full rounded-2xl border border-foreground/10 bg-background p-6 transition-all duration-300 hover:-translate-y-1 hover:border-amber-500/40 hover:shadow-lg hover:shadow-amber-500/5">
+                    <div className="flex size-11 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 transition-colors group-hover:bg-amber-500 group-hover:text-slate-950">
+                      <Icon className="size-6" />
+                    </div>
+                    <h3 className="mt-4 font-semibold">{f.title}</h3>
+                    <p className="mt-2 text-sm text-foreground/70">{f.text}</p>
+                  </div>
+                </Reveal>
+              );
+            })}
+          </div>
+
+          {/* Геймификация — сдержанная полоса под форматами */}
+          <Reveal delay={0.1}>
+            <div className="mt-8 flex flex-col items-center justify-center gap-4 rounded-2xl border border-foreground/10 bg-background p-6 text-center sm:flex-row sm:gap-8 sm:text-left">
+              <p className="flex items-center gap-2 text-sm font-medium text-foreground/80">
+                <Flame className="size-5 text-orange-500" />
+                Серии дней и уровни за активность
+              </p>
+              <span className="hidden h-5 w-px bg-foreground/10 sm:block" />
+              <p className="flex items-center gap-2 text-sm font-medium text-foreground/80">
+                <Trophy className="size-5 text-amber-600" />
+                Достижения и прогресс — чтобы дойти до конца курса
+              </p>
+            </div>
+          </Reveal>
         </div>
       </section>
 
