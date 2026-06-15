@@ -48,7 +48,7 @@ export default async function LearnPage({
           title: true,
           lessons: {
             orderBy: { sortOrder: "asc" },
-            select: { id: true, title: true, status: true, videoStatus: true, audioKey: true },
+            select: { id: true, title: true, status: true, videoStatus: true, audioKey: true, podcastKey: true },
           },
         },
       },
@@ -214,6 +214,7 @@ export default async function LearnPage({
             lessonId={lessonId}
             videoReady={current.videoStatus === "READY"}
             hasAudio={!!current.audioKey}
+            hasPodcast={!!current.podcastKey}
             watermark={session.user.email ?? userId}
             startPositionSec={lessonPos?.lastPositionSec ?? 0}
             summary={summary}

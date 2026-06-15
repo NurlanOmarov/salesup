@@ -257,7 +257,8 @@ model Lesson {
   videoKey      String? // префикс: courses/<slug>/lessons/<id>/ (master.m3u8, сегменты)
   videoAesKeyEnc String? // 16-байтовый AES-128-ключ HLS, зашифрованный app-секретом (VIDEO_KEY_ENC_SECRET); отдаётся через /api/video/key/<lessonId>
   videoStatus   VideoStatus @default(NONE)
-  audioKey      String? // подкаст-формат: аудиодорожка (m4a), извлечённая фабрикой из видео урока; ключ в lib/storage
+  audioKey      String? // аудиоверсия урока: аудиодорожка (m4a), извлечённая фабрикой из видео (factory:audio); ключ в lib/storage
+  podcastKey    String? // AI-подкаст: двухголосый обзор-диалог по уроку (NotebookLM Audio Overview, factory:podcast), m4a; ключ в lib/storage
   durationSec   Int?
   youtubeUrl    String? // источник (видео скачивается и кодируется CLI-фабрикой)
   // Прохождение

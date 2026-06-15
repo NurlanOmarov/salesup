@@ -12,6 +12,7 @@ import {
   Layers,
   MessageSquareWarning,
   Headphones,
+  Podcast,
   ListOrdered,
   SearchCheck,
   ListChecks,
@@ -23,7 +24,7 @@ import { TutorChat } from "@/components/learn/tutor-chat";
 import { SlideDeck } from "@/components/learn/slide-deck";
 import { FlashcardsDeck } from "@/components/learn/flashcards-deck";
 import { ObjectionTrainer } from "@/components/learn/objection-trainer";
-import { PodcastPlayer } from "@/components/learn/podcast-player";
+import { AudioPlayer } from "@/components/learn/podcast-player";
 import { ChecklistCard } from "@/components/learn/checklist-card";
 import { ScriptBuilder } from "@/components/learn/script-builder";
 import { DialogueAudit } from "@/components/learn/dialogue-audit";
@@ -54,6 +55,7 @@ export interface SimulationInfo {
 
 type Tab =
   | "video"
+  | "audio"
   | "podcast"
   | "slides"
   | "summary"
@@ -71,6 +73,7 @@ export function LessonTabs({
   lessonId,
   videoReady,
   hasAudio = false,
+  hasPodcast = false,
   watermark,
   startPositionSec,
   summary,
@@ -89,6 +92,7 @@ export function LessonTabs({
   lessonId: string;
   videoReady: boolean;
   hasAudio?: boolean;
+  hasPodcast?: boolean;
   watermark: string;
   startPositionSec: number;
   summary: string | null;
@@ -108,7 +112,8 @@ export function LessonTabs({
 
   const tabs: { key: Tab; label: string; icon: typeof PlayCircle; show: boolean }[] = [
     { key: "video", label: "Видео", icon: PlayCircle, show: true },
-    { key: "podcast", label: "Подкаст", icon: Headphones, show: hasAudio },
+    { key: "podcast", label: "Подкаст", icon: Podcast, show: hasPodcast },
+    { key: "audio", label: "Аудиоверсия", icon: Headphones, show: hasAudio },
     { key: "slides", label: "Презентация", icon: Presentation, show: !!slides },
     { key: "summary", label: "Конспект", icon: FileText, show: !!summary },
     { key: "flashcards", label: "Карточки", icon: Layers, show: !!flashcards },
@@ -164,10 +169,15 @@ export function LessonTabs({
         )}
       </div>
 
-      {/* Подкаст — монтируется один раз (вне переключения), чтобы не рвать аудио */}
-      {hasAudio ? (
+      {/* Аудио — монтируется один раз (вне переключения вкладок), чтобы не рвать воспроизведение */}
+      {hasPodcast ? (
         <div className={`mt-4 ${tab === "podcast" ? "block" : "hidden"}`}>
-          <PodcastPlayer lessonId={lessonId} />
+          <AudioPlayer lessonId={lessonId} variant="podcast" />
+        </div>
+      ) : null}
+      {hasAudio ? (
+        <div className={`mt-4 ${tab === "audio" ? "block" : "hidden"}`}>
+          <AudioPlayer lessonId={lessonId} variant="audio" />
         </div>
       ) : null}
 
