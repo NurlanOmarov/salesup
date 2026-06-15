@@ -27,6 +27,17 @@ export function tooManyDevices(activeCount: number, limit: number = DEVICE_LIMIT
 }
 
 /**
+ * Эффективный лимит устройств из настройки ученика (User.deviceLimit):
+ *   null → стандартный лимит (DEVICE_LIMIT); 0 → безлимит (возвращаем null); N>0 → N.
+ * null на выходе означает «без ограничения» (не флагуем и не блокируем по устройствам).
+ */
+export function effectiveDeviceLimit(deviceLimit: number | null | undefined): number | null {
+  if (deviceLimit === null || deviceLimit === undefined) return DEVICE_LIMIT;
+  if (deviceLimit <= 0) return null; // безлимит
+  return deviceLimit;
+}
+
+/**
  * Аномально много просмотра: суммарно просмотрено заметно больше, чем длится
  * урок (признак параллельного просмотра с нескольких устройств/аккаунт-шеринга).
  * Возвращает true, если watchedSec > factor × durationSec (при известной длительности).
@@ -49,9 +60,11 @@ export function evaluateFlags(input: {
   maxWatchedSec: number;
   maxLessonDurationSec: number;
   distinctCities: number;
+  deviceLimit?: number | null; // эффективный лимит (null = безлимит → не флагуем по устройствам)
 }): FlagReason[] {
   const reasons: FlagReason[] = [];
-  if (tooManyDevices(input.activeDevices)) reasons.push("MANY_DEVICES");
+  const limit = input.deviceLimit === undefined ? DEVICE_LIMIT : input.deviceLimit;
+  if (limit !== null && tooManyDevices(input.activeDevices, limit)) reasons.push("MANY_DEVICES");
   if (suspiciousWatch(input.maxWatchedSec, input.maxLessonDurationSec)) reasons.push("ABNORMAL_WATCH");
   if (tooManyCities(input.distinctCities)) reasons.push("MANY_CITIES");
   return reasons;

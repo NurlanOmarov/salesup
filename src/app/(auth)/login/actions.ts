@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { AuthError } from "next-auth";
 import { z } from "zod";
-import { signIn } from "@/auth";
+import { signIn, signOut } from "@/auth";
 import { db } from "@/lib/db";
 import {
   clientIpFromHeaders,
@@ -65,13 +65,23 @@ export async function loginAction(
     select: { id: true, role: true, mustChangePassword: true },
   });
 
-  // Антишаринг (S6.1): фиксируем устройство для выявления раздачи аккаунта.
+  // Антишаринг (S6.1): фиксируем устройство и проверяем персональный лимит устройств.
   if (user) {
+    let allowed = true;
     try {
       const ua = (await headers()).get("user-agent") ?? "unknown";
-      await registerDevice(user.id, ua, ip);
+      const res = await registerDevice(user.id, ua, ip);
+      allowed = res.allowed;
     } catch {
-      // учёт устройства не должен мешать входу
+      // учёт устройства не должен мешать входу при технической ошибке
+    }
+    // Новое устройство сверх лимита: откатываем вход и просим обратиться к админу.
+    if (!allowed) {
+      await signOut({ redirect: false });
+      return {
+        error:
+          "Достигнут лимит устройств для этого аккаунта. Войдите со знакомого устройства или обратитесь к администратору.",
+      };
     }
   }
 

@@ -14,6 +14,7 @@ export type AdminAction =
   | "password.reset"
   | "student.block"
   | "student.unblock"
+  | "student.device_limit"
   | "lead.update";
 
 export function writeAdminLog(params: {

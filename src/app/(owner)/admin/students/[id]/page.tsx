@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { db } from "@/lib/db";
 import { isEnrollmentActive } from "@/lib/access";
-import { EnrollmentManager, DangerZone } from "./manage";
+import { EnrollmentManager, DangerZone, DeviceLimitForm } from "./manage";
 
 export const metadata: Metadata = {
   title: "Карточка ученика",
@@ -36,6 +36,7 @@ export default async function StudentPage({
       industry: true,
       deletedAt: true,
       mustChangePassword: true,
+      deviceLimit: true,
       createdAt: true,
       enrollments: {
         select: {
@@ -88,6 +89,7 @@ export default async function StudentPage({
     "password.reset": "Сброшен пароль",
     "student.block": "Заблокирован вход",
     "student.unblock": "Разблокирован вход",
+    "student.device_limit": "Изменён лимит устройств",
   };
 
   return (
@@ -133,6 +135,7 @@ export default async function StudentPage({
       <div className="mt-6 grid gap-5 lg:grid-cols-2">
         <EnrollmentManager userId={student.id} enrollments={enrollments} grantable={grantable} />
         <DangerZone userId={student.id} blocked={!!student.deletedAt} />
+        <DeviceLimitForm userId={student.id} deviceLimit={student.deviceLimit} />
       </div>
 
       {/* Журнал действий по этому ученику */}

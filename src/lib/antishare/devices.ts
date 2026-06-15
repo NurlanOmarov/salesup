@@ -1,5 +1,11 @@
 import { db } from "@/lib/db";
-import { deviceFingerprint, DEVICE_LIMIT, evaluateFlags, type FlagReason } from "./heuristics.js";
+import {
+  deviceFingerprint,
+  DEVICE_LIMIT,
+  effectiveDeviceLimit,
+  evaluateFlags,
+  type FlagReason,
+} from "./heuristics.js";
 
 /**
  * Учёт устройств и выявление подозрительной активности (S6.1). Вход жёстко не
@@ -10,18 +16,50 @@ import { deviceFingerprint, DEVICE_LIMIT, evaluateFlags, type FlagReason } from 
 
 const ACTIVE_WINDOW_DAYS = 7;
 
-/** Зарегистрировать устройство при входе (upsert по userId+fingerprint). */
+/**
+ * Зарегистрировать устройство при входе и проверить лимит устройств ученика.
+ * Возвращает { allowed }: false — если это НОВОЕ устройство сверх персонального
+ * лимита (User.deviceLimit) или ранее заблокированное. Владелец и «безлимит»
+ * (deviceLimit=0) не ограничиваются. Известное устройство всегда проходит.
+ */
 export async function registerDevice(
   userId: string,
   userAgent: string,
   ip: string,
-): Promise<void> {
+): Promise<{ allowed: boolean }> {
   const fingerprint = deviceFingerprint(userAgent || "unknown");
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: { role: true, deviceLimit: true },
+  });
+  const limit = user?.role === "OWNER" ? null : effectiveDeviceLimit(user?.deviceLimit ?? null);
+
+  const existing = await db.device.findUnique({
+    where: { userId_fingerprint: { userId, fingerprint } },
+    select: { isBlocked: true },
+  });
+
+  // Новое устройство сверх лимита — фиксируем как заблокированное и не пускаем.
+  if (!existing && limit !== null) {
+    const since = new Date(Date.now() - ACTIVE_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+    const active = await db.device.count({
+      where: { userId, isBlocked: false, lastSeenAt: { gte: since } },
+    });
+    if (active >= limit) {
+      await db.device.create({
+        data: { userId, fingerprint, lastIp: ip, isBlocked: true, label: "Сверх лимита" },
+      });
+      return { allowed: false };
+    }
+  }
+  if (existing?.isBlocked) return { allowed: false };
+
   await db.device.upsert({
     where: { userId_fingerprint: { userId, fingerprint } },
     create: { userId, fingerprint, lastIp: ip, lastSeenAt: new Date() },
     update: { lastIp: ip, lastSeenAt: new Date() },
   });
+  return { allowed: true };
 }
 
 export interface FlaggedStudent {
@@ -73,7 +111,7 @@ export async function getFlaggedStudents(): Promise<FlaggedStudent[]> {
 
   const users = await db.user.findMany({
     where: { id: { in: [...candidateIds] }, role: "STUDENT" },
-    select: { id: true, name: true, email: true, deletedAt: true },
+    select: { id: true, name: true, email: true, deletedAt: true, deviceLimit: true },
   });
 
   const result: FlaggedStudent[] = [];
@@ -85,6 +123,7 @@ export async function getFlaggedStudents(): Promise<FlaggedStudent[]> {
       maxWatchedSec: watch.watched,
       maxLessonDurationSec: watch.duration,
       distinctCities: dev.ips.size, // в MVP город ≈ IP (геолокации нет)
+      deviceLimit: effectiveDeviceLimit(u.deviceLimit), // персональный лимит ученика
     });
     if (reasons.length === 0) continue;
     result.push({

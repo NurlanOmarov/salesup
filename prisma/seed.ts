@@ -3,6 +3,15 @@ import { hashPassword } from "../src/lib/auth/password.js";
 import { PHARMA_SUMMARIES } from "./seed-data/pharma-summaries.js";
 import { PHARMA_SLIDES } from "./seed-data/pharma-slides.js";
 import { PHARMA_LESSON_QUIZZES } from "./seed-data/pharma-lesson-quizzes.js";
+import { PHARMA_FLASHCARDS } from "./seed-data/pharma-flashcards.js";
+import { PHARMA_OBJECTIONS } from "./seed-data/pharma-objections.js";
+import {
+  PHARMA_CHECKLISTS,
+  PHARMA_SCRIPTS,
+  PHARMA_AUDITS,
+  PHARMA_HOTSPOTS,
+  PHARMA_SCENARIOS,
+} from "./seed-data/pharma-interactive.js";
 
 /**
  * Сиды для локальной разработки (BACKLOG P0.3).
@@ -761,6 +770,97 @@ async function seedPharmaSlides(courseId: string) {
   }
 }
 
+/** Флеш-карточки уроков (AiArtifact FLASHCARDS) — тренажёр запоминания. */
+async function seedPharmaFlashcards(courseId: string) {
+  const lessons = await db.lesson.findMany({
+    where: { module: { courseId } },
+    select: { id: true, title: true },
+  });
+  for (const lf of PHARMA_FLASHCARDS) {
+    const lesson = lessons.find((l) => l.title.includes(lf.titleMatch));
+    if (!lesson) continue;
+    const content = JSON.stringify({ cards: lf.cards });
+    await db.aiArtifact.upsert({
+      where: { lessonId_type: { lessonId: lesson.id, type: "FLASHCARDS" } },
+      create: { lessonId: lesson.id, type: "FLASHCARDS", content, validation: "VALIDATED", criticScore: 100 },
+      update: { content, validation: "VALIDATED" },
+    });
+  }
+}
+
+/** Тренажёры возражений уроков (AiArtifact OBJECTIONS) — интерактивная практика продаж. */
+async function seedPharmaObjections(courseId: string) {
+  const lessons = await db.lesson.findMany({
+    where: { module: { courseId } },
+    select: { id: true, title: true },
+  });
+  for (const lo of PHARMA_OBJECTIONS) {
+    const lesson = lessons.find((l) => l.title.includes(lo.titleMatch));
+    if (!lesson) continue;
+    const content = JSON.stringify({ items: lo.items });
+    await db.aiArtifact.upsert({
+      where: { lessonId_type: { lessonId: lesson.id, type: "OBJECTIONS" } },
+      create: { lessonId: lesson.id, type: "OBJECTIONS", content, validation: "VALIDATED", criticScore: 100 },
+      update: { content, validation: "VALIDATED" },
+    });
+  }
+}
+
+/** Артефакт-форматы по titleMatch: чек-листы, скрипты, «найди ошибку», hotspot. */
+async function seedPharmaArtifacts(
+  courseId: string,
+  type: "CHECKLIST" | "SCRIPT_BUILDER" | "DIALOGUE_AUDIT" | "HOTSPOT",
+  rows: { titleMatch: string; data: unknown }[],
+) {
+  const lessons = await db.lesson.findMany({
+    where: { module: { courseId } },
+    select: { id: true, title: true },
+  });
+  for (const row of rows) {
+    const lesson = lessons.find((l) => l.title.includes(row.titleMatch));
+    if (!lesson) continue;
+    const content = JSON.stringify(row.data);
+    await db.aiArtifact.upsert({
+      where: { lessonId_type: { lessonId: lesson.id, type } },
+      create: { lessonId: lesson.id, type, content, validation: "VALIDATED", criticScore: 100 },
+      update: { content, validation: "VALIDATED" },
+    });
+  }
+}
+
+/** Сценарии диалог-симулятора (SimulationScenario) по titleMatch. */
+async function seedPharmaScenarios(courseId: string) {
+  const lessons = await db.lesson.findMany({
+    where: { module: { courseId } },
+    select: { id: true, title: true },
+  });
+  for (const s of PHARMA_SCENARIOS) {
+    const lesson = lessons.find((l) => l.title.includes(s.titleMatch));
+    if (!lesson) continue;
+    const exists = await db.simulationScenario.findFirst({
+      where: { lessonId: lesson.id, title: s.title },
+      select: { id: true },
+    });
+    if (exists) {
+      await db.simulationScenario.update({
+        where: { id: exists.id },
+        data: { persona: s.persona, objectives: s.objectives, validation: "VALIDATED", criticScore: 100 },
+      });
+    } else {
+      await db.simulationScenario.create({
+        data: {
+          lessonId: lesson.id,
+          title: s.title,
+          persona: s.persona,
+          objectives: s.objectives,
+          validation: "VALIDATED",
+          criticScore: 100,
+        },
+      });
+    }
+  }
+}
+
 async function main() {
   const owner = await db.user.upsert({
     where: { email: OWNER_EMAIL },
@@ -815,6 +915,13 @@ async function main() {
   }
   await seedPharmaSummaries(pharmaCourse.id);
   await seedPharmaSlides(pharmaCourse.id);
+  await seedPharmaFlashcards(pharmaCourse.id);
+  await seedPharmaObjections(pharmaCourse.id);
+  await seedPharmaArtifacts(pharmaCourse.id, "CHECKLIST", PHARMA_CHECKLISTS);
+  await seedPharmaArtifacts(pharmaCourse.id, "SCRIPT_BUILDER", PHARMA_SCRIPTS);
+  await seedPharmaArtifacts(pharmaCourse.id, "DIALOGUE_AUDIT", PHARMA_AUDITS);
+  await seedPharmaArtifacts(pharmaCourse.id, "HOTSPOT", PHARMA_HOTSPOTS);
+  await seedPharmaScenarios(pharmaCourse.id);
   await seedPharmaExam(pharmaCourse.id);
   await seedPharmaLessonQuizzes(pharmaCourse.id);
 

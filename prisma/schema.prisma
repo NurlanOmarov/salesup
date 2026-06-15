@@ -44,6 +44,7 @@ model User {
   position      String?
   locale        String    @default("ru")
   subtitleLang  SubtitleLang? // язык субтитров по умолчанию в плеере (null = выкл)
+  deviceLimit   Int? // лимит одновременных устройств: null = стандартный (DEVICE_LIMIT), 0 = безлимит, N = N устройств
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   deletedAt     DateTime? // soft delete / анонимизация
@@ -256,6 +257,7 @@ model Lesson {
   videoKey      String? // префикс: courses/<slug>/lessons/<id>/ (master.m3u8, сегменты)
   videoAesKeyEnc String? // 16-байтовый AES-128-ключ HLS, зашифрованный app-секретом (VIDEO_KEY_ENC_SECRET); отдаётся через /api/video/key/<lessonId>
   videoStatus   VideoStatus @default(NONE)
+  audioKey      String? // подкаст-формат: аудиодорожка (m4a), извлечённая фабрикой из видео урока; ключ в lib/storage
   durationSec   Int?
   youtubeUrl    String? // источник (видео скачивается и кодируется CLI-фабрикой)
   // Прохождение
@@ -699,10 +701,14 @@ model SimulationRun {
 
 enum AiArtifactType {
   SUMMARY
-  CHECKLIST
-  FLASHCARDS
+  CHECKLIST // JSON-чек-лист подготовки (интерактивные пункты с локальным прогрессом)
+  FLASHCARDS // JSON-набор карточек «термин → определение» (тренажёр запоминания)
   BLOG_DRAFT
   SLIDES // JSON-колода слайдов презентации урока (рендерится просмотрщиком)
+  OBJECTIONS // JSON-тренажёр отработки возражений клиента (интерактивный выбор ответа)
+  SCRIPT_BUILDER // JSON-конструктор скрипта: собрать этапы звонка в правильном порядке
+  DIALOGUE_AUDIT // JSON-тренажёр «найди ошибку»: отметить неверные реплики менеджера
+  HOTSPOT // JSON-схема с кликабельными точками на изображении (этапы/зоны)
 }
 
 model AiArtifact {

@@ -3,11 +3,48 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
-import { PlayCircle, FileText, ScrollText, Bot, Presentation } from "lucide-react";
+import {
+  PlayCircle,
+  FileText,
+  ScrollText,
+  Bot,
+  Presentation,
+  Layers,
+  MessageSquareWarning,
+  Headphones,
+  ListOrdered,
+  SearchCheck,
+  ListChecks,
+  MapPin,
+  MessagesSquare,
+} from "lucide-react";
 import { SecurePlayer, type SubtitleTrackInfo } from "@/components/player/secure-player";
 import { TutorChat } from "@/components/learn/tutor-chat";
 import { SlideDeck } from "@/components/learn/slide-deck";
+import { FlashcardsDeck } from "@/components/learn/flashcards-deck";
+import { ObjectionTrainer } from "@/components/learn/objection-trainer";
+import { PodcastPlayer } from "@/components/learn/podcast-player";
+import { ChecklistCard } from "@/components/learn/checklist-card";
+import { ScriptBuilder } from "@/components/learn/script-builder";
+import { DialogueAudit } from "@/components/learn/dialogue-audit";
+import { HotspotImage } from "@/components/learn/hotspot-image";
+import { SimulationChat } from "@/components/learn/simulation-chat";
 import type { SlideDeckData } from "@/lib/slides";
+import type {
+  FlashcardsData,
+  ObjectionsData,
+  ChecklistData,
+  ScriptBuilderData,
+  DialogueAuditData,
+  HotspotData,
+} from "@/lib/interactive";
+
+export interface SimulationInfo {
+  id: string;
+  title: string;
+  persona: string;
+  objectives: string[];
+}
 
 /**
  * Вкладки урока (современный кабинет курса): Видео · Конспект · Транскрипт.
@@ -15,26 +52,55 @@ import type { SlideDeckData } from "@/lib/slides";
  * воспроизведение; конспект (markdown) и транскрипт скрываются/показываются.
  */
 
-type Tab = "video" | "slides" | "summary" | "transcript" | "tutor";
+type Tab =
+  | "video"
+  | "podcast"
+  | "slides"
+  | "summary"
+  | "flashcards"
+  | "objections"
+  | "script"
+  | "audit"
+  | "checklist"
+  | "hotspot"
+  | "simulation"
+  | "transcript"
+  | "tutor";
 
 export function LessonTabs({
   lessonId,
   videoReady,
+  hasAudio = false,
   watermark,
   startPositionSec,
   summary,
   transcript,
   slides = null,
+  flashcards = null,
+  objections = null,
+  checklist = null,
+  script = null,
+  audit = null,
+  hotspot = null,
+  simulation = null,
   subtitles = [],
   defaultSubtitleLang = null,
 }: {
   lessonId: string;
   videoReady: boolean;
+  hasAudio?: boolean;
   watermark: string;
   startPositionSec: number;
   summary: string | null;
   transcript: string | null;
   slides?: SlideDeckData | null;
+  flashcards?: FlashcardsData | null;
+  objections?: ObjectionsData | null;
+  checklist?: ChecklistData | null;
+  script?: ScriptBuilderData | null;
+  audit?: DialogueAuditData | null;
+  hotspot?: HotspotData | null;
+  simulation?: SimulationInfo | null;
   subtitles?: SubtitleTrackInfo[];
   defaultSubtitleLang?: string | null;
 }) {
@@ -42,8 +108,16 @@ export function LessonTabs({
 
   const tabs: { key: Tab; label: string; icon: typeof PlayCircle; show: boolean }[] = [
     { key: "video", label: "Видео", icon: PlayCircle, show: true },
+    { key: "podcast", label: "Подкаст", icon: Headphones, show: hasAudio },
     { key: "slides", label: "Презентация", icon: Presentation, show: !!slides },
     { key: "summary", label: "Конспект", icon: FileText, show: !!summary },
+    { key: "flashcards", label: "Карточки", icon: Layers, show: !!flashcards },
+    { key: "objections", label: "Возражения", icon: MessageSquareWarning, show: !!objections },
+    { key: "script", label: "Скрипт", icon: ListOrdered, show: !!script },
+    { key: "audit", label: "Найди ошибку", icon: SearchCheck, show: !!audit },
+    { key: "checklist", label: "Чек-лист", icon: ListChecks, show: !!checklist },
+    { key: "hotspot", label: "Схема", icon: MapPin, show: !!hotspot },
+    { key: "simulation", label: "Симулятор", icon: MessagesSquare, show: !!simulation },
     { key: "transcript", label: "Транскрипт", icon: ScrollText, show: !!transcript },
     { key: "tutor", label: "Наставник", icon: Bot, show: true },
   ];
@@ -90,6 +164,13 @@ export function LessonTabs({
         )}
       </div>
 
+      {/* Подкаст — монтируется один раз (вне переключения), чтобы не рвать аудио */}
+      {hasAudio ? (
+        <div className={`mt-4 ${tab === "podcast" ? "block" : "hidden"}`}>
+          <PodcastPlayer lessonId={lessonId} />
+        </div>
+      ) : null}
+
       <AnimatePresence mode="wait">
         {tab === "slides" && slides ? (
           <motion.div
@@ -112,6 +193,60 @@ export function LessonTabs({
             className="prose-quiz mt-4 rounded-2xl border border-foreground/10 bg-background p-6"
           >
             <Markdown text={summary} />
+          </motion.div>
+        ) : null}
+
+        {tab === "flashcards" && flashcards ? (
+          <motion.div
+            key="flashcards"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="mt-4"
+          >
+            <FlashcardsDeck deck={flashcards} />
+          </motion.div>
+        ) : null}
+
+        {tab === "objections" && objections ? (
+          <motion.div
+            key="objections"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="mt-4"
+          >
+            <ObjectionTrainer data={objections} />
+          </motion.div>
+        ) : null}
+
+        {tab === "script" && script ? (
+          <motion.div key="script" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
+            <ScriptBuilder data={script} />
+          </motion.div>
+        ) : null}
+
+        {tab === "audit" && audit ? (
+          <motion.div key="audit" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
+            <DialogueAudit data={audit} />
+          </motion.div>
+        ) : null}
+
+        {tab === "checklist" && checklist ? (
+          <motion.div key="checklist" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
+            <ChecklistCard data={checklist} />
+          </motion.div>
+        ) : null}
+
+        {tab === "hotspot" && hotspot ? (
+          <motion.div key="hotspot" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
+            <HotspotImage data={hotspot} />
+          </motion.div>
+        ) : null}
+
+        {tab === "simulation" && simulation ? (
+          <motion.div key="simulation" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
+            <SimulationChat scenario={simulation} />
           </motion.div>
         ) : null}
 
