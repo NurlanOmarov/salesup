@@ -8,13 +8,14 @@ import { canAccessLesson, httpStatusForDeny } from "@/lib/access";
 export const dynamic = "force-dynamic";
 
 /**
- * Аудиоверсия урока: раздача аудиодорожки (m4a), извлечённой фабрикой из видео
- * (озвучка лекции). AI-подкаст-обзор раздаётся отдельно — /api/video/podcast/<id>.
- *  GET /api/video/audio/<lessonId>
+ * AI-подкаст урока: раздача двухголосого обзора (m4a), сгенерированного фабрикой
+ * через NotebookLM (factory:podcast). Отдельный формат от аудиоверсии урока
+ * (/api/video/audio/<id> — дорожка из видео).
+ *  GET /api/video/podcast/<lessonId>
  *
- * Доступ — полная проверка canAccessLesson на каждый запрос (как у ключа): аудио
- * — тот же платный контент, что и видео. На VPS отдаёт nginx через X-Accel-Redirect;
- * локально стримим напрямую с поддержкой Range (перемотка в плеере).
+ * Доступ — полная проверка canAccessLesson на каждый запрос: подкаст — тот же
+ * платный контент. На VPS отдаёт nginx через X-Accel-Redirect; локально стримим
+ * напрямую с поддержкой Range (перемотка в плеере).
  */
 export async function GET(
   req: NextRequest,
@@ -28,11 +29,11 @@ export async function GET(
   const access = await canAccessLesson(userId, lessonId);
   if (!access.ok) return new NextResponse(access.reason, { status: httpStatusForDeny(access.reason) });
 
-  const lesson = await db.lesson.findUnique({ where: { id: lessonId }, select: { audioKey: true } });
-  if (!lesson?.audioKey || !(await storage.exists(lesson.audioKey))) {
-    return new NextResponse("Audio not available", { status: 404 });
+  const lesson = await db.lesson.findUnique({ where: { id: lessonId }, select: { podcastKey: true } });
+  if (!lesson?.podcastKey || !(await storage.exists(lesson.podcastKey))) {
+    return new NextResponse("Podcast not available", { status: 404 });
   }
-  const key = lesson.audioKey;
+  const key = lesson.podcastKey;
 
   // VPS: nginx отдаёт файл из internal-локации (поддерживает Range сам).
   if (env.VIDEO_XACCEL) {

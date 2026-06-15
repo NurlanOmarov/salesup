@@ -23,6 +23,7 @@
     "db:generate": "prisma generate",
     "factory:video": "tsx --env-file=.env scripts/factory/video.ts",
     "factory:audio": "tsx --env-file=.env scripts/factory/audio.ts",
+    "factory:podcast": "tsx --env-file=.env scripts/factory/podcast.ts",
     "factory:transcript": "tsx --env-file=.env scripts/factory/transcript.ts",
     "factory:subs": "tsx --env-file=.env scripts/factory/subs.ts",
     "factory:chunk": "tsx --env-file=.env scripts/factory/chunk.ts",

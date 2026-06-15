@@ -1,14 +1,43 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Play, Pause, Headphones, RotateCcw, RotateCw, Gauge } from "lucide-react";
+import { Play, Pause, Headphones, Podcast, RotateCcw, RotateCw, Gauge, type LucideIcon } from "lucide-react";
 
 /**
- * Подкаст-формат урока: аудиоплеер дорожки, извлечённой фабрикой из видео урока.
- * Для прослушивания «в дороге» — без видео. Источник защищён (audioKey + доступ),
- * раздаётся через /api/video/audio/<lessonId> (X-Accel на VPS).
+ * Аудиоплеер урока в двух вариантах (один компонент, разные источники/оформление):
+ *  - "audio"   — аудиоверсия урока: озвучка лекции, дорожка из видео (audioKey),
+ *                раздаётся /api/video/audio/<id>;
+ *  - "podcast" — AI-подкаст: двухголосый обзор-диалог (NotebookLM, podcastKey),
+ *                раздаётся /api/video/podcast/<id>.
+ * Источник в обоих случаях защищён (ключ + проверка доступа), на VPS — X-Accel.
  */
 const SPEEDS = [1, 1.25, 1.5, 2];
+
+type Variant = "audio" | "podcast";
+
+const VARIANTS: Record<
+  Variant,
+  { endpoint: string; icon: LucideIcon; title: string; subtitle: string; accent: string; iconWrap: string; button: string }
+> = {
+  audio: {
+    endpoint: "audio",
+    icon: Headphones,
+    title: "Аудиоверсия урока",
+    subtitle: "Озвучка лекции — слушайте в дороге",
+    accent: "from-violet-500/[0.07]",
+    iconWrap: "bg-violet-500/15 text-violet-600",
+    button: "bg-violet-500 hover:bg-violet-400",
+  },
+  podcast: {
+    endpoint: "podcast",
+    icon: Podcast,
+    title: "Подкаст-обзор",
+    subtitle: "Два ведущих разбирают урок — живой формат",
+    accent: "from-amber-500/[0.08]",
+    iconWrap: "bg-amber-500/15 text-amber-600",
+    button: "bg-amber-500 hover:bg-amber-400",
+  },
+};
 
 function fmt(sec: number): string {
   if (!Number.isFinite(sec)) return "0:00";
@@ -17,7 +46,9 @@ function fmt(sec: number): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-export function PodcastPlayer({ lessonId }: { lessonId: string }) {
+export function AudioPlayer({ lessonId, variant = "audio" }: { lessonId: string; variant?: Variant }) {
+  const cfg = VARIANTS[variant];
+  const Icon = cfg.icon;
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
   const [cur, setCur] = useState(0);
@@ -48,20 +79,20 @@ export function PodcastPlayer({ lessonId }: { lessonId: string }) {
   };
 
   return (
-    <div className="rounded-2xl border border-foreground/10 bg-gradient-to-br from-violet-500/[0.07] to-transparent p-5 sm:p-6">
+    <div className={`rounded-2xl border border-foreground/10 bg-gradient-to-br ${cfg.accent} to-transparent p-5 sm:p-6`}>
       <div className="flex items-center gap-3">
-        <div className="flex size-12 items-center justify-center rounded-2xl bg-violet-500/15 text-violet-600">
-          <Headphones className="size-6" />
+        <div className={`flex size-12 items-center justify-center rounded-2xl ${cfg.iconWrap}`}>
+          <Icon className="size-6" />
         </div>
         <div>
-          <p className="font-semibold">Подкаст урока</p>
-          <p className="text-sm text-foreground/55">Аудиоверсия — слушайте в дороге</p>
+          <p className="font-semibold">{cfg.title}</p>
+          <p className="text-sm text-foreground/55">{cfg.subtitle}</p>
         </div>
       </div>
 
       <audio
         ref={audioRef}
-        src={`/api/video/audio/${lessonId}`}
+        src={`/api/video/${cfg.endpoint}/${lessonId}`}
         preload="metadata"
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
@@ -78,7 +109,7 @@ export function PodcastPlayer({ lessonId }: { lessonId: string }) {
           max={dur || 0}
           value={cur}
           onChange={onScrub}
-          className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-foreground/15 accent-violet-500"
+          className={`h-1.5 w-full cursor-pointer appearance-none rounded-full bg-foreground/15 ${variant === "podcast" ? "accent-amber-500" : "accent-violet-500"}`}
         />
         <div className="mt-1.5 flex justify-between text-xs text-foreground/50">
           <span>{fmt(cur)}</span>
@@ -93,7 +124,7 @@ export function PodcastPlayer({ lessonId }: { lessonId: string }) {
         </button>
         <button
           onClick={toggle}
-          className="flex size-14 items-center justify-center rounded-full bg-violet-500 text-white transition-colors hover:bg-violet-400"
+          className={`flex size-14 items-center justify-center rounded-full text-white transition-colors ${cfg.button}`}
           aria-label={playing ? "Пауза" : "Воспроизвести"}
         >
           {playing ? <Pause className="size-6" /> : <Play className="size-6 translate-x-0.5" />}

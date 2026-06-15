@@ -8,9 +8,12 @@ import { run, requireBinary } from "./lib/exec.js";
 import { c, log, humanSize } from "./lib/log.js";
 
 /**
- * CLI: подкаст-конвейер — извлечение аудиодорожки из видео урока (CLAUDE.md, формат
- * «подкаст»). Источник тот же, что у видео (yt-dlp по youtubeUrl), извлекается чистое
- * аудио (m4a/AAC) и кладётся в storage рядом с HLS: courses/<slug>/lessons/<id>/audio.m4a.
+ * CLI: аудиоверсия урока — извлечение аудиодорожки из видео урока (озвучка лекции для
+ * прослушивания «в дороге»). Источник тот же, что у видео (yt-dlp по youtubeUrl),
+ * извлекается чистое аудио (m4a/AAC) и кладётся в storage рядом с HLS:
+ * courses/<slug>/lessons/<id>/audio.m4a.
+ *
+ * Это НЕ AI-подкаст: подкаст-обзор двумя ведущими генерит factory:podcast (NotebookLM).
  *
  *   pnpm factory:audio --lesson <lessonId>
  *   pnpm factory:audio --course <courseSlug>     # батч всех уроков с youtubeUrl
@@ -97,7 +100,7 @@ async function processLesson(
 
     await db.lesson.update({ where: { id: lesson.id }, data: { audioKey: key } });
 
-    log.ok(`Подкаст урока «${lesson.title}» готов: ${humanSize(data.length)}`);
+    log.ok(`Аудиоверсия урока «${lesson.title}» готова: ${humanSize(data.length)}`);
     return { sizeBytes: data.length };
   } finally {
     await rm(workDir, { recursive: true, force: true });
