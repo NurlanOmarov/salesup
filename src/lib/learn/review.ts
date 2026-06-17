@@ -172,6 +172,7 @@ export async function gradeCard(
       lapses: next.lapses,
       dueAt: next.dueAt,
       lastResult: next.lastResult,
+      lastReviewedAt: now,
     },
   });
   return { dueAt: next.dueAt, box: next.box };

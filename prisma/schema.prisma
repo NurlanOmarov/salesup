@@ -759,6 +759,7 @@ model CardReview {
   repetitions Int        @default(0)
   lapses      Int        @default(0)
   lastResult  Boolean? // последний ответ: запомнил/нет
+  lastReviewedAt DateTime? // когда карточку последний раз повторяли (для дневных целей)
   createdAt   DateTime   @default(now())
   user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   artifact    AiArtifact @relation(fields: [artifactId], references: [id], onDelete: Cascade)
