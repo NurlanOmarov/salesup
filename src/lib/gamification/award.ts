@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { levelForXp } from "./levels.js";
-import { nextStreak } from "./streak.js";
+import { applyStreak } from "./streak.js";
 
 /**
  * Начисление наград (S8). Идемпотентно по смыслу: бейдж выдаётся один раз,
@@ -49,14 +49,19 @@ export async function awardBadge(userId: string, code: string): Promise<boolean>
 export async function touchStreak(userId: string, today: Date = new Date()): Promise<number> {
   const profile = await db.gamificationProfile.findUnique({
     where: { userId },
-    select: { streakDays: true, lastActiveOn: true },
+    select: { streakDays: true, lastActiveOn: true, streakFreezes: true },
   });
-  const streak = nextStreak(profile?.lastActiveOn ?? null, today, profile?.streakDays ?? 0);
+  const result = applyStreak(
+    profile?.lastActiveOn ?? null,
+    today,
+    profile?.streakDays ?? 0,
+    profile?.streakFreezes ?? 0,
+  );
 
   await db.gamificationProfile.upsert({
     where: { userId },
-    create: { userId, streakDays: streak, lastActiveOn: today },
-    update: { streakDays: streak, lastActiveOn: today },
+    create: { userId, streakDays: result.streak, streakFreezes: result.freezes, lastActiveOn: today },
+    update: { streakDays: result.streak, streakFreezes: result.freezes, lastActiveOn: today },
   });
-  return streak;
+  return result.streak;
 }

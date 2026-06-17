@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Flame, Trophy, BookCheck, GraduationCap, Award, Medal, Lock, Star } from "lucide-react";
+import { Flame, Trophy, BookCheck, GraduationCap, Award, Medal, Lock, Star, Snowflake } from "lucide-react";
 import { requireUser } from "@/lib/auth/guards";
 import { db } from "@/lib/db";
 import { levelProgress } from "@/lib/gamification/levels";
@@ -18,7 +18,7 @@ export default async function AchievementsPage() {
   const [profile, allBadges, earned, lessonsDone, passedAttempts, certs] = await Promise.all([
     db.gamificationProfile.findUnique({
       where: { userId },
-      select: { xp: true, streakDays: true },
+      select: { xp: true, streakDays: true, streakFreezes: true },
     }),
     db.badge.findMany({ orderBy: { id: "asc" }, select: { code: true, title: true, description: true } }),
     db.userBadge.findMany({
@@ -83,12 +83,23 @@ export default async function AchievementsPage() {
               </p>
             </div>
           </div>
-          {profile?.streakDays ? (
-            <div className="flex items-center gap-1.5 rounded-full bg-orange-500/10 px-3 py-1.5 text-sm font-medium text-orange-700">
-              <Flame className="size-4" />
-              Серия {profile.streakDays} дн.
-            </div>
-          ) : null}
+          <div className="flex items-center gap-2">
+            {profile?.streakDays ? (
+              <div className="flex items-center gap-1.5 rounded-full bg-orange-500/10 px-3 py-1.5 text-sm font-medium text-orange-700">
+                <Flame className="size-4" />
+                Серия {profile.streakDays} дн.
+              </div>
+            ) : null}
+            {profile?.streakFreezes ? (
+              <div
+                className="flex items-center gap-1.5 rounded-full bg-sky-500/10 px-3 py-1.5 text-sm font-medium text-sky-700"
+                title="Заморозка спасает серию при пропуске дня"
+              >
+                <Snowflake className="size-4" />
+                {profile.streakFreezes}
+              </div>
+            ) : null}
+          </div>
         </div>
         <div
           className="mt-4 h-2.5 overflow-hidden rounded-full bg-foreground/10"
