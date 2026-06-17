@@ -189,3 +189,71 @@ export function parseHotspot(content: string | null | undefined): HotspotData | 
     return null;
   }
 }
+
+// ─── Ветвящийся сценарий (branching: выбор реплики ведёт к разным исходам) ─────
+
+export type BranchOutcome = "win" | "lose" | "neutral";
+
+/** Вариант ответа ученика: текст реплики, переход к узлу, опц. микро-фидбек. */
+export interface BranchChoice {
+  text: string;
+  to: string; // id следующего узла
+  note?: string;
+}
+
+/** Узел диалога: реплика клиента + варианты ответа (или терминальный исход). */
+export interface BranchNode {
+  id: string;
+  npc: string; // реплика клиента / описание ситуации
+  choices?: BranchChoice[]; // пусто/нет → терминальный узел
+  outcome?: BranchOutcome; // для терминального узла
+  outcomeText?: string;
+}
+
+export interface BranchingData {
+  title?: string;
+  start: string;
+  nodes: BranchNode[];
+}
+
+/**
+ * Целостность графа: старт существует, все переходы ведут к существующим узлам,
+ * есть хотя бы один терминальный узел (без вариантов). Чистая функция (юнит-тест).
+ */
+export function validateBranchingGraph(data: BranchingData): boolean {
+  const ids = new Set(data.nodes.map((n) => n.id));
+  if (!ids.has(data.start)) return false;
+  if (ids.size !== data.nodes.length) return false; // дубликаты id
+  let hasTerminal = false;
+  for (const n of data.nodes) {
+    const choices = n.choices ?? [];
+    if (choices.length === 0) hasTerminal = true;
+    for (const c of choices) {
+      if (!ids.has(c.to)) return false;
+    }
+  }
+  return hasTerminal;
+}
+
+/** Безопасный парсинг ветвящегося сценария. null при структурной ошибке/битом графе. */
+export function parseBranching(content: string | null | undefined): BranchingData | null {
+  if (!content) return null;
+  try {
+    const data = JSON.parse(content) as BranchingData;
+    if (!data || typeof data.start !== "string" || !Array.isArray(data.nodes)) return null;
+    const nodes = data.nodes.filter(
+      (n): n is BranchNode =>
+        !!n &&
+        typeof n.id === "string" &&
+        typeof n.npc === "string" &&
+        (n.choices === undefined ||
+          (Array.isArray(n.choices) &&
+            n.choices.every((c) => c && typeof c.text === "string" && typeof c.to === "string"))),
+    );
+    if (nodes.length === 0) return null;
+    const clean: BranchingData = { title: data.title, start: data.start, nodes };
+    return validateBranchingGraph(clean) ? clean : null;
+  } catch {
+    return null;
+  }
+}

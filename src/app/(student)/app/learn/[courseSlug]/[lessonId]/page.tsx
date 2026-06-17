@@ -17,6 +17,7 @@ import {
   parseScriptBuilder,
   parseDialogueAudit,
   parseHotspot,
+  parseBranching,
 } from "@/lib/interactive";
 import { loadScenario } from "@/lib/ai/simulate";
 
@@ -96,7 +97,7 @@ export default async function LearnPage({
     ]);
 
   // Новые интерактивы (чек-лист, скрипт, «найди ошибку», hotspot) + сценарий симулятора.
-  const [checklistArtifact, scriptArtifact, auditArtifact, hotspotArtifact, simulation] =
+  const [checklistArtifact, scriptArtifact, auditArtifact, hotspotArtifact, branchingArtifact, simulation] =
     await Promise.all([
       db.aiArtifact.findUnique({
         where: { lessonId_type: { lessonId, type: "CHECKLIST" } },
@@ -112,6 +113,10 @@ export default async function LearnPage({
       }),
       db.aiArtifact.findUnique({
         where: { lessonId_type: { lessonId, type: "HOTSPOT" } },
+        select: { content: true, validation: true },
+      }),
+      db.aiArtifact.findUnique({
+        where: { lessonId_type: { lessonId, type: "BRANCHING" } },
         select: { content: true, validation: true },
       }),
       loadScenario(lessonId),
@@ -132,6 +137,8 @@ export default async function LearnPage({
     auditArtifact?.validation === "VALIDATED" ? parseDialogueAudit(auditArtifact.content) : null;
   const hotspot =
     hotspotArtifact?.validation === "VALIDATED" ? parseHotspot(hotspotArtifact.content) : null;
+  const branching =
+    branchingArtifact?.validation === "VALIDATED" ? parseBranching(branchingArtifact.content) : null;
   const transcriptText =
     transcript && transcript.status === "CLEANED" ? transcript.cleanText : null;
 
@@ -223,6 +230,7 @@ export default async function LearnPage({
             slides={slides}
             flashcards={flashcards}
             objections={objections}
+            branching={branching}
             checklist={checklist}
             script={script}
             audit={audit}
