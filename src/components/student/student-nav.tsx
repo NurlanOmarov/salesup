@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { GraduationCap, LayoutGrid, Trophy, Award, Settings } from "lucide-react";
+import { GraduationCap, LayoutGrid, Repeat, Trophy, Award, Settings } from "lucide-react";
 import { LogoutButton } from "@/components/logout-button";
 
 /**
@@ -13,6 +13,7 @@ import { LogoutButton } from "@/components/logout-button";
 
 const NAV: { href: string; label: string; icon: typeof LayoutGrid; exact?: boolean }[] = [
   { href: "/app", label: "Обучение", icon: LayoutGrid, exact: true },
+  { href: "/app/review", label: "Повторение", icon: Repeat },
   { href: "/app/achievements", label: "Достижения", icon: Trophy },
   { href: "/app/certificates", label: "Сертификаты", icon: Award },
   { href: "/app/settings", label: "Настройки", icon: Settings },
@@ -69,7 +70,7 @@ export function StudentTabBar() {
       className="fixed inset-x-0 bottom-0 z-40 border-t border-foreground/10 bg-background/95 backdrop-blur lg:hidden"
       aria-label="Разделы кабинета"
     >
-      <div className="mx-auto grid max-w-md grid-cols-4">
+      <div className="mx-auto grid max-w-md grid-cols-5">
         {NAV.map((item) => {
           const active = isActive(pathname, item.href, item.exact);
           return (

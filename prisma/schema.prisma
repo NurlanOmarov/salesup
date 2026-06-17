@@ -67,6 +67,7 @@ model User {
   reviews         Review[]
   events          Event[]
   llmUsage        LlmUsage[]
+  cardReviews     CardReview[]
 }
 
 // Auth.js v5
@@ -739,8 +740,30 @@ model AiArtifact {
   thumbsDown  Int             @default(0)
   createdAt  DateTime         @default(now())
   lesson     Lesson           @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  cardReviews CardReview[]
 
   @@unique([lessonId, type])
+}
+
+// Прогресс интервального повторения флеш-карточки (Leitner-lite, по карточке на ученика).
+// Карточка адресуется парой (artifactId FLASHCARDS, cardIndex в deck.cards). Тренажёр
+// не использует LLM — повторение чистой механикой по dueAt (CLAUDE.md: один сервер).
+model CardReview {
+  id          String     @id @default(cuid())
+  userId      String
+  artifactId  String
+  cardIndex   Int // индекс карточки в FlashcardsData.cards
+  box         Int        @default(0) // ступень Leitner: 0 — новая/проваленная
+  dueAt       DateTime   @default(now())
+  repetitions Int        @default(0)
+  lapses      Int        @default(0)
+  lastResult  Boolean? // последний ответ: запомнил/нет
+  createdAt   DateTime   @default(now())
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  artifact    AiArtifact @relation(fields: [artifactId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, artifactId, cardIndex])
+  @@index([userId, dueAt])
 }
 
 model AiUsageDay {
