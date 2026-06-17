@@ -118,7 +118,18 @@ export interface LessonScenario {
   title: string;
   persona: string;
   objectives: string[];
+  archetype: "BUSY_DOCTOR" | "SKEPTIC" | "PROCUREMENT" | "FRIENDLY_NONCOMMITTAL" | "AGGRESSIVE";
+  difficulty: number; // 1..3
+  complianceRules: string[];
 }
+
+/** Базовые требования фарм-комплаенса — общие для всех сценариев. */
+const BASE_COMPLIANCE: string[] = [
+  "Нельзя обещать гарантированный или 100% результат лечения",
+  "Заявления об эффективности — только со ссылкой на инструкцию или клинические данные",
+  "Не продвигать препарат вне зарегистрированных показаний (off-label)",
+];
+
 export const PHARMA_SCENARIOS: LessonScenario[] = [
   {
     titleMatch: "7 методов закрытия",
@@ -131,6 +142,9 @@ export const PHARMA_SCENARIOS: LessonScenario[] = [
       "Снять возражение о надёжности",
       "Подвести к конкретному следующему шагу",
     ],
+    archetype: "PROCUREMENT",
+    difficulty: 2,
+    complianceRules: [...BASE_COMPLIANCE, "Не предлагать закупщику личную выгоду или вознаграждение за закуп"],
   },
   {
     titleMatch: "конфликтных ситуаций",
@@ -143,5 +157,8 @@ export const PHARMA_SCENARIOS: LessonScenario[] = [
       "Перевести разговор в конструктив",
       "Предложить конкретное решение и удержать клиента",
     ],
+    archetype: "AGGRESSIVE",
+    difficulty: 3,
+    complianceRules: BASE_COMPLIANCE,
   },
 ];

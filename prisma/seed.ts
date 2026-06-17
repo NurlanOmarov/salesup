@@ -844,7 +844,15 @@ async function seedPharmaScenarios(courseId: string) {
     if (exists) {
       await db.simulationScenario.update({
         where: { id: exists.id },
-        data: { persona: s.persona, objectives: s.objectives, validation: "VALIDATED", criticScore: 100 },
+        data: {
+          persona: s.persona,
+          objectives: s.objectives,
+          archetype: s.archetype,
+          difficulty: s.difficulty,
+          complianceRules: s.complianceRules,
+          validation: "VALIDATED",
+          criticScore: 100,
+        },
       });
     } else {
       await db.simulationScenario.create({
@@ -853,6 +861,9 @@ async function seedPharmaScenarios(courseId: string) {
           title: s.title,
           persona: s.persona,
           objectives: s.objectives,
+          archetype: s.archetype,
+          difficulty: s.difficulty,
+          complianceRules: s.complianceRules,
           validation: "VALIDATED",
           criticScore: 100,
         },

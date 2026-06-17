@@ -3,7 +3,7 @@ import { z } from "zod";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { canAccessLesson, httpStatusForDeny } from "@/lib/access";
-import { replyAsClient, debriefRun, type SimMessage } from "@/lib/ai/simulate";
+import { replyAsClient, scoreRun, complianceRulesOf, type SimMessage, type ScenarioRow } from "@/lib/ai/simulate";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +21,7 @@ const schema = z.object({
 /**
  * Тренажёр-симулятор диалога (S-интерактив): ученик ↔ AI-клиент.
  *  - finish=false → следующая реплика клиента (replyAsClient)
- *  - finish=true  → разбор и оценка диалога (debriefRun)
+ *  - finish=true  → scorecard по фазам + compliance (scoreRun)
  * Доступ — через lib/access по уроку сценария; лимит — внутри lib/ai/simulate.
  */
 export async function POST(req: NextRequest) {
@@ -36,7 +36,15 @@ export async function POST(req: NextRequest) {
 
   const scenario = await db.simulationScenario.findUnique({
     where: { id: scenarioId },
-    select: { lessonId: true, persona: true, objectives: true, validation: true },
+    select: {
+      lessonId: true,
+      persona: true,
+      objectives: true,
+      archetype: true,
+      difficulty: true,
+      complianceRules: true,
+      validation: true,
+    },
   });
   if (!scenario || scenario.validation !== "VALIDATED") {
     return new NextResponse("Scenario not found", { status: 404 });
@@ -48,12 +56,18 @@ export async function POST(req: NextRequest) {
   const objectives = Array.isArray(scenario.objectives)
     ? (scenario.objectives.filter((o) => typeof o === "string") as string[])
     : [];
-  const scenarioRow = { persona: scenario.persona, objectives };
+  const scenarioRow: ScenarioRow = {
+    persona: scenario.persona,
+    objectives,
+    archetype: scenario.archetype,
+    difficulty: scenario.difficulty,
+    complianceRules: complianceRulesOf(scenario.complianceRules),
+  };
   const hist = history as SimMessage[];
 
   try {
     if (finish) {
-      const result = await debriefRun(userId, scenarioId, scenarioRow, hist);
+      const result = await scoreRun(userId, scenarioId, scenarioRow, hist);
       return NextResponse.json(result);
     }
     const result = await replyAsClient(userId, scenarioRow, hist);
