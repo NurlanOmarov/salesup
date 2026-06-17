@@ -108,6 +108,7 @@ export function LessonTabs({
   audit = null,
   hotspot = null,
   simulation = null,
+  voiceEnabled = false,
   subtitles = [],
   defaultSubtitleLang = null,
 }: {
@@ -128,6 +129,7 @@ export function LessonTabs({
   audit?: DialogueAuditData | null;
   hotspot?: HotspotData | null;
   simulation?: SimulationInfo | null;
+  voiceEnabled?: boolean;
   subtitles?: SubtitleTrackInfo[];
   defaultSubtitleLang?: string | null;
 }) {
@@ -358,7 +360,7 @@ export function LessonTabs({
 
         {tab === "simulation" && simulation ? (
           <motion.div key="simulation" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
-            <SimulationChat scenario={simulation} />
+            <SimulationChat scenario={simulation} voiceEnabled={voiceEnabled} />
           </motion.div>
         ) : null}
 

@@ -14,6 +14,11 @@ import {
   AlertTriangle,
   ThumbsUp,
   Lightbulb,
+  Mic,
+  Square,
+  Loader2,
+  Volume2,
+  Keyboard,
 } from "lucide-react";
 
 /**
@@ -66,20 +71,62 @@ function phaseColor(score: number): string {
   return "bg-rose-500";
 }
 
-export function SimulationChat({ scenario }: { scenario: ScenarioInfo }) {
+type VoiceStatus = "idle" | "recording" | "processing" | "speaking";
+
+export function SimulationChat({
+  scenario,
+  voiceEnabled = false,
+}: {
+  scenario: ScenarioInfo;
+  voiceEnabled?: boolean;
+}) {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [pending, setPending] = useState(false);
   const [remaining, setRemaining] = useState<number | null>(null);
   const [card, setCard] = useState<Scorecard | null>(null);
+  const [voiceMode, setVoiceMode] = useState(false);
+  const [voiceStatus, setVoiceStatus] = useState<VoiceStatus>("idle");
+  const [voiceError, setVoiceError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages, pending, card]);
 
-  async function send(text: string) {
+  /** Озвучить реплику клиента (TTS). Мягко: при сбое просто не проигрываем. */
+  async function playTts(text: string) {
+    try {
+      setVoiceStatus("speaking");
+      const res = await fetch("/api/ai/voice/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      if (!res.ok) throw new Error();
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = audioRef.current ?? new Audio();
+      audioRef.current = audio;
+      audio.src = url;
+      await audio.play().catch(() => {});
+      await new Promise<void>((resolve) => {
+        audio.onended = () => resolve();
+        audio.onerror = () => resolve();
+      });
+      URL.revokeObjectURL(url);
+    } catch {
+      // тихо — текст реплики уже виден в ленте
+    } finally {
+      setVoiceStatus("idle");
+    }
+  }
+
+  async function send(text: string): Promise<void> {
     const q = text.trim();
     if (!q || pending || card) return;
     const history: Msg[] = [...messages, { role: "student", text: q }];
@@ -96,10 +143,60 @@ export function SimulationChat({ scenario }: { scenario: ScenarioInfo }) {
       const data = await res.json();
       setMessages((m) => [...m, { role: "client", text: data.reply }]);
       if (typeof data.remaining === "number") setRemaining(data.remaining);
+      if (voiceMode && typeof data.reply === "string") await playTts(data.reply);
     } catch {
       setMessages((m) => [...m, { role: "client", text: "(клиент задумался — попробуйте ещё раз)" }]);
     } finally {
       setPending(false);
+    }
+  }
+
+  /** Распознать записанную речь и отправить как реплику. */
+  async function handleVoiceBlob(blob: Blob) {
+    if (blob.size === 0) return;
+    setVoiceStatus("processing");
+    setVoiceError(null);
+    try {
+      const form = new FormData();
+      form.append("audio", blob, "speech.webm");
+      const res = await fetch("/api/ai/voice/stt", { method: "POST", body: form });
+      if (!res.ok) throw new Error();
+      const { text } = (await res.json()) as { text?: string };
+      if (text && text.trim()) {
+        await send(text.trim());
+      } else {
+        setVoiceError("Не расслышал — попробуйте ещё раз.");
+        setVoiceStatus("idle");
+      }
+    } catch {
+      setVoiceError("Не удалось распознать речь.");
+      setVoiceStatus("idle");
+    }
+  }
+
+  /** Старт/стоп записи микрофона (MediaRecorder). */
+  async function toggleRecording() {
+    if (voiceStatus === "recording") {
+      recorderRef.current?.stop();
+      return;
+    }
+    if (pending || voiceStatus !== "idle") return;
+    setVoiceError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const rec = new MediaRecorder(stream);
+      chunksRef.current = [];
+      rec.ondataavailable = (e) => e.data.size > 0 && chunksRef.current.push(e.data);
+      rec.onstop = () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(chunksRef.current, { type: rec.mimeType || "audio/webm" });
+        void handleVoiceBlob(blob);
+      };
+      recorderRef.current = rec;
+      rec.start();
+      setVoiceStatus("recording");
+    } catch {
+      setVoiceError("Нет доступа к микрофону.");
     }
   }
 
@@ -152,6 +249,30 @@ export function SimulationChat({ scenario }: { scenario: ScenarioInfo }) {
           </ul>
         ) : null}
       </div>
+
+      {/* Переключатель «текст / голос» */}
+      {voiceEnabled && !card ? (
+        <div className="mt-3 inline-flex rounded-lg border border-foreground/15 p-0.5 text-sm">
+          <button
+            onClick={() => setVoiceMode(false)}
+            className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 transition-colors ${
+              !voiceMode ? "bg-amber-500/15 text-amber-700" : "text-foreground/60"
+            }`}
+          >
+            <Keyboard className="size-4" />
+            Текст
+          </button>
+          <button
+            onClick={() => setVoiceMode(true)}
+            className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 transition-colors ${
+              voiceMode ? "bg-amber-500/15 text-amber-700" : "text-foreground/60"
+            }`}
+          >
+            <Mic className="size-4" />
+            Голос
+          </button>
+        </div>
+      ) : null}
 
       {/* Лента диалога */}
       <div ref={scrollRef} className="mt-3 max-h-[44vh] space-y-3 overflow-y-auto pr-1">
@@ -314,35 +435,44 @@ export function SimulationChat({ scenario }: { scenario: ScenarioInfo }) {
         </div>
       ) : (
         <div className="mt-3">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              send(input);
-            }}
-            className="flex items-end gap-2"
-          >
-            <textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  send(input);
-                }
-              }}
-              rows={1}
-              placeholder="Ваша реплика клиенту…"
-              disabled={pending}
-              className="max-h-32 min-h-[44px] flex-1 resize-none rounded-xl border border-foreground/20 bg-background px-3 py-2.5 text-sm outline-none focus:border-amber-500/50"
+          {voiceMode ? (
+            <VoicePanel
+              status={voiceStatus}
+              error={voiceError}
+              pending={pending}
+              onToggle={toggleRecording}
             />
-            <button
-              type="submit"
-              disabled={pending || !input.trim()}
-              className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-slate-950 transition-colors hover:bg-amber-400 disabled:opacity-40"
+          ) : (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                send(input);
+              }}
+              className="flex items-end gap-2"
             >
-              <Send className="size-4" />
-            </button>
-          </form>
+              <textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    send(input);
+                  }
+                }}
+                rows={1}
+                placeholder="Ваша реплика клиенту…"
+                disabled={pending}
+                className="max-h-32 min-h-[44px] flex-1 resize-none rounded-xl border border-foreground/20 bg-background px-3 py-2.5 text-sm outline-none focus:border-amber-500/50"
+              />
+              <button
+                type="submit"
+                disabled={pending || !input.trim()}
+                className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-slate-950 transition-colors hover:bg-amber-400 disabled:opacity-40"
+              >
+                <Send className="size-4" />
+              </button>
+            </form>
+          )}
           <div className="mt-2 flex items-center justify-between">
             <button
               onClick={finish}
@@ -358,6 +488,67 @@ export function SimulationChat({ scenario }: { scenario: ScenarioInfo }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/** Панель голосового ввода: большая кнопка микрофона + статус. */
+function VoicePanel({
+  status,
+  error,
+  pending,
+  onToggle,
+}: {
+  status: VoiceStatus;
+  error: string | null;
+  pending: boolean;
+  onToggle: () => void;
+}) {
+  const recording = status === "recording";
+  const busy = status === "processing" || status === "speaking" || (pending && status !== "recording");
+
+  const label =
+    status === "recording"
+      ? "Идёт запись — нажмите, чтобы отправить"
+      : status === "processing"
+        ? "Распознаю речь…"
+        : status === "speaking"
+          ? "Клиент отвечает…"
+          : "Нажмите и говорите";
+
+  return (
+    <div className="flex flex-col items-center gap-2 py-2">
+      <button
+        onClick={onToggle}
+        disabled={busy}
+        aria-label={recording ? "Остановить запись" : "Начать запись"}
+        className={[
+          "flex size-16 items-center justify-center rounded-full text-white shadow-sm transition-colors disabled:opacity-50",
+          recording ? "bg-rose-500 hover:bg-rose-400" : "bg-amber-500 hover:bg-amber-400",
+        ].join(" ")}
+      >
+        {status === "processing" ? (
+          <Loader2 className="size-7 animate-spin" />
+        ) : status === "speaking" ? (
+          <Volume2 className="size-7 animate-pulse" />
+        ) : recording ? (
+          <Square className="size-6" />
+        ) : (
+          <Mic className="size-7" />
+        )}
+      </button>
+      {recording ? (
+        <motion.span
+          initial={{ opacity: 0.4 }}
+          animate={{ opacity: 1 }}
+          transition={{ repeat: Infinity, repeatType: "reverse", duration: 0.7 }}
+          className="text-xs font-medium text-rose-600"
+        >
+          ● запись
+        </motion.span>
+      ) : null}
+      <p className="text-sm text-foreground/60">{label}</p>
+      {error ? <p className="text-xs text-rose-600">{error}</p> : null}
     </div>
   );
 }

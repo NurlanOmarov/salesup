@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, LayoutGrid, CheckCircle2, GraduationCap, Info } from "lucide-react";
 import { requireUser } from "@/lib/auth/guards";
+import { env } from "@/env";
 import { buttonVariants } from "@/components/ui/button";
 import { db } from "@/lib/db";
 import { canAccessLesson } from "@/lib/access";
@@ -236,6 +237,7 @@ export default async function LearnPage({
             audit={audit}
             hotspot={hotspot}
             simulation={simulation}
+            voiceEnabled={env.VOICE_ENABLED}
             subtitles={subtitles}
             defaultSubtitleLang={viewer?.subtitleLang ?? null}
           />
