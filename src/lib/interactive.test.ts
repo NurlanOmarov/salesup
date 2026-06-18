@@ -6,6 +6,9 @@ import {
   parseScriptBuilder,
   parseDialogueAudit,
   parseHotspot,
+  parseBranching,
+  validateBranchingGraph,
+  type BranchingData,
 } from "./interactive";
 
 describe("parseFlashcards", () => {
@@ -101,5 +104,69 @@ describe("parseHotspot", () => {
     expect(parseHotspot(JSON.stringify(ok))).toEqual({ image: "/x.png", caption: undefined, points: ok.points });
     expect(parseHotspot(JSON.stringify({ image: "/x.png", points: [] }))).toBeNull();
     expect(parseHotspot(JSON.stringify({ points: [{ x: 1, y: 2, label: "l", text: "t" }] }))).toBeNull();
+  });
+});
+
+const validBranching: BranchingData = {
+  title: "Холодный визит",
+  start: "n1",
+  nodes: [
+    { id: "n1", npc: "Мне некогда.", choices: [{ text: "Уделите минуту", to: "n2" }, { text: "Ухожу", to: "end_lose" }] },
+    { id: "n2", npc: "Ну говорите.", choices: [{ text: "Презентую выгоду", to: "end_win" }] },
+    { id: "end_win", npc: "Оставьте материалы.", outcome: "win", outcomeText: "Контакт установлен" },
+    { id: "end_lose", npc: "Всего доброго.", outcome: "lose", outcomeText: "Визит сорван" },
+  ],
+};
+
+describe("validateBranchingGraph", () => {
+  it("принимает корректный граф", () => {
+    expect(validateBranchingGraph(validBranching)).toBe(true);
+  });
+
+  it("отвергает несуществующий стартовый узел", () => {
+    expect(validateBranchingGraph({ ...validBranching, start: "missing" })).toBe(false);
+  });
+
+  it("отвергает переход в несуществующий узел", () => {
+    expect(
+      validateBranchingGraph({ start: "n1", nodes: [{ id: "n1", npc: "x", choices: [{ text: "y", to: "ghost" }] }] }),
+    ).toBe(false);
+  });
+
+  it("требует хотя бы один терминальный узел (цикл без выхода → false)", () => {
+    expect(
+      validateBranchingGraph({
+        start: "a",
+        nodes: [
+          { id: "a", npc: "x", choices: [{ text: "→b", to: "b" }] },
+          { id: "b", npc: "y", choices: [{ text: "→a", to: "a" }] },
+        ],
+      }),
+    ).toBe(false);
+  });
+
+  it("отвергает дубликаты id", () => {
+    expect(
+      validateBranchingGraph({
+        start: "a",
+        nodes: [
+          { id: "a", npc: "x", choices: [{ text: "→a", to: "a" }] },
+          { id: "a", npc: "y" },
+        ],
+      }),
+    ).toBe(false);
+  });
+});
+
+describe("parseBranching", () => {
+  it("парсит валидный JSON", () => {
+    expect(parseBranching(JSON.stringify(validBranching))?.nodes).toHaveLength(4);
+  });
+
+  it("null при битом/пустом/сломанном", () => {
+    expect(parseBranching(null)).toBeNull();
+    expect(parseBranching("{не json")).toBeNull();
+    expect(parseBranching(JSON.stringify({ start: "x", nodes: [] }))).toBeNull();
+    expect(parseBranching(JSON.stringify({ ...validBranching, start: "ghost" }))).toBeNull();
   });
 });

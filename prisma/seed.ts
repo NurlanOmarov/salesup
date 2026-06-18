@@ -10,6 +10,7 @@ import {
   PHARMA_SCRIPTS,
   PHARMA_AUDITS,
   PHARMA_HOTSPOTS,
+  PHARMA_BRANCHING,
   PHARMA_SCENARIOS,
 } from "./seed-data/pharma-interactive.js";
 
@@ -809,7 +810,7 @@ async function seedPharmaObjections(courseId: string) {
 /** Артефакт-форматы по titleMatch: чек-листы, скрипты, «найди ошибку», hotspot. */
 async function seedPharmaArtifacts(
   courseId: string,
-  type: "CHECKLIST" | "SCRIPT_BUILDER" | "DIALOGUE_AUDIT" | "HOTSPOT",
+  type: "CHECKLIST" | "SCRIPT_BUILDER" | "DIALOGUE_AUDIT" | "HOTSPOT" | "BRANCHING",
   rows: { titleMatch: string; data: unknown }[],
 ) {
   const lessons = await db.lesson.findMany({
@@ -844,7 +845,15 @@ async function seedPharmaScenarios(courseId: string) {
     if (exists) {
       await db.simulationScenario.update({
         where: { id: exists.id },
-        data: { persona: s.persona, objectives: s.objectives, validation: "VALIDATED", criticScore: 100 },
+        data: {
+          persona: s.persona,
+          objectives: s.objectives,
+          archetype: s.archetype,
+          difficulty: s.difficulty,
+          complianceRules: s.complianceRules,
+          validation: "VALIDATED",
+          criticScore: 100,
+        },
       });
     } else {
       await db.simulationScenario.create({
@@ -853,6 +862,9 @@ async function seedPharmaScenarios(courseId: string) {
           title: s.title,
           persona: s.persona,
           objectives: s.objectives,
+          archetype: s.archetype,
+          difficulty: s.difficulty,
+          complianceRules: s.complianceRules,
           validation: "VALIDATED",
           criticScore: 100,
         },
@@ -921,6 +933,7 @@ async function main() {
   await seedPharmaArtifacts(pharmaCourse.id, "SCRIPT_BUILDER", PHARMA_SCRIPTS);
   await seedPharmaArtifacts(pharmaCourse.id, "DIALOGUE_AUDIT", PHARMA_AUDITS);
   await seedPharmaArtifacts(pharmaCourse.id, "HOTSPOT", PHARMA_HOTSPOTS);
+  await seedPharmaArtifacts(pharmaCourse.id, "BRANCHING", PHARMA_BRANCHING);
   await seedPharmaScenarios(pharmaCourse.id);
   await seedPharmaExam(pharmaCourse.id);
   await seedPharmaLessonQuizzes(pharmaCourse.id);

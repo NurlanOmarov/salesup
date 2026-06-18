@@ -7,6 +7,8 @@ import { db } from "@/lib/db";
 import { isEnrollmentActive } from "@/lib/access";
 import { courseProgress, nextLesson } from "@/lib/learn/progress";
 import { ProgressPanel, type BadgeView } from "@/components/gamification/progress-panel";
+import { DailyQuests } from "@/components/gamification/daily-quests";
+import { dailyQuests } from "@/lib/gamification/quests";
 import { buttonVariants } from "@/components/ui/button";
 
 export const metadata: Metadata = {
@@ -99,10 +101,11 @@ export default async function DashboardPage() {
     .sort((a, b) => b.progress.percent - a.progress.percent)[0] ?? null;
 
   // Геймификация (сдержанно): профиль + бейджи.
-  const [profile, allBadges, earnedBadges] = await Promise.all([
+  const [profile, allBadges, earnedBadges, quests] = await Promise.all([
     db.gamificationProfile.findUnique({ where: { userId }, select: { xp: true, streakDays: true } }),
     db.badge.findMany({ orderBy: { id: "asc" }, select: { code: true, title: true, description: true } }),
     db.userBadge.findMany({ where: { userId }, select: { badge: { select: { code: true } } } }),
+    dailyQuests(userId),
   ]);
   const earnedCodes = new Set(earnedBadges.map((b) => b.badge.code));
   const badgeViews: BadgeView[] = allBadges.map((b) => ({ ...b, earned: earnedCodes.has(b.code) }));
@@ -187,8 +190,9 @@ export default async function DashboardPage() {
 
       {/* Сдержанный блок прогресса (компактно; полная версия — в «Достижениях») */}
       {courses.length > 0 ? (
-        <div className="mt-5">
+        <div className="mt-5 grid gap-4 lg:grid-cols-2">
           <ProgressPanel xp={profile?.xp ?? 0} streakDays={profile?.streakDays ?? 0} badges={badgeViews} compact />
+          <DailyQuests quests={quests} />
         </div>
       ) : null}
 

@@ -10,6 +10,7 @@ import type {
   ScriptBuilderData,
   DialogueAuditData,
   HotspotData,
+  BranchingData,
 } from "../../src/lib/interactive.js";
 
 export interface LessonChecklist {
@@ -118,7 +119,18 @@ export interface LessonScenario {
   title: string;
   persona: string;
   objectives: string[];
+  archetype: "BUSY_DOCTOR" | "SKEPTIC" | "PROCUREMENT" | "FRIENDLY_NONCOMMITTAL" | "AGGRESSIVE";
+  difficulty: number; // 1..3
+  complianceRules: string[];
 }
+
+/** Базовые требования фарм-комплаенса — общие для всех сценариев. */
+const BASE_COMPLIANCE: string[] = [
+  "Нельзя обещать гарантированный или 100% результат лечения",
+  "Заявления об эффективности — только со ссылкой на инструкцию или клинические данные",
+  "Не продвигать препарат вне зарегистрированных показаний (off-label)",
+];
+
 export const PHARMA_SCENARIOS: LessonScenario[] = [
   {
     titleMatch: "7 методов закрытия",
@@ -131,6 +143,9 @@ export const PHARMA_SCENARIOS: LessonScenario[] = [
       "Снять возражение о надёжности",
       "Подвести к конкретному следующему шагу",
     ],
+    archetype: "PROCUREMENT",
+    difficulty: 2,
+    complianceRules: [...BASE_COMPLIANCE, "Не предлагать закупщику личную выгоду или вознаграждение за закуп"],
   },
   {
     titleMatch: "конфликтных ситуаций",
@@ -143,5 +158,49 @@ export const PHARMA_SCENARIOS: LessonScenario[] = [
       "Перевести разговор в конструктив",
       "Предложить конкретное решение и удержать клиента",
     ],
+    archetype: "AGGRESSIVE",
+    difficulty: 3,
+    complianceRules: BASE_COMPLIANCE,
+  },
+];
+
+// Ветвящийся сценарий (branching): диалог с врачом, выбор реплики ведёт к исходу.
+export const PHARMA_BRANCHING: { titleMatch: string; data: BranchingData }[] = [
+  {
+    titleMatch: "7 методов закрытия",
+    data: {
+      title: "Закрытие визита к занятому врачу",
+      start: "open",
+      nodes: [
+        {
+          id: "open",
+          npc: "Врач, не отрываясь от бумаг: «У меня две минуты, что у вас?»",
+          choices: [
+            { text: "Коротко: препарат снижает давление мягче у пожилых — по данным инструкции. Покажу?", to: "interest", note: "Кратко и по делу — то, что нужно занятому врачу." },
+            { text: "Давайте я подробно расскажу про всю линейку препаратов компании.", to: "rushed", note: "Слишком много для «двух минут» — врач теряет интерес." },
+          ],
+        },
+        {
+          id: "interest",
+          npc: "«Мягче — это как? У меня пожилых много, но я осторожен с новинками.»",
+          choices: [
+            { text: "Понимаю осторожность. Оставлю данные исследования и зайду через 2 недели обсудить?", to: "win", note: "Снял возражение, не давил, продвинул к следующему шагу." },
+            { text: "Да не переживайте, назначайте всем — точно поможет.", to: "lose_compliance", note: "Необоснованное обещание — грубая ошибка." },
+          ],
+        },
+        {
+          id: "rushed",
+          npc: "«Мне правда некогда. Оставьте что-нибудь, посмотрю на досуге.» (внимание потеряно)",
+          choices: [
+            { text: "Конечно. Можно я зайду через 2 недели с коротким разбором по вашим пациентам?", to: "neutral_followup", note: "Спас контакт договорённостью о следующем визите." },
+            { text: "Хорошо, до свидания.", to: "lose_noresult", note: "Ушли без следующего шага — визит впустую." },
+          ],
+        },
+        { id: "win", npc: "«Хорошо, оставляйте. Через две недели поговорим.»", outcome: "win", outcomeText: "Контакт установлен, есть договорённость о повторном визите. Идеальное закрытие для занятого врача." },
+        { id: "neutral_followup", npc: "«Ну, заходите. Только покороче.»", outcome: "neutral", outcomeText: "Визит спасён, но первое впечатление смазано многословием. В следующий раз — сразу к сути." },
+        { id: "lose_compliance", npc: "Врач нахмурился: «Всем подряд? Спасибо, я сам решу, кому что назначать.»", outcome: "lose", outcomeText: "Нарушение: необоснованное обещание эффективности подорвало доверие. Так терять врача нельзя." },
+        { id: "lose_noresult", npc: "«Угу, до свидания.»", outcome: "lose", outcomeText: "Визит без договорённости о следующем шаге — потраченное время. Всегда закрывайте на конкретику." },
+      ],
+    },
   },
 ];

@@ -20,12 +20,16 @@ import {
   MessagesSquare,
   BookOpen,
   Dumbbell,
+  Zap,
+  GitBranch,
 } from "lucide-react";
 import { SecurePlayer, type SubtitleTrackInfo } from "@/components/player/secure-player";
 import { TutorChat } from "@/components/learn/tutor-chat";
 import { SlideDeck } from "@/components/learn/slide-deck";
 import { FlashcardsDeck } from "@/components/learn/flashcards-deck";
 import { ObjectionTrainer } from "@/components/learn/objection-trainer";
+import { RapidFireDrill } from "@/components/learn/rapid-fire-drill";
+import { BranchingScenario } from "@/components/learn/branching-scenario";
 import { AudioPlayer } from "@/components/learn/podcast-player";
 import { ChecklistCard } from "@/components/learn/checklist-card";
 import { ScriptBuilder } from "@/components/learn/script-builder";
@@ -40,6 +44,7 @@ import type {
   ScriptBuilderData,
   DialogueAuditData,
   HotspotData,
+  BranchingData,
 } from "@/lib/interactive";
 
 export interface SimulationInfo {
@@ -66,6 +71,8 @@ type Tab =
   | "summary"
   | "flashcards"
   | "objections"
+  | "rapidfire"
+  | "branching"
   | "script"
   | "audit"
   | "checklist"
@@ -95,11 +102,13 @@ export function LessonTabs({
   slides = null,
   flashcards = null,
   objections = null,
+  branching = null,
   checklist = null,
   script = null,
   audit = null,
   hotspot = null,
   simulation = null,
+  voiceEnabled = false,
   subtitles = [],
   defaultSubtitleLang = null,
 }: {
@@ -114,11 +123,13 @@ export function LessonTabs({
   slides?: SlideDeckData | null;
   flashcards?: FlashcardsData | null;
   objections?: ObjectionsData | null;
+  branching?: BranchingData | null;
   checklist?: ChecklistData | null;
   script?: ScriptBuilderData | null;
   audit?: DialogueAuditData | null;
   hotspot?: HotspotData | null;
   simulation?: SimulationInfo | null;
+  voiceEnabled?: boolean;
   subtitles?: SubtitleTrackInfo[];
   defaultSubtitleLang?: string | null;
 }) {
@@ -133,6 +144,8 @@ export function LessonTabs({
     { key: "transcript", label: "Транскрипт", icon: ScrollText, show: !!transcript, group: "materials" },
     { key: "flashcards", label: "Карточки", icon: Layers, show: !!flashcards, group: "practice" },
     { key: "objections", label: "Возражения", icon: MessageSquareWarning, show: !!objections, group: "practice" },
+    { key: "rapidfire", label: "На скорость", icon: Zap, show: !!objections, group: "practice" },
+    { key: "branching", label: "Сценарий", icon: GitBranch, show: !!branching, group: "practice" },
     { key: "script", label: "Скрипт", icon: ListOrdered, show: !!script, group: "practice" },
     { key: "audit", label: "Найди ошибку", icon: SearchCheck, show: !!audit, group: "practice" },
     { key: "checklist", label: "Чек-лист", icon: ListChecks, show: !!checklist, group: "practice" },
@@ -297,6 +310,30 @@ export function LessonTabs({
           </motion.div>
         ) : null}
 
+        {tab === "rapidfire" && objections ? (
+          <motion.div
+            key="rapidfire"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="mt-4"
+          >
+            <RapidFireDrill data={objections} />
+          </motion.div>
+        ) : null}
+
+        {tab === "branching" && branching ? (
+          <motion.div
+            key="branching"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="mt-4"
+          >
+            <BranchingScenario data={branching} />
+          </motion.div>
+        ) : null}
+
         {tab === "script" && script ? (
           <motion.div key="script" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
             <ScriptBuilder data={script} />
@@ -323,7 +360,7 @@ export function LessonTabs({
 
         {tab === "simulation" && simulation ? (
           <motion.div key="simulation" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
-            <SimulationChat scenario={simulation} />
+            <SimulationChat scenario={simulation} voiceEnabled={voiceEnabled} />
           </motion.div>
         ) : null}
 

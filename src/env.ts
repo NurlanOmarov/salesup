@@ -22,6 +22,13 @@ const serverSchema = z.object({
   // Ключ провайдера эмбеддингов. Сейчас — OpenAI (text-embedding-3-small, D-001).
   EMBEDDINGS_API_KEY: z.string().min(1),
 
+  // Голосовой ролплей (STT/TTS через OpenAI). ⚠️ Отступление от «один сервер»:
+  // голос ученика уходит на внешний сервис; голос — биометрия (ПДн РК) — поэтому
+  // выключено по умолчанию, включать осознанно. OPENAI_API_KEY опционален: при
+  // отсутствии используется EMBEDDINGS_API_KEY (тот же OpenAI-ключ).
+  VOICE_ENABLED: bool.default("false"),
+  OPENAI_API_KEY: z.string().optional(),
+
   MEDIA_ROOT: z.string().min(1),
   STORAGE_DRIVER: z.enum(["fs", "s3"]).default("fs"),
   VIDEO_SIGNING_SECRET: z.string().min(16),

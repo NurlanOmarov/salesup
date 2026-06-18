@@ -67,6 +67,7 @@ model User {
   reviews         Review[]
   events          Event[]
   llmUsage        LlmUsage[]
+  cardReviews     CardReview[]
 }
 
 // Auth.js v5
@@ -670,12 +671,25 @@ model AiMessage {
   @@index([conversationId, createdAt])
 }
 
+// Тип ЛПР в тренажёре-симуляторе — устойчивый характер собеседника
+enum PersonaArchetype {
+  BUSY_DOCTOR // занятой врач: мало времени, перебивает
+  SKEPTIC // скептик-завотделением: требует доказательств
+  PROCUREMENT // закупщик: давит на цену/условия
+  FRIENDLY_NONCOMMITTAL // дружелюбный, но не назначает
+  AGGRESSIVE // негативный/закрытый
+}
+
 model SimulationScenario {
   id         String           @id @default(cuid())
   lessonId   String
   title      String
   persona    String           @db.Text
   objectives Json
+  archetype       PersonaArchetype @default(BUSY_DOCTOR) // тип ЛПР (поведение клиента)
+  difficulty      Int              @default(2) // 1..3 — насколько упирается клиент
+  complianceRules Json? // string[]: запрещённые/обязательные формулировки для проверки
+  rubric          Json? // PhaseSpec[] | null → дефолтная рубрика фаз визита
   origin     ContentOrigin    @default(AI_GENERATED)
   validation ValidationStatus @default(PENDING) // публикуется после AI-критика
   criticScore Int?
@@ -694,6 +708,9 @@ model SimulationRun {
   dialog     Json
   debrief    String?   @db.Text
   scorePct   Int?
+  scorecard       Json? // Scorecard: разбивка по фазам визита
+  complianceFlags Json? // ComplianceFlag[]: нарушения требований
+  passed          Boolean? // false при любом fail-флаге (compliance instant-fail)
   finishedAt DateTime?
   createdAt  DateTime  @default(now())
   scenario SimulationScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
@@ -710,6 +727,7 @@ enum AiArtifactType {
   SCRIPT_BUILDER // JSON-конструктор скрипта: собрать этапы звонка в правильном порядке
   DIALOGUE_AUDIT // JSON-тренажёр «найди ошибку»: отметить неверные реплики менеджера
   HOTSPOT // JSON-схема с кликабельными точками на изображении (этапы/зоны)
+  BRANCHING // JSON-дерево ветвящегося диалога: выбор реплики ведёт к разным исходам
 }
 
 model AiArtifact {
@@ -723,8 +741,31 @@ model AiArtifact {
   thumbsDown  Int             @default(0)
   createdAt  DateTime         @default(now())
   lesson     Lesson           @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  cardReviews CardReview[]
 
   @@unique([lessonId, type])
+}
+
+// Прогресс интервального повторения флеш-карточки (Leitner-lite, по карточке на ученика).
+// Карточка адресуется парой (artifactId FLASHCARDS, cardIndex в deck.cards). Тренажёр
+// не использует LLM — повторение чистой механикой по dueAt (CLAUDE.md: один сервер).
+model CardReview {
+  id          String     @id @default(cuid())
+  userId      String
+  artifactId  String
+  cardIndex   Int // индекс карточки в FlashcardsData.cards
+  box         Int        @default(0) // ступень Leitner: 0 — новая/проваленная
+  dueAt       DateTime   @default(now())
+  repetitions Int        @default(0)
+  lapses      Int        @default(0)
+  lastResult  Boolean? // последний ответ: запомнил/нет
+  lastReviewedAt DateTime? // когда карточку последний раз повторяли (для дневных целей)
+  createdAt   DateTime   @default(now())
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  artifact    AiArtifact @relation(fields: [artifactId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, artifactId, cardIndex])
+  @@index([userId, dueAt])
 }
 
 model AiUsageDay {
@@ -879,6 +920,7 @@ model GamificationProfile {
   xp           Int       @default(0)
   level        Int       @default(1)
   streakDays   Int       @default(0)
+  streakFreezes Int      @default(1) // запас «заморозок» серии (спасает пропущенный день)
   lastActiveOn DateTime? @db.Date
   user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
