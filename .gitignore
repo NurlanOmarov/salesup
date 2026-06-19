@@ -23,6 +23,8 @@ test-results/
 *.mp4
 *.ts.seg
 *.m3u8
+# но промо-видео лендинга — это статика приложения, его коммитим
+!/public/landing/*.mp4
 
 # misc
 .DS_Store

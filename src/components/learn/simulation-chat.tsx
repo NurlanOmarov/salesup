@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import {
   Send,
@@ -64,6 +65,12 @@ interface Scorecard {
   topTip: string;
 }
 
+// 3D-голова грузится только в голосовом режиме (Three.js не в общем бандле).
+const DoctorAvatar = dynamic(
+  () => import("./doctor-avatar").then((m) => m.DoctorAvatar),
+  { ssr: false },
+);
+
 /** Цвет полоски фазы по порогу. */
 function phaseColor(score: number): string {
   if (score >= 80) return "bg-emerald-500";
@@ -76,9 +83,12 @@ type VoiceStatus = "idle" | "recording" | "processing" | "speaking";
 export function SimulationChat({
   scenario,
   voiceEnabled = false,
+  avatarUrl = null,
 }: {
   scenario: ScenarioInfo;
   voiceEnabled?: boolean;
+  /** URL GLB-аватара говорящей головы; null — аватар выключен (AVATAR_ENABLED). */
+  avatarUrl?: string | null;
 }) {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
@@ -88,15 +98,24 @@ export function SimulationChat({
   const [voiceMode, setVoiceMode] = useState(false);
   const [voiceStatus, setVoiceStatus] = useState<VoiceStatus>("idle");
   const [voiceError, setVoiceError] = useState<string | null>(null);
+  // AnalyserNode для липсинка аватара (создаётся при первой озвучке).
+  const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
+  // Субтитр реплики клиента — показываем синхронно со стартом озвучки.
+  const [caption, setCaption] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const srcNodeRef = useRef<MediaElementAudioSourceNode | null>(null);
 
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages, pending, card]);
+
+  // Освобождаем AudioContext при размонтировании.
+  useEffect(() => () => void audioCtxRef.current?.close().catch(() => {}), []);
 
   /** Озвучить реплику клиента (TTS). Мягко: при сбое просто не проигрываем. */
   async function playTts(text: string) {
@@ -113,6 +132,28 @@ export function SimulationChat({
       const audio = audioRef.current ?? new Audio();
       audioRef.current = audio;
       audio.src = url;
+
+      // Для аватара пропускаем звук через AnalyserNode (липсинк по громкости).
+      // MediaElementSource создаётся один раз на элемент — отсюда guard srcNodeRef.
+      if (avatarUrl && !srcNodeRef.current) {
+        try {
+          const ctx = new AudioContext();
+          const node = ctx.createMediaElementSource(audio);
+          const an = ctx.createAnalyser();
+          an.fftSize = 512;
+          an.smoothingTimeConstant = 0.6;
+          node.connect(an);
+          an.connect(ctx.destination);
+          audioCtxRef.current = ctx;
+          srcNodeRef.current = node;
+          setAnalyser(an);
+        } catch {
+          // нет Web Audio — аватар останется в idle, звук играет как обычно
+        }
+      }
+      await audioCtxRef.current?.resume().catch(() => {});
+      // Субтитр появляется ровно когда аватар начинает говорить (синхрон с речью).
+      audio.onplay = () => setCaption(text);
       await audio.play().catch(() => {});
       await new Promise<void>((resolve) => {
         audio.onended = () => resolve();
@@ -163,6 +204,7 @@ export function SimulationChat({
       if (!res.ok) throw new Error();
       const { text } = (await res.json()) as { text?: string };
       if (text && text.trim()) {
+        setVoiceStatus("idle"); // STT завершён; дальше «клиент думает» (pending)
         await send(text.trim());
       } else {
         setVoiceError("Не расслышал — попробуйте ещё раз.");
@@ -230,6 +272,7 @@ export function SimulationChat({
     setMessages([]);
     setCard(null);
     setInput("");
+    setCaption("");
   }
 
   return (
@@ -274,7 +317,8 @@ export function SimulationChat({
         </div>
       ) : null}
 
-      {/* Лента диалога */}
+      {/* Лента диалога (в голосовом режиме скрыта — фокус на аватаре) */}
+      {!voiceMode || card ? (
       <div ref={scrollRef} className="mt-3 max-h-[44vh] space-y-3 overflow-y-auto pr-1">
         {messages.length === 0 ? (
           <p className="py-6 text-center text-sm text-foreground/45">
@@ -312,6 +356,7 @@ export function SimulationChat({
           </motion.p>
         ) : null}
       </div>
+      ) : null}
 
       {/* Разбор (scorecard) или ввод */}
       {card ? (
@@ -436,12 +481,42 @@ export function SimulationChat({
       ) : (
         <div className="mt-3">
           {voiceMode ? (
-            <VoicePanel
-              status={voiceStatus}
-              error={voiceError}
-              pending={pending}
-              onToggle={toggleRecording}
-            />
+            <div className="flex flex-col items-center">
+              {avatarUrl ? (
+                <div className="mx-auto w-56 sm:w-64">
+                  <DoctorAvatar
+                    src={avatarUrl}
+                    analyser={analyser}
+                    speaking={voiceStatus === "speaking"}
+                  />
+                </div>
+              ) : null}
+
+              {/* Субтитр реплики клиента — синхронно с озвучкой */}
+              <div className="mb-2 flex min-h-[3.5rem] max-w-md items-center px-2">
+                {caption ? (
+                  <motion.p
+                    key={caption}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-center text-[15px] leading-snug text-foreground/85"
+                  >
+                    {caption}
+                  </motion.p>
+                ) : messages.length === 0 ? (
+                  <p className="text-center text-sm text-foreground/45">
+                    Поздоровайтесь и установите контакт — нажмите микрофон и говорите.
+                  </p>
+                ) : null}
+              </div>
+
+              <VoicePanel
+                status={voiceStatus}
+                error={voiceError}
+                pending={pending}
+                onToggle={toggleRecording}
+              />
+            </div>
           ) : (
             <form
               onSubmit={(e) => {
@@ -514,7 +589,9 @@ function VoicePanel({
         ? "Распознаю речь…"
         : status === "speaking"
           ? "Клиент отвечает…"
-          : "Нажмите и говорите";
+          : pending
+            ? "Клиент думает…"
+            : "Нажмите и говорите";
 
   return (
     <div className="flex flex-col items-center gap-2 py-2">

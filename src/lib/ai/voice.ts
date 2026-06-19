@@ -11,8 +11,14 @@ const STT_URL = "https://api.openai.com/v1/audio/transcriptions";
 const TTS_URL = "https://api.openai.com/v1/audio/speech";
 
 const STT_MODEL = "whisper-1";
-const TTS_MODEL = "tts-1";
+// gpt-4o-mini-tts — управляемая просодия через instructions (живая интонация,
+// корректные вопросы в русской речи), в отличие от старого tts-1.
+const TTS_MODEL = "gpt-4o-mini-tts";
 const TTS_VOICE = "onyx"; // глубокий мужской голос — под роль врача/ЛПР
+const TTS_INSTRUCTIONS =
+  "Говори по-русски естественно и разговорно, как живой собеседник в деловом " +
+  "разговоре. Соблюдай интонацию: повышай тон в конце вопросов, делай смысловые " +
+  "паузы. Тон — спокойный, уверенный, доброжелательный.";
 
 /** Ограничения, чтобы не отправить лишнего и не словить дорогой запрос. */
 export const MAX_AUDIO_BYTES = 8 * 1024 * 1024; // ~8 МБ ≈ несколько минут речи
@@ -74,7 +80,13 @@ export async function synthesizeSpeech(text: string, voice = TTS_VOICE): Promise
       Authorization: `Bearer ${apiKey()}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ model: TTS_MODEL, voice, input, response_format: "mp3" }),
+    body: JSON.stringify({
+      model: TTS_MODEL,
+      voice,
+      input,
+      instructions: TTS_INSTRUCTIONS,
+      response_format: "mp3",
+    }),
   });
   if (!res.ok) {
     throw new Error(`OpenAI TTS ${res.status}: ${(await res.text()).slice(0, 300)}`);

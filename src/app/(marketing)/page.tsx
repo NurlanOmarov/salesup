@@ -12,6 +12,7 @@ import {
   Layers,
   MessageSquareWarning,
   MessagesSquare,
+  Mic,
   ListOrdered,
   SearchCheck,
   Flame,
@@ -39,6 +40,7 @@ import {
   stats,
   steps,
   trainer,
+  voiceShowcase,
 } from "@/content/landing";
 
 // ISR: страница статична, отзывы обновляются раз в 10 минут.
@@ -68,6 +70,7 @@ const formatIcons = {
   cards: Layers,
   objections: MessageSquareWarning,
   simulation: MessagesSquare,
+  voice: Mic,
   script: ListOrdered,
   audit: SearchCheck,
 } as const;
@@ -251,6 +254,49 @@ export default async function LandingPage() {
                 <Trophy className="size-5 text-amber-600" />
                 Достижения и прогресс — чтобы дойти до конца курса
               </p>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* Голосовой симулятор с 3D-собеседником — видео-демо */}
+      <section className="border-y border-foreground/5 bg-foreground/[0.025]">
+        <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-16 sm:py-20 lg:grid-cols-2">
+          <Reveal>
+            <div className="relative mx-auto w-full max-w-sm overflow-hidden rounded-3xl border border-foreground/10 bg-[#0a0b11] shadow-xl">
+              <video
+                className="h-auto w-full"
+                autoPlay
+                loop
+                muted
+                playsInline
+                poster="/landing/doctor-poster.jpg"
+                aria-label="Демонстрация 3D-собеседника голосового симулятора"
+              >
+                <source src="/landing/doctor-loop.webm" type="video/webm" />
+                <source src="/landing/doctor-loop.mp4" type="video/mp4" />
+              </video>
+              <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-rose-500/90 px-2.5 py-1 text-xs font-medium text-white">
+                <Mic className="size-3.5" />
+                Голосовой диалог
+              </span>
+            </div>
+          </Reveal>
+          <Reveal delay={0.08}>
+            <div>
+              <span className="inline-flex items-center rounded-full bg-amber-500/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-600">
+                {voiceShowcase.badge}
+              </span>
+              <h2 className="mt-3 text-3xl font-bold">{voiceShowcase.title}</h2>
+              <p className="mt-3 text-foreground/70">{voiceShowcase.subtitle}</p>
+              <ul className="mt-6 space-y-3">
+                {voiceShowcase.points.map((p) => (
+                  <li key={p} className="flex items-start gap-2.5 text-sm text-foreground/80">
+                    <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-emerald-500" />
+                    {p}
+                  </li>
+                ))}
+              </ul>
             </div>
           </Reveal>
         </div>
