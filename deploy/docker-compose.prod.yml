@@ -42,6 +42,8 @@ services:
       AUTH_SECRET: ${AUTH_SECRET}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       EMBEDDINGS_API_KEY: ${EMBEDDINGS_API_KEY}
+      VOICE_ENABLED: ${VOICE_ENABLED:-false}     # голосовой симулятор (STT/TTS)
+      AVATAR_ENABLED: ${AVATAR_ENABLED:-false}   # 3D-голова собеседника
       MEDIA_ROOT: /media
       STORAGE_DRIVER: ${STORAGE_DRIVER:-fs}
       VIDEO_SIGNING_SECRET: ${VIDEO_SIGNING_SECRET}
