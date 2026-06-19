@@ -109,6 +109,8 @@ jobs:
             AUTH_SECRET=${{ secrets.AUTH_SECRET }}
             ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
             EMBEDDINGS_API_KEY=${{ secrets.EMBEDDINGS_API_KEY }}
+            VOICE_ENABLED=true
+            AVATAR_ENABLED=true
             VIDEO_SIGNING_SECRET=${{ secrets.VIDEO_SIGNING_SECRET }}
             VIDEO_KEY_ENC_SECRET=${{ secrets.VIDEO_KEY_ENC_SECRET }}
             STORAGE_DRIVER=fs

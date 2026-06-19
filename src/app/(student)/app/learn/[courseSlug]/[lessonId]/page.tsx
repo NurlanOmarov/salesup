@@ -238,7 +238,7 @@ export default async function LearnPage({
             hotspot={hotspot}
             simulation={simulation}
             voiceEnabled={env.VOICE_ENABLED}
-            avatarUrl={env.AVATAR_ENABLED ? "/api/avatar/doctor" : null}
+            avatarUrl={env.AVATAR_ENABLED ? "/avatars/doctor.glb" : null}
             subtitles={subtitles}
             defaultSubtitleLang={viewer?.subtitleLang ?? null}
           />
