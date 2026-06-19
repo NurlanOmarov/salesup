@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Coins, TrendingUp, Cpu } from "lucide-react";
+import { Coins, TrendingUp, Cpu, Mic } from "lucide-react";
 import { db } from "@/lib/db";
 import { formatUsd } from "@/lib/ai/pricing";
 
@@ -21,7 +21,7 @@ export default async function UsagePage() {
   const since30 = new Date();
   since30.setDate(since30.getDate() - 30);
 
-  const [total, last30, byUser, byModel] = await Promise.all([
+  const [total, last30, byUser, byModel, voiceRaw] = await Promise.all([
     db.llmUsage.aggregate({
       _sum: { inputTokens: true, outputTokens: true, costMicroUsd: true },
     }),
@@ -39,15 +39,27 @@ export default async function UsagePage() {
       _sum: { inputTokens: true, outputTokens: true, costMicroUsd: true },
       orderBy: { _sum: { costMicroUsd: "desc" } },
     }),
+    db.aiUsageDay.groupBy({
+      by: ["userId"],
+      _sum: { voiceSttSec: true, voiceTtsChars: true },
+      orderBy: { _sum: { voiceSttSec: "desc" } },
+    }),
   ]);
+
+  // Голос — только ученики, у кого есть распознавание или озвучка.
+  const voiceByUser = voiceRaw.filter(
+    (r) => (r._sum.voiceSttSec ?? 0) > 0 || (r._sum.voiceTtsChars ?? 0) > 0,
+  );
 
   const totalIn = total._sum.inputTokens ?? 0;
   const totalOut = total._sum.outputTokens ?? 0;
   const totalCost = total._sum.costMicroUsd ?? 0;
   const last30Cost = last30._sum.costMicroUsd ?? 0;
 
-  // Подтягиваем имена учеников для строк с userId.
-  const userIds = byUser.map((u) => u.userId).filter(Boolean) as string[];
+  // Подтягиваем имена учеников для строк с userId (LLM + голос).
+  const userIds = [
+    ...new Set([...byUser.map((u) => u.userId), ...voiceByUser.map((u) => u.userId)].filter(Boolean)),
+  ] as string[];
   const users = userIds.length
     ? await db.user.findMany({
         where: { id: { in: userIds } },
@@ -68,8 +80,8 @@ export default async function UsagePage() {
     <main>
       <h1 className="text-2xl font-bold">Расходы на LLM</h1>
       <p className="mt-1 text-foreground/60">
-        Учёт токенов и стоимости вызовов Anthropic и Voyage. Стоимость фиксируется
-        в момент вызова по действующему тарифу.
+        Учёт токенов и стоимости вызовов Anthropic, OpenAI (эмбеддинги, голос).
+        Стоимость фиксируется в момент вызова по действующему тарифу.
       </p>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-3">
@@ -134,6 +146,52 @@ export default async function UsagePage() {
               </table>
             </div>
           </section>
+
+          {/* Голос — распознавание (STT) и озвучка (TTS) по ученикам */}
+          {voiceByUser.length > 0 ? (
+            <section className="mt-8">
+              <h2 className="flex items-center gap-2 text-lg font-semibold">
+                <Mic className="size-4 text-amber-600" />
+                Голос по ученикам
+              </h2>
+              <p className="mt-1 text-sm text-foreground/55">
+                Распознавание речи (Whisper) и озвучка (TTS). Стоимость учтена в таблицах выше.
+              </p>
+              <div className="mt-3 overflow-hidden rounded-xl border border-foreground/10 bg-background">
+                <table className="w-full text-sm">
+                  <thead className="border-b border-foreground/10 bg-foreground/[0.02] text-left text-xs uppercase tracking-wide text-foreground/50">
+                    <tr>
+                      <th className="px-4 py-3 font-medium">Ученик</th>
+                      <th className="px-4 py-3 font-medium text-right">Распознавание</th>
+                      <th className="px-4 py-3 font-medium text-right">Озвучка (символы)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {voiceByUser.map((row) => {
+                      const u = row.userId ? userById.get(row.userId) : null;
+                      const label = u?.name ?? u?.email ?? "Удалённый ученик";
+                      const min = (row._sum.voiceSttSec ?? 0) / 60;
+                      return (
+                        <tr key={row.userId} className="border-b border-foreground/5 last:border-0">
+                          <td className="px-4 py-3">
+                            {u ? (
+                              <a href={`/admin/students/${u.id}`} className="text-amber-700 hover:underline">
+                                {label}
+                              </a>
+                            ) : (
+                              <span className="text-foreground/70">{label}</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-right text-foreground/70">{min.toFixed(1)} мин</td>
+                          <td className="px-4 py-3 text-right text-foreground/70">{fmtTokens(row._sum.voiceTtsChars ?? 0)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          ) : null}
 
           {/* По моделям */}
           <section className="mt-8">

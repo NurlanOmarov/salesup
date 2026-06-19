@@ -8,6 +8,6 @@ export default NextAuth(authConfig).auth;
 export const config = {
   // исключаем статику, изображения, favicon, robots/sitemap; остальное — через authorized
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|.*\\.(?:svg|png|jpg|jpeg|webp|ico)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|.*\\.(?:svg|png|jpg|jpeg|webp|ico|mp4|webm|glb|gltf|mp3)$).*)",
   ],
 };

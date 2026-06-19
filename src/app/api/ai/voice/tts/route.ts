@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { auth } from "@/auth";
 import { synthesizeSpeech, voiceEnabled, MAX_TTS_CHARS } from "@/lib/ai/voice";
+import { recordVoiceUsage, voiceUsageToday, VOICE_TTS_DAILY_CHARS } from "@/lib/ai/usage";
 
 export const dynamic = "force-dynamic";
 
@@ -21,8 +22,15 @@ export async function POST(req: NextRequest) {
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Некорректный запрос" }, { status: 400 });
 
+  // Дневной лимит озвучки на ученика (правило 10).
+  const used = await voiceUsageToday(session.user.id);
+  if (used.ttsChars >= VOICE_TTS_DAILY_CHARS) {
+    return NextResponse.json({ error: "Дневной лимит голоса исчерпан" }, { status: 429 });
+  }
+
   try {
     const mp3 = await synthesizeSpeech(parsed.data.text);
+    await recordVoiceUsage({ kind: "tts", userId: session.user.id, quantity: parsed.data.text.length });
     return new NextResponse(new Uint8Array(mp3), {
       headers: { "Content-Type": "audio/mpeg", "Cache-Control": "no-store" },
     });

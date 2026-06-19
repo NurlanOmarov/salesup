@@ -105,6 +105,7 @@ export function SimulationChat({
   const scrollRef = useRef<HTMLDivElement>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const recStartRef = useRef(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const srcNodeRef = useRef<MediaElementAudioSourceNode | null>(null);
@@ -193,13 +194,14 @@ export function SimulationChat({
   }
 
   /** Распознать записанную речь и отправить как реплику. */
-  async function handleVoiceBlob(blob: Blob) {
+  async function handleVoiceBlob(blob: Blob, durationMs: number) {
     if (blob.size === 0) return;
     setVoiceStatus("processing");
     setVoiceError(null);
     try {
       const form = new FormData();
       form.append("audio", blob, "speech.webm");
+      form.append("durationMs", String(Math.round(durationMs)));
       const res = await fetch("/api/ai/voice/stt", { method: "POST", body: form });
       if (!res.ok) throw new Error();
       const { text } = (await res.json()) as { text?: string };
@@ -232,10 +234,11 @@ export function SimulationChat({
       rec.onstop = () => {
         stream.getTracks().forEach((t) => t.stop());
         const blob = new Blob(chunksRef.current, { type: rec.mimeType || "audio/webm" });
-        void handleVoiceBlob(blob);
+        void handleVoiceBlob(blob, performance.now() - recStartRef.current);
       };
       recorderRef.current = rec;
       rec.start();
+      recStartRef.current = performance.now();
       setVoiceStatus("recording");
     } catch {
       setVoiceError("Нет доступа к микрофону.");

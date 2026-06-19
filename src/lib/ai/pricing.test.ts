@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { priceFor, costMicroUsd, formatUsd, MODEL_PRICES } from "./pricing.js";
+import {
+  priceFor,
+  costMicroUsd,
+  formatUsd,
+  MODEL_PRICES,
+  sttCostMicroUsd,
+  ttsCostMicroUsd,
+} from "./pricing.js";
 
 describe("priceFor", () => {
   it("известная модель", () => {
@@ -59,5 +66,23 @@ describe("MODEL_PRICES", () => {
     expect(MODEL_PRICES).toHaveProperty("claude-haiku-4-5");
     expect(MODEL_PRICES).toHaveProperty("claude-sonnet-4-6");
     expect(MODEL_PRICES).toHaveProperty("voyage-3");
+  });
+});
+
+describe("стоимость голоса", () => {
+  it("STT: 1 минута = $0.006 (6000 microUSD)", () => {
+    expect(sttCostMicroUsd(60)).toBe(6000);
+  });
+
+  it("STT: 0 секунд — бесплатно", () => {
+    expect(sttCostMicroUsd(0)).toBe(0);
+  });
+
+  it("TTS: 1000 символов = $0.015 (15000 microUSD)", () => {
+    expect(ttsCostMicroUsd(1000)).toBe(15000);
+  });
+
+  it("TTS: пропорционально символам", () => {
+    expect(ttsCostMicroUsd(200)).toBe(3000);
   });
 });

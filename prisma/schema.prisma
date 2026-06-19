@@ -777,6 +777,8 @@ model AiUsageDay {
   simulations  Int      @default(0)
   tokensIn     Int      @default(0)
   tokensOut    Int      @default(0)
+  voiceSttSec   Int     @default(0) // секунды распознавания речи (Whisper) за день
+  voiceTtsChars Int     @default(0) // символы озвучки (TTS) за день
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, day])

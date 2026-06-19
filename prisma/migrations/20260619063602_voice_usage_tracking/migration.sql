@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "AiUsageDay" ADD COLUMN     "voiceSttSec" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "voiceTtsChars" INTEGER NOT NULL DEFAULT 0;

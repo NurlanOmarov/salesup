@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/auth";
 import { transcribeAudio, voiceEnabled, MAX_AUDIO_BYTES } from "@/lib/ai/voice";
+import { recordVoiceUsage, voiceUsageToday, VOICE_STT_DAILY_SEC } from "@/lib/ai/usage";
 
 export const dynamic = "force-dynamic";
 
@@ -22,9 +23,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Некорректный размер аудио" }, { status: 400 });
   }
 
+  // Дневной лимит распознавания речи на ученика (правило 10).
+  const used = await voiceUsageToday(session.user.id);
+  if (used.sttSec >= VOICE_STT_DAILY_SEC) {
+    return NextResponse.json({ error: "Дневной лимит голоса исчерпан" }, { status: 429 });
+  }
+
+  // Длительность: с клиента (durationMs), иначе оценка по размеру (~16 КБ/с opus).
+  const durMs = Number(form?.get("durationMs"));
+  const seconds = Number.isFinite(durMs) && durMs > 0 ? durMs / 1000 : file.size / 16000;
+
   try {
     const buf = Buffer.from(await file.arrayBuffer());
     const text = await transcribeAudio(buf, file.type || "audio/webm");
+    await recordVoiceUsage({ kind: "stt", userId: session.user.id, quantity: seconds });
     return NextResponse.json({ text });
   } catch (e) {
     console.error("Ошибка STT:", e);
