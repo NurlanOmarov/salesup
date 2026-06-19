@@ -29,6 +29,10 @@ const serverSchema = z.object({
   VOICE_ENABLED: bool.default("false"),
   OPENAI_API_KEY: z.string().optional(),
 
+  // Говорящая 3D-голова AI-клиента в голосовом симуляторе (Three.js + GLB-аватар
+  // из media/avatars/). Чисто клиентский рендер; требует VOICE_ENABLED. По умолчанию выкл.
+  AVATAR_ENABLED: bool.default("false"),
+
   MEDIA_ROOT: z.string().min(1),
   STORAGE_DRIVER: z.enum(["fs", "s3"]).default("fs"),
   VIDEO_SIGNING_SECRET: z.string().min(16),
