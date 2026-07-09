@@ -114,7 +114,7 @@ jobs:
             VIDEO_SIGNING_SECRET=${{ secrets.VIDEO_SIGNING_SECRET }}
             VIDEO_KEY_ENC_SECRET=${{ secrets.VIDEO_KEY_ENC_SECRET }}
             STORAGE_DRIVER=fs
-            AUTH_COOKIE_INSECURE=true
+            AUTH_COOKIE_INSECURE=false
             EMAIL_ENABLED=false
             OWNER_EMAIL=${{ secrets.OWNER_EMAIL }}
             NEXT_PUBLIC_SITE_URL=${{ secrets.NEXT_PUBLIC_SITE_URL }}

@@ -97,8 +97,12 @@ services:
     restart: unless-stopped
     depends_on:
       - app
-    ports:
-      - "8444:80"                                # 80/443 заняты labai-nginx; наш внешний порт 8444
+    # Порт на хост НЕ публикуем: доступ снаружи — только через центральный edge-nginx
+    # (compose-проект infra) по поддомену study.activesales.by. См. docs/MIGRATION-RUNBOOK.md.
+    networks:
+      default: {}                    # внутренняя сеть проекта: app, db, worker
+      edge-net:
+        aliases: [salesup-nginx]     # под этим именем edge проксирует трафик на наш nginx
     volumes:
       - ./nginx.http.conf:/etc/nginx/nginx.conf:ro
       - ./proxy_params.conf:/etc/nginx/proxy_params.conf:ro
@@ -107,3 +111,10 @@ services:
 volumes:
   pgdata:
   media:
+
+# Общая внешняя сеть с центральным edge-nginx. Создаётся один раз на сервере:
+#   docker network create edge-net
+# В неё входит ТОЛЬКО nginx; db/app/worker остаются в изолированной default-сети.
+networks:
+  edge-net:
+    external: true
