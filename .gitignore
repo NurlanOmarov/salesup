@@ -34,3 +34,6 @@ test-results/
 
 # playwright-mcp артефакты (скриншоты/трейсы при ручной проверке)
 .playwright-mcp/
+
+# pdfjs worker — копируется в public/ скриптом copy-pdf-worker (dev/build)
+/public/pdf.worker.min.mjs

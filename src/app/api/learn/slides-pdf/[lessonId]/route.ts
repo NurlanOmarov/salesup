@@ -38,8 +38,10 @@ export async function GET(
   }
   const key = lesson.slidesPdfKey;
 
-  // Открываем во вкладке (inline), но заголовок отдаёт осмысленное имя файла для «Сохранить как».
-  const disposition = `inline; filename="slides.pdf"`;
+  // По умолчанию inline (встроенный просмотрщик рендерит PDF), ?download=1 — вложение
+  // (кнопка «Скачать»). Имя файла даёт осмысленное «Сохранить как».
+  const download = new URL(req.url).searchParams.get("download") === "1";
+  const disposition = `${download ? "attachment" : "inline"}; filename="slides.pdf"`;
 
   // VPS: nginx отдаёт файл из internal-локации (поддерживает Range сам).
   if (env.VIDEO_XACCEL) {

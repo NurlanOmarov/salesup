@@ -31,6 +31,7 @@ import { NotesPanel } from "@/components/learn/notes-panel";
 import type { NoteView } from "@/lib/learn/notes";
 import { TutorChat } from "@/components/learn/tutor-chat";
 import { SlideDeck } from "@/components/learn/slide-deck";
+import { PdfSlideViewer } from "@/components/learn/pdf-slide-viewer";
 import { FlashcardsDeck } from "@/components/learn/flashcards-deck";
 import { ObjectionTrainer } from "@/components/learn/objection-trainer";
 import { RapidFireDrill } from "@/components/learn/rapid-fire-drill";
@@ -284,29 +285,13 @@ export function LessonTabs({
             exit={{ opacity: 0 }}
             className="mt-4"
           >
+            {/* PDF-презентация NotebookLM (встроенный слайдер) имеет приоритет над
+                HTML-колодой; кнопка скачивания — внутри просмотрщика. */}
             {hasSlidesPdf ? (
-              <div className="mb-2 flex justify-end">
-                <a
-                  href={`/api/learn/slides-pdf/${lessonId}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-foreground/15 px-3 py-1.5 text-sm font-medium text-foreground/70 transition-colors hover:bg-foreground/5"
-                >
-                  <Download className="size-4" />
-                  Презентация PDF
-                </a>
-              </div>
-            ) : null}
-            {slides ? (
+              <PdfSlideViewer lessonId={lessonId} />
+            ) : slides ? (
               <SlideDeck deck={slides} />
-            ) : (
-              <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-8 text-center">
-                <Presentation className="mx-auto mb-3 size-8 text-foreground/40" />
-                <p className="text-sm text-foreground/70">
-                  Дизайнерская презентация урока — откройте PDF кнопкой выше.
-                </p>
-              </div>
-            )}
+            ) : null}
           </motion.div>
         ) : null}
 
