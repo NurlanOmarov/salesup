@@ -15,7 +15,9 @@ export type AdminAction =
   | "student.block"
   | "student.unblock"
   | "student.device_limit"
-  | "lead.update";
+  | "lead.update"
+  | "course.update"
+  | "course.cover";
 
 export function writeAdminLog(params: {
   actorId: string;

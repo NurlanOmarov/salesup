@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { log } from "@/lib/log";
 import { processBatch } from "@/lib/jobs/runner";
 import { enqueue } from "@/lib/jobs/enqueue";
+import { currency } from "@/lib/currency";
 
 /**
  * Worker-контейнер (S5.4): цикл обработки очереди Job + node-cron расписания.
@@ -44,7 +45,21 @@ function setupCron() {
     );
   });
 
-  log.info("Cron-расписания установлены (weekly digest, daily maintenance)");
+  // Ежедневные учебные напоминания ученикам — 18:00 (вечернее окно обучения).
+  cron.schedule("0 18 * * *", () => {
+    void enqueue("reminders.daily", { triggeredAt: new Date().toISOString() }).catch((e) =>
+      log.error({ err: e }, "Не удалось поставить reminders.daily"),
+    );
+  });
+
+  // Ежедневное обновление курсов валют Нацбанка РК — 04:00 (для витрины в 3 валютах).
+  cron.schedule("0 4 * * *", () => {
+    void currency.refresh().catch((e) =>
+      log.error({ err: e }, "currency.refresh (cron) упал"),
+    );
+  });
+
+  log.info("Cron-расписания установлены (weekly digest, daily maintenance, daily reminders, currency rates)");
 }
 
 async function main() {

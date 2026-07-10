@@ -14,6 +14,22 @@ export function formatPrice(tiyn: number): string {
 }
 
 /**
+ * Публичный URL обложки курса.
+ *  — статический путь/URL (сид-данные «/images/…» или http) → как есть;
+ *  — относительный ключ хранилища (залит через админку) → /api/cover/<id>?v=…
+ *    (?v= — хвост ключа, меняется при каждой загрузке фото → сброс кэша).
+ */
+export function coverPublicUrl(
+  coverUrl: string | null,
+  courseId: string,
+): string | null {
+  if (!coverUrl) return null;
+  if (coverUrl.startsWith("/") || coverUrl.startsWith("http")) return coverUrl;
+  const v = coverUrl.slice(coverUrl.lastIndexOf("/") + 1);
+  return `/api/cover/${courseId}?v=${encodeURIComponent(v)}`;
+}
+
+/**
  * Устойчивое к сборке обращение к БД для ISR-страниц.
  * Образ собирается БЕЗ доступной БД (в CI/Docker), а лендинг/каталог — статичные
  * с `revalidate`. Если при сборке БД недостижима — отдаём fallback, а реальные данные

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Clock } from "lucide-react";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, coverPublicUrl } from "@/lib/utils";
 
 const industryGradients: Record<string, string> = {
   "Туризм": "from-sky-700 via-sky-800 to-slate-900",
@@ -14,7 +14,15 @@ const industryGradients: Record<string, string> = {
   "Розница": "from-rose-700 via-rose-800 to-slate-900",
 };
 
+export interface CoursePrices {
+  kzt: string;
+  rub: string;
+  byn: string;
+  ready: boolean;
+}
+
 export type CourseCardData = {
+  id: string;
   slug: string;
   title: string;
   subtitle: string | null;
@@ -23,6 +31,8 @@ export type CourseCardData = {
   priceTiyn: number;
   oldPriceTiyn: number | null;
   hoursLabel: string | null;
+  /** Предрассчитанные строки цен в 3 валютах (KZT/RUB/BYN по курсу НБ РК). */
+  prices?: CoursePrices;
   _count: { modules: number };
 };
 
@@ -44,9 +54,9 @@ export function CourseCard({ course }: { course: CourseCardData }) {
     >
       {/* Обложка */}
       <div className={`relative aspect-video bg-gradient-to-br ${gradient}`}>
-        {course.coverUrl ? (
+        {coverPublicUrl(course.coverUrl, course.id) ? (
           <Image
-            src={course.coverUrl}
+            src={coverPublicUrl(course.coverUrl, course.id)!}
             alt={course.title}
             fill
             className="object-cover"
@@ -81,13 +91,20 @@ export function CourseCard({ course }: { course: CourseCardData }) {
         <div className="mt-auto pt-4 flex items-end justify-between gap-2">
           <div>
             <div className="flex items-baseline gap-2">
-              <span className="text-lg font-bold">{formatPrice(course.priceTiyn)}</span>
+              <span className="text-lg font-bold">
+                {course.prices?.kzt ?? formatPrice(course.priceTiyn)}
+              </span>
               {course.oldPriceTiyn ? (
                 <span className="text-sm text-foreground/40 line-through">
                   {formatPrice(course.oldPriceTiyn)}
                 </span>
               ) : null}
             </div>
+            {course.prices?.ready ? (
+              <p className="mt-0.5 text-xs text-foreground/45">
+                ≈ {course.prices.rub} · ≈ {course.prices.byn}
+              </p>
+            ) : null}
           </div>
           {course.hoursLabel ? (
             <span className="flex items-center gap-1 text-xs text-foreground/40">

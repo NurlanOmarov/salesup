@@ -11,8 +11,15 @@
   --font-sans: var(--font-geist-sans), system-ui, sans-serif;
 }
 
+/* Тёмная тема по выбору пользователя (класс .dark на <html>, ставит ThemeScript). */
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+}
+
+/* Фоллбэк без JS: следуем системной теме, пока пользователь не выбрал явно. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not(.light):not(.dark) {
     --background: #0a0a0a;
     --foreground: #ededed;
   }

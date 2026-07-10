@@ -1,8 +1,8 @@
 /**
  * factory:publish — публикация медиа-файлов фабрики на прод.
  *
- * Фабрика (factory:audio, factory:podcast) пишет медиа в ЛОКАЛЬНЫЙ каталог
- * MEDIA_ROOT и ключи (audioKey, podcastKey) в ЛОКАЛЬНУЮ dev-БД.
+ * Фабрика (factory:audio, factory:podcast, factory:slides-pdf) пишет медиа в ЛОКАЛЬНЫЙ каталог
+ * MEDIA_ROOT и ключи (audioKey, podcastKey, slidesPdfKey) в ЛОКАЛЬНУЮ dev-БД.
  * Прод-БД и прод-том (salesup_media) — отдельные. Эта команда синхронизует:
  *   1. Для каждого непустого ключа: rsync локального файла media/<key>
  *      на VPS в /tmp/salesup-publish-<ts>/<key>, затем docker cp в контейнер
@@ -26,7 +26,7 @@
  *
  * Безопасность:
  *   • rsync только добавляет/обновляет файлы (без --delete).
- *   • UPDATE касается ТОЛЬКО audioKey/podcastKey конкретного урока по id.
+ *   • UPDATE касается ТОЛЬКО audioKey/podcastKey/slidesPdfKey конкретного урока по id.
  *   • Ключи детерминированы (courses/<slug>/lessons/<id>/...) — SQL-инъекция невозможна.
  *   • Секреты (пароль PostgreSQL) не передаются — psql читает их из env контейнера.
  */
@@ -51,7 +51,7 @@ const MEDIA_ROOT = process.env.MEDIA_ROOT ?? join(process.cwd(), "media");
 // ── Типы ─────────────────────────────────────────────────────────────────────
 
 interface MediaKey {
-  field: "audioKey" | "podcastKey";
+  field: "audioKey" | "podcastKey" | "slidesPdfKey";
   key: string; // относительный ключ, напр. courses/sales-pharma/lessons/<id>/podcast.m4a
 }
 
@@ -139,7 +139,7 @@ function dockerCpToContainer(remoteTmpPath: string, mediaKey: string, dryRun: bo
  * Значение ключа детерминировано (путь без кавычек-опасностей).
  * Для дополнительной безопасности экранируем через $$ quoting SQL-литерал.
  */
-function updateProdDb(lessonId: string, field: "audioKey" | "podcastKey", key: string, dryRun: boolean): void {
+function updateProdDb(lessonId: string, field: "audioKey" | "podcastKey" | "slidesPdfKey", key: string, dryRun: boolean): void {
   // Проверка: ключ должен соответствовать ожидаемому шаблону (безопасность)
   if (!/^courses\/[a-z0-9-]+\/lessons\/[a-z0-9]+\/[a-z0-9._-]+$/.test(key)) {
     throw new Error(`Подозрительный ключ (не проходит валидацию): ${key}`);
@@ -181,6 +181,7 @@ async function loadLessonsForCourse(slug: string): Promise<LessonMedia[]> {
               title: true,
               audioKey: true,
               podcastKey: true,
+              slidesPdfKey: true,
             },
           },
         },
@@ -197,6 +198,7 @@ async function loadLessonsForCourse(slug: string): Promise<LessonMedia[]> {
       const keys: MediaKey[] = [];
       if (l.audioKey) keys.push({ field: "audioKey", key: l.audioKey });
       if (l.podcastKey) keys.push({ field: "podcastKey", key: l.podcastKey });
+      if (l.slidesPdfKey) keys.push({ field: "slidesPdfKey", key: l.slidesPdfKey });
       return { id: l.id, title: l.title, keys };
     })
     .filter((l) => l.keys.length > 0);
@@ -210,6 +212,7 @@ async function loadSingleLesson(lessonId: string): Promise<LessonMedia[]> {
       title: true,
       audioKey: true,
       podcastKey: true,
+      slidesPdfKey: true,
     },
   });
   if (!lesson) throw new Error(`Урок ${lessonId} не найден в локальной БД`);
@@ -217,9 +220,10 @@ async function loadSingleLesson(lessonId: string): Promise<LessonMedia[]> {
   const keys: MediaKey[] = [];
   if (lesson.audioKey) keys.push({ field: "audioKey", key: lesson.audioKey });
   if (lesson.podcastKey) keys.push({ field: "podcastKey", key: lesson.podcastKey });
+  if (lesson.slidesPdfKey) keys.push({ field: "slidesPdfKey", key: lesson.slidesPdfKey });
 
   if (keys.length === 0) {
-    log.warn(`Урок «${lesson.title}» не имеет audioKey / podcastKey — нечего публиковать`);
+    log.warn(`Урок «${lesson.title}» не имеет медиа-ключей (audioKey/podcastKey/slidesPdfKey) — нечего публиковать`);
     return [];
   }
 

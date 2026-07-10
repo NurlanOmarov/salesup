@@ -20,6 +20,7 @@ export interface ProfileInitial {
   industry: string;
   position: string;
   subtitleLang: string;
+  weeklyGoal: number;
 }
 
 export function ProfileForm({ initial }: { initial: ProfileInitial }) {
@@ -38,6 +39,7 @@ export function ProfileForm({ initial }: { initial: ProfileInitial }) {
       industry: formData.get("industry"),
       position: formData.get("position"),
       subtitleLang: formData.get("subtitleLang"),
+      weeklyGoal: formData.get("weeklyGoal"),
     });
     setPending(false);
     if (res.ok) {
@@ -71,20 +73,38 @@ export function ProfileForm({ initial }: { initial: ProfileInitial }) {
         </div>
       </div>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="subtitleLang">Язык субтитров по умолчанию</Label>
-        <select
-          id="subtitleLang"
-          name="subtitleLang"
-          defaultValue={initial.subtitleLang}
-          className="h-11 w-full rounded-lg border border-foreground/20 bg-background px-3 text-sm"
-        >
-          {SUBTITLE_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label htmlFor="subtitleLang">Язык субтитров по умолчанию</Label>
+          <select
+            id="subtitleLang"
+            name="subtitleLang"
+            defaultValue={initial.subtitleLang}
+            className="h-11 w-full rounded-lg border border-foreground/20 bg-background px-3 text-sm"
+          >
+            {SUBTITLE_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="weeklyGoal">Цель: уроков в неделю</Label>
+          <select
+            id="weeklyGoal"
+            name="weeklyGoal"
+            defaultValue={String(initial.weeklyGoal)}
+            className="h-11 w-full rounded-lg border border-foreground/20 bg-background px-3 text-sm"
+          >
+            {[1, 2, 3, 5, 7, 10, 14].map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-foreground/50">Влияет на виджет цели на дашборде.</p>
+        </div>
       </div>
 
       {error ? <p className="text-sm text-red-600">{error}</p> : null}

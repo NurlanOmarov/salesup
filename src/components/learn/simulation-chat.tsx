@@ -486,12 +486,16 @@ export function SimulationChat({
           {voiceMode ? (
             <div className="flex flex-col items-center">
               {avatarUrl ? (
-                <div className="mx-auto w-56 sm:w-64">
+                <div className="relative mx-auto aspect-[4/5] w-full max-w-[300px] overflow-hidden rounded-3xl bg-gradient-to-b from-sky-500/10 via-foreground/[0.03] to-transparent ring-1 ring-foreground/10">
                   <DoctorAvatar
                     src={avatarUrl}
                     analyser={analyser}
                     speaking={voiceStatus === "speaking"}
                   />
+                  {/* мягкие затухания краёв: плечи растворяются в фоне, без резких срезов */}
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-background to-transparent" />
+                  <div className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-background to-transparent" />
+                  <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-background to-transparent" />
                 </div>
               ) : null}
 
