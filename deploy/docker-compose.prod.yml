@@ -40,6 +40,9 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL}
       AUTH_SECRET: ${AUTH_SECRET}
+      # Канонический базовый URL Auth.js за reverse-proxy (иначе в части путей
+      # генерится внутренний http://0.0.0.0:3000 → ломается post-login redirect).
+      AUTH_URL: ${AUTH_URL:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       EMBEDDINGS_API_KEY: ${EMBEDDINGS_API_KEY}
       VOICE_ENABLED: ${VOICE_ENABLED:-false}     # голосовой симулятор (STT/TTS)
