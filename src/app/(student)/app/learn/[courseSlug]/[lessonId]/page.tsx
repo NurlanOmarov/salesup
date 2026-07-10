@@ -21,6 +21,7 @@ import {
   parseBranching,
 } from "@/lib/interactive";
 import { loadScenario } from "@/lib/ai/simulate";
+import { listLessonNotes } from "@/lib/learn/notes";
 
 export const metadata: Metadata = {
   title: "Урок",
@@ -31,10 +32,14 @@ export const dynamic = "force-dynamic";
 
 export default async function LearnPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ courseSlug: string; lessonId: string }>;
+  searchParams?: Promise<{ t?: string }>;
 }) {
   const { courseSlug, lessonId } = await params;
+  const sp = searchParams ? await searchParams : {};
+  const tParam = Number(sp.t);
   const session = await requireUser();
   const userId = session.user.id;
 
@@ -51,7 +56,7 @@ export default async function LearnPage({
           title: true,
           lessons: {
             orderBy: { sortOrder: "asc" },
-            select: { id: true, title: true, status: true, videoStatus: true, audioKey: true, podcastKey: true },
+            select: { id: true, title: true, status: true, videoStatus: true, audioKey: true, podcastKey: true, slidesPdfKey: true },
           },
         },
       },
@@ -149,13 +154,14 @@ export default async function LearnPage({
     select: { id: true, title: true },
   });
 
-  // Доступные дорожки субтитров + язык по умолчанию из профиля.
-  const [subtitleTracks, viewer] = await Promise.all([
+  // Доступные дорожки субтитров + язык по умолчанию из профиля + заметки ученика.
+  const [subtitleTracks, viewer, notes] = await Promise.all([
     db.subtitleTrack.findMany({
       where: { lessonId, validation: "VALIDATED" },
       select: { lang: true },
     }),
     db.user.findUnique({ where: { id: userId }, select: { subtitleLang: true } }),
+    listLessonNotes(userId, lessonId),
   ]);
   const LANG_LABELS: Record<string, string> = { RU: "Русский", KK: "Қазақша", EN: "English", UZ: "Oʻzbekcha" };
   const langOrder = ["RU", "KK", "EN", "UZ"];
@@ -225,10 +231,14 @@ export default async function LearnPage({
             hasAudio={!!current.audioKey}
             hasPodcast={!!current.podcastKey}
             watermark={session.user.email ?? userId}
-            startPositionSec={lessonPos?.lastPositionSec ?? 0}
+            startPositionSec={
+              Number.isFinite(tParam) && tParam > 0 ? tParam : lessonPos?.lastPositionSec ?? 0
+            }
             summary={summary}
             transcript={transcriptText}
+            notes={notes}
             slides={slides}
+            hasSlidesPdf={!!current.slidesPdfKey}
             flashcards={flashcards}
             objections={objections}
             branching={branching}

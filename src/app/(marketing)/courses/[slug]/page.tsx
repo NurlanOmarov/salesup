@@ -13,8 +13,9 @@ import {
 } from "lucide-react";
 import { db } from "@/lib/db";
 import { env } from "@/env";
-import { formatPrice, buildSafe } from "@/lib/utils";
+import { formatPrice, buildSafe, coverPublicUrl } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { currency, buildMultiPrice, ratesAvailable } from "@/lib/currency";
 import { buttonVariants } from "@/components/ui/button";
 import { Reveal } from "@/components/landing/reveal";
 import { LeadForm } from "@/components/landing/lead-form";
@@ -92,6 +93,10 @@ export default async function CoursePage({
   const { slug } = await params;
   const course = await getCourse(slug);
   if (!course) notFound();
+
+  const ratesPayload = await currency.getRates();
+  const prices = buildMultiPrice(course.priceTiyn, ratesPayload.rates);
+  const hasRates = ratesAvailable(ratesPayload.rates);
 
   const wa = env.NEXT_PUBLIC_SUPPORT_WHATSAPP;
   const tg = env.NEXT_PUBLIC_SUPPORT_TELEGRAM;
@@ -232,10 +237,10 @@ export default async function CoursePage({
             {/* Sticky price card */}
             <Reveal delay={0.15}>
               <div className="rounded-2xl border border-white/10 bg-slate-900 p-6 lg:sticky lg:top-24">
-                {course.coverUrl ? (
+                {coverPublicUrl(course.coverUrl, course.id) ? (
                   <div className="relative mb-4 aspect-video overflow-hidden rounded-xl">
                     <Image
-                      src={course.coverUrl}
+                      src={coverPublicUrl(course.coverUrl, course.id)!}
                       alt={course.title}
                       fill
                       className="object-cover"
@@ -246,7 +251,7 @@ export default async function CoursePage({
 
                 <div className="flex items-baseline gap-3">
                   <span className="text-3xl font-bold text-white">
-                    {formatPrice(course.priceTiyn)}
+                    {prices.kzt}
                   </span>
                   {course.oldPriceTiyn ? (
                     <span className="text-lg text-white/40 line-through">
@@ -254,6 +259,11 @@ export default async function CoursePage({
                     </span>
                   ) : null}
                 </div>
+                {hasRates ? (
+                  <p className="mt-1 text-sm text-white/50">
+                    ≈ {prices.rub} · ≈ {prices.byn}
+                  </p>
+                ) : null}
                 <p className="mt-1 text-sm text-white/50">
                   Онлайн-оплата не требуется
                 </p>
@@ -477,7 +487,12 @@ export default async function CoursePage({
                 <p className="mt-2 font-semibold text-amber-400">
                   {course.title}
                 </p>
-                <p className="text-2xl font-bold">{formatPrice(course.priceTiyn)}</p>
+                <p className="text-2xl font-bold">{prices.kzt}</p>
+                {hasRates ? (
+                  <p className="text-sm text-white/50">
+                    ≈ {prices.rub} · ≈ {prices.byn}
+                  </p>
+                ) : null}
               </div>
             </Reveal>
             <Reveal delay={0.05}>

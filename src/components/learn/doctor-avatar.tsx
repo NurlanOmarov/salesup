@@ -113,11 +113,12 @@ export function DoctorAvatar({
         });
 
         // Кадрируем «голова+плечи». Кость Head — у основания черепа, лицо заметно
-        // выше, поэтому цель поднимаем; камера отодвинута, чтобы влез весь силуэт.
+        // выше, поэтому цель поднимаем; камера отодвинута дальше, чтобы плечи
+        // полностью влезали по ширине (иначе срез по бокам в светлой теме).
         const headPos = new THREE.Vector3();
         (headBone ?? model).getWorldPosition(headPos);
-        const center = headPos.y + 0.06; // примерно уровень лица
-        camera.position.set(headPos.x, center, headPos.z + 1.0);
+        const center = headPos.y + 0.04; // примерно уровень лица
+        camera.position.set(headPos.x, center, headPos.z + 1.2);
         camera.lookAt(headPos.x, center, headPos.z);
       },
       undefined,

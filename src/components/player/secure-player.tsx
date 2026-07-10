@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import Hls from "hls.js";
 import { saveLessonProgress } from "@/app/(student)/app/learn/[courseSlug]/[lessonId]/actions";
+import { usePlayerRegistration } from "@/components/player/player-context";
 
 /**
  * Защищённый HLS-плеер (CLAUDE.md, правило 2 / S2.2). Источник — наш проксирующий
@@ -42,6 +43,7 @@ export function SecurePlayer({
   const hlsRef = useRef<Hls | null>(null);
   const watchedRef = useRef(0); // секунды реального просмотра с последнего сохранения
   const lastTickRef = useRef<number | null>(null);
+  const registerPlayer = usePlayerRegistration();
 
   const [levels, setLevels] = useState<Level[]>([]);
   const [currentLevel, setCurrentLevel] = useState(-1); // -1 = авто
@@ -92,6 +94,20 @@ export function SecurePlayer({
 
     setError("Ваш браузер не поддерживает воспроизведение этого видео.");
   }, [src, startPositionSec]);
+
+  // ── Регистрация управления плеером для панели заметок ──────────────────────
+  useEffect(() => {
+    registerPlayer({
+      getCurrentTime: () => Math.floor(videoRef.current?.currentTime ?? 0),
+      seek: (sec) => {
+        const video = videoRef.current;
+        if (!video) return;
+        video.currentTime = Math.max(0, sec);
+        void video.play().catch(() => {});
+      },
+    });
+    return () => registerPlayer(null);
+  }, [registerPlayer]);
 
   // ── Динамический водяной знак ──────────────────────────────────────────────
   useEffect(() => {

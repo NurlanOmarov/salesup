@@ -25,8 +25,10 @@ const PUBLIC_PREFIXES = [
   "/offer",
   "/privacy",
   "/api/health",
+  "/api/icon", // PWA-иконки (генерятся без авторизации, на них ссылается манифест)
 ];
-const PUBLIC_EXACT = ["/"];
+// PWA: манифест, service worker и offline-страница должны быть доступны без входа.
+const PUBLIC_EXACT = ["/", "/manifest.webmanifest", "/sw.js", "/offline.html"];
 
 function isPublicPath(pathname: string): boolean {
   if (PUBLIC_EXACT.includes(pathname)) return true;

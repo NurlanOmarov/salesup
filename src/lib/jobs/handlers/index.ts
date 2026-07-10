@@ -46,6 +46,14 @@ export const handlers: Record<string, JobHandler> = {
     log.info("maintenance.daily: ежедневные проверки (заглушка до S6.1/S6.3)");
   },
 
+  // Ежедневные учебные напоминания: ставит в очередь письма ученикам с карточками
+  // к повторению / серией под угрозой. Запускается раз в сутки cron-ом воркера.
+  "reminders.daily": async () => {
+    const { buildDailyReminders } = await import("@/lib/learn/reminders.js");
+    const r = await buildDailyReminders();
+    log.info({ candidates: r.candidates, enqueued: r.enqueued }, "reminders.daily: напоминания поставлены");
+  },
+
   // Пустая задача — для проверки воркера/тестов.
   noop: async () => {},
 };

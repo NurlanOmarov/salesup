@@ -45,6 +45,8 @@ model User {
   locale        String    @default("ru")
   subtitleLang  SubtitleLang? // язык субтитров по умолчанию в плеере (null = выкл)
   deviceLimit   Int? // лимит одновременных устройств: null = стандартный (DEVICE_LIMIT), 0 = безлимит, N = N устройств
+  weeklyGoal    Int       @default(3) // учебная цель: сколько уроков завершать в неделю (виджет на дашборде)
+  onboardedAt   DateTime? // когда ученик прошёл онбординг-тур кабинета (null = ещё не видел)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   deletedAt     DateTime? // soft delete / анонимизация
@@ -260,6 +262,7 @@ model Lesson {
   videoStatus   VideoStatus @default(NONE)
   audioKey      String? // аудиоверсия урока: аудиодорожка (m4a), извлечённая фабрикой из видео (factory:audio); ключ в lib/storage
   podcastKey    String? // AI-подкаст: двухголосый обзор-диалог по уроку (NotebookLM Audio Overview, factory:podcast), m4a; ключ в lib/storage
+  slidesPdfKey  String? // AI-презентация урока: дизайнерская колода NotebookLM Slide Deck (factory:slides-pdf), pdf; ключ в lib/storage. Доп. материал рядом с типизированной колодой SLIDES
   durationSec   Int?
   youtubeUrl    String? // источник (видео скачивается и кодируется CLI-фабрикой)
   // Прохождение

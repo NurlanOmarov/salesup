@@ -22,8 +22,13 @@ import {
   Dumbbell,
   Zap,
   GitBranch,
+  StickyNote,
+  Download,
 } from "lucide-react";
 import { SecurePlayer, type SubtitleTrackInfo } from "@/components/player/secure-player";
+import { PlayerProvider } from "@/components/player/player-context";
+import { NotesPanel } from "@/components/learn/notes-panel";
+import type { NoteView } from "@/lib/learn/notes";
 import { TutorChat } from "@/components/learn/tutor-chat";
 import { SlideDeck } from "@/components/learn/slide-deck";
 import { FlashcardsDeck } from "@/components/learn/flashcards-deck";
@@ -79,6 +84,7 @@ type Tab =
   | "hotspot"
   | "simulation"
   | "transcript"
+  | "notes"
   | "tutor";
 
 type Group = "watch" | "materials" | "practice" | "tutor";
@@ -99,7 +105,9 @@ export function LessonTabs({
   startPositionSec,
   summary,
   transcript,
+  notes = [],
   slides = null,
+  hasSlidesPdf = false,
   flashcards = null,
   objections = null,
   branching = null,
@@ -121,7 +129,9 @@ export function LessonTabs({
   startPositionSec: number;
   summary: string | null;
   transcript: string | null;
+  notes?: NoteView[];
   slides?: SlideDeckData | null;
+  hasSlidesPdf?: boolean;
   flashcards?: FlashcardsData | null;
   objections?: ObjectionsData | null;
   branching?: BranchingData | null;
@@ -142,8 +152,9 @@ export function LessonTabs({
     { key: "podcast", label: "Подкаст", icon: Podcast, show: hasPodcast, group: "watch" },
     { key: "audio", label: "Аудиоверсия", icon: Headphones, show: hasAudio, group: "watch" },
     { key: "summary", label: "Конспект", icon: FileText, show: !!summary, group: "materials" },
-    { key: "slides", label: "Презентация", icon: Presentation, show: !!slides, group: "materials" },
+    { key: "slides", label: "Презентация", icon: Presentation, show: !!slides || hasSlidesPdf, group: "materials" },
     { key: "transcript", label: "Транскрипт", icon: ScrollText, show: !!transcript, group: "materials" },
+    { key: "notes", label: "Заметки", icon: StickyNote, show: true, group: "materials" },
     { key: "flashcards", label: "Карточки", icon: Layers, show: !!flashcards, group: "practice" },
     { key: "objections", label: "Возражения", icon: MessageSquareWarning, show: !!objections, group: "practice" },
     { key: "rapidfire", label: "На скорость", icon: Zap, show: !!objections, group: "practice" },
@@ -166,6 +177,7 @@ export function LessonTabs({
   const activeGroup = groups.find((g) => g.key === activeGroupKey) ?? groups[0];
 
   return (
+    <PlayerProvider>
     <div>
       {/* Уровень 1 — группы форматов (на узких экранах прокручиваются) */}
       <div
@@ -264,7 +276,7 @@ export function LessonTabs({
       ) : null}
 
       <AnimatePresence mode="wait">
-        {tab === "slides" && slides ? (
+        {tab === "slides" && (slides || hasSlidesPdf) ? (
           <motion.div
             key="slides"
             initial={{ opacity: 0, y: 8 }}
@@ -272,7 +284,29 @@ export function LessonTabs({
             exit={{ opacity: 0 }}
             className="mt-4"
           >
-            <SlideDeck deck={slides} />
+            {hasSlidesPdf ? (
+              <div className="mb-2 flex justify-end">
+                <a
+                  href={`/api/learn/slides-pdf/${lessonId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-foreground/15 px-3 py-1.5 text-sm font-medium text-foreground/70 transition-colors hover:bg-foreground/5"
+                >
+                  <Download className="size-4" />
+                  Презентация PDF
+                </a>
+              </div>
+            ) : null}
+            {slides ? (
+              <SlideDeck deck={slides} />
+            ) : (
+              <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-8 text-center">
+                <Presentation className="mx-auto mb-3 size-8 text-foreground/40" />
+                <p className="text-sm text-foreground/70">
+                  Дизайнерская презентация урока — откройте PDF кнопкой выше.
+                </p>
+              </div>
+            )}
           </motion.div>
         ) : null}
 
@@ -282,9 +316,20 @@ export function LessonTabs({
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            className="prose-quiz mt-4 rounded-2xl border border-foreground/10 bg-background p-6"
+            className="mt-4"
           >
-            <Markdown text={summary} />
+            <div className="mb-2 flex justify-end">
+              <a
+                href={`/api/learn/material/${lessonId}?type=summary`}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-foreground/15 px-3 py-1.5 text-sm font-medium text-foreground/70 transition-colors hover:bg-foreground/5"
+              >
+                <Download className="size-4" />
+                Скачать PDF
+              </a>
+            </div>
+            <div className="prose-quiz rounded-2xl border border-foreground/10 bg-background p-6">
+              <Markdown text={summary} />
+            </div>
           </motion.div>
         ) : null}
 
@@ -350,6 +395,15 @@ export function LessonTabs({
 
         {tab === "checklist" && checklist ? (
           <motion.div key="checklist" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
+            <div className="mb-2 flex justify-end">
+              <a
+                href={`/api/learn/material/${lessonId}?type=checklist`}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-foreground/15 px-3 py-1.5 text-sm font-medium text-foreground/70 transition-colors hover:bg-foreground/5"
+              >
+                <Download className="size-4" />
+                Скачать PDF
+              </a>
+            </div>
             <ChecklistCard data={checklist} />
           </motion.div>
         ) : null}
@@ -378,6 +432,17 @@ export function LessonTabs({
           </motion.div>
         ) : null}
 
+        {tab === "notes" ? (
+          <motion.div key="notes" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
+            <NotesPanel
+              lessonId={lessonId}
+              initialNotes={notes}
+              hasVideo={videoReady}
+              onJump={() => setTab("video")}
+            />
+          </motion.div>
+        ) : null}
+
         {tab === "tutor" ? (
           <motion.div key="tutor" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
             <TutorChat lessonId={lessonId} />
@@ -385,6 +450,7 @@ export function LessonTabs({
         ) : null}
       </AnimatePresence>
     </div>
+    </PlayerProvider>
   );
 }
 

@@ -21,10 +21,12 @@ export const updateProfileAction = safeAction(
       position: z.string().trim().max(120).optional(),
       // "" → сбросить язык субтитров по умолчанию (выкл)
       subtitleLang: z.enum(["", ...SUBTITLE_LANGS]).optional(),
+      // учебная цель: уроков в неделю (1..14)
+      weeklyGoal: z.coerce.number().int().min(1).max(14).optional(),
     }),
     auth: "user",
   },
-  async ({ name, industry, position, subtitleLang }, { session }) => {
+  async ({ name, industry, position, subtitleLang, weeklyGoal }, { session }) => {
     await db.user.update({
       where: { id: session!.user.id },
       data: {
@@ -32,6 +34,7 @@ export const updateProfileAction = safeAction(
         industry: industry || null,
         position: position || null,
         subtitleLang: subtitleLang ? subtitleLang : null,
+        ...(weeklyGoal ? { weeklyGoal } : {}),
       },
     });
     revalidatePath("/app/settings");

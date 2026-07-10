@@ -25,6 +25,12 @@ export default async function AdminLayout({
               Ученики
             </Link>
             <Link
+              href="/admin/courses"
+              className="rounded-md px-3 py-1.5 text-foreground/70 transition-colors hover:bg-foreground/5 hover:text-foreground"
+            >
+              Курсы
+            </Link>
+            <Link
               href="/admin/leads"
               className="rounded-md px-3 py-1.5 text-foreground/70 transition-colors hover:bg-foreground/5 hover:text-foreground"
             >

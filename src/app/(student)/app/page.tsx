@@ -1,13 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
-import { BookOpen, PlayCircle, GraduationCap, Trophy, CalendarCheck, Layers } from "lucide-react";
+import { BookOpen, PlayCircle, GraduationCap, Trophy, CalendarCheck, Layers, StickyNote } from "lucide-react";
 import { requireUser } from "@/lib/auth/guards";
 import { db } from "@/lib/db";
 import { isEnrollmentActive } from "@/lib/access";
+import { coverPublicUrl } from "@/lib/utils";
 import { courseProgress, nextLesson } from "@/lib/learn/progress";
 import { ProgressPanel, type BadgeView } from "@/components/gamification/progress-panel";
 import { DailyQuests } from "@/components/gamification/daily-quests";
+import { WeeklyGoal } from "@/components/gamification/weekly-goal";
+import { OnboardingTour } from "@/components/student/onboarding-tour";
 import { dailyQuests } from "@/lib/gamification/quests";
 import { buttonVariants } from "@/components/ui/button";
 
@@ -28,6 +31,7 @@ export default async function DashboardPage() {
     include: {
       course: {
         select: {
+          id: true,
           slug: true,
           title: true,
           coverUrl: true,
@@ -100,13 +104,16 @@ export default async function DashboardPage() {
     .filter((c) => c.progress.total > 0 && c.progress.percent < 100)
     .sort((a, b) => b.progress.percent - a.progress.percent)[0] ?? null;
 
-  // Геймификация (сдержанно): профиль + бейджи.
-  const [profile, allBadges, earnedBadges, quests] = await Promise.all([
+  // Геймификация (сдержанно): профиль + бейджи + учебная цель.
+  const [profile, allBadges, earnedBadges, quests, viewer] = await Promise.all([
     db.gamificationProfile.findUnique({ where: { userId }, select: { xp: true, streakDays: true } }),
     db.badge.findMany({ orderBy: { id: "asc" }, select: { code: true, title: true, description: true } }),
     db.userBadge.findMany({ where: { userId }, select: { badge: { select: { code: true } } } }),
     dailyQuests(userId),
+    db.user.findUnique({ where: { id: userId }, select: { weeklyGoal: true, onboardedAt: true } }),
   ]);
+  const weeklyGoal = viewer?.weeklyGoal ?? 3;
+  const showOnboarding = !viewer?.onboardedAt;
   const earnedCodes = new Set(earnedBadges.map((b) => b.badge.code));
   const badgeViews: BadgeView[] = allBadges.map((b) => ({ ...b, earned: earnedCodes.has(b.code) }));
 
@@ -115,6 +122,7 @@ export default async function DashboardPage() {
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8">
+      {showOnboarding ? <OnboardingTour /> : null}
       <div>
         <h1 className="text-2xl font-bold">Моё обучение</h1>
         <p className="mt-1 text-foreground/60">
@@ -129,8 +137,8 @@ export default async function DashboardPage() {
           className="group mt-6 flex flex-col gap-4 overflow-hidden rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/[0.08] to-transparent p-5 transition-colors hover:from-amber-500/[0.14] sm:flex-row sm:items-center"
         >
           <div className="relative aspect-video w-full shrink-0 overflow-hidden rounded-xl bg-gradient-to-br from-slate-700 to-slate-900 sm:w-44">
-            {resume.coverUrl ? (
-              <Image src={resume.coverUrl} alt={resume.title} fill className="object-cover" sizes="176px" />
+            {coverPublicUrl(resume.coverUrl, resume.id) ? (
+              <Image src={coverPublicUrl(resume.coverUrl, resume.id)!} alt={resume.title} fill className="object-cover" sizes="176px" />
             ) : null}
             <span className="absolute inset-0 flex items-center justify-center">
               <PlayCircle className="size-10 text-white/90 drop-shadow transition-transform group-hover:scale-110" />
@@ -188,12 +196,29 @@ export default async function DashboardPage() {
         </div>
       ) : null}
 
-      {/* Сдержанный блок прогресса (компактно; полная версия — в «Достижениях») */}
+      {/* Учебная цель недели + сдержанный блок прогресса (полная версия — в «Достижениях») */}
       {courses.length > 0 ? (
-        <div className="mt-5 grid gap-4 lg:grid-cols-2">
-          <ProgressPanel xp={profile?.xp ?? 0} streakDays={profile?.streakDays ?? 0} badges={badgeViews} compact />
-          <DailyQuests quests={quests} />
-        </div>
+        <>
+          <div className="mt-5">
+            <WeeklyGoal done={weeklyDone} goal={weeklyGoal} />
+          </div>
+          <div className="mt-4 grid gap-4 lg:grid-cols-2">
+            <ProgressPanel xp={profile?.xp ?? 0} streakDays={profile?.streakDays ?? 0} badges={badgeViews} compact />
+            <DailyQuests quests={quests} />
+          </div>
+          <Link
+            href="/app/notes"
+            className="mt-4 flex items-center gap-3 rounded-2xl border border-foreground/10 bg-background p-4 transition-colors hover:bg-foreground/[0.03]"
+          >
+            <div className="flex size-10 items-center justify-center rounded-xl bg-amber-500/15 text-amber-700">
+              <StickyNote className="size-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold">Мои заметки</p>
+              <p className="text-sm text-foreground/60">Все заметки по урокам с переходом к моменту видео</p>
+            </div>
+          </Link>
+        </>
       ) : null}
 
       {courses.length === 0 ? (
@@ -215,9 +240,9 @@ export default async function DashboardPage() {
               className="overflow-hidden rounded-2xl border border-foreground/10 bg-background"
             >
               <div className="relative aspect-video bg-gradient-to-br from-slate-700 to-slate-900">
-                {c.coverUrl ? (
+                {coverPublicUrl(c.coverUrl, c.id) ? (
                   <Image
-                    src={c.coverUrl}
+                    src={coverPublicUrl(c.coverUrl, c.id)!}
                     alt={c.title}
                     fill
                     className="object-cover"

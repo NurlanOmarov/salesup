@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
-import { Flame, Trophy, BookCheck, GraduationCap, Award, Medal, Lock, Star, Snowflake } from "lucide-react";
+import Link from "next/link";
+import { Flame, Trophy, BookCheck, GraduationCap, Award, Medal, Lock, Star, Snowflake, MessagesSquare, ChevronRight, TrendingUp } from "lucide-react";
 import { requireUser } from "@/lib/auth/guards";
 import { db } from "@/lib/db";
 import { levelProgress } from "@/lib/gamification/levels";
+import { leaderboardPosition } from "@/lib/gamification/leaderboard";
 
 export const metadata: Metadata = {
   title: "Достижения",
@@ -15,7 +17,7 @@ export default async function AchievementsPage() {
   const session = await requireUser();
   const userId = session.user.id;
 
-  const [profile, allBadges, earned, lessonsDone, passedAttempts, certs] = await Promise.all([
+  const [profile, allBadges, earned, lessonsDone, passedAttempts, certs, rank] = await Promise.all([
     db.gamificationProfile.findUnique({
       where: { userId },
       select: { xp: true, streakDays: true, streakFreezes: true },
@@ -36,6 +38,7 @@ export default async function AchievementsPage() {
       orderBy: { issuedAt: "desc" },
       select: { id: true, issuedAt: true, course: { select: { title: true } } },
     }),
+    leaderboardPosition(userId),
   ]);
 
   const xp = profile?.xp ?? 0;
@@ -123,6 +126,36 @@ export default async function AchievementsPage() {
           </div>
         ))}
       </section>
+
+      {/* Анонимный рейтинг по XP (без имён — мотивация, не соревнование) */}
+      {rank ? (
+        <section className="mt-5 flex items-center gap-4 rounded-2xl border border-amber-500/30 bg-amber-500/[0.06] p-5">
+          <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-700">
+            <TrendingUp className="size-6" />
+          </div>
+          <div>
+            <p className="text-lg font-bold">Вы в топ {rank.topPercent}% учеников</p>
+            <p className="text-sm text-foreground/60">
+              Опережаете {rank.ahead}% по очкам опыта. Учитесь дальше, чтобы подняться выше.
+            </p>
+          </div>
+        </section>
+      ) : null}
+
+      {/* Тренировки звонков (история + прогресс) */}
+      <Link
+        href="/app/simulator"
+        className="mt-5 flex items-center gap-3 rounded-2xl border border-foreground/10 bg-background p-4 transition-colors hover:bg-foreground/[0.03]"
+      >
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-700">
+          <MessagesSquare className="size-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold">Тренировки звонков</p>
+          <p className="text-sm text-foreground/60">История диалогов с AI-клиентом и динамика навыка</p>
+        </div>
+        <ChevronRight className="size-5 shrink-0 text-foreground/40" />
+      </Link>
 
       {/* Бейджи */}
       <section className="mt-6">

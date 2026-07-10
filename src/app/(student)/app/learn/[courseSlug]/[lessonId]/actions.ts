@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { canAccessLesson } from "@/lib/access";
 import { awardXp, awardBadge, touchStreak } from "@/lib/gamification/award";
 import { XP_REWARDS } from "@/lib/gamification/levels";
+import { addNote, deleteNote } from "@/lib/learn/notes";
 
 /**
  * Сохранение прогресса просмотра урока (S2.2/S4.2): upsert LessonProgress каждые
@@ -67,5 +68,32 @@ export const saveLessonProgress = safeAction(
     }
 
     return { completed };
+  },
+);
+
+/** Добавить заметку к уроку на текущей секунде видео. */
+export const addNoteAction = safeAction(
+  {
+    schema: z.object({
+      lessonId: z.string().min(1),
+      timecodeSec: z.number().int().nonnegative(),
+      text: z.string().trim().min(1, "Заметка пустая").max(2000),
+    }),
+    auth: "user",
+  },
+  async ({ lessonId, timecodeSec, text }, { session }) => {
+    return addNote(session!.user.id, lessonId, timecodeSec, text);
+  },
+);
+
+/** Удалить свою заметку. */
+export const deleteNoteAction = safeAction(
+  {
+    schema: z.object({ noteId: z.string().min(1) }),
+    auth: "user",
+  },
+  async ({ noteId }, { session }) => {
+    await deleteNote(session!.user.id, noteId);
+    return { ok: true };
   },
 );
