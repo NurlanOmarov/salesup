@@ -3,22 +3,27 @@ import { BookOpen } from "lucide-react";
 import { db } from "@/lib/db";
 import { buildSafe } from "@/lib/utils";
 import { currency, buildMultiPrice } from "@/lib/currency";
+import { getStaticPageSeo } from "@/lib/seo/static-pages";
 import { Reveal } from "@/components/landing/reveal";
 import { CourseCard, type CourseCardData } from "@/components/catalog/course-card";
 
 export const revalidate = 60;
 
-export const metadata: Metadata = {
-  title: "Каталог курсов",
-  description:
-    "Видеокурсы по продажам для туризма, мебели, обуви, недвижимости, медпредставителей и B2B. Авторские программы бизнес-тренера Виталия Дубовика.",
-  alternates: { canonical: "/courses" },
-  openGraph: {
-    title: "Каталог курсов по продажам — Бизнес-платформа ACTIVE SALES",
-    description: "Практические видеокурсы для 8 отраслей. AI-наставник в каждом курсе.",
-    type: "website",
-  },
-};
+// Метаданные редактируются в /admin/seo (StaticPageSeo); пусто → фолбэки оттуда же.
+export async function generateMetadata(): Promise<Metadata> {
+  const s = await getStaticPageSeo("/courses");
+  return {
+    title: s.title,
+    description: s.description,
+    alternates: { canonical: "/courses" },
+    robots: { index: !s.noindex },
+    openGraph: {
+      title: "Каталог курсов по продажам — Бизнес-платформа ACTIVE SALES",
+      description: s.description,
+      type: "website",
+    },
+  };
+}
 
 async function getCourses(): Promise<CourseCardData[]> {
   const [rows, ratesPayload] = await Promise.all([

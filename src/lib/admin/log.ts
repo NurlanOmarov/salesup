@@ -19,7 +19,9 @@ export type AdminAction =
   | "course.update"
   | "course.cover"
   | "seo.settings.update"
+  | "seo.staticpage.update"
   | "seo.redirect.create"
+  | "seo.redirect.update"
   | "seo.redirect.delete"
   | "certificate.issue";
 

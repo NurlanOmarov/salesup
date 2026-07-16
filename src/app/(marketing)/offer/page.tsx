@@ -1,21 +1,35 @@
 import type { Metadata } from "next";
+import { getStaticPageSeo } from "@/lib/seo/static-pages";
+import { StaticPageBody } from "@/components/landing/static-page-body";
 
-export const metadata: Metadata = {
-  title: "Публичная оферта",
-  description: "Условия использования платформы ACTIVE SALES.",
-  // Заглушка до наполнения (BACKLOG S6.4) — вне индекса, чтобы не считалось thin content
-  robots: { index: false, follow: true },
-};
+export const revalidate = 300;
 
-export default function OfferPage() {
+// Мета и текст редактируются в /admin/seo. Пока текста нет — заглушка и noindex
+// (thin content, аудит п.7); владелец наполняет через AI-черновик и снимает noindex.
+export async function generateMetadata(): Promise<Metadata> {
+  const s = await getStaticPageSeo("/offer");
+  return {
+    title: s.title,
+    description: s.description,
+    alternates: { canonical: "/offer" },
+    robots: { index: !s.noindex, follow: true },
+  };
+}
+
+export default async function OfferPage() {
+  const s = await getStaticPageSeo("/offer");
   return (
-    <main className="mx-auto max-w-3xl px-4 py-16 prose-sm">
+    <main className="mx-auto max-w-3xl px-4 py-16">
       <h1 className="text-3xl font-bold">Публичная оферта</h1>
-      <p className="mt-4 text-foreground/70">
-        Текст оферты будет добавлен перед запуском (BACKLOG S6.4). Документ
-        определяет условия предоставления доступа к курсам, запрет на
-        распространение материалов и порядок обработки персональных данных.
-      </p>
+      {s.body ? (
+        <StaticPageBody text={s.body} />
+      ) : (
+        <p className="mt-4 text-foreground/70">
+          Текст оферты будет добавлен перед запуском (BACKLOG S6.4). Документ
+          определяет условия предоставления доступа к курсам, запрет на
+          распространение материалов и порядок обработки персональных данных.
+        </p>
+      )}
     </main>
   );
 }

@@ -6,18 +6,30 @@ import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { writeAdminLog } from "@/lib/admin/log";
 import { safeAction, type ActionResult } from "@/lib/safe-action";
+import { storage, normalizeKey } from "@/lib/storage";
 import { revalidateSeoSettings, SEO_SETTINGS_ID } from "@/lib/seo/settings";
 import { normalizePath } from "@/lib/seo/redirects";
 import {
   analyzeCannibalization,
+  keywordClusters,
+  keywordMatch,
   type CannibalReport,
+  type ClusterReport,
 } from "@/lib/seo/semantic";
 import {
   generateMeta,
   scoreMeta,
+  draftStaticPageText,
   type MetaSuggestion,
   type MetaScore,
 } from "@/lib/seo/ai";
+import { getSeoSettings } from "@/lib/seo/settings";
+import {
+  STATIC_PAGES,
+  isKnownStaticPage,
+  revalidateStaticPageSeo,
+} from "@/lib/seo/static-pages";
+import { env } from "@/env";
 
 /** Пустая строка → null (единый способ «очистить» опциональное поле). */
 const optStr = (max: number) =>
@@ -41,6 +53,10 @@ export const updateSeoSettingsAction = safeAction(
       yandexVerification: optStr(200),
       ga4Id: optStr(40),
       yandexMetricaId: optStr(40),
+      orgName: z.string().trim().min(1, "Укажите название организации").max(120),
+      orgDescription: optStr(300),
+      orgPhone: optStr(40),
+      orgCountry: z.string().trim().min(1, "Укажите страну").max(60),
     }),
     auth: "owner",
   },
@@ -135,7 +151,42 @@ export async function scoreMetaAction(
 
 // ─────────────────────────── Редиректы (P2) ───────────────────────────
 
-/** Создать 308-редирект from → to (оба — относительные пути / абсолютный URL для to). */
+/**
+ * Схлопнуть цепочку: если `to` сам редиректится дальше, вернуть конечное назначение
+ * (резолвер в приложении делает один прыжок — цепочки теряли бы позиции). Бросает при
+ * цикле (цепочка возвращается в `from`) и при подозрительно длинной цепочке.
+ */
+async function flattenRedirectTarget(
+  from: string,
+  to: string,
+  excludeId?: string,
+): Promise<string> {
+  if (to.startsWith("http")) return to;
+
+  const all = await db.redirect.findMany({ select: { id: true, from: true, to: true } });
+  const map = new Map(
+    all.filter((r) => r.id !== excludeId).map((r) => [r.from, r.to] as const),
+  );
+
+  let cur = to;
+  const seen = new Set([from]);
+  for (let hops = 0; hops < 10; hops++) {
+    if (seen.has(cur)) {
+      throw new Error("Получается цикл: цепочка редиректов возвращается в исходный путь");
+    }
+    seen.add(cur);
+    const next = map.get(cur);
+    if (!next || next.startsWith("http")) return next ?? cur;
+    cur = next;
+  }
+  throw new Error("Слишком длинная цепочка редиректов — проверьте существующие правила");
+}
+
+/**
+ * Создать 308-редирект from → to (относительные пути / абсолютный URL для to).
+ * Цепочки схлопываются: to резолвится до конечного назначения, а существующие
+ * правила, указывающие на from, перенацеливаются — редирект всегда в один прыжок.
+ */
 export const createRedirectAction = safeAction(
   {
     schema: z.object({
@@ -152,11 +203,53 @@ export const createRedirectAction = safeAction(
     const exists = await db.redirect.findUnique({ where: { from } });
     if (exists) throw new Error("Редирект с таким источником уже есть");
 
-    await db.redirect.create({ data: { from, to } });
+    const finalTo = await flattenRedirectTarget(from, to);
+    await db.redirect.create({ data: { from, to: finalTo } });
+    // Правила, которые вели на from, теперь вели бы в цепочку — перенацеливаем.
+    await db.redirect.updateMany({ where: { to: from }, data: { to: finalTo } });
+    // Путь закрыт редиректом → убираем его из журнала 404.
+    await db.notFoundHit.deleteMany({ where: { path: from } }).catch(() => {});
     await writeAdminLog({
       actorId: session!.user.id,
       action: "seo.redirect.create",
-      meta: { from, to },
+      meta: { from, to: finalTo },
+    });
+    revalidatePath("/admin/seo/redirects");
+    return { ok: true as const };
+  },
+);
+
+/** Изменить существующий редирект (те же проверки циклов/цепочек, что при создании). */
+export const updateRedirectAction = safeAction(
+  {
+    schema: z.object({
+      id: z.string().min(1),
+      from: z.string().trim().min(1, "Укажите путь-источник").max(300),
+      to: z.string().trim().min(1, "Укажите назначение").max(500),
+    }),
+    auth: "owner",
+  },
+  async (input, { session }) => {
+    const from = normalizePath(input.from);
+    const to = input.to.startsWith("http") ? input.to.trim() : normalizePath(input.to);
+    if (from === to) throw new Error("Источник и назначение совпадают");
+
+    const clash = await db.redirect.findUnique({ where: { from } });
+    if (clash && clash.id !== input.id) {
+      throw new Error("Редирект с таким источником уже есть");
+    }
+
+    const finalTo = await flattenRedirectTarget(from, to, input.id);
+    await db.redirect.update({ where: { id: input.id }, data: { from, to: finalTo } });
+    await db.redirect.updateMany({
+      where: { to: from, id: { not: input.id } },
+      data: { to: finalTo },
+    });
+    await db.notFoundHit.deleteMany({ where: { path: from } }).catch(() => {});
+    await writeAdminLog({
+      actorId: session!.user.id,
+      action: "seo.redirect.update",
+      meta: { id: input.id, from, to: finalTo },
     });
     revalidatePath("/admin/seo/redirects");
     return { ok: true as const };
@@ -178,6 +271,81 @@ export const deleteRedirectAction = safeAction(
   },
 );
 
+// ─────────────────────────── Статические страницы (каталог, оферта, политика) ───────────────────────────
+
+/**
+ * Сохранить SEO статической страницы. Пустые title/description → фолбэк страницы;
+ * body (markdown) — текст thin-страниц (/offer, /privacy). Только OWNER.
+ */
+export const updateStaticPageSeoAction = safeAction(
+  {
+    schema: z.object({
+      path: z.string().refine(isKnownStaticPage, "Неизвестная страница"),
+      title: optStr(120),
+      description: optStr(320),
+      noindex: z.boolean(),
+      body: optStr(40_000),
+    }),
+    auth: "owner",
+  },
+  async (input, { session }) => {
+    const page = STATIC_PAGES.find((p) => p.path === input.path)!;
+    const data = {
+      title: input.title,
+      description: input.description,
+      noindex: input.noindex,
+      // body сохраняем только там, где страница его рендерит (не для /courses).
+      body: page.hasBody ? input.body : null,
+    };
+    await db.staticPageSeo.upsert({
+      where: { path: input.path },
+      create: { path: input.path, ...data },
+      update: data,
+    });
+
+    await writeAdminLog({
+      actorId: session!.user.id,
+      action: "seo.staticpage.update",
+      meta: { path: input.path, noindex: input.noindex, hasBody: Boolean(data.body) },
+    });
+
+    revalidateStaticPageSeo();
+    revalidatePath(input.path);
+    return { ok: true as const };
+  },
+);
+
+/**
+ * AI-черновик текста thin-страницы (оферта/политика), Sonnet — по кнопке владельца.
+ * Возвращает markdown; владелец читает, правит и сохраняет отдельным действием
+ * (юридический текст стоит показать юристу — напоминание в форме).
+ */
+export async function draftStaticPageAction(
+  raw: unknown,
+): Promise<ActionResult<{ body: string }>> {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "OWNER") {
+    return { ok: false, error: "Недостаточно прав" };
+  }
+  const parsed = z
+    .object({ path: z.enum(["/offer", "/privacy"]) })
+    .safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "Неизвестная страница" };
+
+  try {
+    const s = await getSeoSettings();
+    const body = await draftStaticPageText(parsed.data.path, {
+      orgName: s.orgName,
+      siteUrl: env.NEXT_PUBLIC_SITE_URL,
+      contact: s.orgPhone ?? env.NEXT_PUBLIC_SUPPORT_PHONE ?? null,
+      userId: session.user.id,
+    });
+    return { ok: true, data: { body } };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Ошибка AI" };
+  }
+}
+
 // ─────────────────────────── Каннибализация (embeddings) ───────────────────────────
 
 /** AI-анализ конкуренции курсов за один запрос (по кнопке — расход API контролируем). */
@@ -195,3 +363,119 @@ export async function analyzeCannibalizationAction(): Promise<
     return { ok: false, error: e instanceof Error ? e.message : "Ошибка анализа" };
   }
 }
+
+// ─────────────────────────── Дефолтная OG-картинка сайта ───────────────────────────
+
+/** Загрузка дефолтной OG-картинки сайта (приоритетнее авто-генерации opengraph-image). */
+export async function uploadDefaultOgAction(
+  formData: FormData,
+): Promise<ActionResult<{ defaultOgKey: string }>> {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "OWNER") {
+    return { ok: false, error: "Недостаточно прав" };
+  }
+  const file = formData.get("file");
+  if (!(file instanceof File)) return { ok: false, error: "Файл не получен" };
+  if (file.size === 0) return { ok: false, error: "Файл пуст" };
+  if (file.size > 8 * 1024 * 1024) return { ok: false, error: "Файл больше 8 МБ" };
+  if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+    return { ok: false, error: "Для OG допустимы PNG, JPEG или WebP" };
+  }
+
+  const ext = file.type.split("/")[1] ?? "png";
+  const newKey = `og/site/og-${Date.now()}.${ext}`;
+
+  try {
+    normalizeKey(newKey);
+    await storage.put(newKey, Buffer.from(await file.arrayBuffer()));
+
+    const prev = (await db.seoSettings.findUnique({ where: { id: SEO_SETTINGS_ID } }))
+      ?.defaultOgKey;
+    await db.seoSettings.upsert({
+      where: { id: SEO_SETTINGS_ID },
+      create: { id: SEO_SETTINGS_ID, defaultOgKey: newKey },
+      update: { defaultOgKey: newKey },
+    });
+    if (prev) {
+      try {
+        await storage.delete(prev);
+      } catch {
+        /* файла могло не быть */
+      }
+    }
+    revalidateSeoSettings();
+    return { ok: true, data: { defaultOgKey: newKey } };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Ошибка загрузки" };
+  }
+}
+
+/** Убрать дефолтную OG-картинку (вернуться к авто-генерации). */
+export const removeDefaultOgAction = safeAction(
+  { schema: z.object({}), auth: "owner" },
+  async () => {
+    const row = await db.seoSettings.findUnique({ where: { id: SEO_SETTINGS_ID } });
+    if (row?.defaultOgKey) {
+      try {
+        await storage.delete(row.defaultOgKey);
+      } catch {
+        /* файла могло не быть */
+      }
+      await db.seoSettings.update({
+        where: { id: SEO_SETTINGS_ID },
+        data: { defaultOgKey: null },
+      });
+    }
+    revalidateSeoSettings();
+    return { ok: true as const };
+  },
+);
+
+// ─────────────────────────── Семантика: кластеры тем + match-score ───────────────────────────
+
+/** Карта тем: группировка курсов по смыслу фокус-ключей (по кнопке, embeddings). */
+export async function keywordClustersAction(): Promise<ActionResult<ClusterReport>> {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "OWNER") {
+    return { ok: false, error: "Недостаточно прав" };
+  }
+  try {
+    return { ok: true, data: await keywordClusters() };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Ошибка анализа" };
+  }
+}
+
+/** Соответствие фокус-ключа содержанию страницы (0..1) — embeddings, не «плотность». */
+export async function keywordMatchAction(
+  raw: unknown,
+): Promise<ActionResult<{ match: number }>> {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "OWNER") {
+    return { ok: false, error: "Недостаточно прав" };
+  }
+  const parsed = z
+    .object({
+      focusKeyword: z.string().trim().min(1, "Нет фокус-ключа").max(120),
+      source: z.string().trim().min(1, "Нет контента").max(6000),
+    })
+    .safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "Заполните фокус-ключ и описание" };
+
+  try {
+    const match = await keywordMatch(parsed.data.focusKeyword, parsed.data.source);
+    return { ok: true, data: { match } };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Ошибка анализа" };
+  }
+}
+
+/** Скрыть запись из журнала 404 (например, скан-шум бота). */
+export const deleteNotFoundHitAction = safeAction(
+  { schema: z.object({ id: z.string().min(1) }), auth: "owner" },
+  async (input) => {
+    await db.notFoundHit.delete({ where: { id: input.id } });
+    revalidatePath("/admin/seo/redirects");
+    return { ok: true as const };
+  },
+);

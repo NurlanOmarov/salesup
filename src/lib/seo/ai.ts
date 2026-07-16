@@ -1,5 +1,5 @@
 import "server-only";
-import { complete } from "@/lib/ai/anthropic";
+import { complete, completeVision, type VisionMediaType } from "@/lib/ai/anthropic";
 
 /**
  * AI-ассистент SEO-метаданных (Anthropic Haiku — CLAUDE.md: Haiku для проверок/
@@ -19,7 +19,7 @@ export interface MetaSuggestion {
 }
 
 const SYSTEM =
-  "Ты SEO-редактор образовательной платформы по продажам (рынок Казахстан, язык — " +
+  "Ты SEO-редактор образовательной платформы по продажам (рынок Беларусь, язык — " +
   "русский). По исходному описанию страницы пишешь SEO-title и meta description для " +
   "выдачи Google. СТРОГИЕ правила: 1) title ≤ 60 символов, description ≤ 155 символов " +
   "(это жёсткие лимиты сниппета — не превышать); 2) естественно вписываешь целевой " +
@@ -98,7 +98,7 @@ export interface MetaScore {
 
 const SCORE_SYSTEM =
   "Ты SEO-аудитор. Оцениваешь пару title+description страницы курса по продажам " +
-  "(рынок Казахстан, русский). Критерии: длина (title ≤ 60, description ≤ 155 симв.), " +
+  "(рынок Беларусь, русский). Критерии: длина (title ≤ 60, description ≤ 155 симв.), " +
   "естественное присутствие целевого запроса, читабельность и польза, отсутствие " +
   "кликбейта/переспама, соответствие описанию страницы. Верни ТОЛЬКО JSON без markdown: " +
   '{"score": <0..100>, "issues": ["..."], "suggestions": ["..."]}. ' +
@@ -158,4 +158,101 @@ export async function scoreMeta(
     issues: asStrings(parsed.issues),
     suggestions: asStrings(parsed.suggestions),
   };
+}
+
+// ─────────────────────────── AI-черновик текста thin-страниц ───────────────────────────
+
+export type StaticDraftPage = "/offer" | "/privacy";
+
+const DRAFT_SPECS: Record<StaticDraftPage, { name: string; brief: string }> = {
+  "/offer": {
+    name: "Публичная оферта",
+    brief:
+      "Договор публичной оферты онлайн-платформы курсов: предмет (доступ к видеокурсам " +
+      "и AI-тренажёрам), порядок оплаты (без онлайн-оплаты: заявка → подтверждение → " +
+      "администратор выдаёт логин/пароль), срок доступа, запрет передачи учётной записи " +
+      "и распространения материалов, интеллектуальная собственность, порядок претензий, " +
+      "ответственность сторон, изменение условий.",
+  },
+  "/privacy": {
+    name: "Политика конфиденциальности",
+    brief:
+      "Политика обработки персональных данных по закону Республики Беларусь «О защите " +
+      "персональных данных» (№ 99-З): состав данных (имя, e-mail/логин, телефон — " +
+      "опционально), цели обработки (доступ к курсам, сертификат, уведомления), " +
+      "правовые основания, сроки хранения, права субъекта (доступ, исправление, " +
+      "удаление, отзыв согласия), передача третьим лицам (нет, кроме законных " +
+      "требований), cookie и счётчики аналитики, контакт для обращений.",
+  },
+};
+
+/**
+ * Черновик текста статической страницы (markdown). Sonnet — длинная генерация
+ * (CLAUDE.md: Sonnet для генерации). Только по кнопке владельца; результат владелец
+ * читает и правит перед сохранением — это НЕ автопубликация (юридический текст
+ * стоит показать юристу, о чём напоминает подсказка в форме).
+ */
+export async function draftStaticPageText(
+  page: StaticDraftPage,
+  opts: { orgName: string; siteUrl: string; contact?: string | null; userId?: string | null },
+): Promise<string> {
+  const spec = DRAFT_SPECS[page];
+  const raw = await complete({
+    model: "claude-sonnet-4-6",
+    system:
+      "Ты юрист-редактор, пишешь документы для сайтов на русском языке (рынок — " +
+      "Республика Беларусь). Пиши структурированный markdown: заголовки разделов «## 1. …», " +
+      "нумерованные пункты, без преамбул и комментариев вне документа. Нейтральный " +
+      "деловой стиль. Не выдумывай реквизиты (УНП, адрес) — оставляй плейсхолдеры вида " +
+      "«[указать …]». Объём — 400–700 слов.",
+    prompt:
+      `Напиши документ «${spec.name}» для сайта ${opts.siteUrl} ` +
+      `(владелец — ${opts.orgName}${opts.contact ? `, контакт: ${opts.contact}` : ""}).\n\n` +
+      `Содержание: ${spec.brief}\n\nВерни только markdown-текст документа.`,
+    maxTokens: 3000,
+    temperature: 0.4,
+    operation: "seo:page-draft",
+    userId: opts.userId ?? null,
+  });
+
+  const text = raw.trim();
+  if (!text) throw new Error("AI не вернул текст");
+  return text;
+}
+
+// ─────────────────────────── AI alt-текст изображения (vision) ───────────────────────────
+
+export const ALT_MAX = 125;
+
+/**
+ * Сгенерировать alt-текст по самой картинке (Haiku vision) с учётом контекста страницы.
+ * Для image SEO и доступности: описывает, что на изображении, без слов «картинка/фото».
+ */
+export async function generateAltText(opts: {
+  imageBase64: string;
+  mediaType: VisionMediaType;
+  context?: string | null; // напр. «Обложка курса „Активные продажи для медпредов"»
+  userId?: string | null;
+}): Promise<string> {
+  const raw = await completeVision({
+    model: "claude-haiku-4-5",
+    system:
+      "Ты пишешь alt-тексты для изображений сайта (русский язык). Правила: одно " +
+      `предложение до ${ALT_MAX} символов; описывай, что изображено, конкретно и ` +
+      "нейтрально; без слов «изображение», «картинка», «фото»; без кавычек вокруг " +
+      "ответа; учитывай контекст страницы, если он дан. Верни ТОЛЬКО сам alt-текст.",
+    prompt:
+      (opts.context ? `Контекст: ${opts.context}.\n` : "") +
+      "Напиши alt-текст для этого изображения.",
+    imageBase64: opts.imageBase64,
+    mediaType: opts.mediaType,
+    maxTokens: 200,
+    temperature: 0.4,
+    operation: "seo:alt",
+    userId: opts.userId ?? null,
+  });
+
+  const alt = raw.trim().replace(/^["«]|["»]$/g, "").trim();
+  if (!alt) throw new Error("AI не вернул alt-текст");
+  return clampWords(alt, ALT_MAX + 35); // небольшой запас сверх рекомендации
 }

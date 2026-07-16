@@ -22,6 +22,7 @@ import { LeadForm } from "@/components/landing/lead-form";
 import { Reviews, type ReviewItem } from "@/components/landing/reviews";
 import { trainer } from "@/content/landing";
 import { resolveRedirect } from "@/lib/seo/redirects";
+import { getRelatedCards } from "@/lib/seo/related";
 
 export const revalidate = 60;
 
@@ -103,11 +104,14 @@ export default async function CoursePage({
   }
 
   // Агрегат рейтинга по всем прошедшим модерацию отзывам (для звёзд в выдаче)
-  const ratingAgg = await db.review.aggregate({
-    where: { courseId: course.id, autoModeration: "VALIDATED" },
-    _avg: { rating: true },
-    _count: true,
-  });
+  const [ratingAgg, related] = await Promise.all([
+    db.review.aggregate({
+      where: { courseId: course.id, autoModeration: "VALIDATED" },
+      _avg: { rating: true },
+      _count: true,
+    }),
+    getRelatedCards(course.id),
+  ]);
 
   const ratesPayload = await currency.getRates();
   const prices = buildMultiPrice(course.priceTiyn, ratesPayload.rates);
@@ -306,7 +310,7 @@ export default async function CoursePage({
                   <div className="relative mb-4 aspect-video overflow-hidden rounded-xl">
                     <Image
                       src={coverPublicUrl(course.coverUrl, course.id)!}
-                      alt={course.title}
+                      alt={course.coverAlt ?? course.title}
                       fill
                       className="object-cover"
                       sizes="380px"
@@ -568,6 +572,55 @@ export default async function CoursePage({
           </div>
         </div>
       </section>
+
+      {/* Связанные курсы — семантическая перелинковка (embeddings, кэш сутки) */}
+      {related.length > 0 ? (
+        <section className="mx-auto max-w-6xl px-4 py-16">
+          <h2 className="text-2xl font-bold">Связанные курсы</h2>
+          <p className="mt-1 text-foreground/60">
+            Программы по смежным темам — усильте навыки продаж.
+          </p>
+          <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {related.map((r) => {
+              const cover = coverPublicUrl(r.coverUrl, r.id);
+              return (
+                <Link
+                  key={r.id}
+                  href={`/courses/${r.slug}`}
+                  className="group overflow-hidden rounded-2xl border border-foreground/10 bg-background transition-shadow hover:shadow-lg"
+                >
+                  <div className="relative aspect-video bg-gradient-to-br from-slate-700 to-slate-900">
+                    {cover ? (
+                      <Image
+                        src={cover}
+                        alt={r.coverAlt ?? r.title}
+                        fill
+                        className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                        sizes="(max-width: 640px) 100vw, 380px"
+                      />
+                    ) : null}
+                    {r.industry ? (
+                      <span className="absolute left-3 top-3 rounded-full bg-slate-950/70 px-2.5 py-1 text-xs font-medium text-white">
+                        {r.industry}
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="p-4">
+                    <p className="font-semibold leading-snug group-hover:text-amber-600">
+                      {r.title}
+                    </p>
+                    {r.subtitle ? (
+                      <p className="mt-1 line-clamp-2 text-sm text-foreground/60">
+                        {r.subtitle}
+                      </p>
+                    ) : null}
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
     </main>
   );
 }

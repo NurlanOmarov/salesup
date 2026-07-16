@@ -31,3 +31,30 @@ export async function resolveRedirect(fromPath: string): Promise<string | null> 
 
   return row.to;
 }
+
+// ─────────────────────────── Журнал 404 ───────────────────────────
+
+/** Расширения, которые не логируем (скан-шум ботов и запросы ассетов). */
+const SKIP_EXT = /\.(png|jpe?g|webp|gif|svg|ico|css|js|map|txt|xml|json|woff2?|ttf|php|asp|aspx|env)$/i;
+/** Служебные метадата-пути Next (og/twitter-картинки, иконки) — не битые ссылки. */
+const SKIP_META = /(opengraph-image|twitter-image|apple-icon|favicon|\/icon)([-.?/]|$)/i;
+
+/**
+ * Зафиксировать 404 на публичной странице (агрегат по пути: hits++). Best-effort:
+ * ошибки глотаем, ответ пользователю не задерживаем. Пути ассетов/скан-шум — мимо.
+ */
+export async function recordNotFound(rawPath: string): Promise<void> {
+  try {
+    const path = normalizePath(rawPath);
+    if (path.length < 2 || path.length > 200 || SKIP_EXT.test(path) || SKIP_META.test(path)) {
+      return;
+    }
+    await db.notFoundHit.upsert({
+      where: { path },
+      create: { path },
+      update: { hits: { increment: 1 } },
+    });
+  } catch (e) {
+    log.warn({ err: e, rawPath }, "notfound: не удалось записать");
+  }
+}

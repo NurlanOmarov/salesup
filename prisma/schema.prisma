@@ -170,6 +170,7 @@ model Course {
   description    String         @db.Text // markdown; генерируется фабрикой из транскриптов
   industry       String?
   coverUrl       String?
+  coverAlt       String? // alt-текст обложки (image SEO/доступность); генерируется AI по картинке
   promoVideoKey  String? // ключ HLS-папки трейлера в lib/storage (публичный, без шифрования)
   priceTiyn      Int
   oldPriceTiyn   Int?
@@ -997,7 +998,27 @@ model SeoSettings {
   ga4Id              String? // "G-XXXXXXX"
   yandexMetricaId    String? // числовой id счётчика Метрики
 
+  // Данные организации → EducationalOrganization JSON-LD (Knowledge Panel).
+  orgName            String  @default("Бизнес-платформа ACTIVE SALES")
+  orgDescription     String? // пусто → defaultDescription
+  orgPhone           String? // пусто → NEXT_PUBLIC_SUPPORT_PHONE
+  orgCountry         String  @default("Belarus") // areaServed (англ. название страны)
+
   updatedAt          DateTime @updatedAt
+}
+
+/// Метаданные статических публичных страниц из админки (каталог, оферта, политика).
+/// path — известный маршрут ("/courses" | "/offer" | "/privacy"). Пустые title/description
+/// → фолбэк на захардкоженные в странице. body (markdown) — текст thin-страниц
+/// (оферта/политика): пусто → заглушка «текст будет добавлен» и noindex по умолчанию.
+model StaticPageSeo {
+  id          String   @id @default(cuid())
+  path        String   @unique
+  title       String?
+  description String?
+  noindex     Boolean  @default(false)
+  body        String?  // markdown-контент страницы (только offer/privacy)
+  updatedAt   DateTime @updatedAt
 }
 
 /// 301/308-редиректы (сохранение позиций при смене slug курса фабрикой и т.п.).
@@ -1011,4 +1032,17 @@ model Redirect {
   createdAt DateTime @default(now())
 
   @@index([from])
+}
+
+/// Журнал 404 на публичных страницах (агрегат по пути, не по хиту — от роста таблицы
+/// при сканах ботов). По нему владелец видит битые входящие ссылки и создаёт редиректы
+/// (admin/seo/redirects). Запись пути прекращается после создания редиректа.
+model NotFoundHit {
+  id          String   @id @default(cuid())
+  path        String   @unique
+  hits        Int      @default(1)
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @updatedAt
+
+  @@index([lastSeenAt])
 }

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Users, UserPlus, PlayCircle, GraduationCap, Award, Inbox, Coins, HardDrive, ThumbsDown, AlertTriangle } from "lucide-react";
+import Link from "next/link";
+import { Users, UserPlus, PlayCircle, GraduationCap, Award, Inbox, Coins, HardDrive, ThumbsDown, AlertTriangle, FileWarning, ArrowRightLeft } from "lucide-react";
 import { buildDigest } from "@/lib/digest/build";
 import { formatUsd } from "@/lib/ai/pricing";
 
@@ -49,6 +50,13 @@ export default async function DigestPage() {
         { icon: AlertTriangle, label: "FAILED-контент", value: d.failedContent, sub: "не прошёл критика" },
       ],
     },
+    {
+      title: "SEO",
+      cards: [
+        { icon: FileWarning, label: "Битых адресов (404)", value: d.notFoundTotal, sub: "за 7 дней" },
+        { icon: ArrowRightLeft, label: "Срабатываний редиректов", value: d.redirectHits, sub: "всего" },
+      ],
+    },
   ];
 
   return (
@@ -74,6 +82,36 @@ export default async function DigestPage() {
             </div>
           </section>
         ))}
+
+        {/* Топ битых адресов недели — с быстрым переходом к созданию редиректа */}
+        {d.notFoundTop.length > 0 ? (
+          <section>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground/50">
+              Топ 404 за неделю
+            </h2>
+            <div className="mt-3 overflow-hidden rounded-2xl border border-foreground/10">
+              <table className="w-full text-sm">
+                <tbody className="divide-y divide-foreground/5">
+                  {d.notFoundTop.map((n) => (
+                    <tr key={n.path}>
+                      <td className="px-4 py-2.5 font-mono text-xs">{n.path}</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums text-foreground/60">
+                        {n.hits}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p className="border-t border-foreground/5 px-4 py-2 text-xs text-foreground/40">
+                Создать редиректы можно в{" "}
+                <Link href="/admin/seo/redirects" className="text-amber-700 hover:underline">
+                  менеджере редиректов
+                </Link>
+                .
+              </p>
+            </div>
+          </section>
+        ) : null}
       </div>
     </main>
   );

@@ -32,11 +32,21 @@ export const handlers: Record<string, JobHandler> = {
 
   // Еженедельный дайджест владельцу (S6.2): собираем сводку, при EMAIL_ENABLED
   // отправляем письмо (S5.5), иначе она доступна на странице /admin/digest.
+  // semantic: true — раз в неделю считаем SEO-каннибализацию (embeddings, доли цента;
+  // правило 10 — единственный автоматический AI-расход, виден в LlmUsage).
   "digest.weekly": async () => {
     const { buildDigest } = await import("@/lib/digest/build.js");
-    const d = await buildDigest(7);
+    const d = await buildDigest(7, new Date(), { semantic: true });
     log.info(
-      { newStudents: d.newStudents, active: d.activeStudents, certs: d.certificatesIssued, llmUsd: d.llmCostUsd },
+      {
+        newStudents: d.newStudents,
+        active: d.activeStudents,
+        certs: d.certificatesIssued,
+        llmUsd: d.llmCostUsd,
+        notFound404: d.notFoundTotal,
+        redirectHits: d.redirectHits,
+        seoCannibalPairs: d.cannibalPairs,
+      },
       "digest.weekly собран",
     );
     // TODO(S5.5): при env.EMAIL_ENABLED отправить владельцу письмом.

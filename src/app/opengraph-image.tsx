@@ -1,15 +1,25 @@
 import { ImageResponse } from "next/og";
+import { getSeoSettings } from "@/lib/seo/settings";
+import { ogFileResponse } from "@/lib/seo/og";
 
 export const alt = "Бизнес-платформа ACTIVE SALES — AI-тренажёр продаж";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 /**
- * OG-изображение (генерируется при сборке через satori).
+ * OG-изображение: если владелец загрузил свою картинку в SEO-настройках
+ * (defaultOgKey) — отдаём её; иначе — авто-генерация через satori.
  * Текст латиницей: дефолтный шрифт satori не содержит кириллицы,
  * а тянуть шрифт по сети при сборке нельзя (один сервер, без внешних зависимостей).
  */
-export default function OgImage() {
+export default async function OgImage() {
+  try {
+    const s = await getSeoSettings();
+    const custom = await ogFileResponse(s.defaultOgKey);
+    if (custom) return custom;
+  } catch {
+    // при сборке без БД / сбое хранилища — генерируем как обычно
+  }
   return new ImageResponse(
     (
       <div

@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRightLeft, Radar } from "lucide-react";
+import { ArrowRightLeft, Radar, FileText, Gauge } from "lucide-react";
 import { env } from "@/env";
 import { getSeoSettings } from "@/lib/seo/settings";
+import { getStaticPageRows, STATIC_PAGES } from "@/lib/seo/static-pages";
 import { SeoSettingsForm } from "./settings-form";
 import { CannibalizationWidget } from "./cannibalization";
+import { StaticPagesForm, type StaticPageFormRow } from "./static-pages-form";
+import { CoursesSeoStatus, SitemapStatus } from "./seo-status";
 
 export const metadata: Metadata = {
   title: "SEO-настройки",
@@ -14,7 +17,22 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function SeoSettingsPage() {
-  const s = await getSeoSettings();
+  const [s, staticRows] = await Promise.all([getSeoSettings(), getStaticPageRows()]);
+
+  const staticPages: StaticPageFormRow[] = STATIC_PAGES.map((p) => {
+    const row = staticRows.find((r) => r.path === p.path);
+    return {
+      path: p.path,
+      label: p.label,
+      hasBody: p.hasBody,
+      fallbackTitle: p.fallbackTitle,
+      fallbackDescription: p.fallbackDescription,
+      title: row?.title ?? "",
+      description: row?.description ?? "",
+      noindex: row ? row.noindex : p.defaultNoindex,
+      body: row?.body ?? "",
+    };
+  });
 
   return (
     <main>
@@ -36,6 +54,37 @@ export default async function SeoSettingsPage() {
         </Link>
       </div>
 
+      {/* Sitemap/robots — быстрый статус без dev-инструментов */}
+      <section className="mt-6">
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground/80">
+          <Gauge className="size-4 text-amber-500" />
+          Sitemap и robots
+        </h2>
+        <SitemapStatus />
+      </section>
+
+      {/* SEO-статус курсов одним экраном */}
+      <section className="mt-6">
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground/80">
+          <Gauge className="size-4 text-amber-500" />
+          SEO-статус опубликованных курсов
+        </h2>
+        <CoursesSeoStatus />
+      </section>
+
+      {/* Статические страницы: каталог, оферта, политика */}
+      <section className="mt-6">
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground/80">
+          <FileText className="size-4 text-amber-500" />
+          Статические страницы
+        </h2>
+        <p className="mt-1 text-xs text-foreground/50">
+          Метаданные каталога и текст оферты/политики. Пока текст thin-страницы пуст,
+          она остаётся noindex; наполните (можно AI-черновиком) и снимите галочку.
+        </p>
+        <StaticPagesForm pages={staticPages} />
+      </section>
+
       <section className="mt-6">
         <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground/80">
           <Radar className="size-4 text-amber-500" />
@@ -43,7 +92,7 @@ export default async function SeoSettingsPage() {
         </h2>
         <p className="mt-1 text-xs text-foreground/50">
           Проверка, не конкурируют ли курсы за один поисковый запрос из-за слишком
-          похожих метаданных.
+          похожих метаданных. Раз в неделю выполняется автоматически — итог в дайджесте.
         </p>
         <CannibalizationWidget />
       </section>
@@ -58,10 +107,15 @@ export default async function SeoSettingsPage() {
           socialTelegram: s.socialTelegram,
           socialYoutube: s.socialYoutube,
           socialTiktok: s.socialTiktok,
+          defaultOgKey: s.defaultOgKey,
           googleVerification: s.googleVerification,
           yandexVerification: s.yandexVerification,
           ga4Id: s.ga4Id,
           yandexMetricaId: s.yandexMetricaId,
+          orgName: s.orgName,
+          orgDescription: s.orgDescription,
+          orgPhone: s.orgPhone,
+          orgCountry: s.orgCountry,
         }}
       />
     </main>

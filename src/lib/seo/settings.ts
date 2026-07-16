@@ -29,6 +29,10 @@ export const SEO_DEFAULTS = {
   yandexVerification: null,
   ga4Id: null,
   yandexMetricaId: null,
+  orgName: "Бизнес-платформа ACTIVE SALES",
+  orgDescription: null,
+  orgPhone: null,
+  orgCountry: "Belarus",
   updatedAt: new Date(0),
 } satisfies SeoSettings;
 

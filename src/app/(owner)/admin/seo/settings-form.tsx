@@ -1,14 +1,21 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Loader2, CheckCircle2, AlertCircle, Sparkles } from "lucide-react";
-import { updateSeoSettingsAction, generateMetaAction } from "./actions";
+import { Loader2, CheckCircle2, AlertCircle, Sparkles, Upload } from "lucide-react";
+import type { MetaSuggestion } from "@/lib/seo/ai";
+import {
+  updateSeoSettingsAction,
+  generateMetaAction,
+  uploadDefaultOgAction,
+  removeDefaultOgAction,
+} from "./actions";
 import {
   SerpPreview,
   CharCounter,
   TITLE_LIMIT,
   DESC_LIMIT,
 } from "./serp-preview";
+import { AiSuggestionCard, UndoBar } from "./ai-suggestion";
 
 export interface SeoSettingsFields {
   titleTemplate: string;
@@ -18,10 +25,15 @@ export interface SeoSettingsFields {
   socialTelegram: string | null;
   socialYoutube: string | null;
   socialTiktok: string | null;
+  defaultOgKey: string | null;
   googleVerification: string | null;
   yandexVerification: string | null;
   ga4Id: string | null;
   yandexMetricaId: string | null;
+  orgName: string;
+  orgDescription: string | null;
+  orgPhone: string | null;
+  orgCountry: string;
 }
 
 const inputCls =
@@ -60,13 +72,46 @@ export function SeoSettingsForm({
   const [yandexMetricaId, setYandexMetricaId] = useState(
     settings.yandexMetricaId ?? "",
   );
+  const [orgName, setOrgName] = useState(settings.orgName);
+  const [orgDescription, setOrgDescription] = useState(settings.orgDescription ?? "");
+  const [orgPhone, setOrgPhone] = useState(settings.orgPhone ?? "");
+  const [orgCountry, setOrgCountry] = useState(settings.orgCountry);
+
+  const [ogKey, setOgKey] = useState(settings.defaultOgKey);
+  const [ogMsg, setOgMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const [pending, startTransition] = useTransition();
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(
     null,
   );
+  // AI ничего не перезаписывает молча: предложение → карточка «было → станет».
   const [aiPending, setAiPending] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [suggestion, setSuggestion] = useState<MetaSuggestion | null>(null);
+  const [undoSnap, setUndoSnap] = useState<{ title: string; description: string } | null>(null);
+
+  /** Сброс всех полей к последним сохранённым значениям (props). */
+  function handleReset() {
+    setTitleTemplate(settings.titleTemplate);
+    setDefaultTitle(settings.defaultTitle);
+    setDefaultDescription(settings.defaultDescription);
+    setSocialInstagram(settings.socialInstagram ?? "");
+    setSocialTelegram(settings.socialTelegram ?? "");
+    setSocialYoutube(settings.socialYoutube ?? "");
+    setSocialTiktok(settings.socialTiktok ?? "");
+    setGoogleVerification(settings.googleVerification ?? "");
+    setYandexVerification(settings.yandexVerification ?? "");
+    setGa4Id(settings.ga4Id ?? "");
+    setYandexMetricaId(settings.yandexMetricaId ?? "");
+    setOrgName(settings.orgName);
+    setOrgDescription(settings.orgDescription ?? "");
+    setOrgPhone(settings.orgPhone ?? "");
+    setOrgCountry(settings.orgCountry);
+    setSuggestion(null);
+    setUndoSnap(null);
+    setResult(null);
+    setAiError(null);
+  }
 
   function handleSave() {
     setResult(null);
@@ -83,6 +128,10 @@ export function SeoSettingsForm({
         yandexVerification,
         ga4Id,
         yandexMetricaId,
+        orgName,
+        orgDescription,
+        orgPhone,
+        orgCountry,
       });
       setResult(
         res.ok ? { ok: true, text: "Сохранено" } : { ok: false, text: res.error },
@@ -97,11 +146,42 @@ export function SeoSettingsForm({
       source: `${defaultTitle}\n${defaultDescription}`.trim(),
     });
     setAiPending(false);
+    if (res.ok) setSuggestion(res.data);
+    else setAiError(res.error);
+  }
+
+  function applySuggestion() {
+    if (!suggestion) return;
+    setUndoSnap({ title: defaultTitle, description: defaultDescription });
+    setDefaultTitle(suggestion.title);
+    setDefaultDescription(suggestion.description);
+    setSuggestion(null);
+  }
+
+  async function handleOgUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setOgMsg(null);
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await uploadDefaultOgAction(fd);
     if (res.ok) {
-      setDefaultTitle(res.data.title);
-      setDefaultDescription(res.data.description);
+      setOgKey(res.data.defaultOgKey);
+      setOgMsg({ ok: true, text: "OG-картинка обновлена" });
     } else {
-      setAiError(res.error);
+      setOgMsg({ ok: false, text: res.error });
+    }
+    e.target.value = "";
+  }
+
+  async function handleOgRemove() {
+    setOgMsg(null);
+    const res = await removeDefaultOgAction({});
+    if (res.ok) {
+      setOgKey(null);
+      setOgMsg({ ok: true, text: "Вернулись к авто-генерации" });
+    } else {
+      setOgMsg({ ok: false, text: res.error });
     }
   }
 
@@ -130,6 +210,36 @@ export function SeoSettingsForm({
           {aiError && (
             <p className="text-xs text-red-600">{aiError}</p>
           )}
+
+          {suggestion ? (
+            <AiSuggestionCard
+              fields={[
+                {
+                  label: "Заголовок",
+                  current: defaultTitle,
+                  suggested: suggestion.title,
+                  limit: TITLE_LIMIT,
+                },
+                {
+                  label: "Описание",
+                  current: defaultDescription,
+                  suggested: suggestion.description,
+                  limit: DESC_LIMIT,
+                },
+              ]}
+              onApply={applySuggestion}
+              onDismiss={() => setSuggestion(null)}
+            />
+          ) : null}
+          {undoSnap && !suggestion ? (
+            <UndoBar
+              onUndo={() => {
+                setDefaultTitle(undoSnap.title);
+                setDefaultDescription(undoSnap.description);
+                setUndoSnap(null);
+              }}
+            />
+          ) : null}
 
           <div>
             <label className={labelCls} htmlFor="titleTemplate">
@@ -239,6 +349,67 @@ export function SeoSettingsForm({
           </div>
         </section>
 
+        {/* Организация (JSON-LD) */}
+        <section className="space-y-4 rounded-2xl border border-foreground/10 bg-background p-5">
+          <div>
+            <h2 className="font-semibold">Организация</h2>
+            <p className="mt-1 text-xs text-foreground/50">
+              Данные для разметки EducationalOrganization (Knowledge Panel,
+              брендовая выдача): название, описание, телефон и страна рынка.
+            </p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className={labelCls} htmlFor="orgName">
+                Название организации
+              </label>
+              <input
+                id="orgName"
+                className={inputCls}
+                value={orgName}
+                onChange={(e) => setOrgName(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className={labelCls} htmlFor="orgPhone">
+                Телефон (E.164)
+              </label>
+              <input
+                id="orgPhone"
+                className={inputCls}
+                placeholder="+375 29 123-45-67 (пусто → из env)"
+                value={orgPhone}
+                onChange={(e) => setOrgPhone(e.target.value)}
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label className={labelCls} htmlFor="orgDescription">
+                Описание организации
+              </label>
+              <textarea
+                id="orgDescription"
+                rows={2}
+                className={inputCls}
+                placeholder="Пусто → описание по умолчанию"
+                value={orgDescription}
+                onChange={(e) => setOrgDescription(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className={labelCls} htmlFor="orgCountry">
+                Страна (англ., для areaServed)
+              </label>
+              <input
+                id="orgCountry"
+                className={inputCls}
+                placeholder="Belarus"
+                value={orgCountry}
+                onChange={(e) => setOrgCountry(e.target.value)}
+              />
+            </div>
+          </div>
+        </section>
+
         {/* Подтверждение прав */}
         <section className="space-y-4 rounded-2xl border border-foreground/10 bg-background p-5">
           <div>
@@ -324,6 +495,14 @@ export function SeoSettingsForm({
             {pending && <Loader2 className="size-4 animate-spin" />}
             Сохранить
           </button>
+          <button
+            type="button"
+            onClick={handleReset}
+            disabled={pending}
+            className="rounded-lg border border-foreground/15 px-4 py-2.5 text-sm font-medium text-foreground/60 transition-colors hover:bg-foreground/5 disabled:opacity-50"
+          >
+            Отменить изменения
+          </button>
           {result && (
             <span
               className={`inline-flex items-center gap-1.5 text-sm ${
@@ -341,13 +520,65 @@ export function SeoSettingsForm({
         </div>
       </div>
 
-      {/* Правая колонка — превью, липкая */}
-      <div className="lg:sticky lg:top-6 lg:self-start">
+      {/* Правая колонка — превью + дефолтная OG, липкая */}
+      <div className="space-y-4 lg:sticky lg:top-6 lg:self-start">
         <SerpPreview
           title={defaultTitle}
           description={defaultDescription}
           url={siteUrl}
         />
+
+        {/* Дефолтная OG-картинка сайта */}
+        <div className="rounded-xl border border-foreground/10 bg-background p-4">
+          <p className="text-sm font-medium text-foreground/80">
+            OG-картинка сайта (соцсети)
+          </p>
+          <p className="mt-1 text-xs text-foreground/40">
+            {ogKey
+              ? "Загружена своя — показывается при шаринге ссылок на сайт."
+              : "Не задана — превью генерируется автоматически."}
+          </p>
+          {ogKey ? (
+            <div className="relative mt-2 aspect-[1200/630] overflow-hidden rounded-lg border border-foreground/10">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`/opengraph-image?v=${encodeURIComponent(ogKey)}`}
+                alt="OG-превью сайта"
+                className="size-full object-cover"
+              />
+            </div>
+          ) : null}
+          <div className="mt-2 flex items-center gap-2">
+            <label className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-dashed border-foreground/25 px-3 py-1.5 text-xs font-medium text-foreground/70 transition-colors hover:border-amber-500 hover:text-amber-700">
+              <Upload className="size-3.5" />
+              {ogKey ? "Заменить" : "Загрузить (1200×630)"}
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="hidden"
+                onChange={handleOgUpload}
+              />
+            </label>
+            {ogKey ? (
+              <button
+                type="button"
+                onClick={handleOgRemove}
+                className="rounded-lg px-2 py-1.5 text-xs text-foreground/50 transition-colors hover:bg-red-500/10 hover:text-red-600"
+              >
+                Убрать
+              </button>
+            ) : null}
+          </div>
+          {ogMsg ? (
+            <p
+              className={
+                ogMsg.ok ? "mt-1.5 text-xs text-emerald-700" : "mt-1.5 text-xs text-red-700"
+              }
+            >
+              {ogMsg.text}
+            </p>
+          ) : null}
+        </div>
       </div>
     </div>
   );

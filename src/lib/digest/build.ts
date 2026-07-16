@@ -23,9 +23,28 @@ export interface DigestData {
   dbBytes: number | null;
   thumbsDown: number;
   failedContent: number;
+  // SEO-сигналы (zero-touch: информация владельцу, а не задача)
+  notFoundTop: { path: string; hits: number }[];
+  notFoundTotal: number;
+  redirectHits: number;
+  /** Пар курсов-конкурентов (embeddings). null — семантика не считалась / недоступна. */
+  cannibalPairs: number | null;
 }
 
-export async function buildDigest(periodDays = 7, now: Date = new Date()): Promise<DigestData> {
+export interface DigestOptions {
+  /**
+   * Считать ли семантическую каннибализацию (OpenAI embeddings). Включается только
+   * в еженедельном Job (правило 10 — контроль расхода API): курсов мало, это доли
+   * цента в неделю, расход виден в LlmUsage. Страница /admin/digest не включает.
+   */
+  semantic?: boolean;
+}
+
+export async function buildDigest(
+  periodDays = 7,
+  now: Date = new Date(),
+  opts: DigestOptions = {},
+): Promise<DigestData> {
   const since = new Date(now.getTime() - periodDays * 24 * 60 * 60 * 1000);
 
   const [
@@ -41,6 +60,9 @@ export async function buildDigest(periodDays = 7, now: Date = new Date()): Promi
     thumbsDownQ,
     failedContent,
     dbSize,
+    notFoundTop,
+    notFoundTotal,
+    redirectAgg,
   ] = await Promise.all([
     db.user.count({ where: { role: "STUDENT", createdAt: { gte: since } } }),
     db.enrollment.count({ where: { startsAt: { gte: since } } }),
@@ -57,7 +79,18 @@ export async function buildDigest(periodDays = 7, now: Date = new Date()): Promi
     db.question.aggregate({ _sum: { thumbsDown: true } }),
     db.question.count({ where: { validation: "FAILED" } }),
     safeDbSize(),
+    db.notFoundHit.findMany({
+      where: { lastSeenAt: { gte: since } },
+      orderBy: { hits: "desc" },
+      take: 5,
+      select: { path: true, hits: true },
+    }),
+    db.notFoundHit.count({ where: { lastSeenAt: { gte: since } } }),
+    db.redirect.aggregate({ _sum: { hits: true } }),
   ]);
+
+  // Семантика — только по явному запросу (weekly-job); сбой embeddings не валит дайджест.
+  const cannibalPairs = opts.semantic ? await safeCannibalPairs() : null;
 
   const activeIds = new Set([...activeProgress.map((p) => p.userId), ...activeAttempts.map((a) => a.userId)]);
 
@@ -77,7 +110,22 @@ export async function buildDigest(periodDays = 7, now: Date = new Date()): Promi
     dbBytes: dbSize,
     thumbsDown: thumbsDownQ._sum.thumbsDown ?? 0,
     failedContent,
+    notFoundTop,
+    notFoundTotal,
+    redirectHits: redirectAgg._sum.hits ?? 0,
+    cannibalPairs,
   };
+}
+
+/** Число пар курсов-конкурентов (embeddings). null при сбое внешнего API. */
+async function safeCannibalPairs(): Promise<number | null> {
+  try {
+    const { analyzeCannibalization } = await import("@/lib/seo/semantic.js");
+    const report = await analyzeCannibalization();
+    return report.pairs.length;
+  } catch {
+    return null;
+  }
 }
 
 /** Размер media (сумма всех объектов хранилища). Ошибки не валят дайджест. */

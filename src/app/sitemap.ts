@@ -2,24 +2,36 @@ import type { MetadataRoute } from "next";
 import { db } from "@/lib/db";
 import { env } from "@/env";
 import { buildSafe } from "@/lib/utils";
+import { getStaticPageSeo } from "@/lib/seo/static-pages";
 
 export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "");
 
+  // Оферта/политика — в карте только когда владелец снял noindex в /admin/seo
+  // (noindex-страница в sitemap — противоречивый сигнал поисковику).
+  const [offerSeo, privacySeo] = await Promise.all([
+    getStaticPageSeo("/offer"),
+    getStaticPageSeo("/privacy"),
+  ]);
+
   const staticPages: MetadataRoute.Sitemap = [
     { url: `${base}/`, changeFrequency: "weekly", priority: 1 },
     { url: `${base}/courses`, changeFrequency: "weekly", priority: 0.8 },
-    { url: `${base}/offer`, changeFrequency: "yearly", priority: 0.3 },
-    { url: `${base}/privacy`, changeFrequency: "yearly", priority: 0.3 },
+    ...(offerSeo.noindex
+      ? []
+      : [{ url: `${base}/offer`, changeFrequency: "yearly" as const, priority: 0.3 }]),
+    ...(privacySeo.noindex
+      ? []
+      : [{ url: `${base}/privacy`, changeFrequency: "yearly" as const, priority: 0.3 }]),
   ];
 
-  // только опубликованные курсы (на сборке без БД — пустой список)
+  // только опубликованные индексируемые курсы (на сборке без БД — пустой список)
   const courses = await buildSafe(
     () =>
       db.course.findMany({
-        where: { status: "PUBLISHED" },
+        where: { status: "PUBLISHED", seoNoindex: false },
         select: { slug: true, updatedAt: true },
       }),
     [] as { slug: string; updatedAt: Date }[],

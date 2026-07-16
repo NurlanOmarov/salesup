@@ -47,25 +47,26 @@ export default async function RootLayout({
   const s = await getSeoSettings();
 
   // Сайт-вайд разметка организации (Knowledge Panel, брендовая выдача).
+  // Название/описание/телефон/страна редактируются в /admin/seo (SeoSettings).
   const sameAs = socialLinks(s);
+  const orgPhone = s.orgPhone ?? env.NEXT_PUBLIC_SUPPORT_PHONE;
   const orgJsonLd = {
     "@context": "https://schema.org",
     "@type": "EducationalOrganization",
-    name: "Бизнес-платформа ACTIVE SALES",
+    name: s.orgName,
     url: env.NEXT_PUBLIC_SITE_URL,
     logo: `${env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "")}/icon.svg`,
-    description:
-      "Онлайн-курсы по техникам продаж с AI-наставником: видеоуроки, тренажёры, тесты и сертификаты.",
-    areaServed: { "@type": "Country", name: "Kazakhstan" },
+    description: s.orgDescription ?? s.defaultDescription,
+    areaServed: { "@type": "Country", name: s.orgCountry },
     ...(sameAs.length ? { sameAs } : {}),
-    ...(env.NEXT_PUBLIC_SUPPORT_PHONE
+    ...(orgPhone
       ? {
           contactPoint: {
             "@type": "ContactPoint",
-            telephone: env.NEXT_PUBLIC_SUPPORT_PHONE,
+            telephone: orgPhone,
             contactType: "customer support",
-            areaServed: "KZ",
-            availableLanguage: ["Russian", "Kazakh"],
+            areaServed: s.orgCountry,
+            availableLanguage: ["Russian"],
           },
         }
       : {}),

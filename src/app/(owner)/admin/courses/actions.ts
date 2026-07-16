@@ -4,10 +4,12 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
+import { env } from "@/env";
 import { storage, normalizeKey } from "@/lib/storage";
 import { writeAdminLog } from "@/lib/admin/log";
 import { log } from "@/lib/log";
 import { safeAction, type ActionResult } from "@/lib/safe-action";
+import { generateAltText } from "@/lib/seo/ai";
 
 /**
  * Управление каталогом курсов (реестр / цены / фото). Только OWNER.
@@ -48,6 +50,7 @@ export const updateCourseAction = safeAction(
       ogDescription: z.string().trim().max(400).optional().or(z.literal("")),
       canonicalPath: z.string().trim().max(300).optional().or(z.literal("")),
       focusKeyword: z.string().trim().max(120).optional().or(z.literal("")),
+      coverAlt: z.string().trim().max(200).optional().or(z.literal("")),
       seoNoindex: z.boolean(),
       certificateEnabled: z.boolean(),
     }),
@@ -83,6 +86,7 @@ export const updateCourseAction = safeAction(
       ogDescription: input.ogDescription || null,
       canonicalPath: input.canonicalPath || null,
       focusKeyword: input.focusKeyword || null,
+      coverAlt: input.coverAlt || null,
       seoNoindex: input.seoNoindex,
       certificateEnabled: input.certificateEnabled,
       publishedAt: !wasPublished && nowPublished ? new Date() : undefined,
@@ -187,5 +191,140 @@ export async function uploadCoverAction(
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Ошибка загрузки";
     return { ok: false, error: msg };
+  }
+}
+
+// ─────────────────────────── OG-картинка курса + AI alt-текст ───────────────────────────
+
+/**
+ * Загрузка кастомной OG-картинки курса (1200×630 рекомендуется). Приоритетнее
+ * авто-генерации в courses/[slug]/opengraph-image. Хранится в lib/storage.
+ */
+export async function uploadOgImageAction(
+  formData: FormData,
+): Promise<ActionResult<{ ogImageUrl: string }>> {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "OWNER") {
+    return { ok: false, error: "Недостаточно прав" };
+  }
+
+  const courseId = String(formData.get("courseId") ?? "");
+  const file = formData.get("file");
+  if (!courseId) return { ok: false, error: "Не указан курс" };
+  if (!(file instanceof File)) return { ok: false, error: "Файл не получен" };
+  if (file.size === 0) return { ok: false, error: "Файл пуст" };
+  if (file.size > MAX_COVER_BYTES) return { ok: false, error: "Файл больше 8 МБ" };
+  if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+    return { ok: false, error: "Для OG допустимы PNG, JPEG или WebP" };
+  }
+
+  const course = await db.course.findUnique({
+    where: { id: courseId },
+    select: { slug: true, ogImageUrl: true },
+  });
+  if (!course) return { ok: false, error: "Курс не найден" };
+
+  const ext = file.type.split("/")[1] ?? "png";
+  const newKey = `og/${courseId}/og-${Date.now()}.${ext}`;
+
+  try {
+    normalizeKey(newKey);
+    await storage.put(newKey, Buffer.from(await file.arrayBuffer()));
+
+    const prev = course.ogImageUrl;
+    if (prev && !prev.startsWith("/") && !prev.startsWith("http")) {
+      try {
+        await storage.delete(prev);
+      } catch (e) {
+        log.warn({ err: e, prev }, "course.og: не удалось удалить старую OG-картинку");
+      }
+    }
+
+    await db.course.update({ where: { id: courseId }, data: { ogImageUrl: newKey } });
+    await writeAdminLog({
+      actorId: session.user.id,
+      action: "course.update",
+      meta: { courseId, slug: course.slug, ogKey: newKey },
+    });
+    revalidatePath(`/courses/${course.slug}`);
+    return { ok: true, data: { ogImageUrl: newKey } };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Ошибка загрузки" };
+  }
+}
+
+/** Убрать кастомную OG-картинку (вернуться к авто-генерации). */
+export const removeOgImageAction = safeAction(
+  { schema: z.object({ courseId: z.string().min(1) }), auth: "owner" },
+  async (input) => {
+    const course = await db.course.findUnique({
+      where: { id: input.courseId },
+      select: { slug: true, ogImageUrl: true },
+    });
+    if (!course) throw new Error("Курс не найден");
+    const prev = course.ogImageUrl;
+    if (prev && !prev.startsWith("/") && !prev.startsWith("http")) {
+      try {
+        await storage.delete(prev);
+      } catch {
+        /* файл мог отсутствовать */
+      }
+    }
+    await db.course.update({ where: { id: input.courseId }, data: { ogImageUrl: null } });
+    revalidatePath(`/courses/${course.slug}`);
+    return { ok: true as const };
+  },
+);
+
+/**
+ * AI alt-текст обложки (Haiku vision): смотрит на саму картинку + контекст курса.
+ * Возвращает ПРЕДЛОЖЕНИЕ — владелец применяет его в форме (поле coverAlt) и сохраняет.
+ */
+export async function generateCoverAltAction(
+  raw: unknown,
+): Promise<ActionResult<{ alt: string }>> {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "OWNER") {
+    return { ok: false, error: "Недостаточно прав" };
+  }
+  const parsed = z.object({ courseId: z.string().min(1) }).safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "Не указан курс" };
+
+  const course = await db.course.findUnique({
+    where: { id: parsed.data.courseId },
+    select: { title: true, industry: true, coverUrl: true },
+  });
+  if (!course?.coverUrl) return { ok: false, error: "У курса нет обложки" };
+
+  try {
+    // Обложка: ключ хранилища → storage; сид-путь /images/… или http → fetch.
+    let buf: Buffer;
+    let mediaType: "image/png" | "image/jpeg" | "image/webp" | "image/gif";
+    const src = course.coverUrl;
+    if (src.startsWith("/") || src.startsWith("http")) {
+      const url = src.startsWith("http")
+        ? src
+        : `${env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "")}${src}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Обложка недоступна (${res.status})`);
+      buf = Buffer.from(await res.arrayBuffer());
+      const ct = res.headers.get("content-type") ?? "";
+      mediaType = ct.includes("jpeg") ? "image/jpeg" : ct.includes("webp") ? "image/webp" : ct.includes("gif") ? "image/gif" : "image/png";
+    } else {
+      buf = await storage.get(src);
+      const ext = src.slice(src.lastIndexOf(".") + 1).toLowerCase();
+      mediaType = ext === "jpg" || ext === "jpeg" ? "image/jpeg" : ext === "webp" ? "image/webp" : ext === "gif" ? "image/gif" : "image/png";
+    }
+    if (buf.length > 5 * 1024 * 1024) return { ok: false, error: "Обложка слишком велика для анализа (>5 МБ)" };
+
+    const alt = await generateAltText({
+      imageBase64: buf.toString("base64"),
+      mediaType,
+      context: `Обложка курса «${course.title}»${course.industry ? `, отрасль: ${course.industry}` : ""}`,
+      userId: session.user.id,
+    });
+    return { ok: true, data: { alt } };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Ошибка AI" };
   }
 }

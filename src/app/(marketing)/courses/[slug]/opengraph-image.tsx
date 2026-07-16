@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 import { db } from "@/lib/db";
 import { formatPrice } from "@/lib/utils";
+import { ogFileResponse } from "@/lib/seo/og";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
@@ -25,8 +26,19 @@ export default async function CourseOgImage({
   const { slug } = await params;
   const course = await db.course.findFirst({
     where: { slug, status: "PUBLISHED" },
-    select: { title: true, subtitle: true, industry: true, priceTiyn: true, hoursLabel: true },
+    select: {
+      title: true,
+      subtitle: true,
+      industry: true,
+      priceTiyn: true,
+      hoursLabel: true,
+      ogImageUrl: true,
+    },
   });
+
+  // Кастомная OG-картинка курса (загружена в админке) — приоритет над генерацией.
+  const custom = await ogFileResponse(course?.ogImageUrl);
+  if (custom) return custom;
 
   const title = course?.title ?? "Курс по продажам";
   const subtitle = course?.subtitle ?? "Авторские программы бизнес-тренера";

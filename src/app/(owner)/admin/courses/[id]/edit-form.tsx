@@ -5,15 +5,26 @@ import Image from "next/image";
 import { Loader2, Upload, CheckCircle2, AlertCircle, Sparkles, Gauge } from "lucide-react";
 import type { RatesMap } from "@/lib/currency";
 import { coverPublicUrl } from "@/lib/utils";
-import { updateCourseAction, uploadCoverAction } from "../actions";
-import { generateMetaAction, scoreMetaAction } from "../../seo/actions";
+import {
+  updateCourseAction,
+  uploadCoverAction,
+  uploadOgImageAction,
+  removeOgImageAction,
+  generateCoverAltAction,
+} from "../actions";
+import {
+  generateMetaAction,
+  scoreMetaAction,
+  keywordMatchAction,
+} from "../../seo/actions";
 import {
   SerpPreview,
   CharCounter,
   TITLE_LIMIT,
   DESC_LIMIT,
 } from "../../seo/serp-preview";
-import type { MetaScore } from "@/lib/seo/ai";
+import { AiSuggestionCard, UndoBar } from "../../seo/ai-suggestion";
+import type { MetaScore, MetaSuggestion } from "@/lib/seo/ai";
 
 interface CourseFields {
   id: string;
@@ -38,8 +49,10 @@ interface CourseFields {
   seoDescription: string | null;
   ogTitle: string | null;
   ogDescription: string | null;
+  ogImageUrl: string | null;
   canonicalPath: string | null;
   focusKeyword: string | null;
+  coverAlt: string | null;
   seoNoindex: boolean;
   certificateEnabled: boolean;
 }
@@ -96,11 +109,22 @@ export function CourseEditForm({
     course.certificateEnabled,
   );
 
-  // AI-помощники SEO (черновик метаданных + оценка качества).
+  const [coverAlt, setCoverAlt] = useState(course.coverAlt ?? "");
+  const [ogKey, setOgKey] = useState(course.ogImageUrl);
+  const [ogMsg, setOgMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  // AI-помощники SEO. UX: AI ничего не перезаписывает молча — предложение показывается
+  // карточкой «было → станет» (Применить / Отклонить), после применения — «Вернуть».
   const [aiPending, setAiPending] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [metaSuggestion, setMetaSuggestion] = useState<MetaSuggestion | null>(null);
+  const [metaUndo, setMetaUndo] = useState<{ title: string; description: string } | null>(null);
+  const [altPending, setAltPending] = useState(false);
+  const [altSuggestion, setAltSuggestion] = useState<string | null>(null);
+  const [altUndo, setAltUndo] = useState<string | null>(null);
   const [scorePending, setScorePending] = useState(false);
   const [score, setScore] = useState<MetaScore | null>(null);
+  const [keywordFit, setKeywordFit] = useState<number | null>(null);
 
   async function handleAiDraft() {
     setAiError(null);
@@ -110,27 +134,113 @@ export function CourseEditForm({
       focusKeyword: focusKeyword || undefined,
     });
     setAiPending(false);
-    if (res.ok) {
-      setSeoTitle(res.data.title);
-      setSeoDescription(res.data.description);
-    } else {
-      setAiError(res.error);
-    }
+    if (res.ok) setMetaSuggestion(res.data);
+    else setAiError(res.error);
+  }
+
+  function applyMetaSuggestion() {
+    if (!metaSuggestion) return;
+    setMetaUndo({ title: seoTitle, description: seoDescription });
+    setSeoTitle(metaSuggestion.title);
+    setSeoDescription(metaSuggestion.description);
+    setMetaSuggestion(null);
+  }
+
+  function undoMeta() {
+    if (!metaUndo) return;
+    setSeoTitle(metaUndo.title);
+    setSeoDescription(metaUndo.description);
+    setMetaUndo(null);
   }
 
   async function handleScore() {
     setAiError(null);
     setScore(null);
+    setKeywordFit(null);
     setScorePending(true);
-    const res = await scoreMetaAction({
-      title: seoTitle || title,
-      description: seoDescription || subtitle,
-      focusKeyword: focusKeyword || undefined,
-      source: description || undefined,
-    });
+    const [scoreRes, fitRes] = await Promise.all([
+      scoreMetaAction({
+        title: seoTitle || title,
+        description: seoDescription || subtitle,
+        focusKeyword: focusKeyword || undefined,
+        source: description || undefined,
+      }),
+      focusKeyword.trim() && description.trim()
+        ? keywordMatchAction({ focusKeyword, source: description })
+        : Promise.resolve(null),
+    ]);
     setScorePending(false);
-    if (res.ok) setScore(res.data);
+    if (scoreRes.ok) setScore(scoreRes.data);
+    else setAiError(scoreRes.error);
+    if (fitRes?.ok) setKeywordFit(fitRes.data.match);
+  }
+
+  async function handleAltAi() {
+    setAiError(null);
+    setAltPending(true);
+    const res = await generateCoverAltAction({ courseId: course.id });
+    setAltPending(false);
+    if (res.ok) setAltSuggestion(res.data.alt);
     else setAiError(res.error);
+  }
+
+  async function handleOgUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setOgMsg(null);
+    const fd = new FormData();
+    fd.append("courseId", course.id);
+    fd.append("file", file);
+    const res = await uploadOgImageAction(fd);
+    if (res.ok) {
+      setOgKey(res.data.ogImageUrl);
+      setOgMsg({ ok: true, text: "OG-картинка обновлена" });
+    } else {
+      setOgMsg({ ok: false, text: res.error });
+    }
+    e.target.value = "";
+  }
+
+  async function handleOgRemove() {
+    setOgMsg(null);
+    const res = await removeOgImageAction({ courseId: course.id });
+    if (res.ok) {
+      setOgKey(null);
+      setOgMsg({ ok: true, text: "Вернулись к авто-генерации" });
+    } else {
+      setOgMsg({ ok: false, text: res.error });
+    }
+  }
+
+  /** Сброс всех полей формы к последним сохранённым значениям (props). */
+  function handleReset() {
+    setTitle(course.title);
+    setSubtitle(course.subtitle ?? "");
+    setIndustry(course.industry ?? "");
+    setDescription(course.description);
+    setPriceKzt(course.priceTiyn / 100);
+    setOldPriceKzt(course.oldPriceTiyn ? course.oldPriceTiyn / 100 : 0);
+    setStatus(course.status);
+    setAccessDuration(course.accessDuration);
+    setSortOrder(course.sortOrder);
+    setHoursLabel(course.hoursLabel ?? "");
+    setSeoTitle(course.seoTitle ?? "");
+    setSeoDescription(course.seoDescription ?? "");
+    setOgTitle(course.ogTitle ?? "");
+    setOgDescription(course.ogDescription ?? "");
+    setCanonicalPath(course.canonicalPath ?? "");
+    setFocusKeyword(course.focusKeyword ?? "");
+    setCoverAlt(course.coverAlt ?? "");
+    setSeoNoindex(course.seoNoindex);
+    setCertificateEnabled(course.certificateEnabled);
+    setMetaSuggestion(null);
+    setMetaUndo(null);
+    setAltSuggestion(null);
+    setAltUndo(null);
+    setScore(null);
+    setKeywordFit(null);
+    setResult(null);
+    setAiError(null);
   }
 
   const [coverKey, setCoverKey] = useState(course.coverUrl);
@@ -167,6 +277,7 @@ export function CourseEditForm({
         ogDescription,
         canonicalPath,
         focusKeyword,
+        coverAlt,
         seoNoindex,
         certificateEnabled,
       });
@@ -413,6 +524,34 @@ export function CourseEditForm({
           </div>
           {aiError ? <p className="mt-2 text-xs text-red-600">{aiError}</p> : null}
 
+          {metaSuggestion ? (
+            <div className="mt-3">
+              <AiSuggestionCard
+                fields={[
+                  {
+                    label: "SEO-заголовок",
+                    current: seoTitle,
+                    suggested: metaSuggestion.title,
+                    limit: TITLE_LIMIT,
+                  },
+                  {
+                    label: "SEO-описание",
+                    current: seoDescription,
+                    suggested: metaSuggestion.description,
+                    limit: DESC_LIMIT,
+                  },
+                ]}
+                onApply={applyMetaSuggestion}
+                onDismiss={() => setMetaSuggestion(null)}
+              />
+            </div>
+          ) : null}
+          {metaUndo && !metaSuggestion ? (
+            <div className="mt-2">
+              <UndoBar onUndo={undoMeta} />
+            </div>
+          ) : null}
+
           {score ? (
             <div className="mt-3 rounded-lg border border-foreground/10 bg-foreground/[0.02] p-3">
               <div className="flex items-center gap-2">
@@ -428,6 +567,20 @@ export function CourseEditForm({
                   {score.score}/100
                 </span>
                 <span className="text-xs text-foreground/50">оценка метаданных</span>
+                {keywordFit != null ? (
+                  <span
+                    className={`ml-auto text-xs font-medium ${
+                      keywordFit >= 0.55
+                        ? "text-emerald-600"
+                        : keywordFit >= 0.4
+                          ? "text-amber-600"
+                          : "text-red-600"
+                    }`}
+                    title="Семантическое соответствие фокус-ключа содержанию курса (embeddings)"
+                  >
+                    ключ ↔ контент: {Math.round(keywordFit * 100)}%
+                  </span>
+                ) : null}
               </div>
               {score.issues.length > 0 ? (
                 <ul className="mt-2 list-disc space-y-0.5 pl-4 text-xs text-red-600/90">
@@ -567,6 +720,14 @@ export function CourseEditForm({
             )}
             Сохранить
           </button>
+          <button
+            type="button"
+            onClick={handleReset}
+            disabled={pending}
+            className="rounded-lg border border-foreground/15 px-4 py-2.5 text-sm font-medium text-foreground/60 transition-colors hover:bg-foreground/5 disabled:opacity-60"
+          >
+            Отменить изменения
+          </button>
           {result ? (
             <span
               className={
@@ -621,6 +782,117 @@ export function CourseEditForm({
             {coverMsg.text}
           </p>
         ) : null}
+
+        {/* Alt-текст обложки (image SEO/доступность) + AI по самой картинке */}
+        <div className="border-t border-foreground/10 pt-3">
+          <div className="flex items-center justify-between">
+            <label
+              className="text-sm font-medium text-foreground/80"
+              htmlFor="coverAlt"
+            >
+              Alt-текст обложки
+            </label>
+            <button
+              type="button"
+              onClick={handleAltAi}
+              disabled={altPending || !coverSrc}
+              className="inline-flex items-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/5 px-2 py-1 text-[11px] font-medium text-amber-700 transition-colors hover:bg-amber-500/10 disabled:opacity-50"
+            >
+              {altPending ? (
+                <Loader2 className="size-3 animate-spin" />
+              ) : (
+                <Sparkles className="size-3" />
+              )}
+              AI по картинке
+            </button>
+          </div>
+          <input
+            id="coverAlt"
+            className={inputCls}
+            placeholder={title}
+            value={coverAlt}
+            onChange={(e) => setCoverAlt(e.target.value)}
+          />
+          {altSuggestion ? (
+            <div className="mt-2">
+              <AiSuggestionCard
+                fields={[{ label: "Alt-текст", current: coverAlt, suggested: altSuggestion }]}
+                onApply={() => {
+                  setAltUndo(coverAlt);
+                  setCoverAlt(altSuggestion);
+                  setAltSuggestion(null);
+                }}
+                onDismiss={() => setAltSuggestion(null)}
+              />
+            </div>
+          ) : null}
+          {altUndo != null && !altSuggestion ? (
+            <div className="mt-1.5">
+              <UndoBar
+                onUndo={() => {
+                  setCoverAlt(altUndo);
+                  setAltUndo(null);
+                }}
+              />
+            </div>
+          ) : null}
+          <p className="mt-1 text-xs text-foreground/40">
+            Пусто → используется название курса. Сохраняется кнопкой «Сохранить».
+          </p>
+        </div>
+
+        {/* OG-картинка (превью ссылки в соцсетях/мессенджерах) */}
+        <div className="border-t border-foreground/10 pt-3">
+          <p className="text-sm font-medium text-foreground/80">
+            OG-картинка (соцсети)
+          </p>
+          <p className="mt-1 text-xs text-foreground/40">
+            {ogKey
+              ? "Загружена своя картинка — она показывается при шаринге ссылки."
+              : "Не задана — превью генерируется автоматически из названия и цены."}
+          </p>
+          {ogKey ? (
+            <div className="relative mt-2 aspect-[1200/630] overflow-hidden rounded-lg border border-foreground/10">
+              {/* превью через api-роут с cache-bust по ключу */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`/api/og-image/${course.id}?v=${encodeURIComponent(ogKey)}`}
+                alt="OG-превью курса"
+                className="size-full object-cover"
+              />
+            </div>
+          ) : null}
+          <div className="mt-2 flex items-center gap-2">
+            <label className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-dashed border-foreground/25 px-3 py-1.5 text-xs font-medium text-foreground/70 transition-colors hover:border-amber-500 hover:text-amber-700">
+              <Upload className="size-3.5" />
+              {ogKey ? "Заменить" : "Загрузить (1200×630)"}
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="hidden"
+                onChange={handleOgUpload}
+              />
+            </label>
+            {ogKey ? (
+              <button
+                type="button"
+                onClick={handleOgRemove}
+                className="rounded-lg px-2 py-1.5 text-xs text-foreground/50 transition-colors hover:bg-red-500/10 hover:text-red-600"
+              >
+                Убрать
+              </button>
+            ) : null}
+          </div>
+          {ogMsg ? (
+            <p
+              className={
+                ogMsg.ok ? "mt-1.5 text-xs text-emerald-700" : "mt-1.5 text-xs text-red-700"
+              }
+            >
+              {ogMsg.text}
+            </p>
+          ) : null}
+        </div>
 
         <div className="border-t border-foreground/10 pt-3 text-xs text-foreground/40">
           <p className="flex items-center gap-1">

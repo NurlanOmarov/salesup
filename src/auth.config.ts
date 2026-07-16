@@ -26,6 +26,7 @@ const PUBLIC_PREFIXES = [
   "/privacy",
   "/api/health",
   "/api/icon", // PWA-иконки (генерятся без авторизации, на них ссылается манифест)
+  "/api/og-image", // кастомные OG-картинки (публичны по природе — их читают соцсети)
 ];
 // PWA: манифест, service worker и offline-страница должны быть доступны без входа.
 const PUBLIC_EXACT = ["/", "/manifest.webmanifest", "/sw.js", "/offline.html"];
@@ -120,6 +121,20 @@ export const authConfig = {
         }
         return true;
       }
+
+      // Приватные зоны известны точно: /app, /admin, /change-password. Всё прочее
+      // неизвестное — пропускаем в приложение: catch-all (marketing) отдаст честный
+      // 404 (журнал битых ссылок) или 308-редирект. Редиректить рандомные URL на
+      // логин нельзя — ломает SEO и журнал 404. Контент это не раскрывает: данные
+      // защищаются в самих зонах и lib/access (правило 1).
+      const isProtected =
+        pathname === "/app" ||
+        pathname.startsWith("/app/") ||
+        pathname === "/admin" ||
+        pathname.startsWith("/admin/") ||
+        pathname === "/change-password" ||
+        pathname.startsWith("/change-password/");
+      if (!isProtected) return true;
 
       // приватные зоны
       if (!isLoggedIn) {

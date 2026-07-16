@@ -1,21 +1,34 @@
 import type { Metadata } from "next";
+import { getStaticPageSeo } from "@/lib/seo/static-pages";
+import { StaticPageBody } from "@/components/landing/static-page-body";
 
-export const metadata: Metadata = {
-  title: "Политика конфиденциальности",
-  description: "Как Бизнес-платформа ACTIVE SALES обрабатывает персональные данные.",
-  // Заглушка до наполнения (BACKLOG S6.4) — вне индекса, чтобы не считалось thin content
-  robots: { index: false, follow: true },
-};
+export const revalidate = 300;
 
-export default function PrivacyPage() {
+// Мета и текст редактируются в /admin/seo. Пока текста нет — заглушка и noindex
+// (thin content, аудит п.7); владелец наполняет через AI-черновик и снимает noindex.
+export async function generateMetadata(): Promise<Metadata> {
+  const s = await getStaticPageSeo("/privacy");
+  return {
+    title: s.title,
+    description: s.description,
+    alternates: { canonical: "/privacy" },
+    robots: { index: !s.noindex, follow: true },
+  };
+}
+
+export default async function PrivacyPage() {
+  const s = await getStaticPageSeo("/privacy");
   return (
     <main className="mx-auto max-w-3xl px-4 py-16">
       <h1 className="text-3xl font-bold">Политика конфиденциальности</h1>
-      <p className="mt-4 text-foreground/70">
-        Текст политики будет добавлен перед запуском (BACKLOG S6.4) с учётом закона
-        РК «О персональных данных»: состав собираемых данных, цели обработки,
-        сроки хранения и право на удаление.
-      </p>
+      {s.body ? (
+        <StaticPageBody text={s.body} />
+      ) : (
+        <p className="mt-4 text-foreground/70">
+          Текст политики будет добавлен перед запуском (BACKLOG S6.4): состав
+          собираемых данных, цели обработки, сроки хранения и право на удаление.
+        </p>
+      )}
     </main>
   );
 }

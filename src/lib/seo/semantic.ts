@@ -1,4 +1,6 @@
-import "server-only";
+// БЕЗ "server-only": модуль используется и worker-контейнером (digest.weekly, tsx),
+// где этот guard бросает ошибку. В клиентский бандл не попадает — импортируется
+// только из server actions и Job-обработчиков.
 import { db } from "@/lib/db";
 import { embedDocuments } from "@/lib/ai/embeddings";
 
@@ -155,4 +157,95 @@ export async function relatedCourses(
     .filter((_, i) => i !== idx)
     .sort((a, b) => b.similarity - a.similarity)
     .slice(0, limit);
+}
+
+// ─────────────────────────── Match-score «ключ ↔ контент» ───────────────────────────
+
+/**
+ * Насколько целевой запрос семантически соответствует содержанию страницы (0..1).
+ * Честная замена «плотности ключевых слов»: сравниваются смыслы, а не вхождения.
+ */
+export async function keywordMatch(
+  focusKeyword: string,
+  source: string,
+): Promise<number> {
+  const kw = focusKeyword.trim();
+  const src = source.trim().slice(0, 4000);
+  if (!kw || !src) return 0;
+  const [kwVec, srcVec] = await embedDocuments([kw, src]);
+  if (!kwVec || !srcVec) return 0;
+  return cosine(kwVec, srcVec);
+}
+
+// ─────────────────────────── Кластеризация тем (карта покрытия) ───────────────────────────
+
+/** Порог, при котором курсы считаются одной темой (мягче каннибализации). */
+export const CLUSTER_THRESHOLD = 0.75;
+
+export interface ThemeCluster {
+  courses: { id: string; slug: string; title: string; focusKeyword: string | null }[];
+}
+
+export interface ClusterReport {
+  clusters: ThemeCluster[]; // группы из ≥2 курсов — одна тема
+  singles: ThemeCluster["courses"]; // курсы со своей уникальной темой
+  noKeyword: ThemeCluster["courses"]; // без фокус-ключа (используется title)
+}
+
+/**
+ * Сгруппировать опубликованные курсы по смысловым темам (фокус-ключ, иначе title).
+ * Жадная кластеризация по cosine ≥ порога — курсов немного, этого достаточно.
+ * Группы из нескольких курсов = конкуренция за тему; одиночки = уникальное покрытие.
+ */
+export async function keywordClusters(
+  threshold = CLUSTER_THRESHOLD,
+): Promise<ClusterReport> {
+  const courses = await db.course.findMany({
+    where: { status: "PUBLISHED" },
+    select: { id: true, slug: true, title: true, focusKeyword: true },
+  });
+  const empty: ClusterReport = { clusters: [], singles: [], noKeyword: [] };
+  if (courses.length === 0) return empty;
+
+  const vectors = await embedDocuments(
+    courses.map((c) => c.focusKeyword?.trim() || c.title),
+  );
+
+  // Жадное объединение: курс попадает в первый кластер, чей «якорь» достаточно близок.
+  const assigned = new Array<number>(courses.length).fill(-1);
+  const anchors: number[] = [];
+  for (let i = 0; i < courses.length; i++) {
+    const vi = vectors[i];
+    if (!vi) continue;
+    let placed = false;
+    for (let a = 0; a < anchors.length; a++) {
+      const va = vectors[anchors[a]!];
+      if (va && cosine(vi, va) >= threshold) {
+        assigned[i] = a;
+        placed = true;
+        break;
+      }
+    }
+    if (!placed) {
+      anchors.push(i);
+      assigned[i] = anchors.length - 1;
+    }
+  }
+
+  const groups = new Map<number, ThemeCluster["courses"]>();
+  courses.forEach((c, i) => {
+    const g = assigned[i] ?? -1;
+    if (!groups.has(g)) groups.set(g, []);
+    groups.get(g)!.push({ id: c.id, slug: c.slug, title: c.title, focusKeyword: c.focusKeyword });
+  });
+
+  const report: ClusterReport = { clusters: [], singles: [], noKeyword: [] };
+  for (const list of groups.values()) {
+    if (list.length >= 2) report.clusters.push({ courses: list });
+    else if (list[0]) report.singles.push(list[0]);
+  }
+  report.noKeyword = courses
+    .filter((c) => !c.focusKeyword?.trim())
+    .map((c) => ({ id: c.id, slug: c.slug, title: c.title, focusKeyword: c.focusKeyword }));
+  return report;
 }
