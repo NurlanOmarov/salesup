@@ -69,7 +69,7 @@ export default async function OgImage() {
           AI Sales Training
         </div>
         <div style={{ marginTop: 24, color: "rgba(255,255,255,0.65)" }}>
-          Video courses + AI client simulator · Astana · Almaty
+          Video courses + AI client simulator · Minsk · Belarus
         </div>
         <div
           style={{

@@ -615,7 +615,7 @@ export function CourseEditForm({
           <input
             id="focusKeyword"
             className={inputCls}
-            placeholder="например: курсы по продажам астана"
+            placeholder="например: курсы по продажам минск"
             value={focusKeyword}
             onChange={(e) => setFocusKeyword(e.target.value)}
           />
