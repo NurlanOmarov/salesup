@@ -12,7 +12,7 @@ export function SiteFooter() {
         <div>
           <p className="text-lg font-bold">ACTIVE SALES</p>
           <p className="mt-2 text-sm text-white/50">
-            Онлайн-курсы по продажам с AI-наставником. Казахстан.
+            Онлайн-курсы по продажам с AI-наставником. Беларусь.
           </p>
         </div>
 
