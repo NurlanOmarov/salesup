@@ -2,6 +2,7 @@ import "server-only";
 import { unstable_cache, revalidateTag } from "next/cache";
 import type { SeoSettings } from "@prisma/client";
 import { db } from "@/lib/db";
+import { buildSafe } from "@/lib/utils";
 
 /**
  * Глобальные SEO-настройки (singleton). Источник — таблица SeoSettings; если строки
@@ -33,8 +34,12 @@ export const SEO_DEFAULTS = {
 
 const load = unstable_cache(
   async (): Promise<SeoSettings> => {
-    const row = await db.seoSettings.findUnique({ where: { id: SEO_SETTINGS_ID } });
-    return row ?? SEO_DEFAULTS;
+    // Образ собирается без доступной БД (CI/Docker) — при сборке отдаём дефолты,
+    // реальные значения подтянет ISR в рантайме. См. buildSafe.
+    return buildSafe(async () => {
+      const row = await db.seoSettings.findUnique({ where: { id: SEO_SETTINGS_ID } });
+      return row ?? SEO_DEFAULTS;
+    }, SEO_DEFAULTS);
   },
   ["seo-settings"],
   { tags: [SEO_SETTINGS_TAG], revalidate: 300 },
