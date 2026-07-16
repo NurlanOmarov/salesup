@@ -122,7 +122,12 @@ export default async function LandingPage() {
         <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 pb-16 pt-16 sm:pt-20 lg:grid-cols-[1.1fr_1fr] lg:pb-24">
           <div className="text-center lg:text-left">
             <Reveal>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-xs font-medium text-amber-300">
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-300/90">
+                Бизнес-платформа ACTIVE SALES
+              </p>
+            </Reveal>
+            <Reveal delay={0.05}>
+              <span className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-xs font-medium text-amber-300">
                 {hero.badge}
               </span>
             </Reveal>
