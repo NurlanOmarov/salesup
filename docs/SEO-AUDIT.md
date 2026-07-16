@@ -1,4 +1,4 @@
-# SEO-аудит SalesAcademy
+# SEO-аудит Бизнес-платформа ACTIVE SALES
 
 _Дата: 2026-07-15. Аудит по фактическому коду публичных страниц, метаданным, structured data, sitemap/robots, производительности и перелинковке._
 
@@ -6,7 +6,7 @@ _Дата: 2026-07-15. Аудит по фактическому коду пуб�
 
 ## ✅ Что уже сделано хорошо
 
-- **Метаданные-фундамент**: `metadataBase`, шаблон title `%s · SalesAcademy`, дефолтные title/description в `src/app/layout.tsx`, `lang="ru"`.
+- **Метаданные-фундамент**: `metadataBase`, шаблон title `%s · ACTIVE SALES`, дефолтные title/description в `src/app/layout.tsx`, `lang="ru"`.
 - **Sitemap** динамический (статические + опубликованные курсы) с `revalidate` — `src/app/sitemap.ts`; **robots.ts** с disallow приватных зон.
 - **Structured data**: `Course` + `FAQPage` на странице курса, `FAQPage` на главной, `ItemList` в каталоге.
 - **OG-картинки**: авто-генерация `src/app/opengraph-image.tsx` (1200×630) и для страницы курса.

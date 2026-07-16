@@ -4,7 +4,7 @@ import { formatPrice } from "@/lib/utils";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
-export const alt = "SalesAcademy — курс по продажам";
+export const alt = "Бизнес-платформа ACTIVE SALES — курс по продажам";
 
 const industryColors: Record<string, string> = {
   "Медпредставители": "#0d9488",
@@ -53,7 +53,7 @@ export default async function CourseOgImage({
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, color: "#f59e0b", fontWeight: 700, fontSize: 22 }}>
             <div style={{ width: 0, height: 0, borderLeft: "12px solid transparent", borderRight: "12px solid transparent", borderBottom: "20px solid #f59e0b" }} />
-            SalesAcademy
+            ACTIVE SALES
           </div>
           {industry ? (
             <div style={{ background: accentColor + "22", border: `1px solid ${accentColor}55`, borderRadius: 999, padding: "6px 18px", fontSize: 16, color: accentColor }}>

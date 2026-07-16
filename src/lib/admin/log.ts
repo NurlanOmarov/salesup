@@ -17,7 +17,11 @@ export type AdminAction =
   | "student.device_limit"
   | "lead.update"
   | "course.update"
-  | "course.cover";
+  | "course.cover"
+  | "seo.settings.update"
+  | "seo.redirect.create"
+  | "seo.redirect.delete"
+  | "certificate.issue";
 
 export function writeAdminLog(params: {
   actorId: string;

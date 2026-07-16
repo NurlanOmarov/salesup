@@ -7,8 +7,8 @@ import type { MetadataRoute } from "next";
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "SalesAcademy — курсы по продажам",
-    short_name: "SalesAcademy",
+    name: "Бизнес-платформа ACTIVE SALES — курсы по продажам",
+    short_name: "ACTIVE SALES",
     description:
       "Видеоуроки по продажам с AI-наставником, тренажёрами, тестами и сертификатами.",
     start_url: "/app",

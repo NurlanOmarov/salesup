@@ -131,7 +131,7 @@ async function generateSlidesPdf(
 ): Promise<Buffer> {
   // 1. Ноутбук под урок.
   log.step("NotebookLM: создаю ноутбук");
-  const created = await run("notebooklm", ["create", `SalesUp · ${lesson.title}`, "--json"]);
+  const created = await run("notebooklm", ["create", `ACTIVE SALES · ${lesson.title}`, "--json"]);
   const notebookId = extractId(created.stdout);
 
   try {

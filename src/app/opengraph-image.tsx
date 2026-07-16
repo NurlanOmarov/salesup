@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "SalesAcademy — AI-тренажёр продаж";
+export const alt = "Бизнес-платформа ACTIVE SALES — AI-тренажёр продаж";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -45,7 +45,7 @@ export default function OgImage() {
               borderBottom: "26px solid #f59e0b",
             }}
           />
-          SalesAcademy
+          ACTIVE SALES
         </div>
         <div
           style={{

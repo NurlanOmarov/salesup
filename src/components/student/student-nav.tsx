@@ -31,7 +31,7 @@ export function StudentHeader({ dueCount = 0 }: { dueCount?: number }) {
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4">
         <Link href="/app" className="flex items-center gap-2 font-bold">
           <GraduationCap className="size-5 text-amber-600" />
-          <span>SalesAcademy</span>
+          <span>ACTIVE SALES</span>
         </Link>
 
         {/* Десктоп-меню */}

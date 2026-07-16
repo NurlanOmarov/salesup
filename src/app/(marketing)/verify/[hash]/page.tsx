@@ -4,15 +4,16 @@ import { db } from "@/lib/db";
 
 export const metadata: Metadata = {
   title: "Проверка сертификата",
-  // Страница содержит ПДн (ФИО в сертификате) — вне индекса (CLAUDE.md, правило 9)
+  // Служебная страница — вне индекса (CLAUDE.md, правило 9). ФИО здесь не показывается.
   robots: { index: false, follow: false },
 };
 
 export const dynamic = "force-dynamic";
 
 /**
- * Публичная страница проверки подлинности сертификата (S5.3). Доступна без входа.
- * По verifyHash показывает: подлинный/не найден/отозван + кому и за какой курс выдан.
+ * Публичная страница проверки подлинности сертификата. Доступна без входа. По verifyHash
+ * подтверждает факт и параметры выдачи (курс, номер, дата) — БЕЗ ФИО (ПДн не хранятся,
+ * правило 9). Работает только для выданных сертификатов, которым владелец присвоил hash.
  */
 export default async function VerifyPage({
   params,
@@ -25,16 +26,16 @@ export default async function VerifyPage({
     where: { verifyHash: hash },
     select: {
       number: true,
-      holderName: true,
       scorePct: true,
       hoursLabel: true,
+      status: true,
       issuedAt: true,
       revokedAt: true,
       course: { select: { title: true } },
     },
   });
 
-  const valid = cert && !cert.revokedAt;
+  const valid = cert && !cert.revokedAt && cert.status === "ISSUED";
 
   return (
     <main className="mx-auto flex min-h-[70vh] max-w-lg flex-col items-center justify-center px-4 py-16 text-center">
@@ -45,21 +46,17 @@ export default async function VerifyPage({
           <div className="mt-6 w-full rounded-2xl border border-foreground/10 bg-background p-6 text-left">
             <dl className="space-y-3 text-sm">
               <div>
-                <dt className="text-xs uppercase tracking-wide text-foreground/50">Владелец</dt>
-                <dd className="text-base font-semibold">{cert!.holderName}</dd>
-              </div>
-              <div>
                 <dt className="text-xs uppercase tracking-wide text-foreground/50">Курс</dt>
                 <dd className="font-medium">{cert!.course.title}</dd>
               </div>
               <div className="flex gap-8">
                 <div>
                   <dt className="text-xs uppercase tracking-wide text-foreground/50">Номер</dt>
-                  <dd>{cert!.number}</dd>
+                  <dd>{cert!.number ?? "—"}</dd>
                 </div>
                 <div>
                   <dt className="text-xs uppercase tracking-wide text-foreground/50">Дата</dt>
-                  <dd>{cert!.issuedAt.toLocaleDateString("ru-RU")}</dd>
+                  <dd>{cert!.issuedAt?.toLocaleDateString("ru-RU") ?? "—"}</dd>
                 </div>
                 {cert!.scorePct != null ? (
                   <div>
@@ -71,7 +68,7 @@ export default async function VerifyPage({
             </dl>
           </div>
           <p className="mt-4 text-xs text-foreground/40">
-            Выдан платформой SalesAcademy
+            Выдан платформой ACTIVE SALES
           </p>
         </>
       ) : (

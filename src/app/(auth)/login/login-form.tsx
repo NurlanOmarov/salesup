@@ -45,7 +45,7 @@ export function LoginForm({
             strokeLinejoin="round"
           />
         </svg>
-        SalesAcademy
+        ACTIVE SALES
       </Link>
 
       <h1 className="mt-6 text-2xl font-bold">Вход</h1>

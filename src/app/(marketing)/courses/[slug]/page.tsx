@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -21,6 +21,7 @@ import { Reveal } from "@/components/landing/reveal";
 import { LeadForm } from "@/components/landing/lead-form";
 import { Reviews, type ReviewItem } from "@/components/landing/reviews";
 import { trainer } from "@/content/landing";
+import { resolveRedirect } from "@/lib/seo/redirects";
 
 export const revalidate = 60;
 
@@ -66,10 +67,12 @@ export async function generateMetadata({
   return {
     title: course.seoTitle ?? course.title,
     description: course.seoDescription ?? course.subtitle ?? undefined,
-    alternates: { canonical: `/courses/${slug}` },
+    alternates: { canonical: course.canonicalPath || `/courses/${slug}` },
+    robots: course.seoNoindex ? { index: false, follow: true } : undefined,
     openGraph: {
-      title: course.title,
-      description: course.subtitle ?? undefined,
+      title: course.ogTitle ?? course.seoTitle ?? course.title,
+      description:
+        course.ogDescription ?? course.seoDescription ?? course.subtitle ?? undefined,
       type: "website",
     },
   };
@@ -92,7 +95,12 @@ export default async function CoursePage({
 }) {
   const { slug } = await params;
   const course = await getCourse(slug);
-  if (!course) notFound();
+  if (!course) {
+    // Курс не найден — возможно, slug переименован фабрикой: пробуем 308-редирект.
+    const to = await resolveRedirect(`/courses/${slug}`);
+    if (to) permanentRedirect(to);
+    notFound();
+  }
 
   // Агрегат рейтинга по всем прошедшим модерацию отзывам (для звёзд в выдаче)
   const ratingAgg = await db.review.aggregate({
@@ -131,7 +139,7 @@ export default async function CoursePage({
     url: `${siteUrl}/courses/${slug}`,
     provider: {
       "@type": "Organization",
-      name: "SalesAcademy",
+      name: "Бизнес-платформа ACTIVE SALES",
       url: siteUrl,
     },
     instructor: {

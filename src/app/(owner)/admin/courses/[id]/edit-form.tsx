@@ -2,10 +2,18 @@
 
 import { useState, useTransition } from "react";
 import Image from "next/image";
-import { Loader2, Upload, CheckCircle2, AlertCircle } from "lucide-react";
+import { Loader2, Upload, CheckCircle2, AlertCircle, Sparkles, Gauge } from "lucide-react";
 import type { RatesMap } from "@/lib/currency";
 import { coverPublicUrl } from "@/lib/utils";
 import { updateCourseAction, uploadCoverAction } from "../actions";
+import { generateMetaAction, scoreMetaAction } from "../../seo/actions";
+import {
+  SerpPreview,
+  CharCounter,
+  TITLE_LIMIT,
+  DESC_LIMIT,
+} from "../../seo/serp-preview";
+import type { MetaScore } from "@/lib/seo/ai";
 
 interface CourseFields {
   id: string;
@@ -28,6 +36,11 @@ interface CourseFields {
   hoursLabel: string | null;
   seoTitle: string | null;
   seoDescription: string | null;
+  ogTitle: string | null;
+  ogDescription: string | null;
+  canonicalPath: string | null;
+  focusKeyword: string | null;
+  seoNoindex: boolean;
   certificateEnabled: boolean;
 }
 
@@ -74,9 +87,51 @@ export function CourseEditForm({
   const [seoDescription, setSeoDescription] = useState(
     course.seoDescription ?? "",
   );
+  const [ogTitle, setOgTitle] = useState(course.ogTitle ?? "");
+  const [ogDescription, setOgDescription] = useState(course.ogDescription ?? "");
+  const [canonicalPath, setCanonicalPath] = useState(course.canonicalPath ?? "");
+  const [focusKeyword, setFocusKeyword] = useState(course.focusKeyword ?? "");
+  const [seoNoindex, setSeoNoindex] = useState(course.seoNoindex);
   const [certificateEnabled, setCertificateEnabled] = useState(
     course.certificateEnabled,
   );
+
+  // AI-помощники SEO (черновик метаданных + оценка качества).
+  const [aiPending, setAiPending] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [scorePending, setScorePending] = useState(false);
+  const [score, setScore] = useState<MetaScore | null>(null);
+
+  async function handleAiDraft() {
+    setAiError(null);
+    setAiPending(true);
+    const res = await generateMetaAction({
+      source: `${title}\n${subtitle}\n${description}`.trim(),
+      focusKeyword: focusKeyword || undefined,
+    });
+    setAiPending(false);
+    if (res.ok) {
+      setSeoTitle(res.data.title);
+      setSeoDescription(res.data.description);
+    } else {
+      setAiError(res.error);
+    }
+  }
+
+  async function handleScore() {
+    setAiError(null);
+    setScore(null);
+    setScorePending(true);
+    const res = await scoreMetaAction({
+      title: seoTitle || title,
+      description: seoDescription || subtitle,
+      focusKeyword: focusKeyword || undefined,
+      source: description || undefined,
+    });
+    setScorePending(false);
+    if (res.ok) setScore(res.data);
+    else setAiError(res.error);
+  }
 
   const [coverKey, setCoverKey] = useState(course.coverUrl);
   const [coverVersion, setCoverVersion] = useState(0);
@@ -108,6 +163,11 @@ export function CourseEditForm({
         hoursLabel,
         seoTitle,
         seoDescription,
+        ogTitle,
+        ogDescription,
+        canonicalPath,
+        focusKeyword,
+        seoNoindex,
         certificateEnabled,
       });
       setResult(
@@ -318,29 +378,180 @@ export function CourseEditForm({
           </div>
         </div>
 
+        {/* ─── SEO ─────────────────────────────────────────────── */}
+        <div className="border-t border-foreground/10 pt-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold text-foreground/80">SEO</h2>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleAiDraft}
+                disabled={aiPending}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/5 px-3 py-1.5 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-500/10 disabled:opacity-50"
+              >
+                {aiPending ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <Sparkles className="size-3.5" />
+                )}
+                AI-черновик
+              </button>
+              <button
+                type="button"
+                onClick={handleScore}
+                disabled={scorePending}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-foreground/20 px-3 py-1.5 text-xs font-medium text-foreground/70 transition-colors hover:bg-foreground/5 disabled:opacity-50"
+              >
+                {scorePending ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <Gauge className="size-3.5" />
+                )}
+                Проверить SEO
+              </button>
+            </div>
+          </div>
+          {aiError ? <p className="mt-2 text-xs text-red-600">{aiError}</p> : null}
+
+          {score ? (
+            <div className="mt-3 rounded-lg border border-foreground/10 bg-foreground/[0.02] p-3">
+              <div className="flex items-center gap-2">
+                <span
+                  className={`text-lg font-bold ${
+                    score.score >= 80
+                      ? "text-emerald-600"
+                      : score.score >= 50
+                        ? "text-amber-600"
+                        : "text-red-600"
+                  }`}
+                >
+                  {score.score}/100
+                </span>
+                <span className="text-xs text-foreground/50">оценка метаданных</span>
+              </div>
+              {score.issues.length > 0 ? (
+                <ul className="mt-2 list-disc space-y-0.5 pl-4 text-xs text-red-600/90">
+                  {score.issues.map((s, i) => (
+                    <li key={i}>{s}</li>
+                  ))}
+                </ul>
+              ) : null}
+              {score.suggestions.length > 0 ? (
+                <ul className="mt-1.5 list-disc space-y-0.5 pl-4 text-xs text-foreground/60">
+                  {score.suggestions.map((s, i) => (
+                    <li key={i}>{s}</li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+          ) : null}
+
+          <div className="mt-3">
+            <SerpPreview
+              title={seoTitle || title}
+              description={seoDescription || subtitle}
+              url={`activesales.by/courses/${course.slug}`}
+            />
+          </div>
+        </div>
+
         <div>
-          <label className={labelCls} htmlFor="seoTitle">
-            SEO-заголовок
+          <label className={labelCls} htmlFor="focusKeyword">
+            Целевой запрос (focus keyword)
           </label>
+          <input
+            id="focusKeyword"
+            className={inputCls}
+            placeholder="например: курсы по продажам астана"
+            value={focusKeyword}
+            onChange={(e) => setFocusKeyword(e.target.value)}
+          />
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between">
+            <label className={labelCls} htmlFor="seoTitle">
+              SEO-заголовок
+            </label>
+            <CharCounter value={seoTitle} limit={TITLE_LIMIT} />
+          </div>
           <input
             id="seoTitle"
             className={inputCls}
+            placeholder={title}
             value={seoTitle}
             onChange={(e) => setSeoTitle(e.target.value)}
           />
         </div>
         <div>
-          <label className={labelCls} htmlFor="seoDesc">
-            SEO-описание
-          </label>
+          <div className="flex items-center justify-between">
+            <label className={labelCls} htmlFor="seoDesc">
+              SEO-описание
+            </label>
+            <CharCounter value={seoDescription} limit={DESC_LIMIT} />
+          </div>
           <textarea
             id="seoDesc"
             rows={2}
             className={inputCls}
+            placeholder={subtitle}
             value={seoDescription}
             onChange={(e) => setSeoDescription(e.target.value)}
           />
         </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className={labelCls} htmlFor="ogTitle">
+              OG-заголовок (для соцсетей)
+            </label>
+            <input
+              id="ogTitle"
+              className={inputCls}
+              placeholder={seoTitle || title}
+              value={ogTitle}
+              onChange={(e) => setOgTitle(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className={labelCls} htmlFor="ogDesc">
+              OG-описание
+            </label>
+            <input
+              id="ogDesc"
+              className={inputCls}
+              placeholder={seoDescription || subtitle}
+              value={ogDescription}
+              onChange={(e) => setOgDescription(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className={labelCls} htmlFor="canonical">
+            Canonical (override)
+          </label>
+          <input
+            id="canonical"
+            className={inputCls}
+            placeholder={`/courses/${course.slug}`}
+            value={canonicalPath}
+            onChange={(e) => setCanonicalPath(e.target.value)}
+          />
+          <p className="mt-1 text-xs text-foreground/40">
+            Оставьте пустым — будет /courses/{course.slug}.
+          </p>
+        </div>
+
+        <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-foreground/80">
+          <input
+            type="checkbox"
+            className="size-4 rounded border-foreground/30 accent-amber-500"
+            checked={seoNoindex}
+            onChange={(e) => setSeoNoindex(e.target.checked)}
+          />
+          Скрыть из поисковиков (noindex)
+        </label>
 
         <div className="flex items-center gap-3 pt-1">
           <button

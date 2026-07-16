@@ -35,8 +35,8 @@ export default async function AchievementsPage() {
     }),
     db.certificate.findMany({
       where: { userId, revokedAt: null },
-      orderBy: { issuedAt: "desc" },
-      select: { id: true, issuedAt: true, course: { select: { title: true } } },
+      orderBy: { readyAt: "desc" },
+      select: { id: true, issuedAt: true, readyAt: true, course: { select: { title: true } } },
     }),
     leaderboardPosition(userId),
   ]);
@@ -55,7 +55,7 @@ export default async function AchievementsPage() {
     ...certs.map((c) => ({
       kind: "cert" as const,
       title: `Сертификат: ${c.course.title}`,
-      at: c.issuedAt,
+      at: c.issuedAt ?? c.readyAt,
     })),
   ]
     .sort((a, b) => b.at.getTime() - a.at.getTime())

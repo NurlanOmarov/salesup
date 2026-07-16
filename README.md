@@ -1,4 +1,4 @@
-# SalesAcademy
+# Бизнес-платформа ACTIVE SALES
 
 Платформа онлайн-курсов по продажам с AI-наставником. Полное описание — [docs/TZ.md](docs/TZ.md), план работ — [docs/BACKLOG.md](docs/BACKLOG.md), архитектурные решения — [docs/DECISIONS.md](docs/DECISIONS.md). Конвенции для разработки — [CLAUDE.md](CLAUDE.md).
 

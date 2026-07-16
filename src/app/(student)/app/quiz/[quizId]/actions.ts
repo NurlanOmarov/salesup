@@ -5,7 +5,7 @@ import { safeAction } from "@/lib/safe-action";
 import { db } from "@/lib/db";
 import { canAccessCourse } from "@/lib/access";
 import { scoreAttempt, type QuestionLike, type GradableType } from "@/lib/quiz/scoring";
-import { issueCertificateIfEligible } from "@/lib/certificates/issue";
+import { markCertificateReadyIfEligible } from "@/lib/certificates/issue";
 import { awardXp, awardBadge } from "@/lib/gamification/award";
 import { XP_REWARDS } from "@/lib/gamification/levels";
 
@@ -101,13 +101,13 @@ export const submitQuizAttempt = safeAction(
 
     // Сдан итоговый экзамен → пробуем выдать сертификат (идемпотентно).
     // Ошибки генерации PDF не должны ронять ответ: тест уже зачтён.
-    let certificateIssued = false;
+    let certificateReady = false;
     if (result.passed && quiz.kind === "FINAL_EXAM" && quiz.courseId) {
       try {
-        const r = await issueCertificateIfEligible(userId, quiz.courseId);
-        certificateIssued = r.issued;
+        const r = await markCertificateReadyIfEligible(userId, quiz.courseId);
+        certificateReady = r.ready;
       } catch (e) {
-        console.error("Не удалось выдать сертификат:", e);
+        console.error("Не удалось зафиксировать готовность к сертификату:", e);
       }
     }
 
@@ -116,7 +116,7 @@ export const submitQuizAttempt = safeAction(
       try {
         await awardXp(userId, quiz.kind === "FINAL_EXAM" ? XP_REWARDS.examPassed : XP_REWARDS.quizPassed);
         if (quiz.kind === "FINAL_EXAM" && result.scorePct === 100) await awardBadge(userId, "perfect-exam");
-        if (certificateIssued) {
+        if (certificateReady) {
           await awardXp(userId, XP_REWARDS.certificate);
           await awardBadge(userId, "course-complete");
         }
@@ -155,7 +155,7 @@ export const submitQuizAttempt = safeAction(
       scorePct: result.scorePct,
       passed: result.passed,
       passScore: quiz.passScore,
-      certificateIssued,
+      certificateReady,
       xpEarned,
       review,
     };

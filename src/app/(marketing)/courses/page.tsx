@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     "Видеокурсы по продажам для туризма, мебели, обуви, недвижимости, медпредставителей и B2B. Авторские программы бизнес-тренера Виталия Дубовика.",
   alternates: { canonical: "/courses" },
   openGraph: {
-    title: "Каталог курсов по продажам — SalesAcademy",
+    title: "Каталог курсов по продажам — Бизнес-платформа ACTIVE SALES",
     description: "Практические видеокурсы для 8 отраслей. AI-наставник в каждом курсе.",
     type: "website",
   },
@@ -55,7 +55,7 @@ export default async function CoursesPage() {
   const listJsonLd = {
     "@context": "https://schema.org",
     "@type": "ItemList",
-    name: "Курсы по продажам — SalesAcademy",
+    name: "Курсы по продажам — Бизнес-платформа ACTIVE SALES",
     itemListElement: courses.map((c, i) => ({
       "@type": "ListItem",
       position: i + 1,

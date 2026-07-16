@@ -1,4 +1,4 @@
-# BACKLOG — SalesAcademy v1.2 «Автопилот / Один сервер»
+# BACKLOG — Бизнес-платформа ACTIVE SALES v1.2 «Автопилот / Один сервер»
 
 План задач для Claude Code. Каждая задача — готовый промпт (вместе с `CLAUDE.md` и `docs/TZ.md`).
 

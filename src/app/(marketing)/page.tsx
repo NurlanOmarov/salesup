@@ -49,7 +49,7 @@ export const revalidate = 600;
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
   openGraph: {
-    title: "SalesAcademy — курсы по продажам с AI-наставником",
+    title: "Бизнес-платформа ACTIVE SALES — курсы по продажам с AI-наставником",
     description: hero.subtitle,
     type: "website",
   },

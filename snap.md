@@ -1,0 +1,125 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - link "SalesAcademy" [ref=e5] [cursor=pointer]:
+          - /url: /app
+          - img [ref=e6]
+          - generic [ref=e9]: SalesAcademy
+        - navigation "Разделы кабинета" [ref=e10]:
+          - link "Обучение" [ref=e11] [cursor=pointer]:
+            - /url: /app
+          - link "Повторение 20" [ref=e12] [cursor=pointer]:
+            - /url: /app/review
+            - text: Повторение
+            - generic [ref=e13]: "20"
+          - link "Достижения" [ref=e14] [cursor=pointer]:
+            - /url: /app/achievements
+          - link "Сертификаты" [ref=e15] [cursor=pointer]:
+            - /url: /app/certificates
+          - link "Настройки" [ref=e16] [cursor=pointer]:
+            - /url: /app/settings
+        - generic [ref=e17]:
+          - link "Поиск по материалам" [ref=e18] [cursor=pointer]:
+            - /url: /app/search
+            - img [ref=e19]
+          - button "Выйти" [ref=e23]
+    - generic [ref=e24]:
+      - complementary [ref=e25]:
+        - link "Моё обучение" [ref=e26] [cursor=pointer]:
+          - /url: /app
+          - img [ref=e27]
+          - text: Моё обучение
+        - navigation "Оглавление курса" [ref=e33]:
+          - paragraph [ref=e34]: Активные продажи для медицинских представителей
+          - generic [ref=e35]:
+            - generic [ref=e36]:
+              - paragraph [ref=e37]: Модуль 1. Выявление потребностей
+              - list [ref=e38]:
+                - listitem [ref=e39]
+                - listitem [ref=e46]
+                - listitem [ref=e52]
+                - listitem [ref=e58]
+            - generic [ref=e65]:
+              - paragraph [ref=e66]: Модуль 2. Методика СПИН
+              - list [ref=e67]:
+                - listitem [ref=e68]
+                - listitem [ref=e74]
+            - generic [ref=e80]:
+              - paragraph [ref=e81]: Модуль 3. Конкурентная среда
+              - list [ref=e82]:
+                - listitem [ref=e83]
+                - listitem [ref=e89]
+                - listitem [ref=e95]
+            - generic [ref=e101]:
+              - paragraph [ref=e102]: Модуль 4. Убеждение и закрытие сделки
+              - list [ref=e103]:
+                - listitem [ref=e104]
+                - listitem [ref=e110]
+                - listitem [ref=e116]
+                - listitem [ref=e125]
+            - generic [ref=e131]:
+              - paragraph [ref=e132]: Модуль 5. Профессиональные принципы
+              - list [ref=e133]:
+                - listitem [ref=e134]
+                - listitem [ref=e140]
+      - main [ref=e146]:
+        - heading "7 методов закрытия сделки" [level=1] [ref=e148]
+        - generic [ref=e150]:
+          - tablist "Разделы урока" [ref=e151]:
+            - tab "Смотреть 2" [selected] [ref=e152]:
+              - generic [ref=e154]:
+                - img [ref=e155]
+                - text: Смотреть
+                - generic [ref=e158]: "2"
+            - tab "Материалы 4" [ref=e159]:
+              - generic [ref=e160]:
+                - img [ref=e161]
+                - text: Материалы
+                - generic [ref=e163]: "4"
+            - tab "Практика 4" [ref=e164]:
+              - generic [ref=e165]:
+                - img [ref=e166]
+                - text: Практика
+                - generic [ref=e172]: "4"
+            - tab "Наставник" [ref=e173]:
+              - generic [ref=e174]:
+                - img [ref=e175]
+                - text: Наставник
+          - 'tablist "Форматы: Смотреть" [ref=e178]':
+            - tab "Видео" [selected] [ref=e179]:
+              - img [ref=e180]
+              - text: Видео
+            - tab "Подкаст" [ref=e183]:
+              - img [ref=e184]
+              - text: Подкаст
+          - tabpanel "Видео" [ref=e189]:
+            - generic [ref=e190]:
+              - generic: student@example.kz
+              - generic [ref=e192]:
+                - generic [ref=e193]
+                - generic [ref=e195]
+              - generic [ref=e219]: Не удалось загрузить видео. Обновите страницу.
+        - paragraph [ref=e197]:
+          - img [ref=e198]
+          - text: Урок отметится пройденным автоматически после просмотра ≥90% видео.
+        - link "Проверь себя Методы закрытия сделки" [ref=e200] [cursor=pointer]:
+          - /url: /app/quiz/cmqazjfe7002u9krhs7lxrvvl
+          - generic [ref=e201]:
+            - img [ref=e203]
+            - generic [ref=e206]:
+              - paragraph [ref=e207]: Проверь себя
+              - paragraph [ref=e208]: Методы закрытия сделки
+          - img [ref=e209]
+        - generic [ref=e211]:
+          - link "Назад" [ref=e212] [cursor=pointer]:
+            - /url: /app/learn/sales-pharma/cmqaqmuds00109kdr8xwid0bp
+            - img [ref=e213]
+            - text: Назад
+          - link "Следующий урок" [ref=e215] [cursor=pointer]:
+            - /url: /app/learn/sales-pharma/cmqaqmudx00149kdrm8ww7n15
+            - text: Следующий урок
+            - img [ref=e216]
+  - button "Open Next.js Dev Tools" [ref=e225] [cursor=pointer]:
+    - img [ref=e226]
+  - alert [ref=e218]

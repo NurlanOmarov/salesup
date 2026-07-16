@@ -1,4 +1,4 @@
-// prisma/schema.prisma — SalesAcademy v1.2 «Автопилот / Один сервер»
+// prisma/schema.prisma — Бизнес-платформа ACTIVE SALES v1.2 «Автопилот / Один сервер»
 // Self-hosted PostgreSQL 16 + pgvector на VPS. Деньги в tiyn (1 ₸ = 100 tiyn), Int.
 // v1.1: модерация человеком заменена AI-критиком (ValidationStatus), ContentGap вместо
 //       «вопросов тренеру», Postgres-очередь Job, фидбек-петля дизлайков.
@@ -183,10 +183,16 @@ model Course {
   certificateEnabled  Boolean @default(true)
   certificateMinScore Int     @default(80)
   hoursLabel          String?
-  // SEO (генерируется фабрикой, валидируется критиком)
+  // SEO (генерируется фабрикой, валидируется критиком; поля *Title/*Description —
+  // ручной override владельца поверх фабрики: пусто → берётся сгенерённое/дефолт).
   seoTitle       String?
   seoDescription String?
   ogImageUrl     String?
+  ogTitle        String? // override OG-заголовка (иначе title)
+  ogDescription  String? // override OG-описания (иначе subtitle)
+  canonicalPath  String? // override canonical (иначе /courses/<slug>)
+  focusKeyword   String? // целевой запрос — для AI-скоринга и подсказок
+  seoNoindex     Boolean @default(false) // снять из индекса (напр. черновик-препринт)
   learnPoints    Json? // string[]
   targetAudience Json? // string[]
   faq            Json? // {q,a}[]
@@ -622,17 +628,29 @@ model Note {
   @@index([userId, lessonId])
 }
 
+// Минимизация ПДн (правило 9): именной сертификат НЕ формируется автоматически и ФИО
+// в системе НЕ хранится. При выполнении условий создаётся запись со статусом READY
+// («готов к выдаче»); ученику показывается инструкция отправить ФИО на почту, админ
+// изготавливает документ вне системы и вручную помечает ISSUED. Поля holderName/number/
+// verifyHash/pdfKey остаются опциональными на случай ручного заполнения владельцем.
+enum CertificateStatus {
+  READY  // ученик выполнил условия, готов получить сертификат
+  ISSUED // владелец выдал сертификат вручную
+}
+
 model Certificate {
-  id         String    @id @default(cuid())
-  number     String    @unique
+  id         String            @id @default(cuid())
+  number     String?           @unique // присваивается вручную при выдаче
   userId     String
   courseId   String
-  holderName String
+  holderName String? // НЕ заполняется автоматически (ПДн); опц. ручной ввод владельцем
   scorePct   Int?
   hoursLabel String?
-  pdfKey     String? // относительный ключ в lib/storage
-  verifyHash String    @unique
-  issuedAt   DateTime  @default(now())
+  pdfKey     String? // относительный ключ в lib/storage (если владелец приложит PDF)
+  verifyHash String?           @unique
+  status     CertificateStatus @default(READY)
+  readyAt    DateTime          @default(now()) // когда выполнены условия
+  issuedAt   DateTime? // когда владелец пометил «Выдан»
   revokedAt  DateTime?
   user   User   @relation(fields: [userId], references: [id])
   course Course @relation(fields: [courseId], references: [id])
@@ -947,4 +965,50 @@ model UserBadge {
   badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
 
   @@id([userId, badgeId])
+}
+
+/// Глобальные SEO-настройки сайта (singleton: одна строка, id = "singleton").
+/// Выносит из кода то, что владелец меняет без деплоя: шаблоны метаданных, соцпрофили
+/// (→ sameAs в Organization), подтверждение прав в Search Console / Вебмастере и
+/// опциональные маркетинговые счётчики. Счётчики вставляются ТОЛЬКО на публичных
+/// (marketing)-страницах — не в кабинете ученика (CLAUDE.md D-002 + правило 9 о ПДн).
+model SeoSettings {
+  id                 String  @id @default("singleton")
+
+  // Шаблоны метаданных. titleTemplate — паттерн Next ("%s · ACTIVE SALES").
+  titleTemplate      String  @default("%s · ACTIVE SALES")
+  defaultTitle       String  @default("Бизнес-платформа ACTIVE SALES — курсы по продажам с AI-наставником")
+  defaultDescription String  @default("Онлайн-курсы по техникам продаж: видеоуроки, AI-тренажёр на материале тренера, тесты и сертификаты.")
+
+  // Соцпрофили → sameAs + contactPoint в EducationalOrganization JSON-LD.
+  socialInstagram    String?
+  socialTelegram     String?
+  socialYoutube      String?
+  socialTiktok       String?
+
+  // Дефолтная OG-картинка (относительный ключ lib/storage). Пусто → авто-opengraph-image.
+  defaultOgKey       String?
+
+  // Подтверждение прав (значение content= мета-тега). Публичные страницы, <head>.
+  googleVerification String?
+  yandexVerification String?
+
+  // Маркетинговые счётчики (D-002): вставляются ТОЛЬКО на (marketing). Пусто → выключено.
+  ga4Id              String? // "G-XXXXXXX"
+  yandexMetricaId    String? // числовой id счётчика Метрики
+
+  updatedAt          DateTime @updatedAt
+}
+
+/// 301/308-редиректы (сохранение позиций при смене slug курса фабрикой и т.п.).
+/// from — относительный путь ("/courses/old-slug"), уникален. Резолвится в приложении
+/// (courses/[slug] через permanentRedirect) — не в edge-middleware, где нет Prisma.
+model Redirect {
+  id        String   @id @default(cuid())
+  from      String   @unique // относительный путь-источник, с ведущим /
+  to        String            // назначение (относительный путь или абсолютный URL)
+  hits      Int      @default(0) // сколько раз сработал — в дайджест владельцу
+  createdAt DateTime @default(now())
+
+  @@index([from])
 }

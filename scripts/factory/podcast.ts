@@ -117,7 +117,7 @@ async function generatePodcast(
   log.step("NotebookLM: создаю ноутбук");
   const created = await run("notebooklm", [
     "create",
-    `SalesUp · ${lesson.title}`,
+    `ACTIVE SALES · ${lesson.title}`,
     "--json",
   ]);
   const notebookId = extractId(created.stdout);

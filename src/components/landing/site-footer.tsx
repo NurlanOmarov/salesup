@@ -10,7 +10,7 @@ export function SiteFooter() {
     <footer className="bg-slate-950 text-white">
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:grid-cols-2 lg:grid-cols-4">
         <div>
-          <p className="text-lg font-bold">SalesAcademy</p>
+          <p className="text-lg font-bold">ACTIVE SALES</p>
           <p className="mt-2 text-sm text-white/50">
             Онлайн-курсы по продажам с AI-наставником. Казахстан.
           </p>
@@ -97,7 +97,7 @@ export function SiteFooter() {
         </div>
       </div>
       <div className="border-t border-white/10 py-4 text-center text-xs text-white/60">
-        © {year} SalesAcademy. Все права защищены.
+        © {year} ACTIVE SALES. Все права защищены.
       </div>
     </footer>
   );

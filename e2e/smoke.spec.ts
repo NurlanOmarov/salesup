@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 
 test("лендинг отвечает и рендерит hero + бренд", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("link", { name: "SalesAcademy" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "ACTIVE SALES" })).toBeVisible();
   await expect(
     page.getByRole("heading", {
       level: 1,

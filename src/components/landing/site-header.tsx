@@ -17,7 +17,7 @@ export function SiteHeader() {
               strokeLinejoin="round"
             />
           </svg>
-          SalesAcademy
+          ACTIVE SALES
         </Link>
         <nav className="flex items-center gap-2 sm:gap-4">
           <Link

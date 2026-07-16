@@ -1,5 +1,5 @@
 import { env } from "@/env";
-import { issueCertificateIfEligible } from "@/lib/certificates/issue";
+import { markCertificateReadyIfEligible } from "@/lib/certificates/issue";
 import { log } from "@/lib/log";
 
 /** Обработчик задачи: получает payload, выполняет, бросает при ошибке (для ретрая). */
@@ -10,11 +10,12 @@ export type JobHandler = (payload: unknown) => Promise<void>;
  * идемпотентным (задача может выполниться повторно после сбоя/ретрая).
  */
 export const handlers: Record<string, JobHandler> = {
-  // Генерация сертификата — идемпотентна (issue проверяет уже выданный).
+  // Фиксация готовности к сертификату — идемпотентна (проверяет существующую запись).
+  // ПДн не формируем: выдачу владелец подтверждает вручную в админке.
   "certificate.generate": async (payload) => {
     const { userId, courseId } = payload as { userId: string; courseId: string };
     if (!userId || !courseId) throw new Error("certificate.generate: нет userId/courseId");
-    await issueCertificateIfEligible(userId, courseId);
+    await markCertificateReadyIfEligible(userId, courseId);
   },
 
   // Отправка письма — фактическая отправка появится в S5.5 (nodemailer). Пока:
