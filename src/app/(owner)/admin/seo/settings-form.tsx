@@ -32,8 +32,9 @@ export interface SeoSettingsFields {
   yandexMetricaId: string | null;
   orgName: string;
   orgDescription: string | null;
-  orgPhone: string | null;
+  orgPhone: string;
   orgCountry: string;
+  supportWhatsapp: string;
 }
 
 const inputCls =
@@ -74,8 +75,9 @@ export function SeoSettingsForm({
   );
   const [orgName, setOrgName] = useState(settings.orgName);
   const [orgDescription, setOrgDescription] = useState(settings.orgDescription ?? "");
-  const [orgPhone, setOrgPhone] = useState(settings.orgPhone ?? "");
+  const [orgPhone, setOrgPhone] = useState(settings.orgPhone);
   const [orgCountry, setOrgCountry] = useState(settings.orgCountry);
+  const [supportWhatsapp, setSupportWhatsapp] = useState(settings.supportWhatsapp);
 
   const [ogKey, setOgKey] = useState(settings.defaultOgKey);
   const [ogMsg, setOgMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -105,8 +107,9 @@ export function SeoSettingsForm({
     setYandexMetricaId(settings.yandexMetricaId ?? "");
     setOrgName(settings.orgName);
     setOrgDescription(settings.orgDescription ?? "");
-    setOrgPhone(settings.orgPhone ?? "");
+    setOrgPhone(settings.orgPhone);
     setOrgCountry(settings.orgCountry);
+    setSupportWhatsapp(settings.supportWhatsapp);
     setSuggestion(null);
     setUndoSnap(null);
     setResult(null);
@@ -132,6 +135,7 @@ export function SeoSettingsForm({
         orgDescription,
         orgPhone,
         orgCountry,
+        supportWhatsapp,
       });
       setResult(
         res.ok ? { ok: true, text: "Сохранено" } : { ok: false, text: res.error },
@@ -352,10 +356,11 @@ export function SeoSettingsForm({
         {/* Организация (JSON-LD) */}
         <section className="space-y-4 rounded-2xl border border-foreground/10 bg-background p-5">
           <div>
-            <h2 className="font-semibold">Организация</h2>
+            <h2 className="font-semibold">Организация и контакты</h2>
             <p className="mt-1 text-xs text-foreground/50">
-              Данные для разметки EducationalOrganization (Knowledge Panel,
-              брендовая выдача): название, описание, телефон и страна рынка.
+              Название/описание/страна → разметка EducationalOrganization. Телефон и
+              WhatsApp показываются везде: футер, лендинг, страница курса, «забыли
+              пароль», кабинет ученика.
             </p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -372,14 +377,26 @@ export function SeoSettingsForm({
             </div>
             <div>
               <label className={labelCls} htmlFor="orgPhone">
-                Телефон (E.164)
+                Телефон поддержки
               </label>
               <input
                 id="orgPhone"
                 className={inputCls}
-                placeholder="+375 29 123-45-67 (пусто → из env)"
+                placeholder="+375 (29) 605-30-32"
                 value={orgPhone}
                 onChange={(e) => setOrgPhone(e.target.value)}
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label className={labelCls} htmlFor="supportWhatsapp">
+                WhatsApp (ссылка)
+              </label>
+              <input
+                id="supportWhatsapp"
+                className={inputCls}
+                placeholder="https://wa.me/375296053032"
+                value={supportWhatsapp}
+                onChange={(e) => setSupportWhatsapp(e.target.value)}
               />
             </div>
             <div className="sm:col-span-2">

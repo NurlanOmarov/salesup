@@ -1,25 +1,22 @@
 import { MessageCircle, Send, Phone, LifeBuoy } from "lucide-react";
-import { env } from "@/env";
+import { getSupportContacts } from "@/lib/seo/settings";
 
 /**
  * Контакты поддержки в кабинете (те же, что на лендинге/«забыли пароль»): WhatsApp,
- * Telegram, телефон владельца — из NEXT_PUBLIC_SUPPORT_*. Для вопросов по доступу и
- * оплате (онлайн-оплаты в MVP нет — D из CLAUDE.md). Если контакты не заданы — ничего
- * не рендерим. `variant="card"` — секция в настройках; `variant="inline"` — компактно.
+ * Telegram, телефон владельца — из SeoSettings (правятся в /admin/seo без деплоя).
+ * Для вопросов по доступу и оплате (онлайн-оплаты в MVP нет — D из CLAUDE.md).
+ * `variant="card"` — секция в настройках; `variant="inline"` — компактно.
  */
 function digits(s: string): string {
   return s.replace(/[^\d]/g, "");
 }
 
-export function SupportContact({ variant = "card" }: { variant?: "card" | "inline" }) {
-  const wa = env.NEXT_PUBLIC_SUPPORT_WHATSAPP;
-  const tg = env.NEXT_PUBLIC_SUPPORT_TELEGRAM;
-  const phone = env.NEXT_PUBLIC_SUPPORT_PHONE;
-  if (!wa && !tg && !phone) return null;
+export async function SupportContact({ variant = "card" }: { variant?: "card" | "inline" }) {
+  const { phone, phoneHref, whatsapp: wa, telegram: tg } = await getSupportContacts();
 
   const links = [
     wa && {
-      href: `https://wa.me/${digits(wa)}`,
+      href: wa.startsWith("http") ? wa : `https://wa.me/${digits(wa)}`,
       label: "WhatsApp",
       icon: MessageCircle,
       cls: "text-emerald-600",
@@ -31,7 +28,7 @@ export function SupportContact({ variant = "card" }: { variant?: "card" | "inlin
       cls: "text-sky-600",
     },
     phone && {
-      href: `tel:${digits(phone)}`,
+      href: phoneHref,
       label: phone,
       icon: Phone,
       cls: "text-amber-600",

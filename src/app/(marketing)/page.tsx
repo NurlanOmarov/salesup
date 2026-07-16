@@ -19,7 +19,7 @@ import {
   Trophy,
 } from "lucide-react";
 import { db } from "@/lib/db";
-import { env } from "@/env";
+import { getSupportContacts } from "@/lib/seo/settings";
 import { buttonVariants } from "@/components/ui/button";
 import { cn, buildSafe } from "@/lib/utils";
 import { Reveal } from "@/components/landing/reveal";
@@ -90,8 +90,8 @@ async function getReviews(): Promise<ReviewItem[]> {
 
 export default async function LandingPage() {
   const reviews = await getReviews();
-  const wa = env.NEXT_PUBLIC_SUPPORT_WHATSAPP;
-  const tg = env.NEXT_PUBLIC_SUPPORT_TELEGRAM;
+  // Контакты — из SeoSettings (правятся в /admin/seo без деплоя).
+  const { whatsapp: wa, telegram: tg } = await getSupportContacts();
 
   const faqJsonLd = {
     "@context": "https://schema.org",

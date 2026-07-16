@@ -35,6 +35,17 @@ import { env } from "@/env";
 const optStr = (max: number) =>
   z.string().trim().max(max).optional().transform((v) => (v ? v : null));
 
+/** Ссылка WhatsApp (wa.me / api.whatsapp.com). Вне экспорта — ограничение "use server". */
+const waLinkSchema = z
+  .string()
+  .trim()
+  .min(1, "Укажите ссылку WhatsApp")
+  .max(300)
+  .refine(
+    (v) => v.startsWith("https://wa.me/") || v.startsWith("https://api.whatsapp.com/"),
+    { message: "Ожидается ссылка вида https://wa.me/375…" },
+  );
+
 /**
  * Сохранение глобальных SEO-настроек (singleton). Только OWNER.
  * Меняет метаданные/счётчики/подтверждения прав без деплоя; сбрасывает кэш layout.
@@ -55,8 +66,9 @@ export const updateSeoSettingsAction = safeAction(
       yandexMetricaId: optStr(40),
       orgName: z.string().trim().min(1, "Укажите название организации").max(120),
       orgDescription: optStr(300),
-      orgPhone: optStr(40),
+      orgPhone: z.string().trim().min(1, "Укажите телефон").max(40),
       orgCountry: z.string().trim().min(1, "Укажите страну").max(60),
+      supportWhatsapp: waLinkSchema,
     }),
     auth: "owner",
   },
@@ -337,7 +349,7 @@ export async function draftStaticPageAction(
     const body = await draftStaticPageText(parsed.data.path, {
       orgName: s.orgName,
       siteUrl: env.NEXT_PUBLIC_SITE_URL,
-      contact: s.orgPhone ?? env.NEXT_PUBLIC_SUPPORT_PHONE ?? null,
+      contact: s.orgPhone,
       userId: session.user.id,
     });
     return { ok: true, data: { body } };

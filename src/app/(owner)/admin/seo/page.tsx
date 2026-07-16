@@ -116,6 +116,7 @@ export default async function SeoSettingsPage() {
           orgDescription: s.orgDescription,
           orgPhone: s.orgPhone,
           orgCountry: s.orgCountry,
+          supportWhatsapp: s.supportWhatsapp,
         }}
       />
     </main>

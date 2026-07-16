@@ -23,6 +23,7 @@ import { Reviews, type ReviewItem } from "@/components/landing/reviews";
 import { trainer } from "@/content/landing";
 import { resolveRedirect } from "@/lib/seo/redirects";
 import { getRelatedCards } from "@/lib/seo/related";
+import { getSupportContacts } from "@/lib/seo/settings";
 
 export const revalidate = 60;
 
@@ -117,8 +118,8 @@ export default async function CoursePage({
   const prices = buildMultiPrice(course.priceTiyn, ratesPayload.rates);
   const hasRates = ratesAvailable(ratesPayload.rates);
 
-  const wa = env.NEXT_PUBLIC_SUPPORT_WHATSAPP;
-  const tg = env.NEXT_PUBLIC_SUPPORT_TELEGRAM;
+  // Контакты — из SeoSettings (правятся в /admin/seo без деплоя).
+  const { whatsapp: wa, telegram: tg } = await getSupportContacts();
   const reviews = course.reviews as ReviewItem[];
 
   const learnPoints = Array.isArray(course.learnPoints)

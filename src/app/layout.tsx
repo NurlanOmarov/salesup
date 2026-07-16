@@ -49,7 +49,7 @@ export default async function RootLayout({
   // Сайт-вайд разметка организации (Knowledge Panel, брендовая выдача).
   // Название/описание/телефон/страна редактируются в /admin/seo (SeoSettings).
   const sameAs = socialLinks(s);
-  const orgPhone = s.orgPhone ?? env.NEXT_PUBLIC_SUPPORT_PHONE;
+  const orgPhone = s.orgPhone;
   const orgJsonLd = {
     "@context": "https://schema.org",
     "@type": "EducationalOrganization",

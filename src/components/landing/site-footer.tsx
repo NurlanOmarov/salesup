@@ -1,9 +1,9 @@
 import Link from "next/link";
+import { getSupportContacts } from "@/lib/seo/settings";
 
-export function SiteFooter() {
-  const wa = process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP;
-  const tg = process.env.NEXT_PUBLIC_SUPPORT_TELEGRAM;
-  const phone = process.env.NEXT_PUBLIC_SUPPORT_PHONE;
+export async function SiteFooter() {
+  // Контакты — из SeoSettings (правятся в /admin/seo без деплоя).
+  const { phone, phoneHref, whatsapp: wa, telegram: tg } = await getSupportContacts();
   const year = 2026;
 
   return (
@@ -40,16 +40,11 @@ export function SiteFooter() {
         <div className="text-sm">
           <p className="font-semibold text-white/90">Контакты</p>
           <ul className="mt-2 space-y-1 text-white/60">
-            {phone ? (
-              <li>
-                <a
-                  href={`tel:${phone.replace(/\s/g, "")}`}
-                  className="transition-colors hover:text-amber-400"
-                >
-                  {phone}
-                </a>
-              </li>
-            ) : null}
+            <li>
+              <a href={phoneHref} className="transition-colors hover:text-amber-400">
+                {phone}
+              </a>
+            </li>
             {wa ? (
               <li>
                 <a

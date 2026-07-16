@@ -1001,8 +1001,12 @@ model SeoSettings {
   // Данные организации → EducationalOrganization JSON-LD (Knowledge Panel).
   orgName            String  @default("Бизнес-платформа ACTIVE SALES")
   orgDescription     String? // пусто → defaultDescription
-  orgPhone           String? // пусто → NEXT_PUBLIC_SUPPORT_PHONE
   orgCountry         String  @default("Belarus") // areaServed (англ. название страны)
+
+  // Контакты поддержки: футер, лендинг, «забыли пароль», кабинет ученика, JSON-LD.
+  // Правятся в /admin/seo без деплоя; env NEXT_PUBLIC_SUPPORT_* больше не источник.
+  orgPhone           String  @default("+375 (29) 605-30-32")
+  supportWhatsapp    String  @default("https://wa.me/375296053032") // ссылка wa.me
 
   updatedAt          DateTime @updatedAt
 }
