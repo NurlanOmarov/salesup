@@ -8,12 +8,33 @@ export function SiteFooter() {
 
   return (
     <footer className="bg-slate-950 text-white">
-      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:grid-cols-3">
+      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:grid-cols-2 lg:grid-cols-4">
         <div>
           <p className="text-lg font-bold">SalesAcademy</p>
           <p className="mt-2 text-sm text-white/50">
             Онлайн-курсы по продажам с AI-наставником. Казахстан.
           </p>
+        </div>
+
+        <div className="text-sm">
+          <p className="font-semibold text-white/90">Навигация</p>
+          <ul className="mt-2 space-y-1 text-white/60">
+            <li>
+              <Link href="/" className="transition-colors hover:text-amber-400">
+                Главная
+              </Link>
+            </li>
+            <li>
+              <Link href="/courses" className="transition-colors hover:text-amber-400">
+                Каталог курсов
+              </Link>
+            </li>
+            <li>
+              <Link href="/login" className="transition-colors hover:text-amber-400">
+                Вход для учеников
+              </Link>
+            </li>
+          </ul>
         </div>
 
         <div className="text-sm">

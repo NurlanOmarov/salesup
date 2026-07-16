@@ -94,6 +94,13 @@ export default async function CoursePage({
   const course = await getCourse(slug);
   if (!course) notFound();
 
+  // Агрегат рейтинга по всем прошедшим модерацию отзывам (для звёзд в выдаче)
+  const ratingAgg = await db.review.aggregate({
+    where: { courseId: course.id, autoModeration: "VALIDATED" },
+    _avg: { rating: true },
+    _count: true,
+  });
+
   const ratesPayload = await currency.getRates();
   const prices = buildMultiPrice(course.priceTiyn, ratesPayload.rates);
   const hasRates = ratesAvailable(ratesPayload.rates);
@@ -139,6 +146,52 @@ export default async function CoursePage({
       availability: "https://schema.org/InStock",
     },
     ...(course.hoursLabel ? { timeRequired: course.hoursLabel } : {}),
+    ...(ratingAgg._count > 0 && ratingAgg._avg.rating
+      ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: Number(ratingAgg._avg.rating.toFixed(1)),
+            reviewCount: ratingAgg._count,
+            bestRating: 5,
+            worstRating: 1,
+          },
+        }
+      : {}),
+    ...(reviews.length > 0
+      ? {
+          review: reviews.map((r) => ({
+            "@type": "Review",
+            author: { "@type": "Person", name: r.userName },
+            reviewRating: {
+              "@type": "Rating",
+              ratingValue: r.rating,
+              bestRating: 5,
+              worstRating: 1,
+            },
+            reviewBody: r.text,
+          })),
+        }
+      : {}),
+  };
+
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Главная", item: siteUrl },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Курсы",
+        item: `${siteUrl}/courses`,
+      },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name: course.title,
+        item: `${siteUrl}/courses/${slug}`,
+      },
+    ],
   };
 
   const faqJsonLd =
@@ -159,6 +212,10 @@ export default async function CoursePage({
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(courseJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
       {faqJsonLd ? (
         <script

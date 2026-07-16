@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Политика конфиденциальности",
   description: "Как SalesAcademy обрабатывает персональные данные.",
+  // Заглушка до наполнения (BACKLOG S6.4) — вне индекса, чтобы не считалось thin content
+  robots: { index: false, follow: true },
 };
 
 export default function PrivacyPage() {

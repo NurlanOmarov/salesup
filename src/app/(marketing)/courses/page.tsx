@@ -51,6 +51,7 @@ async function getCourses(): Promise<CourseCardData[]> {
 export default async function CoursesPage() {
   const courses = await getCourses();
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "";
   const listJsonLd = {
     "@context": "https://schema.org",
     "@type": "ItemList",
@@ -59,8 +60,22 @@ export default async function CoursesPage() {
       "@type": "ListItem",
       position: i + 1,
       name: c.title,
-      url: `${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/courses/${c.slug}`,
+      url: `${siteUrl}/courses/${c.slug}`,
     })),
+  };
+
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Главная", item: siteUrl },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Курсы",
+        item: `${siteUrl}/courses`,
+      },
+    ],
   };
 
   return (
@@ -68,6 +83,10 @@ export default async function CoursesPage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(listJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
 
       <Reveal>

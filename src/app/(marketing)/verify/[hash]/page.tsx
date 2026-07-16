@@ -4,6 +4,8 @@ import { db } from "@/lib/db";
 
 export const metadata: Metadata = {
   title: "Проверка сертификата",
+  // Страница содержит ПДн (ФИО в сертификате) — вне индекса (CLAUDE.md, правило 9)
+  robots: { index: false, follow: false },
 };
 
 export const dynamic = "force-dynamic";

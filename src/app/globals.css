@@ -49,6 +49,15 @@ body {
 .aurora-a { animation: aurora-a 14s ease-in-out infinite; }
 .aurora-b { animation: aurora-b 18s ease-in-out infinite; }
 
+/* пословный вылет заголовка hero — только transform, текст рисуется сразу (LCP) */
+@keyframes hero-word-in {
+  from { transform: translateY(0.55em); }
+}
+.hero-word {
+  display: inline-block;
+  animation: hero-word-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
 /* плавающие карточки вокруг AI-демо */
 @keyframes float-y {
   0%, 100% { transform: translateY(0); }
@@ -71,7 +80,7 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  .aurora-a, .aurora-b, .float-y, .float-y-delayed, .marquee-track {
+  .aurora-a, .aurora-b, .float-y, .float-y-delayed, .marquee-track, .hero-word {
     animation: none;
   }
 }
