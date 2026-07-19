@@ -62,8 +62,8 @@ export default async function AdminCoursesPage() {
       </div>
 
       <p className="mt-1 text-sm text-foreground/60">
-        Управление ценами, обложками и статусом публикации. Цена задаётся в тенге,
-        пересчёт в ₽/Br — по курсу НБ РК.
+        Управление ценами, обложками и статусом публикации. Цена задаётся в белорусских
+        рублях, пересчёт в ₸/₽ — по курсу НБ РК.
       </p>
 
       <div className="mt-5 overflow-hidden rounded-xl border border-foreground/10 bg-background">
@@ -124,10 +124,10 @@ export default async function AdminCoursesPage() {
                         {c.industry ?? "—"}
                       </td>
                       <td className="px-4 py-3">
-                        <div className="font-medium">{prices.kzt}</div>
+                        <div className="font-medium">{prices.byn}</div>
                         {hasRates ? (
                           <div className="text-xs text-foreground/50">
-                            {prices.rub} · {prices.byn}
+                            {prices.kzt} · {prices.rub}
                           </div>
                         ) : null}
                       </td>

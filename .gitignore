@@ -37,3 +37,11 @@ test-results/
 
 # pdfjs worker — копируется в public/ скриптом copy-pdf-worker (dev/build)
 /public/pdf.worker.min.mjs
+
+# Материалы курсов (исходники контента) — тяжёлые бинарники не в git.
+# Транскрипты (transcript.txt) трекаются как текстовый источник.
+Презентации/**/*.pptx
+Презентации/**/*.pdf
+Презентации/**/*.html
+Презентации/**/*.webp
+Презентации/**/*.docx

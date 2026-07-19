@@ -20,7 +20,7 @@ export async function generateMetadata(): Promise<Metadata> {
       statusBarStyle: "black-translucent",
       title: "ACTIVE SALES",
     },
-    // icon.svg подхватывается автоматически из src/app/icon.svg — дублировать не нужно
+    // icon.png подхватывается автоматически из src/app/icon.png — дублировать не нужно
     icons: { apple: "/api/icon?size=180" },
     openGraph: { type: "website", siteName: "Бизнес-платформа ACTIVE SALES", locale: "ru_RU" },
     twitter: {
@@ -55,7 +55,7 @@ export default async function RootLayout({
     "@type": "EducationalOrganization",
     name: s.orgName,
     url: env.NEXT_PUBLIC_SITE_URL,
-    logo: `${env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "")}/icon.svg`,
+    logo: `${env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "")}/logo.png`,
     description: s.orgDescription ?? s.defaultDescription,
     areaServed: { "@type": "Country", name: s.orgCountry },
     ...(sameAs.length ? { sameAs } : {}),

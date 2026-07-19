@@ -23,6 +23,14 @@ describe("computeExpiry", () => {
   it("MONTHS_12 → +12 месяцев", () => {
     expect(computeExpiry("MONTHS_12", FROM)?.toISOString()).toBe("2027-01-15T10:00:00.000Z");
   });
+
+  it("MONTHS_24 → +24 месяца", () => {
+    expect(computeExpiry("MONTHS_24", FROM)?.toISOString()).toBe("2028-01-15T10:00:00.000Z");
+  });
+
+  it("MONTHS_36 → +36 месяцев", () => {
+    expect(computeExpiry("MONTHS_36", FROM)?.toISOString()).toBe("2029-01-15T10:00:00.000Z");
+  });
 });
 
 describe("addMonths", () => {

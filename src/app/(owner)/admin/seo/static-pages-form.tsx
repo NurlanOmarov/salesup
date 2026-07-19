@@ -96,7 +96,7 @@ function PageCard({ page }: { page: StaticPageFormRow }) {
           <div>
             <div className="flex items-center justify-between">
               <label className={labelCls} htmlFor={`t-${page.path}`}>
-                SEO-заголовок
+                SEO-заголовок (title)
               </label>
               <CharCounter value={title} limit={TITLE_LIMIT} />
             </div>

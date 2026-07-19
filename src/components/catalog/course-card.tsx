@@ -31,7 +31,7 @@ export type CourseCardData = {
   priceTiyn: number;
   oldPriceTiyn: number | null;
   hoursLabel: string | null;
-  /** Предрассчитанные строки цен в 3 валютах (KZT/RUB/BYN по курсу НБ РК). */
+  /** Предрассчитанные строки цен в 3 валютах (BYN основная, KZT/RUB — конвертация по курсу НБ РК). */
   prices?: CoursePrices;
   _count: { modules: number };
 };
@@ -92,7 +92,7 @@ export function CourseCard({ course }: { course: CourseCardData }) {
           <div>
             <div className="flex items-baseline gap-2">
               <span className="text-lg font-bold">
-                {course.prices?.kzt ?? formatPrice(course.priceTiyn)}
+                {course.prices?.byn ?? formatPrice(course.priceTiyn)}
               </span>
               {course.oldPriceTiyn ? (
                 <span className="text-sm text-foreground/40 line-through">
@@ -102,7 +102,7 @@ export function CourseCard({ course }: { course: CourseCardData }) {
             </div>
             {course.prices?.ready ? (
               <p className="mt-0.5 text-xs text-foreground/45">
-                ≈ {course.prices.rub} · ≈ {course.prices.byn}
+                ≈ {course.prices.kzt} · ≈ {course.prices.rub}
               </p>
             ) : null}
           </div>

@@ -19,6 +19,10 @@ export function computeExpiry(
       return addMonths(from, 6);
     case "MONTHS_12":
       return addMonths(from, 12);
+    case "MONTHS_24":
+      return addMonths(from, 24);
+    case "MONTHS_36":
+      return addMonths(from, 36);
     default:
       return null;
   }
@@ -30,6 +34,8 @@ export const ACCESS_DURATIONS = [
   "MONTHS_3",
   "MONTHS_6",
   "MONTHS_12",
+  "MONTHS_24",
+  "MONTHS_36",
   "LIFETIME",
 ] as const satisfies readonly AccessDuration[];
 
@@ -39,6 +45,8 @@ export const ACCESS_DURATION_LABELS: Record<AccessDuration, string> = {
   MONTHS_3: "3 месяца",
   MONTHS_6: "6 месяцев",
   MONTHS_12: "1 год",
+  MONTHS_24: "2 года",
+  MONTHS_36: "3 года",
   LIFETIME: "Бессрочно",
 };
 

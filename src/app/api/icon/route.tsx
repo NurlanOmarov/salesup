@@ -3,7 +3,7 @@ import { ImageResponse } from "next/og";
 /**
  * Генерация PNG-иконок приложения «на лету» для PWA-манифеста (без бинарных ассетов
  * в репозитории). ?size=192|512, ?maskable=1 — с safe-zone отступом под Android-маски.
- * Брендовый знак: тёмный квадрат + амберный «шеврон» (как в src/app/icon.svg).
+ * Брендовый знак: красный квадрат + белый «шеврон» (как в public/logo.png).
  */
 export const dynamic = "force-static";
 export const revalidate = false;
@@ -25,7 +25,7 @@ export function GET(req: Request) {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#020617",
+          background: "#f4003a",
         }}
       >
         <svg
@@ -37,12 +37,12 @@ export function GET(req: Request) {
           <path
             d="M20 44 L32 20 L44 44"
             fill="none"
-            stroke="#f59e0b"
+            stroke="#ffffff"
             strokeWidth={stroke * (64 / inner)}
             strokeLinecap="round"
             strokeLinejoin="round"
           />
-          <circle cx="32" cy="20" r="4" fill="#f59e0b" />
+          <circle cx="32" cy="20" r="4" fill="#ffffff" />
         </svg>
       </div>
     ),

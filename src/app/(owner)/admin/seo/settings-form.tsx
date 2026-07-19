@@ -219,13 +219,13 @@ export function SeoSettingsForm({
             <AiSuggestionCard
               fields={[
                 {
-                  label: "Заголовок",
+                  label: "Заголовок (title)",
                   current: defaultTitle,
                   suggested: suggestion.title,
                   limit: TITLE_LIMIT,
                 },
                 {
-                  label: "Описание",
+                  label: "Описание (description)",
                   current: defaultDescription,
                   suggested: suggestion.description,
                   limit: DESC_LIMIT,
@@ -247,7 +247,7 @@ export function SeoSettingsForm({
 
           <div>
             <label className={labelCls} htmlFor="titleTemplate">
-              Шаблон title
+              Шаблон title (title template)
             </label>
             <input
               id="titleTemplate"
@@ -263,7 +263,7 @@ export function SeoSettingsForm({
           <div>
             <div className="flex items-center justify-between">
               <label className={labelCls} htmlFor="defaultTitle">
-                Заголовок главной / по умолчанию
+                Заголовок главной / по умолчанию (title)
               </label>
               <CharCounter value={defaultTitle} limit={TITLE_LIMIT} />
             </div>
@@ -278,7 +278,7 @@ export function SeoSettingsForm({
           <div>
             <div className="flex items-center justify-between">
               <label className={labelCls} htmlFor="defaultDescription">
-                Описание по умолчанию
+                Описание по умолчанию (description)
               </label>
               <CharCounter value={defaultDescription} limit={DESC_LIMIT} />
             </div>

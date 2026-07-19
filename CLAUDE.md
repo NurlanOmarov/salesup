@@ -61,7 +61,7 @@ deploy/  # docker-compose.yml, nginx.conf, Dockerfile, crontab-заметки
 
 ## Конвенции
 
-- UI — русский; код/коммиты — английский. Деньги в tiyn (Int) — поля сохранены в схеме для будущего платёжного модуля. ID — cuid, slug — kebab-case.
+- UI — русский; код/коммиты — английский. Деньги в tiyn (Int) — поля сохранены в схеме для будущего платёжного модуля; базовая валюта — BYN (белорусский рубль, 1 Br = 100 tiyn), KZT/RUB — витринная конвертация по курсу НБ РК (см. D-010 в docs/DECISIONS.md). ID — cuid, slug — kebab-case.
 - RSC по умолчанию; мутации — Server Actions через `safeAction` (auth+zod+ошибки). Логика в `lib/`, enum-ы из Prisma.
 - Медиа-файлы адресуются ТОЛЬКО относительным ключом через `lib/storage`; запрещено `fs.readFile('/var/...')` в src/.
 - Фича = ветка; перед merge: lint+typecheck+test.

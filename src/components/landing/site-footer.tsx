@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { getSupportContacts } from "@/lib/seo/settings";
 
@@ -10,7 +11,10 @@ export async function SiteFooter() {
     <footer className="bg-slate-950 text-white">
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:grid-cols-2 lg:grid-cols-4">
         <div>
-          <p className="text-lg font-bold">ACTIVE SALES</p>
+          <div className="flex items-center gap-2">
+            <Image src="/logo.png" alt="" width={28} height={28} className="size-7" />
+            <p className="text-lg font-bold text-[#f4003a]">ACTIVE SALES</p>
+          </div>
           <p className="mt-2 text-sm text-white/50">
             Онлайн-курсы по продажам с AI-наставником. Беларусь.
           </p>

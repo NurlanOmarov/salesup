@@ -10,22 +10,17 @@ import { writeAdminLog } from "@/lib/admin/log";
 import { log } from "@/lib/log";
 import { safeAction, type ActionResult } from "@/lib/safe-action";
 import { generateAltText } from "@/lib/seo/ai";
+import { ACCESS_DURATIONS } from "@/lib/admin/enrollment";
 
 /**
  * Управление каталогом курсов (реестр / цены / фото). Только OWNER.
- * Цена хранится в tiyn (1 ₸ = 100 tiyn); админ вводит ₽/₸ в мажорных единицах.
+ * Цена хранится в tiyn (имя поля историческое; по факту — BYN-копейки, 1 Br = 100 tiyn);
+ * админ вводит цену в белорусских рублях (BYN) в мажорных единицах.
  */
 
 const STATUSES = ["DRAFT", "PUBLISHED", "ARCHIVED"] as const;
-const DURATIONS = [
-  "LIFETIME",
-  "MONTHS_1",
-  "MONTHS_3",
-  "MONTHS_6",
-  "MONTHS_12",
-] as const;
 
-/** ₽ в tiyn: «49 000» → 4 900 000 tiyn. Допускает пробелы как разделители. */
+/** BYN в tiyn: «300» → 30 000 tiyn. */
 function toTiyn(raw: number): number {
   return Math.max(0, Math.round(raw * 100));
 }
@@ -38,10 +33,10 @@ export const updateCourseAction = safeAction(
       subtitle: z.string().trim().max(300).optional().or(z.literal("")),
       industry: z.string().trim().max(80).optional().or(z.literal("")),
       description: z.string().trim().max(8000).optional().or(z.literal("")),
-      priceKzt: z.coerce.number().min(0),
-      oldPriceKzt: z.coerce.number().min(0).optional(),
+      priceByn: z.coerce.number().min(0),
+      oldPriceByn: z.coerce.number().min(0).optional(),
       status: z.enum(STATUSES),
-      accessDuration: z.enum(DURATIONS),
+      accessDuration: z.enum(ACCESS_DURATIONS),
       sortOrder: z.coerce.number().int().min(0).max(9999),
       hoursLabel: z.string().trim().max(40).optional().or(z.literal("")),
       seoTitle: z.string().trim().max(200).optional().or(z.literal("")),
@@ -71,10 +66,10 @@ export const updateCourseAction = safeAction(
       subtitle: input.subtitle || null,
       industry: input.industry || null,
       description: input.description || "",
-      priceTiyn: toTiyn(input.priceKzt),
+      priceTiyn: toTiyn(input.priceByn),
       oldPriceTiyn:
-        input.oldPriceKzt && input.oldPriceKzt > input.priceKzt
-          ? toTiyn(input.oldPriceKzt)
+        input.oldPriceByn && input.oldPriceByn > input.priceByn
+          ? toTiyn(input.oldPriceByn)
           : null,
       status: input.status,
       accessDuration: input.accessDuration,

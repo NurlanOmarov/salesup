@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Loader2, Upload, CheckCircle2, AlertCircle, Sparkles, Gauge } from "lucide-react";
 import type { RatesMap } from "@/lib/currency";
 import { coverPublicUrl } from "@/lib/utils";
+import { ACCESS_DURATIONS, ACCESS_DURATION_LABELS } from "@/lib/admin/enrollment";
 import {
   updateCourseAction,
   uploadCoverAction,
@@ -37,12 +38,7 @@ interface CourseFields {
   priceTiyn: number;
   oldPriceTiyn: number | null;
   status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
-  accessDuration:
-    | "LIFETIME"
-    | "MONTHS_1"
-    | "MONTHS_3"
-    | "MONTHS_6"
-    | "MONTHS_12";
+  accessDuration: (typeof ACCESS_DURATIONS)[number];
   sortOrder: number;
   hoursLabel: string | null;
   seoTitle: string | null;
@@ -59,18 +55,22 @@ interface CourseFields {
 
 const SYMBOLS = { KZT: "₸", RUB: "₽", BYN: "Br" } as const;
 
-// Зеркало округления lib/currency/format (ceil до 100 для RUB, до 10 для BYN).
+// Зеркало округления lib/currency/format (ceil до 100 для KZT/RUB, BYN — база, без округления).
 function roundFor(amount: number, code: "KZT" | "RUB" | "BYN"): number {
-  if (code === "RUB") return Math.ceil(amount / 100) * 100;
-  if (code === "BYN") return Math.ceil(amount / 10) * 10;
+  if (code === "KZT" || code === "RUB") return Math.ceil(amount / 100) * 100;
   return amount;
 }
+/** byn — введённая админом цена в BYN; code — валюта отображения (BYN — как есть, KZT/RUB — кросс-курс через rates.BYN). */
 function preview(
-  kzt: number,
+  byn: number,
   code: "KZT" | "RUB" | "BYN",
   rates: RatesMap,
 ): string {
-  if (code === "KZT") return `${kzt.toLocaleString("ru-RU")} ${SYMBOLS.KZT}`;
+  if (code === "BYN") return `${byn.toLocaleString("ru-RU")} ${SYMBOLS.BYN}`;
+  const bynRate = rates.BYN;
+  if (!bynRate || bynRate <= 0) return "—";
+  const kzt = byn * bynRate;
+  if (code === "KZT") return `${Math.round(roundFor(kzt, "KZT")).toLocaleString("ru-RU")} ${SYMBOLS.KZT}`;
   const rate = rates[code];
   if (!rate || rate <= 0) return "—";
   const v = roundFor(kzt / rate, code);
@@ -88,8 +88,8 @@ export function CourseEditForm({
   const [subtitle, setSubtitle] = useState(course.subtitle ?? "");
   const [industry, setIndustry] = useState(course.industry ?? "");
   const [description, setDescription] = useState(course.description);
-  const [priceKzt, setPriceKzt] = useState(course.priceTiyn / 100);
-  const [oldPriceKzt, setOldPriceKzt] = useState(
+  const [priceByn, setPriceByn] = useState(course.priceTiyn / 100);
+  const [oldPriceByn, setOldPriceByn] = useState(
     course.oldPriceTiyn ? course.oldPriceTiyn / 100 : 0,
   );
   const [status, setStatus] = useState(course.status);
@@ -218,8 +218,8 @@ export function CourseEditForm({
     setSubtitle(course.subtitle ?? "");
     setIndustry(course.industry ?? "");
     setDescription(course.description);
-    setPriceKzt(course.priceTiyn / 100);
-    setOldPriceKzt(course.oldPriceTiyn ? course.oldPriceTiyn / 100 : 0);
+    setPriceByn(course.priceTiyn / 100);
+    setOldPriceByn(course.oldPriceTiyn ? course.oldPriceTiyn / 100 : 0);
     setStatus(course.status);
     setAccessDuration(course.accessDuration);
     setSortOrder(course.sortOrder);
@@ -265,8 +265,8 @@ export function CourseEditForm({
         subtitle,
         industry,
         description,
-        priceKzt,
-        oldPriceKzt,
+        priceByn,
+        oldPriceByn,
         status,
         accessDuration,
         sortOrder,
@@ -368,28 +368,28 @@ export function CourseEditForm({
         <div className="grid gap-5 sm:grid-cols-2">
           <div>
             <label className={labelCls} htmlFor="price">
-              Цена, ₸ (тенге)
+              Цена, Br (BYN)
             </label>
             <input
               id="price"
               type="number"
               min={0}
               className={inputCls}
-              value={priceKzt}
-              onChange={(e) => setPriceKzt(Number(e.target.value) || 0)}
+              value={priceByn}
+              onChange={(e) => setPriceByn(Number(e.target.value) || 0)}
             />
           </div>
           <div>
             <label className={labelCls} htmlFor="oldPrice">
-              Старая цена, ₸ (для зачёркивания)
+              Старая цена, Br (для зачёркивания)
             </label>
             <input
               id="oldPrice"
               type="number"
               min={0}
               className={inputCls}
-              value={oldPriceKzt}
-              onChange={(e) => setOldPriceKzt(Number(e.target.value) || 0)}
+              value={oldPriceByn}
+              onChange={(e) => setOldPriceByn(Number(e.target.value) || 0)}
             />
           </div>
         </div>
@@ -397,15 +397,15 @@ export function CourseEditForm({
         {/* Живой пересчёт в 3 валютах */}
         <div className="rounded-lg bg-foreground/[0.03] p-3 text-sm">
           <p className="mb-1 text-xs uppercase tracking-wide text-foreground/40">
-            Цена по курсу НБ РК (RUB/BYN — с округлением)
+            Цена по курсу НБ РК (KZT/RUB — с округлением)
           </p>
           <div className="flex flex-wrap gap-x-5 gap-y-1 font-medium">
-            <span>{preview(priceKzt, "KZT", rates)}</span>
+            <span>{preview(priceByn, "BYN", rates)}</span>
             <span className="text-foreground/60">
-              {preview(priceKzt, "RUB", rates)}
+              {preview(priceByn, "KZT", rates)}
             </span>
             <span className="text-foreground/60">
-              {preview(priceKzt, "BYN", rates)}
+              {preview(priceByn, "RUB", rates)}
             </span>
           </div>
         </div>
@@ -442,11 +442,11 @@ export function CourseEditForm({
                 )
               }
             >
-              <option value="LIFETIME">Навсегда</option>
-              <option value="MONTHS_1">1 месяц</option>
-              <option value="MONTHS_3">3 месяца</option>
-              <option value="MONTHS_6">6 месяцев</option>
-              <option value="MONTHS_12">12 месяцев</option>
+              {ACCESS_DURATIONS.map((d) => (
+                <option key={d} value={d}>
+                  {ACCESS_DURATION_LABELS[d]}
+                </option>
+              ))}
             </select>
           </div>
           <div>
@@ -529,13 +529,13 @@ export function CourseEditForm({
               <AiSuggestionCard
                 fields={[
                   {
-                    label: "SEO-заголовок",
+                    label: "SEO-заголовок (title)",
                     current: seoTitle,
                     suggested: metaSuggestion.title,
                     limit: TITLE_LIMIT,
                   },
                   {
-                    label: "SEO-описание",
+                    label: "SEO-описание (description)",
                     current: seoDescription,
                     suggested: metaSuggestion.description,
                     limit: DESC_LIMIT,
@@ -624,7 +624,7 @@ export function CourseEditForm({
         <div>
           <div className="flex items-center justify-between">
             <label className={labelCls} htmlFor="seoTitle">
-              SEO-заголовок
+              SEO-заголовок (title)
             </label>
             <CharCounter value={seoTitle} limit={TITLE_LIMIT} />
           </div>
@@ -639,7 +639,7 @@ export function CourseEditForm({
         <div>
           <div className="flex items-center justify-between">
             <label className={labelCls} htmlFor="seoDesc">
-              SEO-описание
+              SEO-описание (description)
             </label>
             <CharCounter value={seoDescription} limit={DESC_LIMIT} />
           </div>
@@ -656,7 +656,7 @@ export function CourseEditForm({
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label className={labelCls} htmlFor="ogTitle">
-              OG-заголовок (для соцсетей)
+              OG-заголовок (og:title, для соцсетей)
             </label>
             <input
               id="ogTitle"
@@ -668,7 +668,7 @@ export function CourseEditForm({
           </div>
           <div>
             <label className={labelCls} htmlFor="ogDesc">
-              OG-описание
+              OG-описание (og:description)
             </label>
             <input
               id="ogDesc"
@@ -790,7 +790,7 @@ export function CourseEditForm({
               className="text-sm font-medium text-foreground/80"
               htmlFor="coverAlt"
             >
-              Alt-текст обложки
+              Alt-текст обложки (alt)
             </label>
             <button
               type="button"

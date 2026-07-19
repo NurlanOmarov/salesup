@@ -159,6 +159,8 @@ enum AccessDuration {
   MONTHS_3
   MONTHS_6
   MONTHS_12
+  MONTHS_24
+  MONTHS_36
 }
 
 model Course {

@@ -50,9 +50,9 @@ export async function CoursesSeoStatus() {
             <th className="px-4 py-2 font-medium">Курс</th>
             <th className="px-3 py-2 text-center font-medium">Title</th>
             <th className="px-3 py-2 text-center font-medium">Description</th>
-            <th className="px-3 py-2 text-center font-medium">Фокус-ключ</th>
-            <th className="px-3 py-2 text-center font-medium">Alt обложки</th>
-            <th className="px-3 py-2 text-center font-medium">Индекс</th>
+            <th className="px-3 py-2 text-center font-medium">Фокус-ключ (focus keyword)</th>
+            <th className="px-3 py-2 text-center font-medium">Alt обложки (alt)</th>
+            <th className="px-3 py-2 text-center font-medium">Индекс (index)</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-foreground/5">

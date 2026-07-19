@@ -155,7 +155,7 @@ export default async function CoursePage({
     offers: {
       "@type": "Offer",
       price: Math.round(course.priceTiyn / 100),
-      priceCurrency: "KZT",
+      priceCurrency: "BYN",
       availability: "https://schema.org/InStock",
     },
     ...(course.hoursLabel ? { timeRequired: course.hoursLabel } : {}),
@@ -321,7 +321,7 @@ export default async function CoursePage({
 
                 <div className="flex items-baseline gap-3">
                   <span className="text-3xl font-bold text-white">
-                    {prices.kzt}
+                    {prices.byn}
                   </span>
                   {course.oldPriceTiyn ? (
                     <span className="text-lg text-white/40 line-through">
@@ -331,7 +331,7 @@ export default async function CoursePage({
                 </div>
                 {hasRates ? (
                   <p className="mt-1 text-sm text-white/50">
-                    ≈ {prices.rub} · ≈ {prices.byn}
+                    ≈ {prices.kzt} · ≈ {prices.rub}
                   </p>
                 ) : null}
                 <p className="mt-1 text-sm text-white/50">
@@ -557,10 +557,10 @@ export default async function CoursePage({
                 <p className="mt-2 font-semibold text-amber-400">
                   {course.title}
                 </p>
-                <p className="text-2xl font-bold">{prices.kzt}</p>
+                <p className="text-2xl font-bold">{prices.byn}</p>
                 {hasRates ? (
                   <p className="text-sm text-white/50">
-                    ≈ {prices.rub} · ≈ {prices.byn}
+                    ≈ {prices.kzt} · ≈ {prices.rub}
                   </p>
                 ) : null}
               </div>

@@ -79,10 +79,10 @@ export default async function CourseEditPage({
           <p className="text-xs uppercase tracking-wide text-foreground/40">
             Текущая цена (по курсу НБ РК)
           </p>
-          <p className="mt-1 font-bold">{prices.kzt}</p>
+          <p className="mt-1 font-bold">{prices.byn}</p>
           {hasRates ? (
             <p className="text-xs text-foreground/50">
-              {prices.rub} · {prices.byn}
+              {prices.kzt} · {prices.rub}
             </p>
           ) : null}
         </div>
