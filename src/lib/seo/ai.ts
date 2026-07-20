@@ -1,5 +1,5 @@
 import "server-only";
-import { complete, completeVision, type VisionMediaType } from "@/lib/ai/anthropic";
+import { complete } from "@/lib/ai/anthropic";
 
 /**
  * AI-ассистент SEO-метаданных (Anthropic Haiku — CLAUDE.md: Haiku для проверок/
@@ -218,41 +218,4 @@ export async function draftStaticPageText(
   const text = raw.trim();
   if (!text) throw new Error("AI не вернул текст");
   return text;
-}
-
-// ─────────────────────────── AI alt-текст изображения (vision) ───────────────────────────
-
-export const ALT_MAX = 125;
-
-/**
- * Сгенерировать alt-текст по самой картинке (Haiku vision) с учётом контекста страницы.
- * Для image SEO и доступности: описывает, что на изображении, без слов «картинка/фото».
- */
-export async function generateAltText(opts: {
-  imageBase64: string;
-  mediaType: VisionMediaType;
-  context?: string | null; // напр. «Обложка курса „Активные продажи для медпредов"»
-  userId?: string | null;
-}): Promise<string> {
-  const raw = await completeVision({
-    model: "claude-haiku-4-5",
-    system:
-      "Ты пишешь alt-тексты для изображений сайта (русский язык). Правила: одно " +
-      `предложение до ${ALT_MAX} символов; описывай, что изображено, конкретно и ` +
-      "нейтрально; без слов «изображение», «картинка», «фото»; без кавычек вокруг " +
-      "ответа; учитывай контекст страницы, если он дан. Верни ТОЛЬКО сам alt-текст.",
-    prompt:
-      (opts.context ? `Контекст: ${opts.context}.\n` : "") +
-      "Напиши alt-текст для этого изображения.",
-    imageBase64: opts.imageBase64,
-    mediaType: opts.mediaType,
-    maxTokens: 200,
-    temperature: 0.4,
-    operation: "seo:alt",
-    userId: opts.userId ?? null,
-  });
-
-  const alt = raw.trim().replace(/^["«]|["»]$/g, "").trim();
-  if (!alt) throw new Error("AI не вернул alt-текст");
-  return clampWords(alt, ALT_MAX + 35); // небольшой запас сверх рекомендации
 }

@@ -4,12 +4,10 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
-import { env } from "@/env";
 import { storage, normalizeKey } from "@/lib/storage";
 import { writeAdminLog } from "@/lib/admin/log";
 import { log } from "@/lib/log";
 import { safeAction, type ActionResult } from "@/lib/safe-action";
-import { generateAltText } from "@/lib/seo/ai";
 import { ACCESS_DURATIONS } from "@/lib/admin/enrollment";
 
 /**
@@ -272,8 +270,11 @@ export const removeOgImageAction = safeAction(
 );
 
 /**
- * AI alt-текст обложки (Haiku vision): смотрит на саму картинку + контекст курса.
- * Возвращает ПРЕДЛОЖЕНИЕ — владелец применяет его в форме (поле coverAlt) и сохраняет.
+ * Alt-текст обложки — детерминированно из названия курса и отрасли (без AI/vision).
+ * Обложка курса — это графика с наложенным текстом (заголовок, автор, бейджи), а не
+ * фото: vision-модель описывала визуальную сцену и игнорировала сам текст на картинке,
+ * то есть смысловое содержание. Возвращает ПРЕДЛОЖЕНИЕ — владелец применяет его в форме
+ * (поле coverAlt) и сохраняет.
  */
 export async function generateCoverAltAction(
   raw: unknown,
@@ -291,35 +292,6 @@ export async function generateCoverAltAction(
   });
   if (!course?.coverUrl) return { ok: false, error: "У курса нет обложки" };
 
-  try {
-    // Обложка: ключ хранилища → storage; сид-путь /images/… или http → fetch.
-    let buf: Buffer;
-    let mediaType: "image/png" | "image/jpeg" | "image/webp" | "image/gif";
-    const src = course.coverUrl;
-    if (src.startsWith("/") || src.startsWith("http")) {
-      const url = src.startsWith("http")
-        ? src
-        : `${env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "")}${src}`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`Обложка недоступна (${res.status})`);
-      buf = Buffer.from(await res.arrayBuffer());
-      const ct = res.headers.get("content-type") ?? "";
-      mediaType = ct.includes("jpeg") ? "image/jpeg" : ct.includes("webp") ? "image/webp" : ct.includes("gif") ? "image/gif" : "image/png";
-    } else {
-      buf = await storage.get(src);
-      const ext = src.slice(src.lastIndexOf(".") + 1).toLowerCase();
-      mediaType = ext === "jpg" || ext === "jpeg" ? "image/jpeg" : ext === "webp" ? "image/webp" : ext === "gif" ? "image/gif" : "image/png";
-    }
-    if (buf.length > 5 * 1024 * 1024) return { ok: false, error: "Обложка слишком велика для анализа (>5 МБ)" };
-
-    const alt = await generateAltText({
-      imageBase64: buf.toString("base64"),
-      mediaType,
-      context: `Обложка курса «${course.title}»${course.industry ? `, отрасль: ${course.industry}` : ""}`,
-      userId: session.user.id,
-    });
-    return { ok: true, data: { alt } };
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "Ошибка AI" };
-  }
+  const alt = `Обложка курса «${course.title}»${course.industry ? `, отрасль: ${course.industry}` : ""}`;
+  return { ok: true, data: { alt } };
 }

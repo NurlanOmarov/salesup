@@ -783,7 +783,7 @@ export function CourseEditForm({
           </p>
         ) : null}
 
-        {/* Alt-текст обложки (image SEO/доступность) + AI по самой картинке */}
+        {/* Alt-текст обложки (image SEO/доступность): автозаполнение из названия+отрасли */}
         <div className="border-t border-foreground/10 pt-3">
           <div className="flex items-center justify-between">
             <label
@@ -803,7 +803,7 @@ export function CourseEditForm({
               ) : (
                 <Sparkles className="size-3" />
               )}
-              AI по картинке
+              Заполнить из названия
             </button>
           </div>
           <input
