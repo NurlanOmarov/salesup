@@ -38,9 +38,11 @@ const db = new PrismaClient();
 /**
  * Точечный режим для прода (иначе сид затирает правки админки).
  *   SEED_COURSES=sales-b2b   — обрабатывать только перечисленные курсы (через запятую)
- *   SEED_PRESERVE_COURSE=1   — НЕ трогать поля существующего курса (цена, обложка,
- *                              описание правятся в админке); создавать только
- *                              недостающие модули/уроки и учебный контент
+ *   SEED_PRESERVE_COURSE=1   — сохранить поля, которые ведёт админка: цену
+ *                              (priceTiyn/oldPriceTiyn), обложку и статус курса.
+ *                              Тексты витрины (описание, «чему научитесь», FAQ,
+ *                              длительность) при этом обновляются из сида —
+ *                              иначе на проде остаётся описание от старого каркаса
  * По умолчанию (локальная разработка) — прежнее поведение: полный сид.
  */
 const SEED_COURSES = (process.env.SEED_COURSES ?? "")
@@ -497,11 +499,25 @@ const COURSES: CourseSpec[] = [
 ];
 
 async function upsertCourse(spec: CourseSpec) {
-  // SEED_PRESERVE_COURSE: существующий курс не трогаем — его поля ведёт админка.
+  // SEED_PRESERVE_COURSE: цену, обложку и статус ведёт админка — их не трогаем,
+  // тексты витрины обновляем (описание старого каркаса иначе останется на проде).
   if (SEED_PRESERVE_COURSE) {
     const existing = await db.course.findUnique({ where: { slug: spec.slug }, select: { id: true, slug: true } });
     if (existing) {
-      console.log(`   курс ${spec.slug}: поля сохранены (SEED_PRESERVE_COURSE=1)`);
+      await db.course.update({
+        where: { id: existing.id },
+        data: {
+          title: spec.title,
+          subtitle: spec.subtitle,
+          description: spec.description,
+          industry: spec.industry,
+          hoursLabel: spec.hoursLabel,
+          learnPoints: spec.learnPoints,
+          targetAudience: spec.targetAudience,
+          faq: spec.faq,
+        },
+      });
+      console.log(`   курс ${spec.slug}: тексты обновлены, цена/обложка/статус сохранены`);
       await createMissingModules(existing.id, spec);
       return existing;
     }
