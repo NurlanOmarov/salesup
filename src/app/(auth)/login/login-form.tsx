@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
@@ -34,18 +35,8 @@ export function LoginForm({
         href="/"
         className="flex items-center gap-2 text-lg font-bold tracking-tight"
       >
-        <svg viewBox="0 0 64 64" className="size-6" aria-hidden>
-          <rect width="64" height="64" rx="14" fill="#f59e0b" />
-          <path
-            d="M20 44 L32 20 L44 44"
-            fill="none"
-            stroke="#020617"
-            strokeWidth="6"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-        ACTIVE SALES
+        <Image src="/logo.png" alt="" width={24} height={24} className="size-6" />
+        <span className="text-brand">ACTIVE SALES</span>
       </Link>
 
       <h1 className="mt-6 text-2xl font-bold">Вход</h1>

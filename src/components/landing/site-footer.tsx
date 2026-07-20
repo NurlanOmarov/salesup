@@ -13,7 +13,7 @@ export async function SiteFooter() {
         <div>
           <div className="flex items-center gap-2">
             <Image src="/logo.png" alt="" width={28} height={28} className="size-7" />
-            <p className="text-lg font-bold text-[#f4003a]">ACTIVE SALES</p>
+            <p className="text-lg font-bold text-brand">ACTIVE SALES</p>
           </div>
           <p className="mt-2 text-sm text-white/50">
             Онлайн-курсы по продажам с AI-наставником. Беларусь.
@@ -24,17 +24,17 @@ export async function SiteFooter() {
           <p className="font-semibold text-white/90">Навигация</p>
           <ul className="mt-2 space-y-1 text-white/60">
             <li>
-              <Link href="/" className="transition-colors hover:text-amber-400">
+              <Link href="/" className="transition-colors hover:text-brand-light">
                 Главная
               </Link>
             </li>
             <li>
-              <Link href="/courses" className="transition-colors hover:text-amber-400">
+              <Link href="/courses" className="transition-colors hover:text-brand-light">
                 Каталог курсов
               </Link>
             </li>
             <li>
-              <Link href="/login" className="transition-colors hover:text-amber-400">
+              <Link href="/login" className="transition-colors hover:text-brand-light">
                 Вход для учеников
               </Link>
             </li>
@@ -45,7 +45,7 @@ export async function SiteFooter() {
           <p className="font-semibold text-white/90">Контакты</p>
           <ul className="mt-2 space-y-1 text-white/60">
             <li>
-              <a href={phoneHref} className="transition-colors hover:text-amber-400">
+              <a href={phoneHref} className="transition-colors hover:text-brand-light">
                 {phone}
               </a>
             </li>
@@ -55,7 +55,7 @@ export async function SiteFooter() {
                   href={wa}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="transition-colors hover:text-amber-400"
+                  className="transition-colors hover:text-brand-light"
                 >
                   WhatsApp
                 </a>
@@ -67,7 +67,7 @@ export async function SiteFooter() {
                   href={tg}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="transition-colors hover:text-amber-400"
+                  className="transition-colors hover:text-brand-light"
                 >
                   Telegram
                 </a>
@@ -80,14 +80,14 @@ export async function SiteFooter() {
           <p className="font-semibold text-white/90">Документы</p>
           <ul className="mt-2 space-y-1 text-white/60">
             <li>
-              <Link href="/offer" className="transition-colors hover:text-amber-400">
+              <Link href="/offer" className="transition-colors hover:text-brand-light">
                 Публичная оферта
               </Link>
             </li>
             <li>
               <Link
                 href="/privacy"
-                className="transition-colors hover:text-amber-400"
+                className="transition-colors hover:text-brand-light"
               >
                 Политика конфиденциальности
               </Link>

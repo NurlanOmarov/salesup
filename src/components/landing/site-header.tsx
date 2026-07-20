@@ -9,7 +9,7 @@ export function SiteHeader() {
         <Link href="/" className="flex items-center gap-2.5">
           <Image src="/logo.png" alt="" width={36} height={36} className="size-9" priority />
           <span className="flex flex-col leading-tight">
-            <span className="text-lg font-bold tracking-tight text-[#f4003a]">ACTIVE SALES</span>
+            <span className="text-lg font-bold tracking-tight text-brand">ACTIVE SALES</span>
             <span className="text-[11px] font-medium text-white/60">
               бизнес-тренинги для менеджеров
             </span>

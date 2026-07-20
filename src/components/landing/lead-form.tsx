@@ -73,7 +73,7 @@ export function LeadForm({
       <Button
         type="submit"
         size="lg"
-        variant="accent"
+        variant="brand"
         className="mt-4 w-full"
         disabled={isPending}
       >

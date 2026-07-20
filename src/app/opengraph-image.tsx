@@ -40,7 +40,7 @@ export default async function OgImage() {
             display: "flex",
             alignItems: "center",
             gap: 16,
-            color: "#f59e0b",
+            color: "#f4003a",
             fontSize: 28,
             fontWeight: 700,
           }}
@@ -52,7 +52,7 @@ export default async function OgImage() {
               height: 0,
               borderLeft: "16px solid transparent",
               borderRight: "16px solid transparent",
-              borderBottom: "26px solid #f59e0b",
+              borderBottom: "26px solid #f4003a",
             }}
           />
           ACTIVE SALES
@@ -81,8 +81,8 @@ export default async function OgImage() {
         >
           <div
             style={{
-              background: "#f59e0b",
-              color: "#020617",
+              background: "#f4003a",
+              color: "#ffffff",
               borderRadius: 999,
               padding: "12px 28px",
               fontSize: 26,

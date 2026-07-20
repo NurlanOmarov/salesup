@@ -63,8 +63,8 @@ export default async function CourseOgImage({
       >
         {/* Header: logo + industry */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, color: "#f59e0b", fontWeight: 700, fontSize: 22 }}>
-            <div style={{ width: 0, height: 0, borderLeft: "12px solid transparent", borderRight: "12px solid transparent", borderBottom: "20px solid #f59e0b" }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 12, color: "#f4003a", fontWeight: 700, fontSize: 22 }}>
+            <div style={{ width: 0, height: 0, borderLeft: "12px solid transparent", borderRight: "12px solid transparent", borderBottom: "20px solid #f4003a" }} />
             ACTIVE SALES
           </div>
           {industry ? (

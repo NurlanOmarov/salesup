@@ -50,7 +50,7 @@ export function CourseCard({ course }: { course: CourseCardData }) {
   return (
     <Link
       href={`/courses/${course.slug}`}
-      className="group flex flex-col overflow-hidden rounded-2xl border border-foreground/10 bg-background transition-all duration-300 hover:-translate-y-1 hover:border-amber-500/40 hover:shadow-lg hover:shadow-amber-500/5"
+      className="group flex flex-col overflow-hidden rounded-2xl border border-foreground/10 bg-background transition-all duration-300 hover:-translate-y-1 hover:border-brand/40 hover:shadow-lg hover:shadow-brand/5"
     >
       {/* Обложка */}
       <div className={`relative aspect-video bg-gradient-to-br ${gradient}`}>
@@ -79,7 +79,7 @@ export function CourseCard({ course }: { course: CourseCardData }) {
 
       {/* Контент */}
       <div className="flex flex-1 flex-col p-5">
-        <h2 className="line-clamp-2 font-semibold leading-snug group-hover:text-amber-700 transition-colors">
+        <h2 className="line-clamp-2 font-semibold leading-snug group-hover:text-brand-strong transition-colors">
           {course.title}
         </h2>
         {course.subtitle ? (

@@ -47,7 +47,7 @@ export function StatCounter({
     <div ref={ref} className="text-center">
       <div className="text-3xl font-bold tabular-nums text-white sm:text-4xl">
         {fmt(display)}
-        <span className="text-amber-400">{suffix}</span>
+        <span className="text-brand-light">{suffix}</span>
       </div>
       <div className="mt-1 text-sm text-white/60">{label}</div>
     </div>

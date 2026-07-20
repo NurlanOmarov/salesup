@@ -32,7 +32,7 @@ export function IndustriesMarquee({ items }: { items: readonly string[] }) {
           <span
             key={`${name}-${i}`}
             aria-hidden={i >= items.length}
-            className="whitespace-nowrap rounded-full border border-foreground/15 bg-background px-5 py-2.5 text-sm font-medium transition-colors hover:border-amber-500/50 hover:text-amber-600"
+            className="whitespace-nowrap rounded-full border border-foreground/15 bg-background px-5 py-2.5 text-sm font-medium transition-colors hover:border-brand/50 hover:text-brand-strong"
           >
             {name}
           </span>

@@ -244,7 +244,7 @@ export default async function CoursePage({
             <div>
               {course.industry ? (
                 <Reveal>
-                  <span className="inline-flex items-center rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-xs font-medium text-amber-300">
+                  <span className="inline-flex items-center rounded-full border border-brand-light/30 bg-brand/10 px-3 py-1 text-xs font-medium text-brand-light">
                     {course.industry}
                   </span>
                 </Reveal>
@@ -288,7 +288,7 @@ export default async function CoursePage({
               {learnPoints.length > 0 ? (
                 <Reveal delay={0.12}>
                   <div className="mt-8">
-                    <h2 className="text-sm font-semibold uppercase tracking-wider text-amber-400">
+                    <h2 className="text-sm font-semibold uppercase tracking-wider text-brand-light">
                       Что вы получите
                     </h2>
                     <ul className="mt-3 space-y-2">
@@ -341,7 +341,7 @@ export default async function CoursePage({
                 <a
                   href="#zayavka"
                   className={cn(
-                    buttonVariants({ variant: "accent", size: "lg" }),
+                    buttonVariants({ variant: "brand", size: "lg" }),
                     "mt-4 w-full",
                   )}
                 >
@@ -416,7 +416,7 @@ export default async function CoursePage({
               <details className="group rounded-xl border border-foreground/10 bg-background">
                 <summary className="flex cursor-pointer items-center justify-between gap-4 px-5 py-4 marker:content-none">
                   <div className="flex items-center gap-3">
-                    <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-xs font-bold text-amber-700">
+                    <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-brand/10 text-xs font-bold text-brand-strong">
                       {mIdx + 1}
                     </span>
                     <span className="font-semibold">{module.title}</span>
@@ -485,7 +485,7 @@ export default async function CoursePage({
           {/* Тренер — краткий блок */}
           <Reveal delay={0.05}>
             <div className="rounded-2xl border border-foreground/10 bg-background p-6">
-              <p className="text-xs font-semibold uppercase tracking-wider text-amber-700">
+              <p className="text-xs font-semibold uppercase tracking-wider text-brand-strong">
                 Ваш тренер
               </p>
               <p className="mt-2 text-lg font-bold">{trainer.name}</p>
@@ -493,7 +493,7 @@ export default async function CoursePage({
               <p className="mt-3 text-sm text-foreground/70">{trainer.text}</p>
               <Link
                 href="/#trainer"
-                className="mt-4 inline-block text-sm font-medium text-amber-700 hover:text-amber-600"
+                className="mt-4 inline-block text-sm font-medium text-brand-strong hover:text-brand"
               >
                 Подробнее о тренере →
               </Link>
@@ -545,7 +545,7 @@ export default async function CoursePage({
       {/* CTA — форма заявки */}
       <section id="zayavka" className="mx-auto max-w-6xl px-4 pb-20 pt-4">
         <div className="relative overflow-hidden rounded-3xl bg-slate-950 p-8 text-white md:p-12">
-          <div className="pointer-events-none absolute -top-24 right-0 h-72 w-72 rounded-full bg-amber-500/10 blur-3xl" />
+          <div className="pointer-events-none absolute -top-24 right-0 h-72 w-72 rounded-full bg-brand/15 blur-3xl" />
           <div className="relative grid items-center gap-10 md:grid-cols-2">
             <Reveal>
               <div>
@@ -554,7 +554,7 @@ export default async function CoursePage({
                   Оставьте заявку — расскажем об условиях, подберём удобный способ
                   оплаты. Доступ выдаётся вручную после подтверждения оплаты.
                 </p>
-                <p className="mt-2 font-semibold text-amber-400">
+                <p className="mt-2 font-semibold text-brand-light">
                   {course.title}
                 </p>
                 <p className="text-2xl font-bold">{prices.byn}</p>
@@ -607,7 +607,7 @@ export default async function CoursePage({
                     ) : null}
                   </div>
                   <div className="p-4">
-                    <p className="font-semibold leading-snug group-hover:text-amber-600">
+                    <p className="font-semibold leading-snug group-hover:text-brand-strong">
                       {r.title}
                     </p>
                     {r.subtitle ? (

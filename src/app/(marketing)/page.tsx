@@ -113,7 +113,7 @@ export default async function LandingPage() {
       {/* Hero — тёмная «киношная» секция (ТЗ §2.3, ориентир MasterClass) */}
       <section className="relative overflow-hidden bg-slate-950 text-white">
         <div className="pointer-events-none absolute inset-0">
-          <div className="aurora-a absolute -top-32 left-1/2 h-96 w-[60rem] -translate-x-1/2 rounded-full bg-amber-500/15 blur-3xl" />
+          <div className="aurora-a absolute -top-32 left-1/2 h-96 w-[60rem] -translate-x-1/2 rounded-full bg-brand/20 blur-3xl" />
           <div className="aurora-b absolute -bottom-48 right-0 h-96 w-96 rounded-full bg-indigo-500/15 blur-3xl" />
           {/* тонкая сетка для глубины */}
           <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:72px_72px] [mask-image:radial-gradient(ellipse_70%_60%_at_50%_0%,black,transparent)]" />
@@ -122,12 +122,12 @@ export default async function LandingPage() {
         <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 pb-16 pt-16 sm:pt-20 lg:grid-cols-[1.1fr_1fr] lg:pb-24">
           <div className="text-center lg:text-left">
             <Reveal>
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-300/90">
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-brand-light">
                 Бизнес-платформа ACTIVE SALES
               </p>
             </Reveal>
             <Reveal delay={0.05}>
-              <span className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-xs font-medium text-amber-300">
+              <span className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-brand-light/30 bg-brand/10 px-3 py-1 text-xs font-medium text-brand-light">
                 {hero.badge}
               </span>
             </Reveal>
@@ -145,7 +145,7 @@ export default async function LandingPage() {
                 <Link
                   href="/courses"
                   className={cn(
-                    buttonVariants({ size: "lg", variant: "accent" }),
+                    buttonVariants({ size: "lg", variant: "brand" }),
                     "w-full sm:w-auto",
                   )}
                 >
@@ -205,12 +205,12 @@ export default async function LandingPage() {
             const Icon = stepIcons[s.icon];
             return (
               <Reveal key={s.title} delay={i * 0.05}>
-                <div className="group h-full rounded-2xl border border-foreground/10 p-6 transition-all duration-300 hover:-translate-y-1 hover:border-amber-500/40 hover:shadow-lg hover:shadow-amber-500/5">
-                  <div className="flex size-11 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 transition-colors group-hover:bg-amber-500 group-hover:text-slate-950">
+                <div className="group h-full rounded-2xl border border-foreground/10 p-6 transition-all duration-300 hover:-translate-y-1 hover:border-brand/40 hover:shadow-lg hover:shadow-brand/5">
+                  <div className="flex size-11 items-center justify-center rounded-xl bg-brand/10 text-brand-strong transition-colors group-hover:bg-brand group-hover:text-white">
                     <Icon className="size-6" />
                   </div>
                   <h3 className="mt-4 font-semibold">
-                    <span className="mr-1.5 text-amber-700">{i + 1}.</span>
+                    <span className="mr-1.5 text-brand-strong">{i + 1}.</span>
                     {s.title}
                   </h3>
                   <p className="mt-2 text-sm text-foreground/70">{s.text}</p>
@@ -235,8 +235,8 @@ export default async function LandingPage() {
               const Icon = formatIcons[f.icon];
               return (
                 <Reveal key={f.title} delay={(i % 3) * 0.05}>
-                  <div className="group h-full rounded-2xl border border-foreground/10 bg-background p-6 transition-all duration-300 hover:-translate-y-1 hover:border-amber-500/40 hover:shadow-lg hover:shadow-amber-500/5">
-                    <div className="flex size-11 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 transition-colors group-hover:bg-amber-500 group-hover:text-slate-950">
+                  <div className="group h-full rounded-2xl border border-foreground/10 bg-background p-6 transition-all duration-300 hover:-translate-y-1 hover:border-brand/40 hover:shadow-lg hover:shadow-brand/5">
+                    <div className="flex size-11 items-center justify-center rounded-xl bg-brand/10 text-brand-strong transition-colors group-hover:bg-brand group-hover:text-white">
                       <Icon className="size-6" />
                     </div>
                     <h3 className="mt-4 font-semibold">{f.title}</h3>
@@ -281,7 +281,7 @@ export default async function LandingPage() {
                 <source src="/landing/doctor-loop.webm" type="video/webm" />
                 <source src="/landing/doctor-loop.mp4" type="video/mp4" />
               </video>
-              <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-rose-500/90 px-2.5 py-1 text-xs font-medium text-white">
+              <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-brand/90 px-2.5 py-1 text-xs font-medium text-white">
                 <Mic className="size-3.5" />
                 Голосовой диалог
               </span>
@@ -289,7 +289,7 @@ export default async function LandingPage() {
           </Reveal>
           <Reveal delay={0.08}>
             <div>
-              <span className="inline-flex items-center rounded-full bg-amber-500/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-600">
+              <span className="inline-flex items-center rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand-strong">
                 {voiceShowcase.badge}
               </span>
               <h2 className="mt-3 text-3xl font-bold">{voiceShowcase.title}</h2>
@@ -354,7 +354,7 @@ export default async function LandingPage() {
           </Reveal>
           <div>
             <Reveal>
-              <span className="text-sm font-semibold uppercase tracking-wider text-amber-700">
+              <span className="text-sm font-semibold uppercase tracking-wider text-brand-strong">
                 {trainer.label}
               </span>
               <h2 className="mt-2 text-3xl font-bold">{trainer.name}</h2>
@@ -405,7 +405,7 @@ export default async function LandingPage() {
           <div className="mt-10 grid gap-5 md:grid-cols-3">
             {methodology.points.map((p, i) => (
               <Reveal key={p.title} delay={i * 0.05}>
-                <div className="h-full rounded-2xl border border-foreground/10 bg-background p-6 transition-colors hover:border-amber-500/40">
+                <div className="h-full rounded-2xl border border-foreground/10 bg-background p-6 transition-colors hover:border-brand/40">
                   <h3 className="font-semibold">{p.title}</h3>
                   <p className="mt-2 text-sm text-foreground/70">{p.text}</p>
                 </div>
@@ -444,7 +444,7 @@ export default async function LandingPage() {
       {/* Заявка — тёмный блок, закольцовывает страницу с hero */}
       <section id="zayavka" className="mx-auto max-w-6xl px-4 pb-20 pt-4">
         <div className="relative overflow-hidden rounded-3xl bg-slate-950 p-8 text-white md:p-12">
-          <div className="pointer-events-none absolute -top-24 right-0 h-72 w-72 rounded-full bg-amber-500/10 blur-3xl" />
+          <div className="pointer-events-none absolute -top-24 right-0 h-72 w-72 rounded-full bg-brand/15 blur-3xl" />
           <div className="relative grid items-center gap-10 md:grid-cols-2">
             <Reveal>
               <div>

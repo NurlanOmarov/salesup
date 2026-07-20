@@ -10,6 +10,7 @@ const buttonVariants = cva(
         default: "bg-foreground text-background hover:opacity-90",
         accent:
           "bg-amber-500 font-semibold text-slate-950 hover:bg-amber-400",
+        brand: "bg-brand font-semibold text-white hover:bg-brand-strong",
         "outline-light":
           "border border-white/25 bg-transparent text-white hover:border-white/50 hover:bg-white/5",
         outline:
