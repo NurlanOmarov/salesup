@@ -17,6 +17,7 @@ cd "$HERE"
 : "${DEPLOY_HOST:?DEPLOY_HOST не задан (user@ip)}"
 : "${DEPLOY_PATH:?DEPLOY_PATH не задан}"
 NGINX_CONF="${NGINX_CONF:-./nginx.http.conf}"
+DEPLOY_SSH_PORT="${DEPLOY_SSH_PORT:-22}"
 
 echo "▶ Проверки перед деплоем (lint, typecheck, test)…"
 pnpm lint
@@ -25,12 +26,13 @@ pnpm test
 
 echo "▶ Синхронизация исходников на ${DEPLOY_HOST}:${DEPLOY_PATH}…"
 rsync -az --delete \
+  -e "ssh -p ${DEPLOY_SSH_PORT}" \
   --exclude node_modules --exclude .next --exclude .git \
   --exclude media --exclude '.env*' --exclude out \
   ./ "${DEPLOY_HOST}:${DEPLOY_PATH}/"
 
 echo "▶ Сборка и запуск на VPS…"
-ssh "${DEPLOY_HOST}" bash -s <<EOF
+ssh -p "${DEPLOY_SSH_PORT}" "${DEPLOY_HOST}" bash -s <<EOF
 set -euo pipefail
 cd "${DEPLOY_PATH}/deploy"
 export NGINX_CONF="${NGINX_CONF}"
