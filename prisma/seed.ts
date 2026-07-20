@@ -1,10 +1,10 @@
 import { PrismaClient } from "@prisma/client";
 import { hashPassword } from "../src/lib/auth/password.js";
-import { PHARMA_SUMMARIES } from "./seed-data/pharma-summaries.js";
-import { PHARMA_SLIDES } from "./seed-data/pharma-slides.js";
-import { PHARMA_LESSON_QUIZZES } from "./seed-data/pharma-lesson-quizzes.js";
-import { PHARMA_FLASHCARDS } from "./seed-data/pharma-flashcards.js";
-import { PHARMA_OBJECTIONS } from "./seed-data/pharma-objections.js";
+import { PHARMA_SUMMARIES, type LessonSummary } from "./seed-data/pharma-summaries.js";
+import { PHARMA_SLIDES, type LessonDeck } from "./seed-data/pharma-slides.js";
+import { PHARMA_LESSON_QUIZZES, type LessonQuizSeed } from "./seed-data/pharma-lesson-quizzes.js";
+import { PHARMA_FLASHCARDS, type LessonFlashcards } from "./seed-data/pharma-flashcards.js";
+import { PHARMA_OBJECTIONS, type LessonObjections } from "./seed-data/pharma-objections.js";
 import {
   PHARMA_CHECKLISTS,
   PHARMA_SCRIPTS,
@@ -12,7 +12,22 @@ import {
   PHARMA_HOTSPOTS,
   PHARMA_BRANCHING,
   PHARMA_SCENARIOS,
+  type LessonScenario,
 } from "./seed-data/pharma-interactive.js";
+import { B2B_EXAM, B2B_EXAM_PASS_SCORE, type SeedQuestion } from "./seed-data/b2b-exam.js";
+import {
+  B2B_SUMMARIES,
+  B2B_SLIDES,
+  B2B_LESSON_QUIZZES,
+  B2B_FLASHCARDS,
+  B2B_OBJECTIONS,
+  B2B_CHECKLISTS,
+  B2B_SCRIPTS,
+  B2B_AUDITS,
+  B2B_HOTSPOTS,
+  B2B_BRANCHING,
+  B2B_SCENARIOS,
+} from "./seed-data/b2b-content.js";
 
 /**
  * Сиды для локальной разработки (BACKLOG P0.3).
@@ -378,41 +393,88 @@ const COURSES: CourseSpec[] = [
   {
     slug: "sales-b2b",
     title: "B2B-переговоры и крупные сделки",
-    subtitle: "Системные продажи корпоративным клиентам",
+    subtitle: "Давление, торг и работа с ЛПР: переговоры как управляемый процесс",
     description:
-      "Курс для менеджеров B2B-компаний. Полный цикл корпоративной сделки: поиск ЛПР, первая встреча, ценностное предложение, ценовые переговоры, тендерные процедуры.",
+      "Живой тренинг бизнес-тренера Виталия Дубовика по деловым переговорам в B2B. Четыре урока: проактивная подготовка вместо реакции на рынок, карта ролей в компании клиента (ЛПР и ЛВР) и математика воронки, четыре типа переговоров — «железо, бронза, серебро, золото» — с разбором 11 тактик манипуляции, и правила VIP-переговоров с методикой СПИН. В конце — итоговый тест на 20 вопросов по содержанию уроков.",
     industry: "B2B-переговоры",
     priceTiyn: 360_000,
     oldPriceTiyn: 540_000,
-    hoursLabel: "9 часов",
+    hoursLabel: "~28 минут",
     learnPoints: [
-      "Карта стейкхолдеров: кто принимает решение и кто влияет",
-      "Техника SPIN для выявления потребностей корпоративного клиента",
-      "Подготовка и проведение презентации ценностного предложения",
-      "Ценовые переговоры: как торговаться без потери маржи",
-      "Работа с тендером: как войти в шорт-лист не на цене",
+      "Проактивный подход: готовиться к переговорам вместо реакции «дали — взял»",
+      "ЛПР и ЛВР: кто говорит «да», когда все говорят «нет», и правило 2Н — нужные вопросы нужным людям",
+      "Воронка от незнакомца до адвоката бренда и честная математика отказов (конверсия 1–3%)",
+      "Четыре типа переговоров: железо (давление), бронза (торг), серебро (консультация), золото (партнёрство)",
+      "11 тактик манипуляции оппонента и как им не поддаться: пауза, парковка возражения, красивый уход",
+      "План обмена: как размениваться переменными сделки, а не отдавать скидку",
+      "VIP-переговоры: свобода решения, «назови мотив хода», косвенные вопросы и накопление согласия",
+      "Методика СПИН: ситуационные → проблемные → извлекающие → направляющие вопросы",
     ],
     targetAudience: [
       "Менеджеры по продажам в B2B и B2G",
       "Руководители отделов корпоративных продаж",
-      "Владельцы бизнеса, продающие другим компаниям",
+      "КАМ-менеджеры и специалисты по работе с ключевыми клиентами",
+      "Владельцы бизнеса, которые сами ведут крупные сделки",
     ],
     faq: [
       { q: "Подходит ли для IT и услуг?", a: "Да. Методика адаптирована под «невещественные» продукты — услуги, SaaS, консалтинг." },
+      {
+        q: "Нужен ли опыт переговоров?",
+        a: "Достаточно базового. Курс даёт структуру встречи и готовые фразы, поэтому подходит и тем, кто только начал вести крупные сделки.",
+      },
+      {
+        q: "Что нужно сделать после курса?",
+        a: "Выбрать одну реальную встречу, подготовиться к ней по алгоритмам курса, провести переговоры и пройти итоговый тест из 20 вопросов (проходной балл — 75%).",
+      },
+      {
+        q: "Примеры в видео — про поставки в рестораны. Подойдёт ли курс другой сфере?",
+        a: "Да. Тренинг снят на аудитории поставщиков HoReCa, но все модели — ЛПР/ЛВР, типы переговоров, тактики манипуляции, СПИН — универсальны. Конспекты и задания курса даны на нейтральных B2B-примерах.",
+      },
     ],
+    // Структура собрана ПО РЕАЛЬНОМУ содержанию плейлиста (4 части живого тренинга,
+    // https://youtube.com/playlist?list=PLPVUOXpAlSF4), а не по блокам презентации:
+    // темы видео с ними совпадают лишь частично. Пятый ролик плейлиста (полная
+    // 25-минутная версия, age-restricted) в курс намеренно не включён.
     modules: [
       {
-        title: "Модуль 1. Вход и квалификация",
+        title: "Модуль 1. Подготовка и проактивный подход",
         lessons: [
-          { title: "Поиск ЛПР и первый контакт", yt: "https://youtu.be/PLACEHOLDER", free: true },
-          { title: "Квалификация сделки: BANT и MEDDIC", yt: "https://youtu.be/PLACEHOLDER" },
+          {
+            title: "Проактивный подход: подготовка вместо реакции",
+            yt: "https://www.youtube.com/watch?v=823Y0bwGvoQ",
+            durationSec: 373,
+            free: true,
+          },
         ],
       },
       {
-        title: "Модуль 2. Переговоры и закрытие",
+        title: "Модуль 2. Клиент: роли и воронка",
         lessons: [
-          { title: "Презентация ценностного предложения", yt: "https://youtu.be/PLACEHOLDER" },
-          { title: "Ценовые переговоры и финальное закрытие", yt: "https://youtu.be/PLACEHOLDER" },
+          {
+            title: "ЛПР и ЛВР, воронка продаж и работа с отказами",
+            yt: "https://www.youtube.com/watch?v=NfWBj19OMoY",
+            durationSec: 323,
+          },
+        ],
+      },
+      {
+        title: "Модуль 3. Типы переговоров и давление",
+        lessons: [
+          {
+            title: "Четыре типа переговоров: давление, торг, консультация, партнёрство",
+            yt: "https://www.youtube.com/watch?v=unIxHDJBvDQ",
+            durationSec: 529,
+          },
+        ],
+      },
+      {
+        title: "Модуль 4. VIP-переговоры и формирование потребности",
+        lessons: [
+          {
+            title: "VIP-переговоры: доверие, мотив хода и методика СПИН",
+            yt: "https://www.youtube.com/watch?v=QoBNde4dMTk",
+            durationSec: 407,
+          },
         ],
       },
     ],
@@ -474,6 +536,7 @@ async function upsertCourse(spec: CourseSpec) {
             status: l.free ? "PUBLISHED" : "DRAFT",
             isFreePreview: l.free ?? false,
             youtubeUrl: l.yt,
+            durationSec: l.durationSec ?? null,
             videoStatus: "NONE",
           },
         });
@@ -487,14 +550,8 @@ async function upsertCourse(spec: CourseSpec) {
 // ── Финальный экзамен медпред-курса (вопросы по реальному содержанию видео) ──
 // Для ORDERING варианты заданы в правильном порядке (sortOrder = индекс), на клиенте
 // перемешиваются. Для FILL_BLANK options.text — эталонные ответы по порядку пропусков.
-type SeedQuestion = {
-  type: "SINGLE_CHOICE" | "MULTI_CHOICE" | "TRUE_FALSE" | "ORDERING" | "FILL_BLANK" | "MATCHING" | "CATEGORIZATION";
-  text: string;
-  explanation: string;
-  // MATCHING — text=левый, pairKey=правый; CATEGORIZATION — text=элемент, pairKey=категория
-  options: { text: string; correct: boolean; pairKey?: string }[];
-};
-
+// Тип SeedQuestion — в seed-data/b2b-exam.ts (MATCHING: text=левый, pairKey=правый;
+// CATEGORIZATION: text=элемент, pairKey=категория).
 const PHARMA_EXAM: SeedQuestion[] = [
   {
     type: "ORDERING",
@@ -647,7 +704,10 @@ const PHARMA_EXAM: SeedQuestion[] = [
   },
 ];
 
-async function seedPharmaExam(courseId: string) {
+async function seedFinalExam(
+  courseId: string,
+  spec: { questions: SeedQuestion[]; description: string; passScore: number },
+) {
   const existing = await db.quiz.findFirst({
     where: { courseId, kind: "FINAL_EXAM" },
     select: { id: true },
@@ -659,13 +719,13 @@ async function seedPharmaExam(courseId: string) {
       kind: "FINAL_EXAM",
       courseId,
       title: "Итоговый экзамен курса",
-      description: "Проверка знаний по техникам продаж для медицинских представителей.",
-      passScore: 80,
+      description: spec.description,
+      passScore: spec.passScore,
       status: "PUBLISHED",
     },
   });
 
-  for (const [qi, q] of PHARMA_EXAM.entries()) {
+  for (const [qi, q] of spec.questions.entries()) {
     await db.question.create({
       data: {
         quizId: quiz.id,
@@ -691,12 +751,12 @@ async function seedPharmaExam(courseId: string) {
 }
 
 /** Задания к отдельным урокам (LESSON_QUIZ) — тип подобран под содержание урока. */
-async function seedPharmaLessonQuizzes(courseId: string) {
+async function seedLessonQuizzes(courseId: string, rows: LessonQuizSeed[]) {
   const lessons = await db.lesson.findMany({
     where: { module: { courseId } },
     select: { id: true, title: true },
   });
-  for (const lq of PHARMA_LESSON_QUIZZES) {
+  for (const lq of rows) {
     const lesson = lessons.find((l) => l.title.includes(lq.lessonMatch));
     if (!lesson) continue;
     if (await db.quiz.findFirst({ where: { lessonId: lesson.id, kind: "LESSON_QUIZ" }, select: { id: true } })) continue;
@@ -737,12 +797,12 @@ async function seedPharmaLessonQuizzes(courseId: string) {
 }
 
 /** Конспекты уроков (AiArtifact SUMMARY) по реальному содержанию видео. */
-async function seedPharmaSummaries(courseId: string) {
+async function seedSummaries(courseId: string, rows: LessonSummary[]) {
   const lessons = await db.lesson.findMany({
     where: { module: { courseId } },
     select: { id: true, title: true },
   });
-  for (const ls of PHARMA_SUMMARIES) {
+  for (const ls of rows) {
     const lesson = lessons.find((l) => l.title.includes(ls.titleMatch));
     if (!lesson) continue;
     await db.aiArtifact.upsert({
@@ -754,12 +814,12 @@ async function seedPharmaSummaries(courseId: string) {
 }
 
 /** Презентации уроков (AiArtifact SLIDES) — JSON-колоды для просмотрщика. */
-async function seedPharmaSlides(courseId: string) {
+async function seedSlides(courseId: string, rows: LessonDeck[]) {
   const lessons = await db.lesson.findMany({
     where: { module: { courseId } },
     select: { id: true, title: true },
   });
-  for (const ds of PHARMA_SLIDES) {
+  for (const ds of rows) {
     const lesson = lessons.find((l) => l.title.includes(ds.titleMatch));
     if (!lesson) continue;
     const content = JSON.stringify(ds.deck);
@@ -772,12 +832,12 @@ async function seedPharmaSlides(courseId: string) {
 }
 
 /** Флеш-карточки уроков (AiArtifact FLASHCARDS) — тренажёр запоминания. */
-async function seedPharmaFlashcards(courseId: string) {
+async function seedFlashcards(courseId: string, rows: LessonFlashcards[]) {
   const lessons = await db.lesson.findMany({
     where: { module: { courseId } },
     select: { id: true, title: true },
   });
-  for (const lf of PHARMA_FLASHCARDS) {
+  for (const lf of rows) {
     const lesson = lessons.find((l) => l.title.includes(lf.titleMatch));
     if (!lesson) continue;
     const content = JSON.stringify({ cards: lf.cards });
@@ -790,12 +850,12 @@ async function seedPharmaFlashcards(courseId: string) {
 }
 
 /** Тренажёры возражений уроков (AiArtifact OBJECTIONS) — интерактивная практика продаж. */
-async function seedPharmaObjections(courseId: string) {
+async function seedObjections(courseId: string, rows: LessonObjections[]) {
   const lessons = await db.lesson.findMany({
     where: { module: { courseId } },
     select: { id: true, title: true },
   });
-  for (const lo of PHARMA_OBJECTIONS) {
+  for (const lo of rows) {
     const lesson = lessons.find((l) => l.title.includes(lo.titleMatch));
     if (!lesson) continue;
     const content = JSON.stringify({ items: lo.items });
@@ -808,7 +868,7 @@ async function seedPharmaObjections(courseId: string) {
 }
 
 /** Артефакт-форматы по titleMatch: чек-листы, скрипты, «найди ошибку», hotspot. */
-async function seedPharmaArtifacts(
+async function seedArtifacts(
   courseId: string,
   type: "CHECKLIST" | "SCRIPT_BUILDER" | "DIALOGUE_AUDIT" | "HOTSPOT" | "BRANCHING",
   rows: { titleMatch: string; data: unknown }[],
@@ -830,12 +890,12 @@ async function seedPharmaArtifacts(
 }
 
 /** Сценарии диалог-симулятора (SimulationScenario) по titleMatch. */
-async function seedPharmaScenarios(courseId: string) {
+async function seedScenarios(courseId: string, rows: LessonScenario[]) {
   const lessons = await db.lesson.findMany({
     where: { module: { courseId } },
     select: { id: true, title: true },
   });
-  for (const s of PHARMA_SCENARIOS) {
+  for (const s of rows) {
     const lesson = lessons.find((l) => l.title.includes(s.titleMatch));
     if (!lesson) continue;
     const exists = await db.simulationScenario.findFirst({
@@ -925,18 +985,49 @@ async function main() {
   if (firstLesson) {
     await db.lesson.update({ where: { id: firstLesson.id }, data: { isFreePreview: true } });
   }
-  await seedPharmaSummaries(pharmaCourse.id);
-  await seedPharmaSlides(pharmaCourse.id);
-  await seedPharmaFlashcards(pharmaCourse.id);
-  await seedPharmaObjections(pharmaCourse.id);
-  await seedPharmaArtifacts(pharmaCourse.id, "CHECKLIST", PHARMA_CHECKLISTS);
-  await seedPharmaArtifacts(pharmaCourse.id, "SCRIPT_BUILDER", PHARMA_SCRIPTS);
-  await seedPharmaArtifacts(pharmaCourse.id, "DIALOGUE_AUDIT", PHARMA_AUDITS);
-  await seedPharmaArtifacts(pharmaCourse.id, "HOTSPOT", PHARMA_HOTSPOTS);
-  await seedPharmaArtifacts(pharmaCourse.id, "BRANCHING", PHARMA_BRANCHING);
-  await seedPharmaScenarios(pharmaCourse.id);
-  await seedPharmaExam(pharmaCourse.id);
-  await seedPharmaLessonQuizzes(pharmaCourse.id);
+  await seedSummaries(pharmaCourse.id, PHARMA_SUMMARIES);
+  await seedSlides(pharmaCourse.id, PHARMA_SLIDES);
+  await seedFlashcards(pharmaCourse.id, PHARMA_FLASHCARDS);
+  await seedObjections(pharmaCourse.id, PHARMA_OBJECTIONS);
+  await seedArtifacts(pharmaCourse.id, "CHECKLIST", PHARMA_CHECKLISTS);
+  await seedArtifacts(pharmaCourse.id, "SCRIPT_BUILDER", PHARMA_SCRIPTS);
+  await seedArtifacts(pharmaCourse.id, "DIALOGUE_AUDIT", PHARMA_AUDITS);
+  await seedArtifacts(pharmaCourse.id, "HOTSPOT", PHARMA_HOTSPOTS);
+  await seedArtifacts(pharmaCourse.id, "BRANCHING", PHARMA_BRANCHING);
+  await seedScenarios(pharmaCourse.id, PHARMA_SCENARIOS);
+  await seedFinalExam(pharmaCourse.id, {
+    questions: PHARMA_EXAM,
+    description: "Проверка знаний по техникам продаж для медицинских представителей.",
+    passScore: 80,
+  });
+  await seedLessonQuizzes(pharmaCourse.id, PHARMA_LESSON_QUIZZES);
+
+  // ── Курс «B2B-переговоры и крупные сделки» ────────────────────────────────
+  // Итоговый тест готов (авторские материалы тренера). Поурочный контент
+  // (конспекты, слайды, задания, тренажёры) добавляется по одному уроку —
+  // после появления видео, см. prisma/seed-data/b2b-content.ts.
+  const b2bCourse = courses.find((c) => c.slug === "sales-b2b")!;
+  await seedSummaries(b2bCourse.id, B2B_SUMMARIES);
+  await seedSlides(b2bCourse.id, B2B_SLIDES);
+  await seedFlashcards(b2bCourse.id, B2B_FLASHCARDS);
+  await seedObjections(b2bCourse.id, B2B_OBJECTIONS);
+  await seedArtifacts(b2bCourse.id, "CHECKLIST", B2B_CHECKLISTS);
+  await seedArtifacts(b2bCourse.id, "SCRIPT_BUILDER", B2B_SCRIPTS);
+  await seedArtifacts(b2bCourse.id, "DIALOGUE_AUDIT", B2B_AUDITS);
+  await seedArtifacts(b2bCourse.id, "HOTSPOT", B2B_HOTSPOTS);
+  await seedArtifacts(b2bCourse.id, "BRANCHING", B2B_BRANCHING);
+  await seedScenarios(b2bCourse.id, B2B_SCENARIOS);
+  await seedFinalExam(b2bCourse.id, {
+    questions: B2B_EXAM,
+    description: "Проверка знаний по урокам курса: проактивная подготовка, ЛПР и воронка, четыре типа переговоров, VIP и СПИН.",
+    passScore: B2B_EXAM_PASS_SCORE,
+  });
+  await seedLessonQuizzes(b2bCourse.id, B2B_LESSON_QUIZZES);
+  // Уроки с готовым HLS публикуем: контент к ним собран (конспект, слайды, задания).
+  await db.lesson.updateMany({
+    where: { module: { courseId: b2bCourse.id }, videoStatus: "READY" },
+    data: { status: "PUBLISHED" },
+  });
 
   // Отзывы для курса медпреда (VALIDATED — видны на лендинге)
   const existingReviews = await db.review.count({ where: { courseId: pharmaCourse.id } });

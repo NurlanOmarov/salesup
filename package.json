@@ -28,9 +28,11 @@
     "factory:slides-import": "tsx --env-file=.env --env-file-if-exists=.env.deploy scripts/factory/slides-import.ts",
     "factory:transcript": "tsx --env-file=.env scripts/factory/transcript.ts",
     "factory:subs": "tsx --env-file=.env scripts/factory/subs.ts",
+    "factory:subs-import": "tsx --env-file=.env scripts/factory/subs-import.ts",
     "factory:chunk": "tsx --env-file=.env scripts/factory/chunk.ts",
     "factory:embed": "tsx --env-file=.env scripts/factory/embed.ts",
     "factory:publish": "tsx --env-file=.env --env-file-if-exists=.env.deploy scripts/factory/publish.ts",
+    "factory:publish-video": "tsx --env-file=.env --env-file-if-exists=.env.deploy scripts/factory/publish-video.ts",
     "worker": "tsx --env-file=.env scripts/worker.ts"
   },
   "prisma": {

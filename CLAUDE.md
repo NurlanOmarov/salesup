@@ -31,7 +31,8 @@
 pnpm dev | build | lint | typecheck | test | test:e2e
 pnpm db:migrate | db:studio | db:seed
 docker compose up -d            # на VPS: app, db, nginx, worker
-pnpm deploy                     # build → rsync → ssh restart (scripts/deploy.sh)
+git push origin main            # ДЕПЛОЙ: GitHub Actions собирает образы → GHCR → сервер pull+up (.github/workflows/deploy.yml)
+# scripts/deploy.sh — устаревший путь (сборка на сервере), по умолчанию заблокирован
 # Фабрика (локально):
 pnpm factory:ingest <playlistUrl> --course <slug>    # курс под ключ (видео+контент+субтитры)
 pnpm factory:video <videoUrl> --lesson <id>          # yt-dlp → HLS AES → rsync на VPS
