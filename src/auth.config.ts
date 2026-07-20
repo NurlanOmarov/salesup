@@ -27,6 +27,7 @@ const PUBLIC_PREFIXES = [
   "/api/health",
   "/api/icon", // PWA-иконки (генерятся без авторизации, на них ссылается манифест)
   "/api/og-image", // кастомные OG-картинки (публичны по природе — их читают соцсети)
+  "/api/cover", // обложки курсов в публичном каталоге — читаются анонимно
 ];
 // PWA: манифест, service worker и offline-страница должны быть доступны без входа.
 const PUBLIC_EXACT = ["/", "/manifest.webmanifest", "/sw.js", "/offline.html"];
