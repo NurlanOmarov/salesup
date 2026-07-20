@@ -45,7 +45,7 @@ services:
       OWNER_EMAIL: ${OWNER_EMAIL}
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
     volumes:
-      - media:/media:ro # app только читает медиа; пишет фабрика по rsync
+      - media:/media # app пишет обложки/OG сам (admin upload) + читает медиа фабрики
     expose:
       - "3000"
     deploy:

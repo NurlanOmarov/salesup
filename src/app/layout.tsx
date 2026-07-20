@@ -20,8 +20,8 @@ export async function generateMetadata(): Promise<Metadata> {
       statusBarStyle: "black-translucent",
       title: "ACTIVE SALES",
     },
-    // icon.png подхватывается автоматически из src/app/icon.png — дублировать не нужно
-    icons: { apple: "/api/icon?size=180" },
+    // metadata.icons отключает автоподхват файловой конвенции целиком — icon.png нужно указывать явно
+    icons: { icon: "/icon.png", apple: "/api/icon?size=180" },
     openGraph: { type: "website", siteName: "Бизнес-платформа ACTIVE SALES", locale: "ru_RU" },
     twitter: {
       card: "summary_large_image",
