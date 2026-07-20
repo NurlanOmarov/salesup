@@ -27,6 +27,7 @@ import { Faq } from "@/components/landing/faq";
 import { Reviews, type ReviewItem } from "@/components/landing/reviews";
 import { LeadForm } from "@/components/landing/lead-form";
 import { AiDemo } from "@/components/landing/ai-demo";
+import { HeroVideo } from "@/components/landing/hero-video";
 import { StatCounter } from "@/components/landing/stat-counter";
 import { AnimatedTitle } from "@/components/landing/animated-title";
 import { IndustriesMarquee } from "@/components/landing/industries-marquee";
@@ -110,17 +111,16 @@ export default async function LandingPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
 
-      {/* Hero — тёмная «киношная» секция (ТЗ §2.3, ориентир MasterClass) */}
+      {/* Hero — тёмная «киношная» секция с фоновым синемаграфом (ТЗ §2.3).
+          Текст живёт в левой (затенённой) половине кадра, движение — справа. */}
       <section className="relative overflow-hidden bg-slate-950 text-white">
-        <div className="pointer-events-none absolute inset-0">
-          <div className="aurora-a absolute -top-32 left-1/2 h-96 w-[60rem] -translate-x-1/2 rounded-full bg-brand/20 blur-3xl" />
-          <div className="aurora-b absolute -bottom-48 right-0 h-96 w-96 rounded-full bg-indigo-500/15 blur-3xl" />
-          {/* тонкая сетка для глубины */}
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:72px_72px] [mask-image:radial-gradient(ellipse_70%_60%_at_50%_0%,black,transparent)]" />
-        </div>
+        {/* Видео покрывает только зону контента (не полосу счётчиков) — иначе
+            кружка, живущая у нижнего края кадра, уезжает под разделитель. */}
+        <div className="relative">
+          <HeroVideo />
 
-        <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 pb-16 pt-16 sm:pt-20 lg:grid-cols-[1.1fr_1fr] lg:pb-24">
-          <div className="text-center lg:text-left">
+          <div className="relative mx-auto max-w-6xl px-4 pb-12 pt-16 sm:pb-16 sm:pt-20 lg:pb-24 lg:pt-24">
+          <div className="max-w-xl text-center lg:text-left">
             <Reveal>
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-brand-light">
                 Бизнес-платформа ACTIVE SALES
@@ -133,15 +133,15 @@ export default async function LandingPage() {
             </Reveal>
             <AnimatedTitle
               text={hero.title}
-              className="mt-5 text-balance text-4xl font-bold tracking-tight sm:text-5xl xl:text-6xl"
+              className="mt-5 text-balance text-4xl font-bold tracking-tight drop-shadow-lg sm:text-5xl xl:text-6xl"
             />
             <Reveal delay={0.1}>
-              <p className="mx-auto mt-5 max-w-xl text-balance text-lg text-white/70 lg:mx-0">
+              <p className="mt-5 text-balance text-lg text-white/75">
                 {hero.subtitle}
               </p>
             </Reveal>
             <Reveal delay={0.15}>
-              <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row lg:justify-start sm:justify-center">
+              <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center lg:justify-start">
                 <Link
                   href="/courses"
                   className={cn(
@@ -161,28 +161,10 @@ export default async function LandingPage() {
                   {hero.secondaryCta}
                 </a>
               </div>
-              <p className="mt-3 text-sm text-white/50">{hero.note}</p>
+              <p className="mt-3 text-sm text-white/60">{hero.note}</p>
             </Reveal>
           </div>
-
-          {/* Демо AI-наставника (ТЗ §4.1.1: интерактивный виджет на лендинге) */}
-          <Reveal delay={0.2}>
-            <div className="relative">
-              <AiDemo />
-              {/* плавающие карточки результата */}
-              <div className="float-y absolute -left-3 -top-4 hidden rounded-xl border border-white/10 bg-slate-900/90 px-3 py-2 shadow-xl backdrop-blur sm:block lg:-left-8">
-                <p className="flex items-center gap-1.5 text-xs font-semibold text-white">
-                  <CheckCircle2 className="size-3.5 text-emerald-400" />
-                  Возражение отработано
-                </p>
-              </div>
-              <div className="float-y-delayed absolute -bottom-4 -right-2 hidden rounded-xl border border-white/10 bg-slate-900/90 px-3 py-2 shadow-xl backdrop-blur sm:block lg:-right-6">
-                <p className="text-xs font-semibold text-amber-300">
-                  +1 закрытая сделка 🎉
-                </p>
-              </div>
-            </div>
-          </Reveal>
+          </div>
         </div>
 
         {/* Счётчики — внутри тёмной секции */}
@@ -396,22 +378,49 @@ export default async function LandingPage() {
         </Reveal>
       </section>
 
-      {/* Методика */}
+      {/* Методика + живое демо AI-наставника (ТЗ §4.1.1: интерактивный виджет).
+          Демо стоит здесь, а не в hero: секция как раз объясняет, что такое
+          AI-наставник, — посетитель может сразу его попробовать. */}
       <section className="border-y border-foreground/5 bg-foreground/[0.025]">
-        <div className="mx-auto max-w-6xl px-4 py-16">
-          <Reveal>
-            <h2 className="text-center text-3xl font-bold">{methodology.title}</h2>
-          </Reveal>
-          <div className="mt-10 grid gap-5 md:grid-cols-3">
-            {methodology.points.map((p, i) => (
-              <Reveal key={p.title} delay={i * 0.05}>
-                <div className="h-full rounded-2xl border border-foreground/10 bg-background p-6 transition-colors hover:border-brand/40">
-                  <h3 className="font-semibold">{p.title}</h3>
-                  <p className="mt-2 text-sm text-foreground/70">{p.text}</p>
-                </div>
-              </Reveal>
-            ))}
+        <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-16 lg:grid-cols-[1fr_1fr] lg:gap-14 lg:py-20">
+          <div>
+            <Reveal>
+              <h2 className="text-3xl font-bold">{methodology.title}</h2>
+            </Reveal>
+            <div className="mt-8 space-y-5">
+              {methodology.points.map((p, i) => (
+                <Reveal key={p.title} delay={i * 0.05}>
+                  <div className="rounded-2xl border border-foreground/10 bg-background p-6 transition-colors hover:border-brand/40">
+                    <h3 className="font-semibold">{p.title}</h3>
+                    <p className="mt-2 text-sm text-foreground/70">{p.text}</p>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
           </div>
+
+          <Reveal delay={0.1}>
+            <div>
+              <p className="mb-3 text-center text-sm font-medium text-foreground/60 lg:text-left">
+                Попробуйте прямо сейчас — задайте вопрос наставнику:
+              </p>
+              <div className="relative">
+                <AiDemo />
+                {/* плавающие карточки результата — по краям, не перекрывая контент */}
+                <div className="float-y absolute -left-3 -top-4 hidden rounded-xl border border-white/10 bg-slate-900/90 px-3 py-2 shadow-xl backdrop-blur sm:block lg:-left-7">
+                  <p className="flex items-center gap-1.5 text-xs font-semibold text-white">
+                    <CheckCircle2 className="size-3.5 text-emerald-400" />
+                    Возражение отработано
+                  </p>
+                </div>
+                <div className="float-y-delayed absolute bottom-16 -right-3 hidden rounded-xl border border-white/10 bg-slate-900/90 px-3 py-2 shadow-xl backdrop-blur sm:block lg:-right-6">
+                  <p className="text-xs font-semibold text-amber-300">
+                    +1 закрытая сделка 🎉
+                  </p>
+                </div>
+              </div>
+            </div>
+          </Reveal>
         </div>
       </section>
 
