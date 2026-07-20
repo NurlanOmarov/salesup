@@ -31,27 +31,31 @@
  *   • Секреты (пароль PostgreSQL) не передаются — psql читает их из env контейнера.
  */
 
-import { execSync, execFileSync } from "node:child_process";
 import { existsSync, statSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { join } from "node:path";
 import { db } from "@/lib/db";
 import { parseArgs } from "./lib/args.js";
 import { c, log, humanSize } from "./lib/log.js";
+import {
+  DEPLOY_HOST,
+  DEPLOY_SSH_PORT,
+  DEPLOY_DB_CONTAINER,
+  DEPLOY_DB_NAME,
+  DEPLOY_MEDIA_CONTAINER,
+  requireDeployHost,
+  rsyncFile,
+  dockerCpToContainer,
+  updateProdMediaKey,
+  cleanupRemoteTmp,
+  type MediaField,
+} from "./lib/prod.js";
 
-// ── Конфигурация из env ──────────────────────────────────────────────────────
-
-const DEPLOY_HOST = process.env.DEPLOY_HOST ?? "";
-const DEPLOY_SSH_PORT = process.env.DEPLOY_SSH_PORT ?? "22";
-const DEPLOY_DB_CONTAINER = process.env.DEPLOY_DB_CONTAINER ?? "salesup-db-1";
-const DEPLOY_MEDIA_CONTAINER = process.env.DEPLOY_MEDIA_CONTAINER ?? "salesup-worker-1";
-const DEPLOY_DB_USER = process.env.DEPLOY_DB_USER ?? "salesacademy";
-const DEPLOY_DB_NAME = process.env.DEPLOY_DB_NAME ?? "salesacademy";
 const MEDIA_ROOT = process.env.MEDIA_ROOT ?? join(process.cwd(), "media");
 
 // ── Типы ─────────────────────────────────────────────────────────────────────
 
 interface MediaKey {
-  field: "audioKey" | "podcastKey" | "slidesPdfKey";
+  field: MediaField;
   key: string; // относительный ключ, напр. courses/sales-pharma/lessons/<id>/podcast.m4a
 }
 
@@ -59,109 +63,6 @@ interface LessonMedia {
   id: string;
   title: string;
   keys: MediaKey[];
-}
-
-// ── Хелперы SSH/rsync/docker ─────────────────────────────────────────────────
-
-/** Выполнить команду на VPS по SSH, вернуть stdout. */
-function sshExec(cmd: string, silent = false): string {
-  if (!silent) log.info(`ssh: ${c.dim(cmd)}`);
-  return execFileSync(
-    "ssh",
-    ["-p", DEPLOY_SSH_PORT, "-o", "BatchMode=yes", "-o", "ConnectTimeout=15", DEPLOY_HOST, cmd],
-    { encoding: "utf-8", stdio: ["inherit", "pipe", "pipe"] },
-  ).trim();
-}
-
-/**
- * Rsync одного файла на VPS в /tmp/salesup-publish/<key>.
- * Создаёт родительские каталоги на VPS автоматически.
- * Возвращает путь к файлу на VPS.
- *
- * Примечание: без --delete (добавляет/обновляет, не трогает остальное).
- * macOS rsync (BSD) не поддерживает --no-delete; просто не передаём --delete.
- */
-function rsyncFile(localPath: string, remoteKey: string, dryRun: boolean): string {
-  const remoteTmp = `/tmp/salesup-publish/${remoteKey}`;
-  const remoteDir = dirname(remoteTmp);
-
-  // Создать каталог на VPS (пропускаем в dry-run — ssh всё равно нужен)
-  if (!dryRun) {
-    sshExec(`mkdir -p '${remoteDir}'`, true);
-  }
-
-  // -e "ssh -p PORT ..." — передаём как одну строку для rsync -e
-  const sshOpt = `ssh -p ${DEPLOY_SSH_PORT} -o BatchMode=yes -o ConnectTimeout=15`;
-  const args = [
-    "-az",
-    // БЕЗ --delete — rsync по умолчанию только добавляет/обновляет
-    "-e", sshOpt,
-    ...(dryRun ? ["--dry-run"] : []),
-    localPath,
-    `${DEPLOY_HOST}:${remoteTmp}`,
-  ];
-
-  log.info(`rsync → ${c.dim(remoteTmp)}`);
-  execFileSync("rsync", args, { stdio: ["inherit", "inherit", "inherit"] });
-
-  return remoteTmp;
-}
-
-/**
- * Docker cp с VPS tmp-пути в контейнер /media/<key>.
- * Перед cp создаёт родительский каталог внутри контейнера.
- */
-function dockerCpToContainer(remoteTmpPath: string, mediaKey: string, dryRun: boolean): void {
-  const containerDest = `/media/${mediaKey}`;
-  const containerDir = dirname(containerDest);
-
-  if (dryRun) {
-    log.info(`[dry-run] docker cp ${remoteTmpPath} → ${DEPLOY_MEDIA_CONTAINER}:${containerDest}`);
-    return;
-  }
-
-  sshExec(`docker exec ${DEPLOY_MEDIA_CONTAINER} mkdir -p '${containerDir}'`, true);
-  // docker cp не поддерживает --chown, но контейнер запущен от root и том принадлежит node (1000)
-  // После cp делаем chown внутри контейнера
-  sshExec(
-    `docker cp '${remoteTmpPath}' ${DEPLOY_MEDIA_CONTAINER}:${containerDest}`,
-    false,
-  );
-  sshExec(
-    `docker exec ${DEPLOY_MEDIA_CONTAINER} chown 1000:1000 '${containerDest}'`,
-    true,
-  );
-  log.ok(`Скопировано в контейнер: ${c.dim(containerDest)}`);
-}
-
-/**
- * UPDATE audioKey или podcastKey в прод-БД через docker exec psql.
- * Значение ключа детерминировано (путь без кавычек-опасностей).
- * Для дополнительной безопасности экранируем через $$ quoting SQL-литерал.
- */
-function updateProdDb(lessonId: string, field: "audioKey" | "podcastKey" | "slidesPdfKey", key: string, dryRun: boolean): void {
-  // Проверка: ключ должен соответствовать ожидаемому шаблону (безопасность)
-  if (!/^courses\/[a-z0-9-]+\/lessons\/[a-z0-9]+\/[a-z0-9._-]+$/.test(key)) {
-    throw new Error(`Подозрительный ключ (не проходит валидацию): ${key}`);
-  }
-  // lessonId — cuid из Prisma, только [a-z0-9]
-  if (!/^[a-z0-9]+$/.test(lessonId)) {
-    throw new Error(`Подозрительный lessonId: ${lessonId}`);
-  }
-
-  // psql-поле в кавычках (camelCase Prisma), значение через строку PostgreSQL
-  const sql = `UPDATE "Lesson" SET "${field}" = '${key}' WHERE id = '${lessonId}' AND ("${field}" IS NULL OR "${field}" != '${key}');`;
-
-  if (dryRun) {
-    log.info(`[dry-run] psql: ${c.dim(sql)}`);
-    return;
-  }
-
-  const result = sshExec(
-    `docker exec ${DEPLOY_DB_CONTAINER} psql -U ${DEPLOY_DB_USER} -d ${DEPLOY_DB_NAME} -c "${sql.replace(/"/g, '\\"')}"`,
-    false,
-  );
-  log.ok(`БД обновлена (${field}): ${c.dim(result.trim())}`);
 }
 
 // ── Загрузка данных из локальной БД ─────────────────────────────────────────
@@ -257,23 +158,12 @@ async function publishLesson(lesson: LessonMedia, dryRun: boolean): Promise<numb
     }
 
     // 3. UPDATE прод-БД
-    updateProdDb(lesson.id, field, key, dryRun);
+    updateProdMediaKey(lesson.id, field, key, dryRun);
 
     synced++;
   }
 
   return synced;
-}
-
-// ── Очистка tmp на VPS ───────────────────────────────────────────────────────
-
-function cleanupRemoteTmp(dryRun: boolean): void {
-  if (dryRun) return;
-  try {
-    sshExec("rm -rf /tmp/salesup-publish", true);
-  } catch {
-    log.warn("Не удалось удалить /tmp/salesup-publish на VPS (некритично)");
-  }
 }
 
 // ── Точка входа ──────────────────────────────────────────────────────────────
@@ -293,13 +183,7 @@ async function main() {
     );
   }
 
-  if (!DEPLOY_HOST) {
-    throw new Error(
-      "DEPLOY_HOST не задан. Добавьте в .env.deploy:\n" +
-        "  DEPLOY_HOST=administrator@69.197.178.118\n" +
-        "  DEPLOY_SSH_PORT=4822",
-    );
-  }
+  requireDeployHost();
 
   if (dryRun) {
     log.warn("Режим --dry-run: изменений на проде не будет");
