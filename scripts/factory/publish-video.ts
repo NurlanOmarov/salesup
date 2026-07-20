@@ -5,6 +5,8 @@ import { db } from "@/lib/db";
 import { parseArgs } from "./lib/args.js";
 import { c, log, humanSize } from "./lib/log.js";
 import {
+  DEPLOY_HOST,
+  DEPLOY_SSH_PORT,
   DEPLOY_DB_CONTAINER,
   DEPLOY_DB_USER,
   DEPLOY_DB_NAME,
@@ -60,6 +62,20 @@ function psqlExec(sql: string, dryRun: boolean): void {
   );
 }
 
+/** Прогнать SQL через stdin psql — для больших вставок (чанки с векторами). */
+function psqlStdin(sql: string, dryRun: boolean, label: string): void {
+  if (dryRun) {
+    log.info(`[dry-run] psql < ${label} (${(sql.length / 1024).toFixed(0)} КБ SQL)`);
+    return;
+  }
+  execFileSync(
+    "ssh",
+    ["-p", DEPLOY_SSH_PORT, "-o", "BatchMode=yes", "-o", "ConnectTimeout=15", DEPLOY_HOST,
+     `docker exec -i ${DEPLOY_DB_CONTAINER} psql -v ON_ERROR_STOP=1 -q -U ${DEPLOY_DB_USER} -d ${DEPLOY_DB_NAME}`],
+    { input: sql, encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] },
+  );
+}
+
 /** id для строк, которые создаём в обход Prisma (cuid-совместимый вид: c + hex). */
 function newId(): string {
   return "c" + [...crypto.getRandomValues(new Uint8Array(12))].map((b) => b.toString(16).padStart(2, "0")).join("");
@@ -112,6 +128,10 @@ async function main() {
     throw new Error("Сопоставление уроков не удалось — прод-структура курса отличается от локальной");
   }
 
+  const [courseRow] = psqlRows(`select id from "Course" where slug = ${sqlStr(courseSlug)};`);
+  const prodCourseId = courseRow?.[0] ?? "";
+  if (!ID_RE.test(prodCourseId)) throw new Error(`Курс ${courseSlug} не найден на проде`);
+
   log.step(`Курс ${c.bold(courseSlug)}: ${pairs.length} уроков${dryRun ? c.dim(" (dry-run)") : ""}`);
 
   let bytes = 0;
@@ -162,6 +182,46 @@ async function main() {
         dryRun,
       );
     }
+    // Транскрипт и чанки с эмбеддингами — без них AI-наставник не отвечает по уроку.
+    const chunks = await db.$queryRawUnsafe<
+      { seq: number; text: string; startSec: number; endSec: number; embedding: string | null }[]
+    >(
+      `SELECT seq, text, "startSec", "endSec", embedding::text AS embedding
+         FROM "TranscriptChunk" WHERE "lessonId" = $1 ORDER BY seq`,
+      pair.localId,
+    );
+    const transcript = await db.transcript.findUnique({
+      where: { lessonId: pair.localId },
+      select: { sourceUrl: true, language: true, cleanText: true, rawText: true, status: true },
+    });
+
+    if (transcript && chunks.length > 0) {
+      const trId = newId();
+      const parts: string[] = ["BEGIN;"];
+      // Пересоздаём: старые чанки уйдут каскадом за транскриптом.
+      parts.push(`DELETE FROM "Transcript" WHERE "lessonId" = ${sqlStr(pair.prodId)};`);
+      parts.push(
+        `INSERT INTO "Transcript" (id, "lessonId", "sourceUrl", language, "rawText", "cleanText", status, "createdAt", "updatedAt") ` +
+          `VALUES (${sqlStr(trId)}, ${sqlStr(pair.prodId)}, ${sqlStr(transcript.sourceUrl)}, ${sqlStr(transcript.language)}, ` +
+          `${transcript.rawText ? sqlStr(transcript.rawText) : "NULL"}, ${transcript.cleanText ? sqlStr(transcript.cleanText) : "NULL"}, ` +
+          `'${transcript.status}', now(), now());`,
+      );
+      for (const ch of chunks) {
+        parts.push(
+          `INSERT INTO "TranscriptChunk" (id, "transcriptId", "lessonId", "courseId", seq, text, "startSec", "endSec", embedding) ` +
+            `VALUES (${sqlStr(newId())}, ${sqlStr(trId)}, ${sqlStr(pair.prodId)}, ${sqlStr(prodCourseId)}, ${ch.seq}, ` +
+            `${sqlStr(ch.text)}, ${ch.startSec}, ${ch.endSec}, ` +
+            `${ch.embedding ? `${sqlStr(ch.embedding)}::vector` : "NULL"});`,
+        );
+      }
+      parts.push("COMMIT;");
+      psqlStdin(parts.join("\n"), dryRun, `транскрипт «${l.title}»`);
+      const withVec = chunks.filter((ch) => ch.embedding).length;
+      log.info(`Транскрипт: ${chunks.length} чанков (${withVec} с эмбеддингами)`);
+    } else {
+      log.warn(`Нет транскрипта/чанков для «${l.title}» — AI-наставник по уроку отвечать не будет`);
+    }
+
     log.ok(`БД обновлена: видео + ${l.subtitles.length} дорожек субтитров`);
   }
 

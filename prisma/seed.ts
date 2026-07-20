@@ -35,6 +35,20 @@ import {
  */
 const db = new PrismaClient();
 
+/**
+ * Точечный режим для прода (иначе сид затирает правки админки).
+ *   SEED_COURSES=sales-b2b   — обрабатывать только перечисленные курсы (через запятую)
+ *   SEED_PRESERVE_COURSE=1   — НЕ трогать поля существующего курса (цена, обложка,
+ *                              описание правятся в админке); создавать только
+ *                              недостающие модули/уроки и учебный контент
+ * По умолчанию (локальная разработка) — прежнее поведение: полный сид.
+ */
+const SEED_COURSES = (process.env.SEED_COURSES ?? "")
+  .split(",")
+  .map((x) => x.trim())
+  .filter(Boolean);
+const SEED_PRESERVE_COURSE = process.env.SEED_PRESERVE_COURSE === "1";
+
 const OWNER_EMAIL = process.env.OWNER_EMAIL ?? "owner@example.kz";
 const OWNER_PASSWORD = process.env.SEED_OWNER_PASSWORD ?? "owner-dev-pass-123";
 const STUDENT_EMAIL = "student@example.kz";
@@ -483,6 +497,16 @@ const COURSES: CourseSpec[] = [
 ];
 
 async function upsertCourse(spec: CourseSpec) {
+  // SEED_PRESERVE_COURSE: существующий курс не трогаем — его поля ведёт админка.
+  if (SEED_PRESERVE_COURSE) {
+    const existing = await db.course.findUnique({ where: { slug: spec.slug }, select: { id: true, slug: true } });
+    if (existing) {
+      console.log(`   курс ${spec.slug}: поля сохранены (SEED_PRESERVE_COURSE=1)`);
+      await createMissingModules(existing.id, spec);
+      return existing;
+    }
+  }
+
   const course = await db.course.upsert({
     where: { slug: spec.slug },
     update: {
@@ -519,11 +543,18 @@ async function upsertCourse(spec: CourseSpec) {
     },
   });
 
-  const existingModules = await db.module.count({ where: { courseId: course.id } });
+  await createMissingModules(course.id, spec);
+
+  return course;
+}
+
+/** Создать модули и уроки курса, если их ещё нет (существующие не трогаем). */
+async function createMissingModules(courseId: string, spec: CourseSpec) {
+  const existingModules = await db.module.count({ where: { courseId } });
   if (existingModules === 0) {
     for (const [mIdx, m] of spec.modules.entries()) {
       const moduleRow = await db.module.create({
-        data: { courseId: course.id, title: m.title, sortOrder: mIdx },
+        data: { courseId, title: m.title, sortOrder: mIdx },
       });
       for (const [lIdx, l] of m.lessons.entries()) {
         await db.lesson.create({
@@ -543,8 +574,6 @@ async function upsertCourse(spec: CourseSpec) {
       }
     }
   }
-
-  return course;
 }
 
 // ── Финальный экзамен медпред-курса (вопросы по реальному содержанию видео) ──
@@ -965,13 +994,20 @@ async function main() {
     await db.badge.upsert({ where: { code: b.code }, update: {}, create: b });
   }
 
+  const specs = SEED_COURSES.length > 0 ? COURSES.filter((x) => SEED_COURSES.includes(x.slug)) : COURSES;
+  if (SEED_COURSES.length > 0) {
+    const unknown = SEED_COURSES.filter((slug) => !COURSES.some((x) => x.slug === slug));
+    if (unknown.length > 0) throw new Error(`SEED_COURSES: неизвестные курсы — ${unknown.join(", ")}`);
+    console.log(`▶ Точечный сид: ${specs.map((x) => x.slug).join(", ")}`);
+  }
   const courses = [];
-  for (const spec of COURSES) {
+  for (const spec of specs) {
     courses.push(await upsertCourse(spec));
   }
 
   // Медпред-курс собран полностью: публикуем все уроки, конспекты, экзамен.
-  const pharmaCourse = courses.find((c) => c.slug === "sales-pharma")!;
+  const pharmaCourse = courses.find((c) => c.slug === "sales-pharma");
+  if (pharmaCourse) {
   await db.lesson.updateMany({
     where: { module: { courseId: pharmaCourse.id }, videoStatus: "READY" },
     data: { status: "PUBLISHED" },
@@ -1006,7 +1042,10 @@ async function main() {
   // Итоговый тест готов (авторские материалы тренера). Поурочный контент
   // (конспекты, слайды, задания, тренажёры) добавляется по одному уроку —
   // после появления видео, см. prisma/seed-data/b2b-content.ts.
-  const b2bCourse = courses.find((c) => c.slug === "sales-b2b")!;
+  }
+
+  const b2bCourse = courses.find((c) => c.slug === "sales-b2b");
+  if (b2bCourse) {
   await seedSummaries(b2bCourse.id, B2B_SUMMARIES);
   await seedSlides(b2bCourse.id, B2B_SLIDES);
   await seedFlashcards(b2bCourse.id, B2B_FLASHCARDS);
@@ -1028,10 +1067,11 @@ async function main() {
     where: { module: { courseId: b2bCourse.id }, videoStatus: "READY" },
     data: { status: "PUBLISHED" },
   });
+  }
 
   // Отзывы для курса медпреда (VALIDATED — видны на лендинге)
-  const existingReviews = await db.review.count({ where: { courseId: pharmaCourse.id } });
-  if (existingReviews === 0) {
+  const existingReviews = pharmaCourse ? await db.review.count({ where: { courseId: pharmaCourse.id } }) : -1;
+  if (pharmaCourse && existingReviews === 0) {
     const reviews = [
       { userName: "Алёна Шапарова, специалист FMCG", rating: 5, text: "Теперь у меня есть точный алгоритм общения с клиентом — применяю на каждом визите." },
       { userName: "Светлана Протащук, руководитель филиала JTI", rating: 5, text: "Весь материал усвоен полностью благодаря бизнес-играм и разбору реальных кейсов." },
