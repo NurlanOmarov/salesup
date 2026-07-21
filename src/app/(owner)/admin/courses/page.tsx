@@ -38,6 +38,7 @@ export default async function AdminCoursesPage() {
         priceTiyn: true,
         oldPriceTiyn: true,
         status: true,
+        inDevelopment: true,
         sortOrder: true,
         hoursLabel: true,
         _count: { select: { enrollments: true } },
@@ -135,13 +136,20 @@ export default async function AdminCoursesPage() {
                         {c._count.enrollments}
                       </td>
                       <td className="px-4 py-3">
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-xs ${
-                            STATUS_STYLES[c.status] ?? ""
-                          }`}
-                        >
-                          {STATUS_LABELS[c.status] ?? c.status}
-                        </span>
+                        <div className="flex flex-wrap items-center gap-1">
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-xs ${
+                              STATUS_STYLES[c.status] ?? ""
+                            }`}
+                          >
+                            {STATUS_LABELS[c.status] ?? c.status}
+                          </span>
+                          {c.inDevelopment ? (
+                            <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-xs text-amber-700">
+                              В разработке
+                            </span>
+                          ) : null}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-right">
                         <Link
