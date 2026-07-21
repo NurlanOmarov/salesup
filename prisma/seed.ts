@@ -75,6 +75,7 @@ type CourseSpec = {
   priceTiyn: number;
   oldPriceTiyn?: number;
   hoursLabel: string;
+  inDevelopment?: boolean; // бейдж «В разработке» на витрине (каркасы без контента)
   learnPoints: string[];
   targetAudience: string[];
   faq: { q: string; a: string }[];
@@ -238,6 +239,7 @@ const COURSES: CourseSpec[] = [
   // ── Прочие курсы (каркасы, контент собирает фабрика) ──────────────────────
   {
     slug: "sales-tourism",
+    inDevelopment: true,
     title: "Техники продаж в туризме",
     subtitle: "Как продавать туры дорого и без скидок",
     description:
@@ -281,6 +283,7 @@ const COURSES: CourseSpec[] = [
   },
   {
     slug: "sales-kitchens",
+    inDevelopment: true,
     title: "Эффективные продажи кухонь",
     subtitle: "Системный подход к продаже мебели в шоу-руме",
     description:
@@ -324,6 +327,7 @@ const COURSES: CourseSpec[] = [
   },
   {
     slug: "sales-shoes",
+    inDevelopment: true,
     title: "Продажи в магазине обуви и одежды",
     subtitle: "Как увеличить средний чек и конверсию в торговом зале",
     description:
@@ -366,6 +370,7 @@ const COURSES: CourseSpec[] = [
   },
   {
     slug: "sales-realty",
+    inDevelopment: true,
     title: "Техники продаж недвижимости",
     subtitle: "От первого звонка до подписания договора",
     description:
@@ -408,6 +413,7 @@ const COURSES: CourseSpec[] = [
   },
   {
     slug: "sales-b2b",
+    inDevelopment: true,
     title: "B2B-переговоры и крупные сделки",
     subtitle: "Давление, торг и работа с ЛПР: переговоры как управляемый процесс",
     description:
@@ -534,6 +540,7 @@ async function upsertCourse(spec: CourseSpec) {
       oldPriceTiyn: spec.oldPriceTiyn ?? null,
       hoursLabel: spec.hoursLabel,
       status: "PUBLISHED",
+      inDevelopment: spec.inDevelopment ?? false,
       learnPoints: spec.learnPoints,
       targetAudience: spec.targetAudience,
       faq: spec.faq,
@@ -550,6 +557,7 @@ async function upsertCourse(spec: CourseSpec) {
       oldPriceTiyn: spec.oldPriceTiyn ?? null,
       hoursLabel: spec.hoursLabel,
       status: "PUBLISHED",
+      inDevelopment: spec.inDevelopment ?? false,
       accessDuration: "LIFETIME",
       learnPoints: spec.learnPoints,
       targetAudience: spec.targetAudience,

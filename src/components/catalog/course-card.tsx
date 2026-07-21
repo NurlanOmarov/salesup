@@ -31,13 +31,12 @@ export type CourseCardData = {
   priceTiyn: number;
   oldPriceTiyn: number | null;
   hoursLabel: string | null;
+  /** Бейдж «В разработке» — управляется в админке (настройки курса). */
+  inDevelopment: boolean;
   /** Предрассчитанные строки цен в 3 валютах (BYN основная, KZT/RUB — конвертация по курсу НБ РК). */
   prices?: CoursePrices;
   _count: { modules: number };
 };
-
-// Единственный готовый курс — остальные пока в разработке.
-const READY_COURSE_SLUG = "sales-pharma";
 
 export function CourseCard({ course }: { course: CourseCardData }) {
   const gradient =
@@ -45,7 +44,7 @@ export function CourseCard({ course }: { course: CourseCardData }) {
       ? industryGradients[course.industry]
       : "from-slate-700 via-slate-800 to-slate-900";
 
-  const inDevelopment = course.slug !== READY_COURSE_SLUG;
+  const inDevelopment = course.inDevelopment;
 
   return (
     <Link

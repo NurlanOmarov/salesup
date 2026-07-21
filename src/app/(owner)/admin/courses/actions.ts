@@ -34,6 +34,7 @@ export const updateCourseAction = safeAction(
       priceByn: z.coerce.number().min(0),
       oldPriceByn: z.coerce.number().min(0).optional(),
       status: z.enum(STATUSES),
+      inDevelopment: z.boolean(),
       accessDuration: z.enum(ACCESS_DURATIONS),
       sortOrder: z.coerce.number().int().min(0).max(9999),
       hoursLabel: z.string().trim().max(40).optional().or(z.literal("")),
@@ -70,6 +71,7 @@ export const updateCourseAction = safeAction(
           ? toTiyn(input.oldPriceByn)
           : null,
       status: input.status,
+      inDevelopment: input.inDevelopment,
       accessDuration: input.accessDuration,
       sortOrder: input.sortOrder,
       hoursLabel: input.hoursLabel || null,

@@ -178,6 +178,7 @@ model Course {
   oldPriceTiyn   Int?
   accessDuration AccessDuration @default(LIFETIME)
   status         PublishStatus  @default(DRAFT)
+  inDevelopment  Boolean        @default(false) // бейдж «В разработке» на витрине (курс виден, но контент ещё не готов)
   sortOrder      Int            @default(0)
   // Фабрика курсов
   sourcePlaylistUrl String? // YouTube-плейлист — источник курса

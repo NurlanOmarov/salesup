@@ -38,6 +38,7 @@ interface CourseFields {
   priceTiyn: number;
   oldPriceTiyn: number | null;
   status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+  inDevelopment: boolean;
   accessDuration: (typeof ACCESS_DURATIONS)[number];
   sortOrder: number;
   hoursLabel: string | null;
@@ -93,6 +94,7 @@ export function CourseEditForm({
     course.oldPriceTiyn ? course.oldPriceTiyn / 100 : 0,
   );
   const [status, setStatus] = useState(course.status);
+  const [inDevelopment, setInDevelopment] = useState(course.inDevelopment);
   const [accessDuration, setAccessDuration] = useState(course.accessDuration);
   const [sortOrder, setSortOrder] = useState(course.sortOrder);
   const [hoursLabel, setHoursLabel] = useState(course.hoursLabel ?? "");
@@ -221,6 +223,7 @@ export function CourseEditForm({
     setPriceByn(course.priceTiyn / 100);
     setOldPriceByn(course.oldPriceTiyn ? course.oldPriceTiyn / 100 : 0);
     setStatus(course.status);
+    setInDevelopment(course.inDevelopment);
     setAccessDuration(course.accessDuration);
     setSortOrder(course.sortOrder);
     setHoursLabel(course.hoursLabel ?? "");
@@ -268,6 +271,7 @@ export function CourseEditForm({
         priceByn,
         oldPriceByn,
         status,
+        inDevelopment,
         accessDuration,
         sortOrder,
         hoursLabel,
@@ -427,6 +431,15 @@ export function CourseEditForm({
               <option value="PUBLISHED">Опубликован</option>
               <option value="ARCHIVED">В архиве</option>
             </select>
+            <label className="mt-2 flex cursor-pointer items-center gap-2 text-sm font-medium text-foreground/80">
+              <input
+                type="checkbox"
+                className="size-4 rounded border-foreground/30 accent-amber-500"
+                checked={inDevelopment}
+                onChange={(e) => setInDevelopment(e.target.checked)}
+              />
+              Бейдж «В разработке»
+            </label>
           </div>
           <div>
             <label className={labelCls} htmlFor="duration">

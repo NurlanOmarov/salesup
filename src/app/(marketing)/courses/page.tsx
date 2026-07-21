@@ -42,6 +42,7 @@ async function getCourses(): Promise<CourseCardData[]> {
             priceTiyn: true,
             oldPriceTiyn: true,
             hoursLabel: true,
+            inDevelopment: true,
             _count: { select: { modules: true } },
           },
         }),

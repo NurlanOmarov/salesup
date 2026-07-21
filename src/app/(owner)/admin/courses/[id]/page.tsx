@@ -34,6 +34,7 @@ export default async function CourseEditPage({
         priceTiyn: true,
         oldPriceTiyn: true,
         status: true,
+        inDevelopment: true,
         accessDuration: true,
         sortOrder: true,
         hoursLabel: true,
