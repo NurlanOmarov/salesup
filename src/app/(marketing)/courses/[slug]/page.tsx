@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 import { currency, buildMultiPrice, ratesAvailable } from "@/lib/currency";
 import { buttonVariants } from "@/components/ui/button";
 import { Reveal } from "@/components/landing/reveal";
-import { LeadForm } from "@/components/landing/lead-form";
+import { CourseCta, CourseCtaSection } from "@/components/landing/course-cta";
 import { Reviews, type ReviewItem } from "@/components/landing/reviews";
 import { trainer } from "@/content/landing";
 import { resolveRedirect } from "@/lib/seo/redirects";
@@ -338,15 +338,7 @@ export default async function CoursePage({
                   Онлайн-оплата не требуется
                 </p>
 
-                <a
-                  href="#zayavka"
-                  className={cn(
-                    buttonVariants({ variant: "brand", size: "lg" }),
-                    "mt-4 w-full",
-                  )}
-                >
-                  Записаться на курс
-                </a>
+                <CourseCta slug={slug} />
 
                 <div className="mt-4 flex flex-col gap-2">
                   {wa ? (
@@ -542,36 +534,15 @@ export default async function CoursePage({
         </section>
       ) : null}
 
-      {/* CTA — форма заявки */}
+      {/* CTA — форма заявки (или «вы уже записаны» для студента с доступом) */}
       <section id="zayavka" className="mx-auto max-w-6xl px-4 pb-20 pt-4">
-        <div className="relative overflow-hidden rounded-3xl bg-slate-950 p-8 text-white md:p-12">
-          <div className="pointer-events-none absolute -top-24 right-0 h-72 w-72 rounded-full bg-brand/15 blur-3xl" />
-          <div className="relative grid items-center gap-10 md:grid-cols-2">
-            <Reveal>
-              <div>
-                <h2 className="text-3xl font-bold">Записаться на курс</h2>
-                <p className="mt-3 text-white/70">
-                  Оставьте заявку — расскажем об условиях, подберём удобный способ
-                  оплаты. Доступ выдаётся вручную после подтверждения оплаты.
-                </p>
-                <p className="mt-2 font-semibold text-brand-light">
-                  {course.title}
-                </p>
-                <p className="text-2xl font-bold">{prices.byn}</p>
-                {hasRates ? (
-                  <p className="text-sm text-white/50">
-                    ≈ {prices.kzt} · ≈ {prices.rub}
-                  </p>
-                ) : null}
-              </div>
-            </Reveal>
-            <Reveal delay={0.05}>
-              <div className="rounded-2xl bg-background p-6 text-foreground shadow-2xl">
-                <LeadForm courseId={course.id} />
-              </div>
-            </Reveal>
-          </div>
-        </div>
+        <CourseCtaSection
+          slug={slug}
+          courseId={course.id}
+          courseTitle={course.title}
+          priceByn={prices.byn}
+          priceOther={hasRates ? `≈ ${prices.kzt} · ≈ ${prices.rub}` : null}
+        />
       </section>
 
       {/* Связанные курсы — семантическая перелинковка (embeddings, кэш сутки) */}
