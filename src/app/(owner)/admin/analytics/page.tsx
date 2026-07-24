@@ -20,6 +20,22 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
+/**
+ * Внешние счётчики (маркетинговый слой, D-002) — прямые ссылки на кабинеты этого
+ * проекта. Своя аналитика показывает трафик/курсы/страны; источники и рекламные
+ * кампании смотрим здесь. При смене счётчиков — обновить id/URL.
+ */
+const EXTERNAL_ANALYTICS = [
+  {
+    label: "Яндекс.Метрика",
+    href: "https://metrika.yandex.ru/overview?id=110998512&period=week&group=day&isMinSamplingEnabled=false&attr=%7B%22attributionId%22%3A%22LastSign%22%2C%22isCrossDevice%22%3Atrue%7D&isUndefinedEnabled=false&currency=USD",
+  },
+  {
+    label: "Google Analytics",
+    href: "https://analytics.google.com/analytics/web/#/a402217951p547019038/reports/intelligenthome",
+  },
+] as const;
+
 type SP = Record<string, string | string[] | undefined>;
 
 export default async function AnalyticsPage({ searchParams }: { searchParams: Promise<SP> }) {
@@ -55,15 +71,21 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
       {/* Управление периодом */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <PeriodControls activeRange={range} from={d.range.from} to={d.range.to} compare={compare} />
-        <a
-          href="https://metrika.yandex.ru"
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-1.5 text-xs text-foreground/40 transition-colors hover:text-foreground/70"
-        >
-          Источники и кампании — в Метрике/GA
-          <ExternalLink className="size-3.5" />
-        </a>
+        <div className="flex items-center gap-2">
+          <span className="hidden text-xs text-foreground/40 sm:inline">Источники и кампании:</span>
+          {EXTERNAL_ANALYTICS.map((s) => (
+            <a
+              key={s.label}
+              href={s.href}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-foreground/10 bg-background px-2.5 py-1.5 text-xs font-medium text-foreground/70 transition-colors hover:border-foreground/25 hover:text-foreground"
+            >
+              {s.label}
+              <ExternalLink className="size-3.5 opacity-60" />
+            </a>
+          ))}
+        </div>
       </div>
 
       {/* KPI */}
