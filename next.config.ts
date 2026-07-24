@@ -6,8 +6,10 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   // argon2 — нативный модуль; не бандлить на сервере (Sprint 1)
-  // geoip-lite читает .dat-базы с диска — тоже вне бандла webpack
-  serverExternalPackages: ["@node-rs/argon2", "argon2", "pino", "geoip-lite"],
+  // geoip-lite НЕ в external: под pnpm авто-трейсинг не копирует его в standalone
+  // node_modules → webpack бандлит его код, а .dat-базы даёт outputFileTracingIncludes
+  // (+ global.geodatadir в lib/analytics/geo.ts указывает на них в рантайме).
+  serverExternalPackages: ["@node-rs/argon2", "argon2", "pino"],
   // Server Actions по умолчанию режут тело на 1 МБ, а обложки/OG-картинки грузятся
   // через FormData и могут весить до 8 МБ (проверка размера — в actions.ts). Поднимаем
   // лимит, иначе Next отклоняет запрос ДО входа в action → 500 «Server Components render».

@@ -47,7 +47,7 @@ export async function POST(request: Request) {
     if (!parsed.success) return new NextResponse(null, { status: 204 });
 
     const { path, v, ref } = parsed.data;
-    const country = countryFromIp(clientIp(request.headers));
+    const country = await countryFromIp(clientIp(request.headers));
 
     await recordPageView({
       path,

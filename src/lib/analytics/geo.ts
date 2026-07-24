@@ -1,14 +1,30 @@
 import "server-only";
-import geoip from "geoip-lite";
+import { join } from "node:path";
 
 /**
  * Определение страны посетителя по IP — офлайн, через geoip-lite (база стран внутри
  * пакета, никаких внешних вызовов). CLAUDE.md правило 9: сам IP НИКОГДА не сохраняем и
  * не логируем — берём его только на лету, кладём в Event лишь ISO-код страны (BY/KZ/…).
  *
- * geoip-lite грузит базы в RAM при первом require (~140 МБ). Это учтено в бюджете VPS
- * (правило 10); если память станет узким местом — переносим на mmap-mmdb (Country-only).
+ * geoip-lite бандлится webpack'ом (не external), а его .dat-базы копируются в
+ * standalone-образ через outputFileTracingIncludes (next.config). Путь к базам задаём
+ * ДО загрузки модуля через global.geodatadir, т.к. в бандле __dirname не указывает на
+ * папку пакета. Загрузка ленивая — базы (~140 МБ RAM) поднимаются при первом запросе.
  */
+
+type Lookup = (ip: string) => { country?: string } | null;
+let lookupFn: Lookup | null = null;
+
+async function getLookup(): Promise<Lookup> {
+  if (!lookupFn) {
+    (globalThis as { geodatadir?: string }).geodatadir =
+      process.env.GEODATADIR || join(process.cwd(), "node_modules/geoip-lite/data");
+    const mod = await import("geoip-lite");
+    const geoip = (mod as unknown as { default?: { lookup: Lookup }; lookup?: Lookup }).default ?? mod;
+    lookupFn = (geoip as { lookup: Lookup }).lookup;
+  }
+  return lookupFn;
+}
 
 /** IP клиента из заголовков прокси. nginx проставляет X-Real-IP / X-Forwarded-For. */
 export function clientIp(headers: Headers): string | null {
@@ -22,10 +38,11 @@ export function clientIp(headers: Headers): string | null {
 }
 
 /** ISO-код страны по IP или null (приватный/локальный/неопределённый IP). */
-export function countryFromIp(ip: string | null): string | null {
+export async function countryFromIp(ip: string | null): Promise<string | null> {
   if (!ip) return null;
   try {
-    const geo = geoip.lookup(ip);
+    const lookup = await getLookup();
+    const geo = lookup(ip);
     return geo?.country || null;
   } catch {
     return null;
