@@ -28,6 +28,15 @@ import {
   B2B_BRANCHING,
   B2B_SCENARIOS,
 } from "./seed-data/b2b-content.js";
+import {
+  TIME_LESSON_QUIZZES,
+  TIME_FLASHCARDS,
+  TIME_CHECKLISTS,
+  TIME_SCRIPTS,
+  TIME_BRANCHING,
+  TIME_EXAM,
+  TIME_EXAM_PASS_SCORE,
+} from "./seed-data/time-content.js";
 
 /**
  * Сиды для локальной разработки (BACKLOG P0.3).
@@ -1265,6 +1274,24 @@ async function main() {
     where: { module: { courseId: b2bCourse.id }, videoStatus: "READY" },
     data: { status: "PUBLISHED" },
   });
+  }
+
+  // ── Курс «Тайм менеджмент: базовые принципы» ──────────────────────────────
+  // Поурочные задания, флеш-карты, тренажёры и итоговый экзамен — по реальному
+  // содержанию видео Виталия Дубовика, см. prisma/seed-data/time-content.ts.
+  const timeCourse = courses.find((c) => c.slug === "time-management");
+  if (timeCourse) {
+    await seedLessonQuizzes(timeCourse.id, TIME_LESSON_QUIZZES);
+    await seedFlashcards(timeCourse.id, TIME_FLASHCARDS);
+    await seedArtifacts(timeCourse.id, "CHECKLIST", TIME_CHECKLISTS);
+    await seedArtifacts(timeCourse.id, "SCRIPT_BUILDER", TIME_SCRIPTS);
+    await seedArtifacts(timeCourse.id, "BRANCHING", TIME_BRANCHING);
+    await seedFinalExam(timeCourse.id, {
+      questions: TIME_EXAM,
+      description:
+        "Проверка знаний по курсу: приоритеты и матрица Эйзенхауэра, правило 60/40, лягушка/слон/три гвоздя, цели по SMART, ежедневник и хронометраж.",
+      passScore: TIME_EXAM_PASS_SCORE,
+    });
   }
 
   // Отзывы для курса медпреда (VALIDATED — видны на лендинге)
