@@ -6,7 +6,8 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   // argon2 — нативный модуль; не бандлить на сервере (Sprint 1)
-  serverExternalPackages: ["@node-rs/argon2", "argon2", "pino"],
+  // geoip-lite читает .dat-базы с диска — тоже вне бандла webpack
+  serverExternalPackages: ["@node-rs/argon2", "argon2", "pino", "geoip-lite"],
   // Server Actions по умолчанию режут тело на 1 МБ, а обложки/OG-картинки грузятся
   // через FormData и могут весить до 8 МБ (проверка размера — в actions.ts). Поднимаем
   // лимит, иначе Next отклоняет запрос ДО входа в action → 500 «Server Components render».
@@ -15,9 +16,12 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "10mb",
     },
   },
-  // Шрифты для PDF-сертификатов (читаются с диска в рантайме) — копируем в standalone.
+  // Файлы, читаемые с диска в рантайме, — копируем в standalone-образ:
+  //  • шрифты для PDF-сертификатов;
+  //  • базы geoip-lite для /api/track (определение страны по IP, правило 9/10).
   outputFileTracingIncludes: {
     "/**": ["./src/assets/fonts/**"],
+    "/api/track": ["./node_modules/geoip-lite/data/**"],
   },
   // Резолв ESM-style `.js`-импортов в TS-исходниках (lib/storage и др.):
   // webpack по умолчанию не сопоставляет .js → .ts, как это делает tsx/node ESM.

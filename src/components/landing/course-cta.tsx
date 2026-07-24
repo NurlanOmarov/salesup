@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { PlayCircle, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { trackEvent } from "@/lib/analytics/track";
 import { buttonVariants } from "@/components/ui/button";
 import { Reveal } from "@/components/landing/reveal";
 import { LeadForm } from "@/components/landing/lead-form";
@@ -57,6 +58,7 @@ export function CourseCta({ slug }: { slug: string }) {
     return (
       <Link
         href={continueUrl}
+        onClick={() => trackEvent("continue_course", { slug })}
         className={cn(buttonVariants({ variant: "brand", size: "lg" }), "mt-4 w-full")}
       >
         <PlayCircle className="size-5" />
@@ -68,6 +70,7 @@ export function CourseCta({ slug }: { slug: string }) {
   return (
     <a
       href="#zayavka"
+      onClick={() => trackEvent("lead_start", { slug })}
       className={cn(buttonVariants({ variant: "brand", size: "lg" }), "mt-4 w-full")}
     >
       Записаться на курс

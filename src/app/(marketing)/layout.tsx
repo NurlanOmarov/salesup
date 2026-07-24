@@ -1,6 +1,7 @@
 import { SiteHeader } from "@/components/landing/site-header";
 import { SiteFooter } from "@/components/landing/site-footer";
 import { MarketingAnalytics } from "@/components/analytics/marketing-analytics";
+import { PageViewTracker } from "@/components/analytics/pageview-tracker";
 
 export default function MarketingLayout({
   children,
@@ -12,8 +13,9 @@ export default function MarketingLayout({
       <SiteHeader />
       <div className="flex-1">{children}</div>
       <SiteFooter />
-      {/* Счётчики GA4/Метрики — только публичные страницы (D-002). */}
+      {/* Счётчики GA4/Метрики + свой page.view — только публичные страницы (D-002). */}
       <MarketingAnalytics />
+      <PageViewTracker />
     </div>
   );
 }

@@ -931,8 +931,9 @@ export const TIME_EXAM: SeedQuestion[] = [
 
 // ─── Тренажёры-метафоры (интерактивные оболочки: лягушка / слон / гвозди) ─────
 // Ученик работает со СВОИМИ задачами, анимированный SVG реагирует. Контент AI не
-// генерирует: это интерактив, а не текст. Урок «лягушка, слон, три гвоздя» держит
-// все три (переключатель), отдельный урок про лягушку — только её.
+// генерирует: это интерактив, а не текст. Лягушка живёт только в своём профильном
+// уроке «Правило лягушки»; урок «лягушка, слон, три гвоздя» держит слона и гвозди
+// (переключатель) — приёмы для крупных задач, без дубля лягушки.
 
 const FROG_METAPHOR: MetaphorData = {
   variant: "frog",
@@ -965,7 +966,7 @@ const NAILS_METAPHOR: MetaphorData = {
 export const TIME_METAPHORS: { titleMatch: string; data: { items: MetaphorData[] } }[] = [
   {
     titleMatch: "лягушка, слон, три гвоздя",
-    data: { items: [FROG_METAPHOR, ELEPHANT_METAPHOR, NAILS_METAPHOR] },
+    data: { items: [ELEPHANT_METAPHOR, NAILS_METAPHOR] },
   },
   {
     titleMatch: "Правило лягушки",

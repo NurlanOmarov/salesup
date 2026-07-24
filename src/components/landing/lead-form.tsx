@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { createLeadAction, type LeadFormState } from "@/app/(marketing)/actions";
+import { trackEvent } from "@/lib/analytics/track";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,6 +22,12 @@ export function LeadForm({
     createLeadAction,
     initialState,
   );
+
+  // Конверсия в счётчики — только по факту успешной отправки (маркетинговый слой,
+  // D-002). courseId кладём в параметр, чтобы видеть, какой курс приносит заявки.
+  useEffect(() => {
+    if (state.ok) trackEvent("lead_submit", courseId ? { courseId } : {});
+  }, [state.ok, courseId]);
 
   if (state.ok) {
     return (

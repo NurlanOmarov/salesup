@@ -12,18 +12,37 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function AdminHomePage() {
-  const [students, newLeads, courses, llm] = await Promise.all([
+  const [students, newLeads, courses, draftCourses, llm] = await Promise.all([
     db.user.count({ where: { role: "STUDENT" } }),
     db.lead.count({ where: { status: "NEW" } }),
     db.course.count({ where: { status: "PUBLISHED" } }),
+    db.course.count({ where: { status: "DRAFT" } }),
     db.llmUsage.aggregate({ _sum: { costMicroUsd: true } }),
   ]);
 
-  const cards = [
-    { href: "/admin/students", icon: Users, label: "Ученики", value: students },
-    { href: "/admin/leads", icon: Inbox, label: "Новые заявки", value: newLeads },
-    { href: "/courses", icon: BookOpen, label: "Опубликовано курсов", value: courses },
-    { href: "/admin/usage", icon: Coins, label: "Расходы LLM", value: formatUsd(llm._sum.costMicroUsd ?? 0) },
+  const cards: {
+    href: string;
+    icon: typeof Users;
+    label: string;
+    value: string | number;
+    note: string | null;
+  }[] = [
+    { href: "/admin/students", icon: Users, label: "Ученики", value: students, note: null },
+    { href: "/admin/leads", icon: Inbox, label: "Новые заявки", value: newLeads, note: null },
+    {
+      href: "/courses",
+      icon: BookOpen,
+      label: "Опубликовано курсов",
+      value: courses,
+      note: draftCourses > 0 ? `${draftCourses} в разработке` : null,
+    },
+    {
+      href: "/admin/usage",
+      icon: Coins,
+      label: "Расходы LLM",
+      value: formatUsd(llm._sum.costMicroUsd ?? 0),
+      note: null,
+    },
   ];
 
   return (
@@ -43,6 +62,9 @@ export default async function AdminHomePage() {
             <c.icon className="size-6 text-amber-600" />
             <p className="mt-3 text-3xl font-bold">{c.value}</p>
             <p className="text-sm text-foreground/60">{c.label}</p>
+            {c.note ? (
+              <p className="mt-0.5 text-xs text-amber-600/80">{c.note}</p>
+            ) : null}
           </Link>
         ))}
       </div>
