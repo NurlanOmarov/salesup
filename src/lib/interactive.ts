@@ -155,6 +155,194 @@ export function parseDialogueAudit(content: string | null | undefined): Dialogue
   }
 }
 
+// ─── Тренажёр-метафора (слон/лягушка/гвозди: ученик вводит свои задачи) ────────
+
+/**
+ * Визуальная метафора тайм-менеджмента. Ученик вводит СВОИ задачи, анимированный
+ * SVG реагирует — контент AI не генерирует (это интерактивная оболочка), поэтому
+ * критик валидирует тривиально (см. CLAUDE.md, правило 5). Одна запись на урок.
+ */
+export type MetaphorVariant = "elephant" | "frog" | "nails";
+
+const METAPHOR_VARIANTS: MetaphorVariant[] = ["elephant", "frog", "nails"];
+
+export interface MetaphorData {
+  variant: MetaphorVariant;
+  title: string;
+  prompt: string;
+  /** Цель: elephant — число кусков; nails — ровно столько гвоздей; frog — не используется. */
+  goal: number;
+  /** Плейсхолдер поля крупной задачи (elephant/frog). */
+  bigTaskPlaceholder?: string;
+  /** Плейсхолдер поля одного пункта (кусок/задача). */
+  itemPlaceholder?: string;
+}
+
+/** Безопасный парсинг тренажёра-метафоры. null при неизвестном варианте/битой структуре. */
+export function parseMetaphor(content: string | null | undefined): MetaphorData | null {
+  if (!content) return null;
+  try {
+    const data = JSON.parse(content) as MetaphorData;
+    if (
+      !data ||
+      !METAPHOR_VARIANTS.includes(data.variant) ||
+      typeof data.title !== "string" ||
+      typeof data.prompt !== "string"
+    ) {
+      return null;
+    }
+    const goal =
+      typeof data.goal === "number" && Number.isFinite(data.goal)
+        ? Math.min(12, Math.max(2, Math.round(data.goal)))
+        : data.variant === "nails"
+          ? 3
+          : 5;
+    return {
+      variant: data.variant,
+      title: data.title,
+      prompt: data.prompt,
+      goal,
+      bigTaskPlaceholder:
+        typeof data.bigTaskPlaceholder === "string" ? data.bigTaskPlaceholder : undefined,
+      itemPlaceholder:
+        typeof data.itemPlaceholder === "string" ? data.itemPlaceholder : undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Набор метафор одного урока. Урок «лягушка, слон, три гвоздя» держит все три;
+ * отдельный урок про лягушку — одну. Принимает и legacy-форму (один объект).
+ */
+export function parseMetaphors(content: string | null | undefined): MetaphorData[] | null {
+  if (!content) return null;
+  try {
+    const raw = JSON.parse(content) as unknown;
+    const list = Array.isArray((raw as { items?: unknown }).items)
+      ? (raw as { items: unknown[] }).items
+      : [raw];
+    const items = list
+      .map((it) => parseMetaphor(JSON.stringify(it)))
+      .filter((m): m is MetaphorData => m !== null);
+    return items.length > 0 ? items : null;
+  } catch {
+    return null;
+  }
+}
+
+// ─── Матрица Эйзенхауэра (разложить задачи по 4 квадрантам важно/срочно) ───────
+
+/**
+ * Интерактивная матрица: ученик вводит СВОИ задачи и раскладывает по квадрантам
+ * (важно×срочно). Оболочка без AI-контента (см. правило 5). Заготовки задач
+ * опциональны — можно начать с пустого списка. Одна запись на урок.
+ */
+export interface EisenhowerData {
+  title: string;
+  prompt: string;
+  /** Необязательные примеры задач для старта (ученик может добавлять свои). */
+  seedTasks?: string[];
+}
+
+export function parseEisenhower(content: string | null | undefined): EisenhowerData | null {
+  if (!content) return null;
+  try {
+    const data = JSON.parse(content) as EisenhowerData;
+    if (!data || typeof data.title !== "string" || typeof data.prompt !== "string") return null;
+    const seedTasks = Array.isArray(data.seedTasks)
+      ? data.seedTasks.filter((t): t is string => typeof t === "string").slice(0, 12)
+      : undefined;
+    return { title: data.title, prompt: data.prompt, seedTasks };
+  } catch {
+    return null;
+  }
+}
+
+// ─── Правило 60/40 (кольцо дня: планируем ≤60%, остальное — буфер) ────────────
+
+/** Интерактив «правило 60/40». Оболочка без AI-контента (см. правило 5). */
+export interface Rule6040Data {
+  title: string;
+  prompt: string;
+  /** Рабочих часов в дне (знаменатель кольца). 1..16, по умолчанию 8. */
+  dayHours: number;
+  /** Примеры дел {текст, часы} для старта. */
+  seedTasks?: { text: string; hours: number }[];
+}
+
+export function parseRule6040(content: string | null | undefined): Rule6040Data | null {
+  if (!content) return null;
+  try {
+    const d = JSON.parse(content) as Rule6040Data;
+    if (!d || typeof d.title !== "string" || typeof d.prompt !== "string") return null;
+    const dayHours =
+      typeof d.dayHours === "number" && Number.isFinite(d.dayHours)
+        ? Math.min(16, Math.max(1, Math.round(d.dayHours)))
+        : 8;
+    const seedTasks = Array.isArray(d.seedTasks)
+      ? d.seedTasks
+          .filter((t) => t && typeof t.text === "string" && typeof t.hours === "number")
+          .map((t) => ({ text: t.text, hours: Math.min(dayHours, Math.max(0.5, t.hours)) }))
+          .slice(0, 12)
+      : undefined;
+    return { title: d.title, prompt: d.prompt, dayHours, seedTasks };
+  } catch {
+    return null;
+  }
+}
+
+// ─── SMART-цель (5 критериев собирают мишень) ─────────────────────────────────
+
+export interface SmartGoalData {
+  title: string;
+  prompt: string;
+  goalPlaceholder?: string;
+}
+
+export function parseSmartGoal(content: string | null | undefined): SmartGoalData | null {
+  if (!content) return null;
+  try {
+    const d = JSON.parse(content) as SmartGoalData;
+    if (!d || typeof d.title !== "string" || typeof d.prompt !== "string") return null;
+    return {
+      title: d.title,
+      prompt: d.prompt,
+      goalPlaceholder: typeof d.goalPlaceholder === "string" ? d.goalPlaceholder : undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+// ─── Хронометраж / пожиратели времени (круг дня + экстраполяция потерь) ────────
+
+export interface TimeAuditData {
+  title: string;
+  prompt: string;
+  seedActivities?: { text: string; hours: number; waster: boolean }[];
+}
+
+export function parseTimeAudit(content: string | null | undefined): TimeAuditData | null {
+  if (!content) return null;
+  try {
+    const d = JSON.parse(content) as TimeAuditData;
+    if (!d || typeof d.title !== "string" || typeof d.prompt !== "string") return null;
+    const seedActivities = Array.isArray(d.seedActivities)
+      ? d.seedActivities
+          .filter(
+            (a) => a && typeof a.text === "string" && typeof a.hours === "number" && typeof a.waster === "boolean",
+          )
+          .map((a) => ({ text: a.text, hours: Math.min(24, Math.max(0.25, a.hours)), waster: a.waster }))
+          .slice(0, 16)
+      : undefined;
+    return { title: d.title, prompt: d.prompt, seedActivities };
+  } catch {
+    return null;
+  }
+}
+
 // ─── Hotspot-схема (кликабельные точки на изображении) ────────────────────────
 
 export interface HotspotPoint {

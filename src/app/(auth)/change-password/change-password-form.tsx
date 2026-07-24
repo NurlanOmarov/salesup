@@ -1,6 +1,8 @@
 "use client";
 
 import { useActionState } from "react";
+import Image from "next/image";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   changePasswordAction,
@@ -25,7 +27,15 @@ export function ChangePasswordForm() {
       transition={{ duration: 0.25 }}
       className="w-full max-w-sm rounded-2xl border border-foreground/10 p-6 shadow-sm sm:p-8"
     >
-      <h1 className="text-2xl font-bold">Смена пароля</h1>
+      <Link
+        href="/"
+        className="flex items-center gap-2 text-lg font-bold tracking-tight"
+      >
+        <Image src="/logo.png" alt="" width={24} height={24} className="size-6" />
+        <span className="text-brand">ACTIVE SALES</span>
+      </Link>
+
+      <h1 className="mt-6 text-2xl font-bold">Смена пароля</h1>
       <p className="mt-1 text-sm text-foreground/60">
         Это ваш первый вход. Задайте постоянный пароль, чтобы продолжить.
       </p>

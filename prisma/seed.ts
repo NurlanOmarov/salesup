@@ -34,6 +34,11 @@ import {
   TIME_CHECKLISTS,
   TIME_SCRIPTS,
   TIME_BRANCHING,
+  TIME_METAPHORS,
+  TIME_EISENHOWER,
+  TIME_RULE6040,
+  TIME_SMART,
+  TIME_AUDIT,
   TIME_EXAM,
   TIME_EXAM_PASS_SCORE,
 } from "./seed-data/time-content.js";
@@ -81,6 +86,8 @@ type CourseSpec = {
   subtitle: string;
   description: string;
   industry: string;
+  /** Ось витрины «для кого»: EVERYONE — универсальный, SPECIALIZED — под отрасль (по умолчанию). */
+  audience?: "EVERYONE" | "SPECIALIZED";
   priceTiyn: number;
   oldPriceTiyn?: number;
   hoursLabel: string;
@@ -380,6 +387,7 @@ const COURSES: CourseSpec[] = [
   {
     slug: "time-management",
     inDevelopment: true,
+    audience: "EVERYONE", // универсальный навык — не привязан к отрасли
     title: "Тайм менеджмент: базовые принципы",
     subtitle: "Приоритеты, цели и инструменты управления временем — тренинг Виталия Дубовика",
     description:
@@ -700,6 +708,7 @@ async function upsertCourse(spec: CourseSpec) {
           subtitle: spec.subtitle,
           description: spec.description,
           industry: spec.industry,
+          audience: spec.audience ?? "SPECIALIZED",
           hoursLabel: spec.hoursLabel,
           learnPoints: spec.learnPoints,
           targetAudience: spec.targetAudience,
@@ -719,6 +728,7 @@ async function upsertCourse(spec: CourseSpec) {
       subtitle: spec.subtitle,
       description: spec.description,
       industry: spec.industry,
+      audience: spec.audience ?? "SPECIALIZED",
       priceTiyn: spec.priceTiyn,
       oldPriceTiyn: spec.oldPriceTiyn ?? null,
       hoursLabel: spec.hoursLabel,
@@ -736,6 +746,7 @@ async function upsertCourse(spec: CourseSpec) {
       subtitle: spec.subtitle,
       description: spec.description,
       industry: spec.industry,
+      audience: spec.audience ?? "SPECIALIZED",
       priceTiyn: spec.priceTiyn,
       oldPriceTiyn: spec.oldPriceTiyn ?? null,
       hoursLabel: spec.hoursLabel,
@@ -1106,7 +1117,17 @@ async function seedObjections(courseId: string, rows: LessonObjections[]) {
 /** Артефакт-форматы по titleMatch: чек-листы, скрипты, «найди ошибку», hotspot. */
 async function seedArtifacts(
   courseId: string,
-  type: "CHECKLIST" | "SCRIPT_BUILDER" | "DIALOGUE_AUDIT" | "HOTSPOT" | "BRANCHING",
+  type:
+    | "CHECKLIST"
+    | "SCRIPT_BUILDER"
+    | "DIALOGUE_AUDIT"
+    | "HOTSPOT"
+    | "BRANCHING"
+    | "TASK_METAPHOR"
+    | "EISENHOWER"
+    | "RULE_6040"
+    | "SMART_GOAL"
+    | "TIME_AUDIT",
   rows: { titleMatch: string; data: unknown }[],
 ) {
   const lessons = await db.lesson.findMany({
@@ -1286,6 +1307,11 @@ async function main() {
     await seedArtifacts(timeCourse.id, "CHECKLIST", TIME_CHECKLISTS);
     await seedArtifacts(timeCourse.id, "SCRIPT_BUILDER", TIME_SCRIPTS);
     await seedArtifacts(timeCourse.id, "BRANCHING", TIME_BRANCHING);
+    await seedArtifacts(timeCourse.id, "TASK_METAPHOR", TIME_METAPHORS);
+    await seedArtifacts(timeCourse.id, "EISENHOWER", TIME_EISENHOWER);
+    await seedArtifacts(timeCourse.id, "RULE_6040", TIME_RULE6040);
+    await seedArtifacts(timeCourse.id, "SMART_GOAL", TIME_SMART);
+    await seedArtifacts(timeCourse.id, "TIME_AUDIT", TIME_AUDIT);
     await seedFinalExam(timeCourse.id, {
       questions: TIME_EXAM,
       description:

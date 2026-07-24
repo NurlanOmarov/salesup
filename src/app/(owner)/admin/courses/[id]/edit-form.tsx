@@ -33,6 +33,7 @@ interface CourseFields {
   title: string;
   subtitle: string | null;
   industry: string | null;
+  audience: "EVERYONE" | "SPECIALIZED";
   description: string;
   coverUrl: string | null;
   priceTiyn: number;
@@ -88,6 +89,7 @@ export function CourseEditForm({
   const [title, setTitle] = useState(course.title);
   const [subtitle, setSubtitle] = useState(course.subtitle ?? "");
   const [industry, setIndustry] = useState(course.industry ?? "");
+  const [audience, setAudience] = useState(course.audience);
   const [description, setDescription] = useState(course.description);
   const [priceByn, setPriceByn] = useState(course.priceTiyn / 100);
   const [oldPriceByn, setOldPriceByn] = useState(
@@ -219,6 +221,7 @@ export function CourseEditForm({
     setTitle(course.title);
     setSubtitle(course.subtitle ?? "");
     setIndustry(course.industry ?? "");
+    setAudience(course.audience);
     setDescription(course.description);
     setPriceByn(course.priceTiyn / 100);
     setOldPriceByn(course.oldPriceTiyn ? course.oldPriceTiyn / 100 : 0);
@@ -267,6 +270,7 @@ export function CourseEditForm({
         title,
         subtitle,
         industry,
+        audience,
         description,
         priceByn,
         oldPriceByn,
@@ -344,16 +348,40 @@ export function CourseEditForm({
             />
           </div>
           <div>
-            <label className={labelCls} htmlFor="industry">
-              Отрасль
+            <label className={labelCls} htmlFor="audience">
+              Для кого
             </label>
-            <input
-              id="industry"
+            <select
+              id="audience"
               className={inputCls}
-              value={industry}
-              onChange={(e) => setIndustry(e.target.value)}
-            />
+              value={audience}
+              onChange={(e) =>
+                setAudience(e.target.value as CourseFields["audience"])
+              }
+            >
+              <option value="SPECIALIZED">Под отрасль</option>
+              <option value="EVERYONE">Для всех</option>
+            </select>
+            <p className="mt-1 text-xs text-foreground/45">
+              Управляет фильтром на витрине /courses.
+            </p>
           </div>
+        </div>
+
+        <div>
+          <label className={labelCls} htmlFor="industry">
+            Отрасль
+          </label>
+          <input
+            id="industry"
+            className={inputCls}
+            value={industry}
+            onChange={(e) => setIndustry(e.target.value)}
+            placeholder="Напр. Медпредставители"
+          />
+          <p className="mt-1 text-xs text-foreground/45">
+            Метка отрасли и таблетка-фильтр — только для «Под отрасль».
+          </p>
         </div>
 
         <div>

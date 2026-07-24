@@ -17,6 +17,7 @@ import { ACCESS_DURATIONS } from "@/lib/admin/enrollment";
  */
 
 const STATUSES = ["DRAFT", "PUBLISHED", "ARCHIVED"] as const;
+const AUDIENCES = ["EVERYONE", "SPECIALIZED"] as const;
 
 /** BYN в tiyn: «300» → 30 000 tiyn. */
 function toTiyn(raw: number): number {
@@ -30,6 +31,7 @@ export const updateCourseAction = safeAction(
       title: z.string().trim().min(1, "Укажите название").max(200),
       subtitle: z.string().trim().max(300).optional().or(z.literal("")),
       industry: z.string().trim().max(80).optional().or(z.literal("")),
+      audience: z.enum(AUDIENCES),
       description: z.string().trim().max(8000).optional().or(z.literal("")),
       priceByn: z.coerce.number().min(0),
       oldPriceByn: z.coerce.number().min(0).optional(),
@@ -64,6 +66,7 @@ export const updateCourseAction = safeAction(
       title: input.title,
       subtitle: input.subtitle || null,
       industry: input.industry || null,
+      audience: input.audience,
       description: input.description || "",
       priceTiyn: toTiyn(input.priceByn),
       oldPriceTiyn:

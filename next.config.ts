@@ -7,6 +7,14 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   // argon2 — нативный модуль; не бандлить на сервере (Sprint 1)
   serverExternalPackages: ["@node-rs/argon2", "argon2", "pino"],
+  // Server Actions по умолчанию режут тело на 1 МБ, а обложки/OG-картинки грузятся
+  // через FormData и могут весить до 8 МБ (проверка размера — в actions.ts). Поднимаем
+  // лимит, иначе Next отклоняет запрос ДО входа в action → 500 «Server Components render».
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "10mb",
+    },
+  },
   // Шрифты для PDF-сертификатов (читаются с диска в рантайме) — копируем в standalone.
   outputFileTracingIncludes: {
     "/**": ["./src/assets/fonts/**"],

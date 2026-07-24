@@ -11,7 +11,7 @@
 import type { LessonQuizSeed } from "./pharma-lesson-quizzes.js";
 import type { LessonFlashcards } from "./pharma-flashcards.js";
 import type { SeedQuestion } from "./b2b-exam.js";
-import type { ChecklistData, ScriptBuilderData, BranchingData } from "../../src/lib/interactive.js";
+import type { ChecklistData, ScriptBuilderData, BranchingData, MetaphorData, EisenhowerData, Rule6040Data, SmartGoalData, TimeAuditData } from "../../src/lib/interactive.js";
 
 // ─── Поурочные задания (LESSON_QUIZ) ─────────────────────────────────────────
 
@@ -926,5 +926,116 @@ export const TIME_EXAM: SeedQuestion[] = [
       { text: "От количества совещаний", correct: false },
       { text: "От работы строго в офисе", correct: false },
     ],
+  },
+];
+
+// ─── Тренажёры-метафоры (интерактивные оболочки: лягушка / слон / гвозди) ─────
+// Ученик работает со СВОИМИ задачами, анимированный SVG реагирует. Контент AI не
+// генерирует: это интерактив, а не текст. Урок «лягушка, слон, три гвоздя» держит
+// все три (переключатель), отдельный урок про лягушку — только её.
+
+const FROG_METAPHOR: MetaphorData = {
+  variant: "frog",
+  title: "Съешь лягушку с утра",
+  prompt:
+    "Выпишите дела на день и отметьте, насколько каждое неприятно. Самое противное — «лягушка»: съешьте её первой. Отложите — и она будет только расти.",
+  goal: 2,
+  itemPlaceholder: "Дело на день…",
+};
+
+const ELEPHANT_METAPHOR: MetaphorData = {
+  variant: "elephant",
+  title: "Съешь слона по кусочкам",
+  prompt:
+    "Возьмите одну крупную задачу, которая давит и всё время откладывается, и разбейте её на 5 конкретных шагов «на один присест». Так «слон» перестаёт пугать.",
+  goal: 5,
+  bigTaskPlaceholder: "Например: запустить новый отдел продаж",
+  itemPlaceholder: "Один конкретный шаг…",
+};
+
+const NAILS_METAPHOR: MetaphorData = {
+  variant: "nails",
+  title: "Три гвоздя — главные дела дня",
+  prompt:
+    "Из всех дел выберите только 3 главных на день — как «три гвоздя», на которые вешается весь день. Остальное — второстепенно.",
+  goal: 3,
+  itemPlaceholder: "Главное дело…",
+};
+
+export const TIME_METAPHORS: { titleMatch: string; data: { items: MetaphorData[] } }[] = [
+  {
+    titleMatch: "лягушка, слон, три гвоздя",
+    data: { items: [FROG_METAPHOR, ELEPHANT_METAPHOR, NAILS_METAPHOR] },
+  },
+  {
+    titleMatch: "Правило лягушки",
+    data: { items: [FROG_METAPHOR] },
+  },
+];
+
+// ─── Матрица Эйзенхауэра (интерактив: разложить задачи по 4 квадрантам) ───────
+// Урок «Матрица Эйзенхауэра: важные и срочные дела».
+
+export const TIME_RULE6040: { titleMatch: string; data: Rule6040Data }[] = [
+  {
+    titleMatch: "60/40",
+    data: {
+      title: "Спланируй день по правилу 60/40",
+      prompt:
+        "Планируй жёстко только 60% рабочего дня, а 40% оставляй на непредвиденное. Добавь дела с длительностью и проверь: влезет ли внезапное срочное дело — или день лопнет.",
+      dayHours: 8,
+      seedTasks: [
+        { text: "Планёрка с отделом", hours: 1 },
+        { text: "Звонки клиентам", hours: 2 },
+        { text: "Подготовить коммерческое предложение", hours: 1.5 },
+      ],
+    },
+  },
+];
+
+export const TIME_SMART: { titleMatch: string; data: SmartGoalData }[] = [
+  {
+    titleMatch: "ставить цели в жизни",
+    data: {
+      title: "Собери цель по SMART",
+      prompt:
+        "Расплывчатую цель трудно достичь. Сформулируйте её и ответьте на 5 критериев SMART — мишень соберётся, а стрела попадёт в яблочко.",
+      goalPlaceholder: "Например: увеличить продажи отдела",
+    },
+  },
+];
+
+export const TIME_AUDIT: { titleMatch: string; data: TimeAuditData }[] = [
+  {
+    titleMatch: "Хронометраж",
+    data: {
+      title: "Найди своих пожирателей времени",
+      prompt:
+        "Проведите фотографию рабочего дня: запишите, на что реально ушли часы, и отметьте пожирателей. Круг покажет долю потерь, а год — их настоящую цену.",
+      seedActivities: [
+        { text: "Работа с клиентами", hours: 3, waster: false },
+        { text: "Подготовка документов", hours: 2, waster: false },
+        { text: "Соцсети и мессенджеры", hours: 1.5, waster: true },
+        { text: "Затянувшиеся совещания", hours: 1.5, waster: true },
+      ],
+    },
+  },
+];
+
+export const TIME_EISENHOWER: { titleMatch: string; data: EisenhowerData }[] = [
+  {
+    titleMatch: "Матрица Эйзенхауэра",
+    data: {
+      title: "Разложи свой день по матрице Эйзенхауэра",
+      prompt:
+        "Добавьте задачи из своего дня и распределите каждую по важности и срочности. Матрица подскажет, что делать сейчас, что запланировать, что делегировать, а что убрать.",
+      seedTasks: [
+        "Ответить на срыв поставки клиенту",
+        "Подготовить стратегию продаж на квартал",
+        "Разобрать входящие письма",
+        "Полистать ленту новостей",
+        "Позвонить ключевому клиенту по продлению",
+      ],
+    },
   },
 ];

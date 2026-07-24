@@ -19,6 +19,11 @@ import {
   parseDialogueAudit,
   parseHotspot,
   parseBranching,
+  parseMetaphors,
+  parseEisenhower,
+  parseRule6040,
+  parseSmartGoal,
+  parseTimeAudit,
 } from "@/lib/interactive";
 import { loadScenario } from "@/lib/ai/simulate";
 import { listLessonNotes } from "@/lib/learn/notes";
@@ -128,6 +133,29 @@ export default async function LearnPage({
       loadScenario(lessonId),
     ]);
 
+  const [metaphorArtifact, eisenhowerArtifact, rule6040Artifact, smartArtifact, timeAuditArtifact] = await Promise.all([
+    db.aiArtifact.findUnique({
+      where: { lessonId_type: { lessonId, type: "TASK_METAPHOR" } },
+      select: { content: true, validation: true },
+    }),
+    db.aiArtifact.findUnique({
+      where: { lessonId_type: { lessonId, type: "EISENHOWER" } },
+      select: { content: true, validation: true },
+    }),
+    db.aiArtifact.findUnique({
+      where: { lessonId_type: { lessonId, type: "RULE_6040" } },
+      select: { content: true, validation: true },
+    }),
+    db.aiArtifact.findUnique({
+      where: { lessonId_type: { lessonId, type: "SMART_GOAL" } },
+      select: { content: true, validation: true },
+    }),
+    db.aiArtifact.findUnique({
+      where: { lessonId_type: { lessonId, type: "TIME_AUDIT" } },
+      select: { content: true, validation: true },
+    }),
+  ]);
+
   const summary = summaryArtifact?.validation === "VALIDATED" ? summaryArtifact.content : null;
   const slides =
     slidesArtifact?.validation === "VALIDATED" ? parseDeck(slidesArtifact.content) : null;
@@ -145,6 +173,16 @@ export default async function LearnPage({
     hotspotArtifact?.validation === "VALIDATED" ? parseHotspot(hotspotArtifact.content) : null;
   const branching =
     branchingArtifact?.validation === "VALIDATED" ? parseBranching(branchingArtifact.content) : null;
+  const metaphor =
+    metaphorArtifact?.validation === "VALIDATED" ? parseMetaphors(metaphorArtifact.content) : null;
+  const eisenhower =
+    eisenhowerArtifact?.validation === "VALIDATED" ? parseEisenhower(eisenhowerArtifact.content) : null;
+  const rule6040 =
+    rule6040Artifact?.validation === "VALIDATED" ? parseRule6040(rule6040Artifact.content) : null;
+  const smart =
+    smartArtifact?.validation === "VALIDATED" ? parseSmartGoal(smartArtifact.content) : null;
+  const timeaudit =
+    timeAuditArtifact?.validation === "VALIDATED" ? parseTimeAudit(timeAuditArtifact.content) : null;
   const transcriptText =
     transcript && transcript.status === "CLEANED" ? transcript.cleanText : null;
 
@@ -196,13 +234,22 @@ export default async function LearnPage({
     <div className="mx-auto grid max-w-6xl gap-8 px-4 py-6 lg:grid-cols-[260px_1fr]">
       {/* Сайдбар-оглавление (на мобильном — свёрнутая плашка над уроком) */}
       <aside className="lg:sticky lg:top-20 lg:h-fit">
-        <Link
-          href="/app"
-          className="mb-4 inline-flex items-center gap-1.5 px-3 text-sm text-foreground/60 transition-colors hover:text-foreground"
-        >
-          <LayoutGrid className="size-4" />
-          Моё обучение
-        </Link>
+        <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 px-3 text-sm">
+          <Link
+            href="/app"
+            className="inline-flex items-center gap-1.5 text-foreground/60 transition-colors hover:text-foreground"
+          >
+            <LayoutGrid className="size-4" />
+            Моё обучение
+          </Link>
+          <Link
+            href={`/courses/${courseSlug}`}
+            className="inline-flex items-center gap-1.5 text-foreground/60 transition-colors hover:text-foreground"
+          >
+            <Info className="size-4" />
+            О курсе
+          </Link>
+        </div>
         <CourseOutline
           courseSlug={courseSlug}
           courseTitle={course.title}
@@ -246,6 +293,11 @@ export default async function LearnPage({
             script={script}
             audit={audit}
             hotspot={hotspot}
+            metaphor={metaphor}
+            eisenhower={eisenhower}
+            rule6040={rule6040}
+            smart={smart}
+            timeaudit={timeaudit}
             simulation={simulation}
             voiceEnabled={env.VOICE_ENABLED}
             subtitles={subtitles}

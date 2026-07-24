@@ -8,6 +8,12 @@ import {
   parseHotspot,
   parseBranching,
   validateBranchingGraph,
+  parseMetaphor,
+  parseMetaphors,
+  parseEisenhower,
+  parseRule6040,
+  parseSmartGoal,
+  parseTimeAudit,
   type BranchingData,
 } from "./interactive";
 
@@ -168,5 +174,113 @@ describe("parseBranching", () => {
     expect(parseBranching("{не json")).toBeNull();
     expect(parseBranching(JSON.stringify({ start: "x", nodes: [] }))).toBeNull();
     expect(parseBranching(JSON.stringify({ ...validBranching, start: "ghost" }))).toBeNull();
+  });
+});
+
+describe("parseMetaphor", () => {
+  it("парсит валидную метафору «слон»", () => {
+    const json = JSON.stringify({
+      variant: "elephant",
+      title: "Съешь слона",
+      prompt: "Разбей на куски",
+      goal: 5,
+    });
+    expect(parseMetaphor(json)).toMatchObject({ variant: "elephant", goal: 5 });
+  });
+
+  it("зажимает goal в диапазон 2..12", () => {
+    const mk = (goal: number) =>
+      parseMetaphor(JSON.stringify({ variant: "elephant", title: "t", prompt: "p", goal }));
+    expect(mk(100)?.goal).toBe(12);
+    expect(mk(1)?.goal).toBe(2);
+  });
+
+  it("по умолчанию goal=3 для nails и 5 для остальных", () => {
+    expect(
+      parseMetaphor(JSON.stringify({ variant: "nails", title: "t", prompt: "p" }))?.goal,
+    ).toBe(3);
+    expect(
+      parseMetaphor(JSON.stringify({ variant: "frog", title: "t", prompt: "p" }))?.goal,
+    ).toBe(5);
+  });
+
+  it("null при неизвестном варианте или битом входе", () => {
+    expect(parseMetaphor(JSON.stringify({ variant: "dragon", title: "t", prompt: "p" }))).toBeNull();
+    expect(parseMetaphor(JSON.stringify({ variant: "elephant", title: 1, prompt: "p" }))).toBeNull();
+    expect(parseMetaphor(null)).toBeNull();
+    expect(parseMetaphor("{не json")).toBeNull();
+  });
+});
+
+describe("parseMetaphors", () => {
+  it("парсит массив {items:[...]}", () => {
+    const json = JSON.stringify({
+      items: [
+        { variant: "frog", title: "f", prompt: "p" },
+        { variant: "elephant", title: "e", prompt: "p", goal: 5 },
+        { variant: "nails", title: "n", prompt: "p" },
+      ],
+    });
+    const r = parseMetaphors(json);
+    expect(r?.map((m) => m.variant)).toEqual(["frog", "elephant", "nails"]);
+  });
+
+  it("принимает legacy-форму (один объект) и отбрасывает битые", () => {
+    expect(parseMetaphors(JSON.stringify({ variant: "elephant", title: "t", prompt: "p" }))).toHaveLength(1);
+    expect(parseMetaphors(JSON.stringify({ items: [{ variant: "dragon" }] }))).toBeNull();
+    expect(parseMetaphors(null)).toBeNull();
+  });
+});
+
+describe("parseEisenhower", () => {
+  it("парсит и ограничивает seedTasks", () => {
+    const r = parseEisenhower(JSON.stringify({ title: "t", prompt: "p", seedTasks: ["a", "b", 3] }));
+    expect(r).toMatchObject({ title: "t", prompt: "p" });
+    expect(r?.seedTasks).toEqual(["a", "b"]);
+  });
+  it("null без title/prompt", () => {
+    expect(parseEisenhower(JSON.stringify({ title: "t" }))).toBeNull();
+    expect(parseEisenhower(null)).toBeNull();
+  });
+});
+
+describe("parseRule6040", () => {
+  it("парсит и зажимает dayHours 1..16, часы задач", () => {
+    const r = parseRule6040(JSON.stringify({ title: "t", prompt: "p", dayHours: 99, seedTasks: [{ text: "a", hours: 50 }] }));
+    expect(r?.dayHours).toBe(16);
+    expect(r?.seedTasks?.[0]?.hours).toBe(16);
+  });
+  it("dayHours по умолчанию 8; null без title/prompt", () => {
+    expect(parseRule6040(JSON.stringify({ title: "t", prompt: "p" }))?.dayHours).toBe(8);
+    expect(parseRule6040(JSON.stringify({ title: "t" }))).toBeNull();
+    expect(parseRule6040(null)).toBeNull();
+  });
+});
+
+describe("parseSmartGoal", () => {
+  it("парсит title/prompt/placeholder", () => {
+    expect(parseSmartGoal(JSON.stringify({ title: "t", prompt: "p", goalPlaceholder: "g" }))).toEqual({
+      title: "t",
+      prompt: "p",
+      goalPlaceholder: "g",
+    });
+  });
+  it("null без обязательных полей", () => {
+    expect(parseSmartGoal(JSON.stringify({ prompt: "p" }))).toBeNull();
+    expect(parseSmartGoal(null)).toBeNull();
+  });
+});
+
+describe("parseTimeAudit", () => {
+  it("парсит и фильтрует активности", () => {
+    const r = parseTimeAudit(
+      JSON.stringify({ title: "t", prompt: "p", seedActivities: [{ text: "a", hours: 2, waster: true }, { text: "b" }] }),
+    );
+    expect(r?.seedActivities).toHaveLength(1);
+    expect(r?.seedActivities?.[0]).toMatchObject({ text: "a", hours: 2, waster: true });
+  });
+  it("null без обязательных полей", () => {
+    expect(parseTimeAudit(JSON.stringify({ title: "t" }))).toBeNull();
+    expect(parseTimeAudit(null)).toBeNull();
   });
 });

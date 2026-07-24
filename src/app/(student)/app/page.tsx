@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
-import { BookOpen, PlayCircle, GraduationCap, Trophy, CalendarCheck, Layers, StickyNote } from "lucide-react";
+import { BookOpen, PlayCircle, GraduationCap, Trophy, CalendarCheck, Layers, StickyNote, Info } from "lucide-react";
 import { requireUser } from "@/lib/auth/guards";
 import { db } from "@/lib/db";
 import { isEnrollmentActive } from "@/lib/access";
@@ -24,37 +24,59 @@ export const dynamic = "force-dynamic";
 export default async function DashboardPage() {
   const session = await requireUser();
   const userId = session.user.id;
+  const isOwner = session.user.role === "OWNER";
   const now = new Date();
 
-  const enrollments = await db.enrollment.findMany({
-    where: { userId },
-    include: {
-      course: {
-        select: {
-          id: true,
-          slug: true,
-          title: true,
-          coverUrl: true,
-          industry: true,
-          modules: {
-            orderBy: { sortOrder: "asc" },
-            select: {
-              lessons: {
-                where: { status: "PUBLISHED" },
-                orderBy: { sortOrder: "asc" },
-                select: { id: true, title: true },
-              },
-            },
-          },
-          quizzes: {
-            where: { kind: "FINAL_EXAM", status: "PUBLISHED" },
-            select: { id: true },
-            take: 1,
-          },
+  // Срез курса, нужный кабинету (одинаков для ученика и владельца).
+  const courseSelect = {
+    id: true,
+    slug: true,
+    title: true,
+    coverUrl: true,
+    industry: true,
+    modules: {
+      orderBy: { sortOrder: "asc" as const },
+      select: {
+        lessons: {
+          where: { status: "PUBLISHED" as const },
+          orderBy: { sortOrder: "asc" as const },
+          select: { id: true, title: true },
         },
       },
     },
-  });
+    quizzes: {
+      where: { kind: "FINAL_EXAM" as const, status: "PUBLISHED" as const },
+      select: { id: true },
+      take: 1,
+    },
+  };
+
+  // Список курсов кабинета: у ученика — активные записи, у владельца — все
+  // опубликованные (OWNER имеет доступ к любому контенту по роли, lib/access).
+  const accessibleCourses = isOwner
+    ? await db.course.findMany({
+        where: { status: "PUBLISHED" },
+        orderBy: [{ sortOrder: "asc" }, { publishedAt: "desc" }],
+        select: courseSelect,
+      })
+    : (
+        await db.enrollment.findMany({
+          where: { userId },
+          select: {
+            startsAt: true,
+            expiresAt: true,
+            revokedAt: true,
+            course: { select: courseSelect },
+          },
+        })
+      )
+        .filter((e) =>
+          isEnrollmentActive(
+            { startsAt: e.startsAt, expiresAt: e.expiresAt, revokedAt: e.revokedAt },
+            now,
+          ),
+        )
+        .map((e) => e.course);
 
   // Прогресс по всем урокам пользователя одним запросом.
   const completed = await db.lessonProgress.findMany({
@@ -75,22 +97,18 @@ export default async function DashboardPage() {
   ]);
   const recentSlug = lastActivity?.lesson.module.course.slug ?? null;
 
-  const active = enrollments.filter((e) =>
-    isEnrollmentActive({ startsAt: e.startsAt, expiresAt: e.expiresAt, revokedAt: e.revokedAt }, now),
-  );
-
-  const courses = active.map((e) => {
-    const lessons = e.course.modules
+  const courses = accessibleCourses.map((course) => {
+    const lessons = course.modules
       .flatMap((m) => m.lessons)
       .map((l) => ({ id: l.id, title: l.title, completed: completedSet.has(l.id) }));
     const progress = courseProgress(lessons);
     const next = nextLesson(lessons);
     return {
-      ...e.course,
+      ...course,
       progress,
       nextLessonId: next?.id ?? null,
       nextLessonTitle: next?.title ?? null,
-      examId: e.course.quizzes[0]?.id ?? null,
+      examId: course.quizzes[0]?.id ?? null,
     };
   });
 
@@ -128,6 +146,11 @@ export default async function DashboardPage() {
         <p className="mt-1 text-foreground/60">
           Здравствуйте, {session.user.name ?? session.user.email}
         </p>
+        {isOwner ? (
+          <p className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-700">
+            Режим владельца — доступны все опубликованные курсы
+          </p>
+        ) : null}
       </div>
 
       {/* Герой «Продолжить обучение» — туда, где остановился ученик */}
@@ -224,17 +247,35 @@ export default async function DashboardPage() {
       {courses.length === 0 ? (
         <div className="mt-10 rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-10 text-center">
           <BookOpen className="mx-auto size-10 text-foreground/30" />
-          <p className="mt-3 font-medium">У вас пока нет курсов</p>
+          <p className="mt-3 font-medium">
+            {isOwner ? "Опубликованных курсов пока нет" : "У вас пока нет курсов"}
+          </p>
           <p className="mt-1 text-sm text-foreground/60">
-            Доступ выдаёт администратор после оплаты.{" "}
-            <Link href="/courses" className="text-amber-700 hover:underline">
-              Посмотреть каталог
-            </Link>
+            {isOwner ? (
+              <>
+                Опубликуйте курс в{" "}
+                <Link href="/admin/courses" className="text-amber-700 hover:underline">
+                  консоли
+                </Link>
+                , чтобы он появился здесь.
+              </>
+            ) : (
+              <>
+                Доступ выдаёт администратор после оплаты.{" "}
+                <Link href="/courses" className="text-amber-700 hover:underline">
+                  Посмотреть каталог
+                </Link>
+              </>
+            )}
           </p>
         </div>
       ) : (
-        <div className="mt-8 grid gap-5 sm:grid-cols-2">
-          {courses.map((c) => (
+        <>
+          <h2 className="mt-10 text-lg font-bold">
+            {isOwner ? "Опубликованные курсы" : "Доступные мне курсы"}
+          </h2>
+          <div className="mt-4 grid gap-5 sm:grid-cols-2">
+            {courses.map((c) => (
             <div
               key={c.slug}
               className="overflow-hidden rounded-2xl border border-foreground/10 bg-background"
@@ -297,11 +338,19 @@ export default async function DashboardPage() {
                       Итоговый тест
                     </Link>
                   ) : null}
+                  <Link
+                    href={`/courses/${c.slug}`}
+                    className={buttonVariants({ variant: "outline", size: "sm" })}
+                  >
+                    <Info className="size-4" />
+                    О курсе
+                  </Link>
                 </div>
               </div>
             </div>
           ))}
-        </div>
+          </div>
+        </>
       )}
     </main>
   );

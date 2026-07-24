@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { BookOpen } from "lucide-react";
 import { db } from "@/lib/db";
 import { buildSafe } from "@/lib/utils";
 import { currency, buildMultiPrice } from "@/lib/currency";
 import { getStaticPageSeo } from "@/lib/seo/static-pages";
 import { Reveal } from "@/components/landing/reveal";
-import { CourseCard, type CourseCardData } from "@/components/catalog/course-card";
+import type { CourseCardData } from "@/components/catalog/course-card";
+import { CoursesCatalog } from "@/components/catalog/courses-catalog";
 
 export const revalidate = 60;
 
@@ -38,6 +40,7 @@ async function getCourses(): Promise<CourseCardData[]> {
             title: true,
             subtitle: true,
             industry: true,
+            audience: true,
             coverUrl: true,
             priceTiyn: true,
             oldPriceTiyn: true,
@@ -114,13 +117,13 @@ export default async function CoursesPage() {
           </div>
         </Reveal>
       ) : (
-        <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {courses.map((c, i) => (
-            <Reveal key={c.slug} delay={i * 0.04}>
-              <CourseCard course={c} />
-            </Reveal>
-          ))}
-        </div>
+        <Suspense
+          fallback={
+            <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3" />
+          }
+        >
+          <CoursesCatalog courses={courses} />
+        </Suspense>
       )}
     </main>
   );

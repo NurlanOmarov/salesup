@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { requireOwner } from "@/lib/auth/guards";
 import { LogoutButton } from "@/components/logout-button";
@@ -15,8 +16,18 @@ export default async function AdminLayout({
       <header className="border-b border-foreground/10 bg-background">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
           <nav className="flex items-center gap-1 text-sm">
+            <Link href="/" className="flex items-center gap-2 pr-2">
+              <Image src="/logo.png" alt="" width={28} height={28} className="size-7" priority />
+              <span className="text-base font-bold tracking-tight text-brand">ACTIVE SALES</span>
+            </Link>
             <Link href="/admin" className="px-3 py-1.5 font-semibold">
               Консоль
+            </Link>
+            <Link
+              href="/app"
+              className="rounded-md px-3 py-1.5 text-foreground/70 transition-colors hover:bg-foreground/5 hover:text-foreground"
+            >
+              Обучение
             </Link>
             <Link
               href="/admin/students"

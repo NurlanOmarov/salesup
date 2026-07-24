@@ -153,6 +153,14 @@ enum PublishStatus {
   ARCHIVED
 }
 
+// Ось витрины «для кого» (D-… см. DECISIONS). EVERYONE — универсальные навыки
+// (тайм-менеджмент, базовые продажи), SPECIALIZED — под конкретную отрасль (industry).
+// Управляет фильтром на /courses; industry остаётся меткой отрасли для SPECIALIZED.
+enum CourseAudience {
+  EVERYONE
+  SPECIALIZED
+}
+
 enum AccessDuration {
   LIFETIME
   MONTHS_1
@@ -171,6 +179,7 @@ model Course {
   subtitle       String?
   description    String         @db.Text // markdown; генерируется фабрикой из транскриптов
   industry       String?
+  audience       CourseAudience @default(SPECIALIZED) // ось витрины «для кого» (фильтр /courses)
   coverUrl       String?
   coverAlt       String? // alt-текст обложки (image SEO/доступность); генерируется AI по картинке
   promoVideoKey  String? // ключ HLS-папки трейлера в lib/storage (публичный, без шифрования)
@@ -753,6 +762,11 @@ enum AiArtifactType {
   DIALOGUE_AUDIT // JSON-тренажёр «найди ошибку»: отметить неверные реплики менеджера
   HOTSPOT // JSON-схема с кликабельными точками на изображении (этапы/зоны)
   BRANCHING // JSON-дерево ветвящегося диалога: выбор реплики ведёт к разным исходам
+  TASK_METAPHOR // JSON-тренажёр-метафора (слон/лягушка/гвозди): ученик вводит свои задачи, анимированный SVG реагирует
+  EISENHOWER // JSON-интерактив «матрица Эйзенхауэра»: ученик раскладывает задачи по 4 квадрантам важно×срочно
+  RULE_6040 // JSON-интерактив «правило 60/40»: кольцо дня, планируем ≤60%, срочное влезает в буфер
+  SMART_GOAL // JSON-интерактив «SMART-цель»: 5 критериев собирают мишень
+  TIME_AUDIT // JSON-интерактив «хронометраж/пожиратели времени»: круг дня, экстраполяция потерь
 }
 
 model AiArtifact {

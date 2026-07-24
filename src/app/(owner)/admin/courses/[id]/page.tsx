@@ -29,6 +29,7 @@ export default async function CourseEditPage({
         title: true,
         subtitle: true,
         industry: true,
+        audience: true,
         description: true,
         coverUrl: true,
         priceTiyn: true,

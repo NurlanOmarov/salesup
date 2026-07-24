@@ -27,6 +27,8 @@ export type CourseCardData = {
   title: string;
   subtitle: string | null;
   industry: string | null;
+  /** Ось витрины «для кого»: EVERYONE — универсальный, SPECIALIZED — под отрасль. */
+  audience: "EVERYONE" | "SPECIALIZED";
   coverUrl: string | null;
   priceTiyn: number;
   oldPriceTiyn: number | null;

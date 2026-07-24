@@ -1,8 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { GraduationCap, LayoutGrid, Repeat, Trophy, Award, Settings, Search } from "lucide-react";
+import { LayoutGrid, Repeat, Trophy, Award, Settings, Search, LayoutDashboard } from "lucide-react";
 import { LogoutButton } from "@/components/logout-button";
 
 /**
@@ -23,15 +24,20 @@ function isActive(pathname: string, href: string, exact?: boolean) {
   return exact ? pathname === href : pathname.startsWith(href);
 }
 
-export function StudentHeader({ dueCount = 0 }: { dueCount?: number }) {
+export function StudentHeader({ dueCount = 0, isOwner = false }: { dueCount?: number; isOwner?: boolean }) {
   const pathname = usePathname();
 
   return (
     <header className="sticky top-0 z-40 border-b border-foreground/10 bg-background/80 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4">
-        <Link href="/" className="flex items-center gap-2 font-bold">
-          <GraduationCap className="size-5 text-amber-600" />
-          <span>ACTIVE SALES</span>
+        <Link href="/" className="flex items-center gap-2.5">
+          <Image src="/logo.png" alt="" width={32} height={32} className="size-8" priority />
+          <span className="flex flex-col leading-tight">
+            <span className="text-base font-bold tracking-tight text-brand">ACTIVE SALES</span>
+            <span className="hidden text-[11px] font-medium text-foreground/50 sm:block">
+              бизнес-тренинги для менеджеров
+            </span>
+          </span>
         </Link>
 
         {/* Десктоп-меню */}
@@ -63,6 +69,15 @@ export function StudentHeader({ dueCount = 0 }: { dueCount?: number }) {
         </nav>
 
         <div className="flex items-center gap-1">
+          {isOwner ? (
+            <Link
+              href="/admin"
+              className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-foreground/65 transition-colors hover:bg-foreground/5 hover:text-foreground"
+            >
+              <LayoutDashboard className="size-4" />
+              <span className="hidden sm:inline">Консоль</span>
+            </Link>
+          ) : null}
           <Link
             href="/app/search"
             aria-label="Поиск по материалам"

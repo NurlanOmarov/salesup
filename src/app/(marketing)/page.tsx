@@ -28,6 +28,7 @@ import { Reviews, type ReviewItem } from "@/components/landing/reviews";
 import { LeadForm } from "@/components/landing/lead-form";
 import { AiDemo } from "@/components/landing/ai-demo";
 import { HeroVideo } from "@/components/landing/hero-video";
+import { HeroWordStream } from "@/components/landing/hero-word-stream";
 import { StatCounter } from "@/components/landing/stat-counter";
 import { AnimatedTitle } from "@/components/landing/animated-title";
 import { IndustriesMarquee } from "@/components/landing/industries-marquee";
@@ -119,8 +120,9 @@ export default async function LandingPage() {
             кружка, живущая у нижнего края кадра, уезжает под разделитель. */}
         <div className="relative">
           <HeroVideo />
+          <HeroWordStream />
 
-          <div className="relative mx-auto max-w-6xl px-4 pb-12 pt-16 sm:pb-16 sm:pt-20 lg:pb-24 lg:pt-24">
+          <div className="relative z-[2] mx-auto max-w-6xl px-4 pb-12 pt-16 sm:pb-16 sm:pt-20 lg:pb-24 lg:pt-24">
           <div className="max-w-xl text-center lg:text-left">
             <Reveal>
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-brand-light">

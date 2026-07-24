@@ -24,6 +24,11 @@ import {
   GitBranch,
   StickyNote,
   Download,
+  PawPrint,
+  Grid2x2,
+  PieChart,
+  Target,
+  Hourglass,
 } from "lucide-react";
 import { SecurePlayer, type SubtitleTrackInfo } from "@/components/player/secure-player";
 import { PlayerProvider } from "@/components/player/player-context";
@@ -42,6 +47,11 @@ import { ScriptBuilder } from "@/components/learn/script-builder";
 import { DialogueAudit } from "@/components/learn/dialogue-audit";
 import { HotspotImage } from "@/components/learn/hotspot-image";
 import { SimulationChat } from "@/components/learn/simulation-chat";
+import { MetaphorTrainer } from "@/components/learn/metaphor-trainer";
+import { EisenhowerMatrix } from "@/components/learn/eisenhower-matrix";
+import { Rule6040 } from "@/components/learn/rule-6040";
+import { SmartGoal } from "@/components/learn/smart-goal";
+import { TimeAudit } from "@/components/learn/time-audit";
 import type { SlideDeckData } from "@/lib/slides";
 import type {
   FlashcardsData,
@@ -51,6 +61,11 @@ import type {
   DialogueAuditData,
   HotspotData,
   BranchingData,
+  MetaphorData,
+  EisenhowerData,
+  Rule6040Data,
+  SmartGoalData,
+  TimeAuditData,
 } from "@/lib/interactive";
 
 export interface SimulationInfo {
@@ -83,6 +98,11 @@ type Tab =
   | "audit"
   | "checklist"
   | "hotspot"
+  | "metaphor"
+  | "eisenhower"
+  | "rule6040"
+  | "smart"
+  | "timeaudit"
   | "simulation"
   | "transcript"
   | "notes"
@@ -116,6 +136,11 @@ export function LessonTabs({
   script = null,
   audit = null,
   hotspot = null,
+  metaphor = null,
+  eisenhower = null,
+  rule6040 = null,
+  smart = null,
+  timeaudit = null,
   simulation = null,
   voiceEnabled = false,
   subtitles = [],
@@ -139,6 +164,11 @@ export function LessonTabs({
   script?: ScriptBuilderData | null;
   audit?: DialogueAuditData | null;
   hotspot?: HotspotData | null;
+  metaphor?: MetaphorData[] | null;
+  eisenhower?: EisenhowerData | null;
+  rule6040?: Rule6040Data | null;
+  smart?: SmartGoalData | null;
+  timeaudit?: TimeAuditData | null;
   simulation?: SimulationInfo | null;
   voiceEnabled?: boolean;
   subtitles?: SubtitleTrackInfo[];
@@ -162,6 +192,11 @@ export function LessonTabs({
     { key: "audit", label: "Найди ошибку", icon: SearchCheck, show: !!audit, group: "practice" },
     { key: "checklist", label: "Чек-лист", icon: ListChecks, show: !!checklist, group: "practice" },
     { key: "hotspot", label: "Схема", icon: MapPin, show: !!hotspot, group: "practice" },
+    { key: "metaphor", label: "Тренажёр", icon: PawPrint, show: !!metaphor?.length, group: "practice" },
+    { key: "eisenhower", label: "Матрица", icon: Grid2x2, show: !!eisenhower, group: "practice" },
+    { key: "rule6040", label: "60/40", icon: PieChart, show: !!rule6040, group: "practice" },
+    { key: "smart", label: "SMART-цель", icon: Target, show: !!smart, group: "practice" },
+    { key: "timeaudit", label: "Пожиратели", icon: Hourglass, show: !!timeaudit, group: "practice" },
     { key: "simulation", label: "Симулятор", icon: MessagesSquare, show: !!simulation, group: "practice" },
     { key: "tutor", label: "Наставник", icon: Bot, show: true, group: "tutor" },
   ];
@@ -394,6 +429,36 @@ export function LessonTabs({
         {tab === "hotspot" && hotspot ? (
           <motion.div key="hotspot" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
             <HotspotImage data={hotspot} />
+          </motion.div>
+        ) : null}
+
+        {tab === "metaphor" && metaphor?.length ? (
+          <motion.div key="metaphor" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
+            <MetaphorTrainer items={metaphor} />
+          </motion.div>
+        ) : null}
+
+        {tab === "eisenhower" && eisenhower ? (
+          <motion.div key="eisenhower" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
+            <EisenhowerMatrix data={eisenhower} />
+          </motion.div>
+        ) : null}
+
+        {tab === "rule6040" && rule6040 ? (
+          <motion.div key="rule6040" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
+            <Rule6040 data={rule6040} />
+          </motion.div>
+        ) : null}
+
+        {tab === "smart" && smart ? (
+          <motion.div key="smart" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
+            <SmartGoal data={smart} />
+          </motion.div>
+        ) : null}
+
+        {tab === "timeaudit" && timeaudit ? (
+          <motion.div key="timeaudit" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
+            <TimeAudit data={timeaudit} />
           </motion.div>
         ) : null}
 
