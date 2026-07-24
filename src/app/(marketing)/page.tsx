@@ -31,6 +31,7 @@ import { HeroVideo } from "@/components/landing/hero-video";
 import { StatCounter } from "@/components/landing/stat-counter";
 import { AnimatedTitle } from "@/components/landing/animated-title";
 import { IndustriesMarquee } from "@/components/landing/industries-marquee";
+import { VoiceVisualizer } from "@/components/voice-visualizer";
 import {
   clients,
   faq,
@@ -246,23 +247,14 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* Голосовой симулятор с 3D-собеседником — видео-демо */}
+      {/* Голосовой симулятор — анимация голосовых волн */}
       <section className="border-y border-foreground/5 bg-foreground/[0.025]">
         <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-16 sm:py-20 lg:grid-cols-2">
           <Reveal>
-            <div className="relative mx-auto w-full max-w-sm overflow-hidden rounded-3xl border border-foreground/10 bg-[#0a0b11] shadow-xl">
-              <video
-                className="h-auto w-full"
-                autoPlay
-                loop
-                muted
-                playsInline
-                poster="/landing/doctor-poster.jpg"
-                aria-label="Демонстрация 3D-собеседника голосового симулятора"
-              >
-                <source src="/landing/doctor-loop.webm" type="video/webm" />
-                <source src="/landing/doctor-loop.mp4" type="video/mp4" />
-              </video>
+            <div className="relative mx-auto flex aspect-square w-full max-w-sm items-center justify-center overflow-hidden rounded-3xl border border-foreground/10 bg-gradient-to-b from-brand/[0.06] via-[#0a0b11] to-[#07080d] shadow-xl">
+              <div className="h-[78%] w-[78%]">
+                <VoiceVisualizer demo state="speaking" />
+              </div>
               <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-brand/90 px-2.5 py-1 text-xs font-medium text-white">
                 <Mic className="size-3.5" />
                 Голосовой диалог

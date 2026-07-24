@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
+import { VoiceVisualizer } from "@/components/voice-visualizer";
 import {
   Send,
   User,
@@ -65,12 +65,6 @@ interface Scorecard {
   topTip: string;
 }
 
-// 3D-голова грузится только в голосовом режиме (Three.js не в общем бандле).
-const DoctorAvatar = dynamic(
-  () => import("./doctor-avatar").then((m) => m.DoctorAvatar),
-  { ssr: false },
-);
-
 /** Цвет полоски фазы по порогу. */
 function phaseColor(score: number): string {
   if (score >= 80) return "bg-emerald-500";
@@ -83,12 +77,9 @@ type VoiceStatus = "idle" | "recording" | "processing" | "speaking";
 export function SimulationChat({
   scenario,
   voiceEnabled = false,
-  avatarUrl = null,
 }: {
   scenario: ScenarioInfo;
   voiceEnabled?: boolean;
-  /** URL GLB-аватара говорящей головы; null — аватар выключен (AVATAR_ENABLED). */
-  avatarUrl?: string | null;
 }) {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
@@ -98,8 +89,11 @@ export function SimulationChat({
   const [voiceMode, setVoiceMode] = useState(false);
   const [voiceStatus, setVoiceStatus] = useState<VoiceStatus>("idle");
   const [voiceError, setVoiceError] = useState<string | null>(null);
-  // AnalyserNode для липсинка аватара (создаётся при первой озвучке).
+  // AnalyserNode озвучки клиента (TTS) — питает волны при ответе.
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
+  // AnalyserNode микрофона ученика — волны реагируют на речь при записи.
+  const [micAnalyser, setMicAnalyser] = useState<AnalyserNode | null>(null);
+  const micCtxRef = useRef<AudioContext | null>(null);
   // Субтитр реплики клиента — показываем синхронно со стартом озвучки.
   const [caption, setCaption] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -116,7 +110,13 @@ export function SimulationChat({
   }, [messages, pending, card]);
 
   // Освобождаем AudioContext при размонтировании.
-  useEffect(() => () => void audioCtxRef.current?.close().catch(() => {}), []);
+  useEffect(
+    () => () => {
+      void audioCtxRef.current?.close().catch(() => {});
+      void micCtxRef.current?.close().catch(() => {});
+    },
+    [],
+  );
 
   /** Озвучить реплику клиента (TTS). Мягко: при сбое просто не проигрываем. */
   async function playTts(text: string) {
@@ -134,9 +134,9 @@ export function SimulationChat({
       audioRef.current = audio;
       audio.src = url;
 
-      // Для аватара пропускаем звук через AnalyserNode (липсинк по громкости).
+      // Пропускаем звук через AnalyserNode — по громкости анимируем волны.
       // MediaElementSource создаётся один раз на элемент — отсюда guard srcNodeRef.
-      if (avatarUrl && !srcNodeRef.current) {
+      if (!srcNodeRef.current) {
         try {
           const ctx = new AudioContext();
           const node = ctx.createMediaElementSource(audio);
@@ -230,9 +230,25 @@ export function SimulationChat({
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const rec = new MediaRecorder(stream);
       chunksRef.current = [];
+      // Анализатор микрофона: волны реагируют на речь ученика (без вывода в динамики).
+      try {
+        const ctx = new AudioContext();
+        const node = ctx.createMediaStreamSource(stream);
+        const an = ctx.createAnalyser();
+        an.fftSize = 512;
+        an.smoothingTimeConstant = 0.6;
+        node.connect(an);
+        micCtxRef.current = ctx;
+        setMicAnalyser(an);
+      } catch {
+        // нет Web Audio — волны останутся в фоновом режиме
+      }
       rec.ondataavailable = (e) => e.data.size > 0 && chunksRef.current.push(e.data);
       rec.onstop = () => {
         stream.getTracks().forEach((t) => t.stop());
+        setMicAnalyser(null);
+        void micCtxRef.current?.close().catch(() => {});
+        micCtxRef.current = null;
         const blob = new Blob(chunksRef.current, { type: rec.mimeType || "audio/webm" });
         void handleVoiceBlob(blob, performance.now() - recStartRef.current);
       };
@@ -485,19 +501,12 @@ export function SimulationChat({
         <div className="mt-3">
           {voiceMode ? (
             <div className="flex flex-col items-center">
-              {avatarUrl ? (
-                <div className="relative mx-auto aspect-[4/5] w-full max-w-[300px] overflow-hidden rounded-3xl bg-gradient-to-b from-sky-500/10 via-foreground/[0.03] to-transparent ring-1 ring-foreground/10">
-                  <DoctorAvatar
-                    src={avatarUrl}
-                    analyser={analyser}
-                    speaking={voiceStatus === "speaking"}
-                  />
-                  {/* мягкие затухания краёв: плечи растворяются в фоне, без резких срезов */}
-                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-background to-transparent" />
-                  <div className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-background to-transparent" />
-                  <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-background to-transparent" />
-                </div>
-              ) : null}
+              <div className="relative mx-auto aspect-square w-full max-w-[280px]">
+                <VoiceVisualizer
+                  analyser={voiceStatus === "recording" ? micAnalyser : analyser}
+                  state={voiceStatus}
+                />
+              </div>
 
               {/* Субтитр реплики клиента — синхронно с озвучкой */}
               <div className="mb-2 flex min-h-[3.5rem] max-w-md items-center px-2">
