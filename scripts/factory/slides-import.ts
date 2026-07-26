@@ -98,9 +98,20 @@ function score(folder: string, lessonTitle: string): number {
   return hit / ft.length;
 }
 
+/** Доля слов урока, покрытых названием подпапки (0..1) — разводит вложенные названия. */
+function coverage(folder: string, lessonTitle: string): number {
+  const lt = tokens(lessonTitle);
+  if (lt.length === 0) return 0;
+  const ft = tokens(folder, true);
+  const hit = lt.filter((l) => ft.some((f) => sameWord(f, l))).length;
+  return hit / lt.length;
+}
+
 /**
  * Сопоставить подпапки с уроками курса: лучший кандидат должен набрать ≥0.6 и
- * строго обойти второго. Один урок — одна презентация (двойное попадание = ошибка).
+ * строго обойти второго. При равной доле слов побеждает урок, чьё название покрыто
+ * папкой полнее — иначе «8 ошибок…» и «8 финансовых ошибок…» неразличимы.
+ * Один урок — одна презентация (двойное попадание = ошибка).
  */
 function matchDecks(sources: DeckSource[], lessons: LessonRow[]): Match[] {
   const matches: Match[] = [];
@@ -108,8 +119,12 @@ function matchDecks(sources: DeckSource[], lessons: LessonRow[]): Match[] {
 
   for (const source of sources) {
     const ranked = lessons
-      .map((lesson) => ({ lesson, s: score(source.folder, lesson.title) }))
-      .sort((a, b) => b.s - a.s);
+      .map((lesson) => ({
+        lesson,
+        s: score(source.folder, lesson.title),
+        cov: coverage(source.folder, lesson.title),
+      }))
+      .sort((a, b) => b.s - a.s || b.cov - a.cov);
 
     const best = ranked[0];
     const second = ranked[1];
@@ -119,7 +134,7 @@ function matchDecks(sources: DeckSource[], lessons: LessonRow[]): Match[] {
           `${best ? `«${best.lesson.title}» ${Math.round(best.s * 100)}%` : "нет"})`,
       );
     }
-    if (second && second.s >= best.s) {
+    if (second && second.s >= best.s && second.cov >= best.cov) {
       throw new Error(
         `Неоднозначное совпадение для папки «${source.folder}»: ` +
           `«${best.lesson.title}» и «${second.lesson.title}»`,
