@@ -29,6 +29,19 @@ import {
   B2B_SCENARIOS,
 } from "./seed-data/b2b-content.js";
 import {
+  KITCHEN_SUMMARIES,
+  KITCHEN_LESSON_QUIZZES,
+  KITCHEN_FLASHCARDS,
+  KITCHEN_OBJECTIONS,
+  KITCHEN_CHECKLISTS,
+  KITCHEN_SCRIPTS,
+  KITCHEN_AUDITS,
+  KITCHEN_BRANCHING,
+  KITCHEN_SCENARIOS,
+  KITCHEN_EXAM,
+  KITCHEN_EXAM_PASS_SCORE,
+} from "./seed-data/kitchen-content.js";
+import {
   SPIN_SUMMARIES,
   SPIN_SLIDES,
   SPIN_LESSON_QUIZZES,
@@ -128,6 +141,212 @@ type CourseSpec = {
   modules: ModuleSpec[];
   coverUrl?: string;
 };
+
+// ── Курс «Эффективные продажи кухонь 2.0» (реальный YouTube-плейлист) ────────
+// Источник: https://www.youtube.com/playlist?list=PLbPgy5BEZoQUgSLoYOXhE-kXzrxqaVDLM
+// Тренер: Виталий Дубовик (activesales.by). 33 доступных ролика (~5 ч 50 мин);
+// один ролик плейлиста скрыт автором и в курс не входит. Нумерация уроков —
+// авторская (в названиях «Урок №N»), поэтому порядок сохранён как у тренера,
+// а модули собраны по смысловым блокам. Бесплатный превью — вводный урок
+// с содержанием курса.
+const KITCHEN_MODULES: ModuleSpec[] = [
+  {
+    title: "Модуль 1. Рынок кухонь и правила игры",
+    lessons: [
+      {
+        title: "О курсе: содержание программы для продавцов кухонь",
+        yt: "https://www.youtube.com/watch?v=W2EIMlXSmQs",
+        durationSec: 387,
+        free: true,
+      },
+      {
+        title: "Что курс даст дизайнеру и о тренере",
+        yt: "https://www.youtube.com/watch?v=OetiBhiXx3k",
+        durationSec: 257,
+      },
+      {
+        title: "Какая ситуация на рынке кухонь сегодня",
+        yt: "https://www.youtube.com/watch?v=AtdnuIq1bVM",
+        durationSec: 106,
+      },
+      {
+        title: "Игроки на рынке кухонь",
+        yt: "https://www.youtube.com/watch?v=P8wtq8mchfk",
+        durationSec: 313,
+      },
+      {
+        title: "Какие источники привлечения клиентов работают лучше",
+        yt: "https://www.youtube.com/watch?v=IVp12AP0Pss",
+        durationSec: 476,
+      },
+      {
+        title: "Что можно и что нельзя в продажах кухонь",
+        yt: "https://www.youtube.com/watch?v=kx-1mbcfLZw",
+        durationSec: 802,
+      },
+      {
+        title: "Виды продавцов кухонь",
+        yt: "https://www.youtube.com/watch?v=T5VIebgYWWw",
+        durationSec: 321,
+      },
+      {
+        title: "Чем продажи кухонь отличаются от других товаров",
+        yt: "https://www.youtube.com/watch?v=K7Wvz4wajI8",
+        durationSec: 448,
+      },
+    ],
+  },
+  {
+    title: "Модуль 2. Лиды, переписка и звонки",
+    lessons: [
+      {
+        title: "Правила переписки в мессенджерах",
+        yt: "https://www.youtube.com/watch?v=sg0WZnBdMFk",
+        durationSec: 774,
+      },
+      {
+        title: "Алгоритм работы с лидами",
+        yt: "https://www.youtube.com/watch?v=360LjT7-L3E",
+        durationSec: 968,
+      },
+      {
+        title: "Алгоритм продаж на входящем звонке",
+        yt: "https://www.youtube.com/watch?v=_MeW9J6Ok0Q",
+        durationSec: 544,
+      },
+      {
+        title: "Алгоритм исходящего звонка",
+        yt: "https://www.youtube.com/watch?v=Nftg85ZMgPo",
+        durationSec: 542,
+      },
+      {
+        title: "Скрипт переписки с покупателем",
+        yt: "https://www.youtube.com/watch?v=QznvqkTGt58",
+        durationSec: 579,
+      },
+      {
+        title: "Скрипт звонка покупателю кухни",
+        yt: "https://www.youtube.com/watch?v=Kif9tnwHiyk",
+        durationSec: 623,
+      },
+      {
+        title: "Скрипт звонка покупателю в программе: разбор на практике",
+        yt: "https://www.youtube.com/watch?v=rHat8ZSQvxc",
+        durationSec: 428,
+      },
+    ],
+  },
+  {
+    title: "Модуль 3. Работа дизайнера и договор",
+    lessons: [
+      {
+        title: "Чек-лист дизайнера кухни",
+        yt: "https://www.youtube.com/watch?v=e14i1pnZ52Q",
+        durationSec: 929,
+      },
+      {
+        title: "7 советов для заключения договора",
+        yt: "https://www.youtube.com/watch?v=_cHswEM0x_U",
+        durationSec: 854,
+      },
+      {
+        title: "Зачем дизайнеру разбираться в деталях ремонта заказчика",
+        yt: "https://www.youtube.com/watch?v=3rVsr4D79uA",
+        durationSec: 597,
+      },
+    ],
+  },
+  {
+    title: "Модуль 4. Психология покупателя, ошибки и правила",
+    lessons: [
+      {
+        title: "Психология покупателя кухни по типам",
+        yt: "https://www.youtube.com/watch?v=mn_KBFzdoHs",
+        durationSec: 1429,
+      },
+      {
+        title: "6 фактов и советов в продажах кухонь",
+        yt: "https://www.youtube.com/watch?v=898_BL0MZpM",
+        durationSec: 552,
+      },
+      {
+        title: "13 типичных ошибок в продажах кухонь",
+        yt: "https://www.youtube.com/watch?v=TzDlBAacHao",
+        durationSec: 1328,
+      },
+      {
+        title: "10 золотых правил в продажах кухонь",
+        yt: "https://www.youtube.com/watch?v=vk545W5bJho",
+        durationSec: 796,
+      },
+    ],
+  },
+  {
+    title: "Модуль 5. Контакт, потребности и убеждение",
+    lessons: [
+      {
+        title: "10 приёмов установления контакта с покупателем кухни",
+        yt: "https://www.youtube.com/watch?v=uy4YZC75dzQ",
+        durationSec: 731,
+      },
+      {
+        title: "4 правила комплимента покупателю кухни",
+        yt: "https://www.youtube.com/watch?v=K3i3aKdpQ-A",
+        durationSec: 460,
+      },
+      {
+        title: "Работа с потребностями покупателя: часть 1",
+        yt: "https://www.youtube.com/watch?v=xhyn3UPIQnA",
+        durationSec: 815,
+      },
+      {
+        title: "Работа с потребностями покупателя: часть 2",
+        yt: "https://www.youtube.com/watch?v=go4Dd2YDhqQ",
+        durationSec: 334,
+      },
+      {
+        title: "Как убедить купить кухню именно в вашем салоне",
+        yt: "https://www.youtube.com/watch?v=8CmNrcLNBmA",
+        durationSec: 817,
+      },
+      {
+        title: "Адаптация предложения под потребности покупателя",
+        yt: "https://www.youtube.com/watch?v=XN3XhjlgnnA",
+        durationSec: 848,
+      },
+    ],
+  },
+  {
+    title: "Модуль 6. Возражения, конфликты и завершение сделки",
+    lessons: [
+      {
+        title: "Работа с возражениями покупателя кухни",
+        yt: "https://www.youtube.com/watch?v=cOysGrL6X0c",
+        durationSec: 1323,
+      },
+      {
+        title: "Решение конфликтов с покупателями кухонь",
+        yt: "https://www.youtube.com/watch?v=1iMNiRDWcG0",
+        durationSec: 676,
+      },
+      {
+        title: "Завершение общения с покупателем кухни",
+        yt: "https://www.youtube.com/watch?v=7PZa47jAW5s",
+        durationSec: 476,
+      },
+      {
+        title: "Послепродажное обслуживание",
+        yt: "https://www.youtube.com/watch?v=GFR7p_J4It8",
+        durationSec: 228,
+      },
+      {
+        title: "Дополнительные продукты и инструменты для продаж кухонь",
+        yt: "https://www.youtube.com/watch?v=j4RyZG1rTpE",
+        durationSec: 308,
+      },
+    ],
+  },
+];
 
 // ── Курс «СПИН-продажи» (реальный YouTube-плейлист) ──────────────────────────
 // Источник: https://www.youtube.com/playlist?list=PLbPgy5BEZoQWXmEjIFvcKIRl5qKUQB4-9
@@ -670,45 +889,49 @@ const COURSES: CourseSpec[] = [
   {
     slug: "sales-kitchens",
     inDevelopment: true,
-    title: "Эффективные продажи кухонь",
-    subtitle: "Системный подход к продаже мебели в шоу-руме",
+    title: "Эффективные продажи кухонь 2.0",
+    subtitle: "Полный курс дизайнера кухонь: от лида в мессенджере до подписанного договора",
     description:
-      "Практический курс для продавцов и управляющих мебельных салонов. Весь цикл продажи кухни: встреча у входа, выяснение бюджета, презентация, финальное закрытие без скидок.",
+      "Большой видеокурс бизнес-тренера Виталия Дубовика (activesales.by) для дизайнеров и продавцов кухонной мебели. 33 урока и почти шесть часов практики: как устроен рынок кухонь и кто на нём играет, какие источники лидов работают, что можно и чего нельзя делать в салоне, как вести переписку в мессенджерах и звонки по готовым скриптам, чек-лист дизайнера и 7 советов для заключения договора, психология покупателя по типам, 13 типичных ошибок и 10 золотых правил, 10 приёмов установления контакта, работа с потребностями и адаптация предложения, отработка возражений, решение конфликтов, завершение сделки и послепродажное обслуживание.",
     industry: "Мебель и кухни",
     priceTiyn: 300_000,
     oldPriceTiyn: 480_000,
-    hoursLabel: "7 часов",
+    hoursLabel: "~5 часов 50 минут",
     learnPoints: [
-      "Правильная встреча клиента: когда подходить и что говорить",
-      "Техника выяснения бюджета без прямого вопроса о деньгах",
-      "Как провести презентацию кухни через сценарии жизни клиента",
-      "Работа с возражениями: «дорого», «подумаю», «в IKEA дешевле»",
-      "Алгоритм закрытия: замер → задаток → договор",
+      "Понимать рынок кухонь: игроки, конкуренция и источники клиентов, которые реально работают",
+      "Вести переписку в мессенджерах и звонки по готовым скриптам — входящие и исходящие",
+      "Работать с лидами по алгоритму: от первого касания до записи на замер",
+      "Снимать потребности покупателя и адаптировать предложение под его сценарии жизни",
+      "Определять психотип покупателя и подбирать под него аргументы",
+      "Отрабатывать возражения и решать конфликты без потери сделки и репутации",
+      "Доводить до договора: чек-лист дизайнера и 7 советов для подписания",
+      "Не допускать 13 типичных ошибок и держать 10 золотых правил продаж кухонь",
     ],
     targetAudience: [
-      "Продавцы-консультанты мебельных салонов и шоу-румов",
-      "Руководители отделов продаж мебели",
-      "Владельцы мебельных магазинов",
+      "Дизайнеры кухонь и продавцы-консультанты мебельных салонов",
+      "Руководители отделов продаж и управляющие салонами",
+      "Владельцы мебельных производств и студий кухонь",
+      "Новые сотрудники салона — как полноценная программа онбординга",
     ],
     faq: [
-      { q: "Применимо ли только к кухням?", a: "Нет. Методика универсальна для любой корпусной мебели." },
-    ],
-    modules: [
       {
-        title: "Модуль 1. Первый контакт в шоу-руме",
-        lessons: [
-          { title: "Встреча у входа: когда и как подойти", yt: "https://youtu.be/PLACEHOLDER", free: true },
-          { title: "Выяснение потребностей и бюджета", yt: "https://youtu.be/PLACEHOLDER" },
-        ],
+        q: "Нужен ли опыт в мебельных продажах?",
+        a: "Нет. Курс начинается с рынка и базовых правил салона, а дальше даёт готовые скрипты звонков и переписки — по ним можно работать с первого дня.",
       },
       {
-        title: "Модуль 2. Презентация и закрытие",
-        lessons: [
-          { title: "Презентация через образ жизни клиента", yt: "https://youtu.be/PLACEHOLDER" },
-          { title: "Работа с возражениями и закрытие на задаток", yt: "https://youtu.be/PLACEHOLDER" },
-        ],
+        q: "Применимо ли только к кухням?",
+        a: "Методика универсальна для любой корпусной мебели и сложных проектных продаж, но все примеры, скрипты и чек-листы — из практики кухонных салонов.",
+      },
+      {
+        q: "Это только про салон или про онлайн тоже?",
+        a: "И про то, и про другое: отдельные уроки посвящены лидам из интернета, переписке в мессенджерах и звонкам, а другие — работе в торговом зале и на замере.",
+      },
+      {
+        q: "Сколько времени займёт прохождение?",
+        a: "Около шести часов видео плюс задания и тренажёры. Курс разбит на 33 коротких урока — удобно проходить по одному в день.",
       },
     ],
+    modules: KITCHEN_MODULES,
     coverUrl: "/images/courses/sales-kitchens.png",
   },
   {
@@ -1518,6 +1741,33 @@ async function main() {
     where: { module: { courseId: b2bCourse.id }, videoStatus: "READY" },
     data: { status: "PUBLISHED" },
   });
+  }
+
+  // ── Курс «Эффективные продажи кухонь 2.0» ─────────────────────────────────
+  // Контент по видео Виталия Дубовика (транскрипты в «Презентации/Кухни 2.0»),
+  // см. prisma/seed-data/kitchen-content.ts. Презентации уроков — PDF-раздатки
+  // (factory:handout + factory:slides-import), поэтому JSON-колод здесь нет.
+  const kitchenCourse = courses.find((c) => c.slug === "sales-kitchens");
+  if (kitchenCourse) {
+    await seedSummaries(kitchenCourse.id, KITCHEN_SUMMARIES);
+    await seedLessonQuizzes(kitchenCourse.id, KITCHEN_LESSON_QUIZZES);
+    await seedFlashcards(kitchenCourse.id, KITCHEN_FLASHCARDS);
+    await seedObjections(kitchenCourse.id, KITCHEN_OBJECTIONS);
+    await seedArtifacts(kitchenCourse.id, "CHECKLIST", KITCHEN_CHECKLISTS);
+    await seedArtifacts(kitchenCourse.id, "SCRIPT_BUILDER", KITCHEN_SCRIPTS);
+    await seedArtifacts(kitchenCourse.id, "DIALOGUE_AUDIT", KITCHEN_AUDITS);
+    await seedArtifacts(kitchenCourse.id, "BRANCHING", KITCHEN_BRANCHING);
+    await seedScenarios(kitchenCourse.id, KITCHEN_SCENARIOS);
+    await seedFinalExam(kitchenCourse.id, {
+      questions: KITCHEN_EXAM,
+      description:
+        "Проверка знаний по курсу: рынок кухонь, работа с лидами и звонками, чек-лист дизайнера, психология покупателя, потребности, возражения, конфликты и завершение сделки.",
+      passScore: KITCHEN_EXAM_PASS_SCORE,
+    });
+    await db.lesson.updateMany({
+      where: { module: { courseId: kitchenCourse.id }, videoStatus: "READY" },
+      data: { status: "PUBLISHED" },
+    });
   }
 
   // ── Курс «СПИН-продажи: как формировать потребность» ──────────────────────
