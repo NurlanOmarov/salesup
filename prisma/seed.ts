@@ -1110,6 +1110,147 @@ const COURSES: CourseSpec[] = [
           },
         ],
       },
+      // ── Дополнение курса вторым плейлистом (2026-07) ──────────────────────
+      // Источник: https://www.youtube.com/playlist?list=PLbPgy5BEZoQVn4S27QaFdcCMR9vZKc82a
+      // Серия «11 уроков продаж в B2B» (обзор + короткие уроки по одному на тему),
+      // практические разборы (возражения партнёров, премиальный сегмент, холодные
+      // звонки, GAPP-анализ) и блок для работы в полях. Промо-ролики о школе
+      // в курс не включены.
+      {
+        title: "Модуль 5. Система B2B-продаж: 11 уроков",
+        lessons: [
+          {
+            title: "11 уроков продаж в B2B: обзор системы",
+            yt: "https://www.youtube.com/watch?v=KL-dTUYVy6g",
+            durationSec: 544,
+          },
+          {
+            title: "Кто такой ЛПР, ЛВР и ЛДПР",
+            yt: "https://www.youtube.com/watch?v=r7jAaOg8XYQ",
+            durationSec: 51,
+          },
+          {
+            title: "Как убеждать ЛВР в B2B",
+            yt: "https://www.youtube.com/watch?v=lrxhFlrnxcc",
+            durationSec: 61,
+          },
+          {
+            title: "Путь клиента в B2B и конверсия этапов",
+            yt: "https://www.youtube.com/watch?v=LEMjtyE50l0",
+            durationSec: 61,
+          },
+          {
+            title: "Сегментация клиентов среди всех лидов",
+            yt: "https://www.youtube.com/watch?v=waJnetzF7VY",
+            durationSec: 61,
+          },
+          {
+            title: "Как удержать клиента в B2B",
+            yt: "https://www.youtube.com/watch?v=z4fbQmoNMjw",
+            durationSec: 47,
+          },
+          {
+            title: "Как улучшить коммерческое предложение",
+            yt: "https://www.youtube.com/watch?v=LyMzhiK61Us",
+            durationSec: 45,
+          },
+          {
+            title: "Подготовка к важным переговорам",
+            yt: "https://www.youtube.com/watch?v=6sxfr4L9bDo",
+            durationSec: 61,
+          },
+          {
+            title: "Девятый урок B2B: работа с текущей базой",
+            yt: "https://www.youtube.com/watch?v=DtvHNT6O7s4",
+            durationSec: 47,
+          },
+          {
+            title: "Десятый урок B2B: фиксация договорённостей",
+            yt: "https://www.youtube.com/watch?v=zQRV0tPJ7EE",
+            durationSec: 61,
+          },
+          {
+            title: "Как реагировать на изменения в принятии решения",
+            yt: "https://www.youtube.com/watch?v=GUlLdRBDxOI",
+            durationSec: 59,
+          },
+          {
+            title: "Как вести себя в разных ситуациях переговоров",
+            yt: "https://www.youtube.com/watch?v=64nE3R2Kz5A",
+            durationSec: 61,
+          },
+        ],
+      },
+      {
+        title: "Модуль 6. Цена, премиальный сегмент и холодные звонки",
+        lessons: [
+          {
+            title: "Ожидания от сделки на переговорах",
+            yt: "https://www.youtube.com/watch?v=JQqnoEHBlfQ",
+            durationSec: 58,
+          },
+          {
+            title: "Три вида переговоров с партнёром",
+            yt: "https://www.youtube.com/watch?v=X42NDY0s18U",
+            durationSec: 60,
+          },
+          {
+            title: "Пирамида потребностей партнёра: как продавать дороже рынка",
+            yt: "https://www.youtube.com/watch?v=5wyLmPejne4",
+            durationSec: 129,
+          },
+          {
+            title: "Как продавать сложный и дорогой продукт",
+            yt: "https://www.youtube.com/watch?v=oyVUmTYpDQY",
+            durationSec: 59,
+          },
+          {
+            title: "Как убедить партнёра работать с премиальным продуктом",
+            yt: "https://www.youtube.com/watch?v=WdKJbGTAri0",
+            durationSec: 186,
+          },
+          {
+            title: "Возражения партнёров на примере оконной фурнитуры",
+            yt: "https://www.youtube.com/watch?v=XEOMl7JTeqw",
+            durationSec: 316,
+          },
+          {
+            title: "Холодные звонки в B2B: алгоритм из четырёх шагов",
+            yt: "https://www.youtube.com/watch?v=EFS0S2W1L18",
+            durationSec: 180,
+          },
+          {
+            title: "Конфликты в переговорах: как к ним относиться",
+            yt: "https://www.youtube.com/watch?v=Wi3-sr1xTUE",
+            durationSec: 60,
+          },
+          {
+            title: "GAPP-анализ на примере партнёра: разбор",
+            yt: "https://www.youtube.com/watch?v=U8pac-uqoCA",
+            durationSec: 1163,
+          },
+        ],
+      },
+      {
+        title: "Модуль 7. Работа в полях: торговый представитель",
+        lessons: [
+          {
+            title: "8 ошибок торгового представителя",
+            yt: "https://www.youtube.com/watch?v=oSfR75Bm-sU",
+            durationSec: 375,
+          },
+          {
+            title: "8 финансовых ошибок в работе торгового представителя",
+            yt: "https://www.youtube.com/watch?v=24LrEqsdwzs",
+            durationSec: 512,
+          },
+          {
+            title: "Как стать на полку: принцип «пули со смещённым центром»",
+            yt: "https://www.youtube.com/watch?v=2ieom5wEKDg",
+            durationSec: 91,
+          },
+        ],
+      },
     ],
     coverUrl: "/images/courses/sales-b2b.png",
   },
@@ -1211,10 +1352,73 @@ async function dropPlaceholderModules(courseId: string): Promise<boolean> {
   return true;
 }
 
+/**
+ * Дополнить курс модулями и уроками, которых ещё нет.
+ *
+ * Курс живёт: к нему добавляют новые плейлисты (так дополнялся sales-b2b), поэтому
+ * сопоставляем по названию — существующие модули и уроки не трогаем (у них уже есть
+ * видео, прогресс учеников и контент), а недостающие досоздаём в конец.
+ */
+async function addMissingLessons(courseId: string, spec: CourseSpec) {
+  const modules = await db.module.findMany({
+    where: { courseId },
+    select: { id: true, title: true, sortOrder: true, lessons: { select: { title: true } } },
+  });
+  let nextModuleOrder = modules.reduce((max, m) => Math.max(max, m.sortOrder), -1) + 1;
+
+  for (const m of spec.modules) {
+    const existing = modules.find((x) => x.title === m.title);
+    if (!existing) {
+      const created = await db.module.create({
+        data: { courseId, title: m.title, sortOrder: nextModuleOrder++ },
+      });
+      for (const [lIdx, l] of m.lessons.entries()) {
+        await db.lesson.create({
+          data: {
+            moduleId: created.id,
+            title: l.title,
+            sortOrder: lIdx,
+            status: l.free ? "PUBLISHED" : "DRAFT",
+            isFreePreview: l.free ?? false,
+            youtubeUrl: l.yt,
+            durationSec: l.durationSec ?? null,
+            videoStatus: "NONE",
+          },
+        });
+      }
+      console.log(`   + модуль «${m.title}» (${m.lessons.length} уроков)`);
+      continue;
+    }
+
+    const missing = m.lessons.filter((l) => !existing.lessons.some((x) => x.title === l.title));
+    if (missing.length === 0) continue;
+    const lastOrder = existing.lessons.length;
+    for (const [i, l] of missing.entries()) {
+      await db.lesson.create({
+        data: {
+          moduleId: existing.id,
+          title: l.title,
+          sortOrder: lastOrder + i,
+          status: l.free ? "PUBLISHED" : "DRAFT",
+          isFreePreview: l.free ?? false,
+          youtubeUrl: l.yt,
+          durationSec: l.durationSec ?? null,
+          videoStatus: "NONE",
+        },
+      });
+    }
+    console.log(`   + ${missing.length} урок(ов) в модуль «${m.title}»`);
+  }
+}
+
 /** Создать модули и уроки курса, если их ещё нет (существующие не трогаем). */
 async function createMissingModules(courseId: string, spec: CourseSpec) {
   await dropPlaceholderModules(courseId);
   const existingModules = await db.module.count({ where: { courseId } });
+  if (existingModules > 0) {
+    await addMissingLessons(courseId, spec);
+    return;
+  }
   if (existingModules === 0) {
     for (const [mIdx, m] of spec.modules.entries()) {
       const moduleRow = await db.module.create({
