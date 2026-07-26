@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" width="640" height="400" role="img" aria-label="Схема ботинка сбоку: верх из кожи или нубука, мембрана, стелька, подошва с каблуком, шнуровка и задник">
+  <defs>
+    <style>
+      .upper { fill: #d97706; fill-opacity: .26; stroke: #b45309; stroke-width: 3; stroke-linejoin: round; }
+      .toecap { fill: #b45309; fill-opacity: .18; stroke: #b45309; stroke-width: 2; }
+      .sole { fill: #475569; fill-opacity: .5; stroke: #334155; stroke-width: 2.5; stroke-linejoin: round; }
+      .insole { fill: #0ea5e9; fill-opacity: .3; stroke: #0284c7; stroke-width: 1.5; }
+      .membrane { fill: none; stroke: #0284c7; stroke-width: 2.5; stroke-dasharray: 9 6; }
+      .seam { fill: none; stroke: #b45309; stroke-width: 1.5; stroke-dasharray: 5 4; }
+      .line { fill: none; stroke: #b45309; stroke-width: 2; }
+      .lace { fill: none; stroke: #64748b; stroke-width: 3; stroke-linecap: round; }
+      .eyelet { fill: #f8fafc; stroke: #475569; stroke-width: 1.8; }
+      .tread { fill: none; stroke: #1e293b; stroke-width: 2; stroke-opacity: .5; }
+    </style>
+  </defs>
+
+  <g transform="translate(40 20)">
+    <!-- верх ботинка: пятка слева, носок справа -->
+    <path class="upper" d="M124 282
+      C118 244 118 200 122 172
+      C124 156 132 148 146 147
+      L248 140
+      C266 140 272 152 276 168
+      L292 206
+      C300 222 312 232 330 238
+      L432 256
+      C476 264 506 270 518 278
+      C522 280 522 282 518 282
+      Z" />
+
+    <!-- союзка (носочная часть) -->
+    <path class="toecap" d="M432 256 C476 264 506 270 518 278 C522 280 522 282 518 282 L430 282 C428 273 429 265 432 256 Z" />
+
+    <!-- строчка союзки, задний шов -->
+    <path class="seam" d="M330 238 L432 256" />
+    <path class="line" d="M158 280 C154 242 155 202 159 178" />
+
+    <!-- мембрана: внутренний слой верха -->
+    <path class="membrane" d="M142 276
+      C137 242 137 204 141 180
+      C143 168 150 162 161 161
+      L246 155
+      C258 156 262 166 265 178
+      L281 212
+      C290 230 305 244 326 249
+      L430 267
+      C462 273 484 276 498 278" />
+
+    <!-- язычок -->
+    <path class="seam" d="M250 142 C268 158 278 182 288 202" />
+
+    <!-- шнуровка: два ряда люверсов и перекрестия -->
+    <g>
+      <circle class="eyelet" cx="244" cy="150" r="4.5" />
+      <circle class="eyelet" cx="252" cy="170" r="4.5" />
+      <circle class="eyelet" cx="260" cy="190" r="4.5" />
+      <circle class="eyelet" cx="268" cy="210" r="4.5" />
+      <circle class="eyelet" cx="206" cy="156" r="4.5" />
+      <circle class="eyelet" cx="214" cy="176" r="4.5" />
+      <circle class="eyelet" cx="222" cy="196" r="4.5" />
+      <circle class="eyelet" cx="230" cy="216" r="4.5" />
+      <path class="lace" d="M244 150 L214 176 M252 170 L222 196 M260 190 L230 216 M206 156 L252 170 M214 176 L260 190 M222 196 L268 210" />
+    </g>
+
+    <!-- стелька: тонкая полоса внутри над подошвой -->
+    <path class="insole" d="M132 272 L512 272 C518 272 520 276 520 282 L126 282 C126 276 127 272 132 272 Z" />
+
+    <!-- подошва с каблуком -->
+    <path class="sole" d="M124 282 L524 282
+      C540 284 546 292 536 302
+      C528 310 508 312 492 312
+      L204 312
+      L204 334
+      C204 340 198 342 190 342
+      L134 342
+      C122 342 116 334 116 324
+      L116 292
+      C116 286 118 282 124 282 Z" />
+    <g class="tread">
+      <path d="M236 298 h30 M282 298 h30 M328 298 h30 M374 298 h30 M420 298 h30 M466 298 h24" />
+      <path d="M136 328 h48" />
+    </g>
+  </g>
+</svg>

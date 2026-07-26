@@ -25,6 +25,7 @@
     "factory:audio": "tsx --env-file=.env scripts/factory/audio.ts",
     "factory:podcast": "tsx --env-file=.env scripts/factory/podcast.ts",
     "factory:slides-pdf": "tsx --env-file=.env scripts/factory/slides-pdf.ts",
+    "factory:handout": "tsx scripts/factory/handout-pdf.ts",
     "factory:slides-import": "tsx --env-file=.env --env-file-if-exists=.env.deploy scripts/factory/slides-import.ts",
     "factory:transcript": "tsx --env-file=.env scripts/factory/transcript.ts",
     "factory:subs": "tsx --env-file=.env scripts/factory/subs.ts",

@@ -29,6 +29,21 @@ import {
   B2B_SCENARIOS,
 } from "./seed-data/b2b-content.js";
 import {
+  SHOES_SUMMARIES,
+  SHOES_SLIDES,
+  SHOES_LESSON_QUIZZES,
+  SHOES_FLASHCARDS,
+  SHOES_OBJECTIONS,
+  SHOES_CHECKLISTS,
+  SHOES_SCRIPTS,
+  SHOES_AUDITS,
+  SHOES_HOTSPOTS,
+  SHOES_BRANCHING,
+  SHOES_SCENARIOS,
+  SHOES_EXAM,
+  SHOES_EXAM_PASS_SCORE,
+} from "./seed-data/shoes-content.js";
+import {
   TIME_LESSON_QUIZZES,
   TIME_FLASHCARDS,
   TIME_CHECKLISTS,
@@ -225,6 +240,57 @@ const TIME_MODULES: ModuleSpec[] = [
         title: "Какой процент людей может успешно работать удалённо",
         yt: "https://www.youtube.com/watch?v=0qokT4eL8tw",
         durationSec: 59,
+      },
+    ],
+  },
+];
+
+// ── Курс «Продажи в магазине обуви и одежды» (реальный YouTube-плейлист) ─────
+// Источник: https://www.youtube.com/playlist?list=PLbPgy5BEZoQVfPIFo1cr9tNamIkIOr380
+// Тренер: Виталий Дубовик (activesales.by). В плейлисте 8 роликов: четыре части
+// тренинга, ролик «программа курса» и три одинаковых 60-секундных тизера-нарезки
+// (в курс не берём — дублируют содержание). Порядок уроков — по этапам продажи
+// (плейлист отдан в обратном порядке: 4-я часть первой). Всего ~41 минута.
+// Бесплатный превью — вводный ролик с программой курса.
+const SHOES_MODULES: ModuleSpec[] = [
+  {
+    title: "Модуль 1. Контакт с покупателем",
+    lessons: [
+      {
+        title: "О курсе: этапы продажи обуви в салоне",
+        yt: "https://www.youtube.com/watch?v=GYBDEetVtqg",
+        durationSec: 58,
+        free: true,
+      },
+      {
+        title: "Установление контакта с покупателем в торговом зале",
+        yt: "https://www.youtube.com/watch?v=y5FOTQKZBUM",
+        durationSec: 259,
+      },
+    ],
+  },
+  {
+    title: "Модуль 2. Потребность, презентация и примерка",
+    lessons: [
+      {
+        title: "Выявление потребности, презентация и примерка обуви",
+        yt: "https://www.youtube.com/watch?v=3wNrqmWNgPc",
+        durationSec: 565,
+      },
+    ],
+  },
+  {
+    title: "Модуль 3. Возражения, расширение чека и завершение",
+    lessons: [
+      {
+        title: "Работа с возражениями, допродажи и завершение продажи",
+        yt: "https://www.youtube.com/watch?v=dvVvphSZGhs",
+        durationSec: 832,
+      },
+      {
+        title: "Методы закрытия сделки и 13 ошибок продавца обуви",
+        yt: "https://www.youtube.com/watch?v=v0PUPEQ-58Y",
+        durationSec: 760,
       },
     ],
   },
@@ -520,43 +586,46 @@ const COURSES: CourseSpec[] = [
     slug: "sales-shoes",
     inDevelopment: true,
     title: "Продажи в магазине обуви и одежды",
-    subtitle: "Как увеличить средний чек и конверсию в торговом зале",
+    subtitle: "Семь этапов продажи в торговом зале: от контакта до второй пары",
     description:
-      "Курс для продавцов-консультантов и администраторов розничных магазинов. Техника встречи, работа с ценовыми возражениями, допродажи аксессуаров и формирование лояльности покупателей.",
+      "Практический видеокурс для продавцов-консультантов обувных и одёжных салонов от бизнес-тренера Виталия Дубовика (activesales.by). Пять уроков — весь цикл работы с покупателем в зале: как позиционироваться в торговом зале и поймать момент для подхода, какими вопросами выявлять потребность, как делать презентацию на языке выгод и правильно выносить три коробки, как отвечать на «дорого», «я просто смотрю», «боюсь неизвестный бренд» и «я подумаю», как расширять чек второй парой и уходом за обувью, восемь способов завершить продажу и 13 типичных ошибок продавца обуви, из-за которых покупатель уходит без покупки.",
     industry: "Обувь и одежда",
     priceTiyn: 240_000,
-    hoursLabel: "5 часов",
+    hoursLabel: "~41 минута",
     learnPoints: [
-      "Техника открытия диалога без «Вам помочь?»",
-      "Как предлагать более дорогую модель без давления",
-      "Допродажа ухода, сумок и аксессуаров — без навязывания",
-      "Работа с типичными возражениями в рознице",
-      "Формирование базы постоянных покупателей",
+      "Устанавливать контакт: позиционирование в зале, зрительный контакт, контактная фраза — и подход по невербальным сигналам, а не «Вам помочь?»",
+      "Выявлять потребность открытыми, альтернативными и закрытыми вопросами, проверять понимание и резюмировать",
+      "Делать презентацию по технике «свойство → выгода», правилу трёх коробок и правилу Гомера",
+      "Отвечать на четыре типичных возражения покупателя обуви: «дорого», «я просто смотрю», «боюсь неизвестный бренд», «я подумаю»",
+      "Расширять чек: вторая пара, аксессуары и уход за обувью — cross-sell, up-sell и down-sell",
+      "Завершать сделку восемью способами — от прямого и альтернативного до «короны» покупателю",
+      "Не допускать 13 типичных ошибок продавца обуви — от оценки клиента по внешнему виду до «Спасибо, пожалуйста»",
     ],
     targetAudience: [
       "Продавцы-консультанты магазинов обуви и одежды",
       "Администраторы и управляющие торговых точек",
       "Владельцы розничных магазинов",
+      "Новые сотрудники салона — как вводный курс за один рабочий перерыв",
     ],
     faq: [
-      { q: "Подходит ли для онлайн-магазина?", a: "Частично. Модули по первому контакту адаптированы под офлайн-формат." },
-    ],
-    modules: [
       {
-        title: "Модуль 1. Встреча и выяснение потребностей",
-        lessons: [
-          { title: "Открытие диалога в торговом зале", yt: "https://youtu.be/PLACEHOLDER", free: true },
-          { title: "Техника подбора модели", yt: "https://youtu.be/PLACEHOLDER" },
-        ],
+        q: "Нужен ли опыт в продажах?",
+        a: "Нет. Курс начинается с базовых техник: как встретить покупателя, что говорить и когда подходить. Подойдёт продавцу с первого дня в зале.",
       },
       {
-        title: "Модуль 2. Допродажи и лояльность",
-        lessons: [
-          { title: "Допродажа аксессуаров и ухода", yt: "https://youtu.be/PLACEHOLDER" },
-          { title: "Работа с ценовыми возражениями", yt: "https://youtu.be/PLACEHOLDER" },
-        ],
+        q: "Подходит ли для онлайн-магазина?",
+        a: "Частично. Работа с возражениями, техника «свойство → выгода» и допродажи применимы и в переписке, но контакт, примерка и работа в зале — про офлайн-салон.",
+      },
+      {
+        q: "Только про обувь или про одежду тоже?",
+        a: "Примеры тренер разбирает на обуви, но все семь этапов — контакт, потребность, презентация, возражения, расширение чека, завершение — одинаково работают в любом розничном салоне одежды и аксессуаров.",
+      },
+      {
+        q: "Сколько времени займёт прохождение?",
+        a: "Около 41 минуты видео плюс задания и тренажёры. Реально пройти курс за один-два подхода и сразу применить в смене.",
       },
     ],
+    modules: SHOES_MODULES,
     coverUrl: "/images/courses/sales-shoes.png",
   },
   {
@@ -766,8 +835,34 @@ async function upsertCourse(spec: CourseSpec) {
   return course;
 }
 
+/**
+ * Снести каркасную структуру курса, если она ещё «пустая»: все уроки — заглушки
+ * (youtubeUrl с PLACEHOLDER, видео не собрано) и ни один ученик их не проходил.
+ * Нужно, когда каркас курса уже создан на проде, а затем появляется реальный
+ * плейлист: без этого createMissingModules() увидит модули и ничего не изменит.
+ * Возвращает true, если структура удалена и её надо создать заново.
+ */
+async function dropPlaceholderModules(courseId: string): Promise<boolean> {
+  const lessons = await db.lesson.findMany({
+    where: { module: { courseId } },
+    select: { id: true, youtubeUrl: true, videoStatus: true },
+  });
+  if (lessons.length === 0) return false;
+  const allPlaceholders = lessons.every(
+    (l) => (l.youtubeUrl ?? "").includes("PLACEHOLDER") && l.videoStatus === "NONE",
+  );
+  if (!allPlaceholders) return false;
+  const touched = await db.lessonProgress.count({ where: { lessonId: { in: lessons.map((l) => l.id) } } });
+  if (touched > 0) return false;
+
+  await db.module.deleteMany({ where: { courseId } });
+  console.log(`   курс: удалён каркас из ${lessons.length} уроков-заглушек — создаю реальную структуру`);
+  return true;
+}
+
 /** Создать модули и уроки курса, если их ещё нет (существующие не трогаем). */
 async function createMissingModules(courseId: string, spec: CourseSpec) {
+  await dropPlaceholderModules(courseId);
   const existingModules = await db.module.count({ where: { courseId } });
   if (existingModules === 0) {
     for (const [mIdx, m] of spec.modules.entries()) {
@@ -1295,6 +1390,35 @@ async function main() {
     where: { module: { courseId: b2bCourse.id }, videoStatus: "READY" },
     data: { status: "PUBLISHED" },
   });
+  }
+
+  // ── Курс «Продажи в магазине обуви и одежды» ──────────────────────────────
+  // Контент собран по реальному содержанию видео Виталия Дубовика (транскрипты в
+  // «Презентации/Продажи обуви»), см. prisma/seed-data/shoes-content.ts.
+  const shoesCourse = courses.find((c) => c.slug === "sales-shoes");
+  if (shoesCourse) {
+    await seedSummaries(shoesCourse.id, SHOES_SUMMARIES);
+    await seedSlides(shoesCourse.id, SHOES_SLIDES);
+    await seedLessonQuizzes(shoesCourse.id, SHOES_LESSON_QUIZZES);
+    await seedFlashcards(shoesCourse.id, SHOES_FLASHCARDS);
+    await seedObjections(shoesCourse.id, SHOES_OBJECTIONS);
+    await seedArtifacts(shoesCourse.id, "CHECKLIST", SHOES_CHECKLISTS);
+    await seedArtifacts(shoesCourse.id, "SCRIPT_BUILDER", SHOES_SCRIPTS);
+    await seedArtifacts(shoesCourse.id, "DIALOGUE_AUDIT", SHOES_AUDITS);
+    await seedArtifacts(shoesCourse.id, "HOTSPOT", SHOES_HOTSPOTS);
+    await seedArtifacts(shoesCourse.id, "BRANCHING", SHOES_BRANCHING);
+    await seedScenarios(shoesCourse.id, SHOES_SCENARIOS);
+    await seedFinalExam(shoesCourse.id, {
+      questions: SHOES_EXAM,
+      description:
+        "Проверка знаний по курсу: контакт в торговом зале, выявление потребности, презентация и три коробки, работа с возражениями, расширение чека, методы завершения и типичные ошибки.",
+      passScore: SHOES_EXAM_PASS_SCORE,
+    });
+    // Уроки с готовым HLS публикуем: поурочный контент к ним собран.
+    await db.lesson.updateMany({
+      where: { module: { courseId: shoesCourse.id }, videoStatus: "READY" },
+      data: { status: "PUBLISHED" },
+    });
   }
 
   // ── Курс «Тайм менеджмент: базовые принципы» ──────────────────────────────
