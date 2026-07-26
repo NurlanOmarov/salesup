@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" width="640" height="400" role="img" aria-label="Лестница СПИН: ситуационные, проблемные, извлекающие и направляющие вопросы, затем презентация факт — выгода — согласие">
+  <defs>
+    <style>
+      .step { fill: #0ea5e9; fill-opacity: .15; stroke: #0284c7; stroke-width: 2.5; stroke-linejoin: round; }
+      .step-4 { fill: #d97706; fill-opacity: .2; stroke: #b45309; }
+      .deck { fill: #10b981; fill-opacity: .18; stroke: #059669; stroke-width: 2.5; }
+      .letter { font: 800 34px/1 system-ui, -apple-system, "Segoe UI", sans-serif; fill: #0284c7; text-anchor: middle; }
+      .letter-4 { fill: #b45309; }
+      .name { font: 700 15px/1.2 system-ui, -apple-system, "Segoe UI", sans-serif; fill: #475569; text-anchor: middle; }
+      .hint { font: 500 12px/1.2 system-ui, -apple-system, "Segoe UI", sans-serif; fill: #94a3b8; text-anchor: middle; }
+      .axis { font: 500 12px/1.2 system-ui, -apple-system, "Segoe UI", sans-serif; fill: #94a3b8; }
+      .arrow { fill: none; stroke: #94a3b8; stroke-width: 2.5; stroke-dasharray: 8 6; }
+      .base { fill: none; stroke: #cbd5e1; stroke-width: 2; }
+    </style>
+    <marker id="ah" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0 0 L10 4 L0 8 z" fill="#94a3b8" />
+    </marker>
+  </defs>
+
+  <path class="base" d="M24 352 H616" />
+
+  <!-- 1. Ситуационные -->
+  <rect class="step" x="28" y="242" width="126" height="108" rx="10" />
+  <text class="letter" x="91" y="284">С</text>
+  <text class="name" x="91" y="310">Ситуационные</text>
+  <text class="hint" x="91" y="330">войти в доверие</text>
+
+  <!-- 2. Проблемные -->
+  <rect class="step" x="160" y="202" width="126" height="148" rx="10" />
+  <text class="letter" x="223" y="244">П</text>
+  <text class="name" x="223" y="270">Проблемные</text>
+  <text class="hint" x="223" y="290">достать проблему</text>
+
+  <!-- 3. Извлекающие -->
+  <rect class="step" x="292" y="162" width="126" height="188" rx="10" />
+  <text class="letter" x="355" y="204">И</text>
+  <text class="name" x="355" y="230">Извлекающие</text>
+  <text class="hint" x="355" y="250">цена бездействия</text>
+
+  <!-- 4. Направляющие -->
+  <rect class="step step-4" x="424" y="122" width="126" height="228" rx="10" />
+  <text class="letter letter-4" x="487" y="164">Н</text>
+  <text class="name" x="487" y="190">Направляющие</text>
+  <text class="hint" x="487" y="210">решение — у нас</text>
+
+  <!-- презентация -->
+  <rect class="deck" x="556" y="86" width="60" height="264" rx="10" />
+  <text class="hint" x="586" y="74" text-anchor="middle" style="font-size:13px;fill:#64748b;font-weight:700">Презентация</text>
+  <text class="hint" x="586" y="230" transform="rotate(-90 586 230)">факт → выгода → согласие</text>
+
+  <!-- стрелка подъёма -->
+  <path class="arrow" d="M60 228 C140 210 180 178 250 168 C330 156 420 122 540 100" marker-end="url(#ah)" />
+
+  <text class="axis" x="28" y="378">клиент не видит проблемы</text>
+  <text class="axis" x="616" y="378" text-anchor="end">клиент хочет решение</text>
+</svg>

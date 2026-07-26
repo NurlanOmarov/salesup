@@ -151,6 +151,24 @@ function renderSlide(s: HandoutSlide, a: Assets, courseTitle: string): string {
         ${foot}
       </section>`;
 
+    case "split":
+      return `<section class="slide">
+        ${kicker(s.kicker)}
+        <h2>${esc(s.title)}</h2>
+        <div class="body"><div class="split">
+          ${[s.left, s.right]
+            .map(
+              (col) => `<div class="col ${col.tone ?? "neutral"}">
+                <h3>${esc(col.heading)}</h3>
+                <ul>${col.items.map((i) => `<li>${esc(i)}</li>`).join("")}</ul>
+              </div>`,
+            )
+            .join("")}
+        </div>
+        ${s.banner ? `<div class="banner"><span class="q">“</span>${esc(s.banner)}</div>` : ""}</div>
+        ${foot}
+      </section>`;
+
     case "matrix":
       return `<section class="slide">
         ${kicker(s.kicker)}
@@ -302,6 +320,21 @@ const CSS = `
   .strip.red { background: #EE3239; color: #fff; }
   .strip.soft { background: rgba(255,255,255,.08); color: #fff; }
   .strip.soft .n { color: #EE3239; opacity: 1; }
+
+  /* Две колонки-сравнения */
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+  .split .col { border-radius: 14px; padding: 24px 26px; background: #fff; box-shadow: 0 1px 3px rgba(27,36,64,.08); }
+  .split .col.good { background: #ECFDF3; box-shadow: inset 0 0 0 2px #A7E8C0; }
+  .split .col.bad { background: #FEF2F2; box-shadow: inset 0 0 0 2px #FCC8C8; }
+  .split .col h3 { font-size: 24px; font-weight: 700; margin-bottom: 14px; }
+  .split .col.good h3 { color: #047857; }
+  .split .col.bad h3 { color: #B91C1C; }
+  .split .col ul { list-style: none; display: flex; flex-direction: column; gap: 11px; }
+  .split .col li { position: relative; padding-left: 22px; font-size: 20px; line-height: 1.32; color: #4B5563; }
+  .split .col li::before { content: ""; position: absolute; left: 0; top: 11px; width: 9px; height: 9px;
+                           border-radius: 50%; background: #CBD5E1; }
+  .split .col.good li::before { background: #10B981; }
+  .split .col.bad li::before { background: #EF4444; }
 
   /* Матрица */
   .matrix { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }

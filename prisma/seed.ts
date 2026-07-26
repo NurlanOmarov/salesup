@@ -29,6 +29,21 @@ import {
   B2B_SCENARIOS,
 } from "./seed-data/b2b-content.js";
 import {
+  SPIN_SUMMARIES,
+  SPIN_SLIDES,
+  SPIN_LESSON_QUIZZES,
+  SPIN_FLASHCARDS,
+  SPIN_OBJECTIONS,
+  SPIN_CHECKLISTS,
+  SPIN_SCRIPTS,
+  SPIN_AUDITS,
+  SPIN_HOTSPOTS,
+  SPIN_BRANCHING,
+  SPIN_SCENARIOS,
+  SPIN_EXAM,
+  SPIN_EXAM_PASS_SCORE,
+} from "./seed-data/spin-content.js";
+import {
   SHOES_SUMMARIES,
   SHOES_SLIDES,
   SHOES_LESSON_QUIZZES,
@@ -113,6 +128,72 @@ type CourseSpec = {
   modules: ModuleSpec[];
   coverUrl?: string;
 };
+
+// ── Курс «СПИН-продажи» (реальный YouTube-плейлист) ──────────────────────────
+// Источник: https://www.youtube.com/playlist?list=PLbPgy5BEZoQWXmEjIFvcKIRl5qKUQB4-9
+// Тренер: Виталий Дубовик (activesales.by). Семь роликов: один полный разбор метода
+// на всех примерах и шесть отраслевых нарезок из него же. Каждое видео начинается
+// с одной и той же теории (4 вида вопросов + «факт → выгода → согласие»), поэтому
+// порядок педагогический: короткое демо → полный метод → кейсы по сферам →
+// применение вне продаж. Всего ~38 минут. Бесплатный превью — трёхминутный кейс.
+const SPIN_MODULES: ModuleSpec[] = [
+  {
+    title: "Модуль 1. Метод СПИН",
+    lessons: [
+      {
+        title: "СПИН за три минуты: четыре вида вопросов на примере часов",
+        yt: "https://www.youtube.com/watch?v=HgeUtmnxhBw",
+        durationSec: 174,
+        free: true,
+      },
+      {
+        title: "Метод СПИН целиком: разбор на семи разных бизнесах",
+        yt: "https://www.youtube.com/watch?v=2bXjvpwFYdU",
+        durationSec: 907,
+      },
+    ],
+  },
+  {
+    title: "Модуль 2. СПИН в рознице и B2B",
+    lessons: [
+      {
+        title: "Розница: строительный супермаркет и DIY",
+        yt: "https://www.youtube.com/watch?v=36FZ4BVlnjY",
+        durationSec: 282,
+      },
+      {
+        title: "B2B: продажа оборудования предприятиям",
+        yt: "https://www.youtube.com/watch?v=2QsRyIFgDNU",
+        durationSec: 218,
+      },
+    ],
+  },
+  {
+    title: "Модуль 3. СПИН в услугах",
+    lessons: [
+      {
+        title: "Финансовые услуги: банк, лизинг, страхование",
+        yt: "https://www.youtube.com/watch?v=DlE9Ydj15y8",
+        durationSec: 257,
+      },
+      {
+        title: "Услуги: как продавать экспертную работу",
+        yt: "https://www.youtube.com/watch?v=ZvAxbKLo8EA",
+        durationSec: 230,
+      },
+    ],
+  },
+  {
+    title: "Модуль 4. СПИН за пределами продаж",
+    lessons: [
+      {
+        title: "Переговоры с ребёнком: как мотивировать учиться",
+        yt: "https://www.youtube.com/watch?v=w7ufiGDqHZw",
+        durationSec: 189,
+      },
+    ],
+  },
+];
 
 // ── Курс «Тайм-менеджмент» (реальный YouTube-плейлист) ───────────────────────
 // Источник: https://www.youtube.com/playlist?list=PLbPgy5BEZoQWXLXBB2S2ibfJl8NcI5Jco
@@ -448,6 +529,54 @@ const COURSES: CourseSpec[] = [
     ],
     modules: PHARMA_MODULES,
     coverUrl: "/images/courses/sales-pharma.png",
+  },
+  // ── Курс: СПИН-продажи (реальный плейлист, контент по видео) ──────────────
+  {
+    slug: "sales-spin",
+    audience: "EVERYONE", // метод продаж, а не отрасль: примеры от DIY до переговоров с ребёнком
+    title: "СПИН-продажи: как формировать потребность",
+    subtitle: "Четыре вида вопросов, которые доводят клиента до решения купить",
+    description:
+      "Практический видеокурс по методу СПИН от бизнес-тренера Виталия Дубовика (activesales.by). Большинство продавцов умеют выявлять потребность открытыми вопросами, но почти никто не умеет её формировать — а именно это отличает консультанта от продавца. Семь уроков: четыре вида вопросов (ситуационные, проблемные, извлекающие, направляющие), схема презентации «факт → выгода → согласие» и готовые наборы вопросов под шесть сфер — строительный супермаркет и DIY, салон часов, поставка оборудования в B2B, банк и лизинг, продажа экспертных услуг и даже разговор с ребёнком об учёбе.",
+    industry: "Техники продаж",
+    priceTiyn: 300_000,
+    hoursLabel: "~38 минут",
+    learnPoints: [
+      "Различать четыре вида вопросов СПИН и понимать, какую работу делает каждый",
+      "Ситуационными вопросами входить в доверие и показывать, что вы понимаете бизнес клиента",
+      "Проблемными вопросами доставать скрытые потребности, о которых клиент ещё не говорит",
+      "Извлекающими вопросами переводить проблему из подсознания в осознание — через цену бездействия",
+      "Направляющими вопросами подводить клиента к покупке именно у вас",
+      "Собирать презентацию по схеме «факт → выгода → согласие» и закрывать вопросом на согласие",
+      "Составлять собственные СПИН-цепочки под свой продукт: розница, B2B, финансы, услуги",
+    ],
+    targetAudience: [
+      "Менеджеры по продажам в B2B и рознице",
+      "Продавцы-консультанты торгового зала",
+      "Специалисты по продаже услуг: финансы, консалтинг, экспертные работы",
+      "Руководители отделов продаж, которые ставят скрипты команде",
+      "Все, кому важно убеждать: переговоры, работа с подрядчиками, разговор с ребёнком",
+    ],
+    faq: [
+      {
+        q: "Нужен ли опыт продаж?",
+        a: "Нет. Метод разбирается с нуля: что такое каждый из четырёх видов вопросов и в каком порядке их задавать. Примеры — от покупки часов до поставки оборудования на завод.",
+      },
+      {
+        q: "Курс только для B2B?",
+        a: "Нет. В курсе шесть разных сфер: строительный супермаркет и DIY, салон часов, B2B-оборудование, банк и лизинг, экспертные услуги и бытовые переговоры. Метод один — меняются только вопросы.",
+      },
+      {
+        q: "Чем СПИН отличается от обычного выявления потребностей?",
+        a: "Открытые вопросы выявляют потребность, которая у клиента уже осознана. СПИН её формирует: проблемные и извлекающие вопросы показывают клиенту проблему и цену бездействия, а направляющие подводят к вашему решению.",
+      },
+      {
+        q: "Сколько времени займёт прохождение?",
+        a: "Около 38 минут видео плюс задания и тренажёры. Курс реально пройти за один вечер и сразу собрать свою цепочку вопросов под продукт.",
+      },
+    ],
+    modules: SPIN_MODULES,
+    coverUrl: "/images/courses/sales-spin.png",
   },
   // ── Курс: Тайм-менеджмент (реальные видео, контент собирается фабрикой) ────
   {
@@ -1389,6 +1518,35 @@ async function main() {
     where: { module: { courseId: b2bCourse.id }, videoStatus: "READY" },
     data: { status: "PUBLISHED" },
   });
+  }
+
+  // ── Курс «СПИН-продажи: как формировать потребность» ──────────────────────
+  // Контент по видео Виталия Дубовика (транскрипты в «Презентации/СПИН-продажи»),
+  // см. prisma/seed-data/spin-content.ts.
+  const spinCourse = courses.find((c) => c.slug === "sales-spin");
+  if (spinCourse) {
+    await seedSummaries(spinCourse.id, SPIN_SUMMARIES);
+    await seedSlides(spinCourse.id, SPIN_SLIDES);
+    await seedLessonQuizzes(spinCourse.id, SPIN_LESSON_QUIZZES);
+    await seedFlashcards(spinCourse.id, SPIN_FLASHCARDS);
+    await seedObjections(spinCourse.id, SPIN_OBJECTIONS);
+    await seedArtifacts(spinCourse.id, "CHECKLIST", SPIN_CHECKLISTS);
+    await seedArtifacts(spinCourse.id, "SCRIPT_BUILDER", SPIN_SCRIPTS);
+    await seedArtifacts(spinCourse.id, "DIALOGUE_AUDIT", SPIN_AUDITS);
+    await seedArtifacts(spinCourse.id, "HOTSPOT", SPIN_HOTSPOTS);
+    await seedArtifacts(spinCourse.id, "BRANCHING", SPIN_BRANCHING);
+    await seedScenarios(spinCourse.id, SPIN_SCENARIOS);
+    await seedFinalExam(spinCourse.id, {
+      questions: SPIN_EXAM,
+      description:
+        "Проверка знаний по курсу: четыре вида вопросов СПИН, схема «факт → выгода → согласие» и перенос метода на розницу, B2B, финансы, услуги и бытовые переговоры.",
+      passScore: SPIN_EXAM_PASS_SCORE,
+    });
+    // Уроки с готовым HLS публикуем: поурочный контент к ним собран.
+    await db.lesson.updateMany({
+      where: { module: { courseId: spinCourse.id }, videoStatus: "READY" },
+      data: { status: "PUBLISHED" },
+    });
   }
 
   // ── Курс «Продажи в магазине обуви и одежды» ──────────────────────────────

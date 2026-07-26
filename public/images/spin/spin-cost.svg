@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" width="640" height="400" role="img" aria-label="Цена бездействия: сэкономил на дешёвом исполнителе — заплатил дважды, 125 против 75">
+  <defs>
+    <style>
+      .bar-bad { fill: #f43f5e; fill-opacity: .18; stroke: #e11d48; stroke-width: 2.5; stroke-linejoin: round; }
+      .bar-bad-2 { fill: #f43f5e; fill-opacity: .34; stroke: #e11d48; stroke-width: 2.5; }
+      .bar-good { fill: #10b981; fill-opacity: .2; stroke: #059669; stroke-width: 2.5; }
+      .sum { font: 800 26px/1 system-ui, -apple-system, "Segoe UI", sans-serif; text-anchor: middle; }
+      .sum-bad { fill: #be123c; }
+      .sum-good { fill: #047857; }
+      .title { font: 700 16px/1.2 system-ui, -apple-system, "Segoe UI", sans-serif; fill: #475569; text-anchor: middle; }
+      .lbl { font: 600 13px/1.2 system-ui, -apple-system, "Segoe UI", sans-serif; fill: #64748b; text-anchor: middle; }
+      .hint { font: 500 12px/1.2 system-ui, -apple-system, "Segoe UI", sans-serif; fill: #94a3b8; text-anchor: middle; }
+      .base { fill: none; stroke: #cbd5e1; stroke-width: 2; }
+      .delta { fill: none; stroke: #e11d48; stroke-width: 2; stroke-dasharray: 6 5; }
+    </style>
+    <marker id="ah2" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto">
+      <path d="M0 0 L9 4 L0 8 z" fill="#e11d48" />
+    </marker>
+  </defs>
+
+  <path class="base" d="M40 330 H600" />
+
+  <!-- Левая колонка: «сэкономил» -->
+  <text class="title" x="190" y="52">«Сэкономлю — возьму подешевле»</text>
+  <rect class="bar-bad" x="120" y="196" width="140" height="132" rx="8" />
+  <text class="lbl" x="190" y="240">Первый исполнитель</text>
+  <text class="hint" x="190" y="260">$50 — работу не приняли</text>
+  <text class="hint" x="190" y="282">гарантии нет</text>
+  <rect class="bar-bad-2" x="120" y="80" width="140" height="112" rx="8" />
+  <text class="lbl" x="190" y="120">Эксперт после переделки</text>
+  <text class="hint" x="190" y="140">$75 — то, с чего стоило</text>
+  <text class="hint" x="190" y="158">начинать</text>
+  <text class="sum sum-bad" x="190" y="360">= $125</text>
+
+  <!-- Правая колонка: «сразу к эксперту» -->
+  <text class="title" x="450" y="52">«Сразу к эксперту»</text>
+  <rect class="bar-good" x="380" y="196" width="140" height="132" rx="8" />
+  <text class="lbl" x="450" y="240">Эксперт с гарантией</text>
+  <text class="hint" x="450" y="260">$75 — работа принята</text>
+  <text class="hint" x="450" y="282">с первого раза</text>
+  <text class="sum sum-good" x="450" y="360">= $75</text>
+
+  <!-- разница -->
+  <path class="delta" d="M272 196 H372" marker-end="url(#ah2)" />
+  <text class="lbl" x="322" y="186" style="fill:#be123c">−$50</text>
+  <text class="hint" x="322" y="216">цена «экономии»</text>
+</svg>

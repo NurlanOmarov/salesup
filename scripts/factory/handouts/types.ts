@@ -66,6 +66,16 @@ export interface StripsSlide {
   banner?: string;
 }
 
+/** Две колонки-сравнения: «работает / не работает», «было / стало», вопросы и презентация. */
+export interface SplitSlide {
+  layout: "split";
+  kicker: string;
+  title: string;
+  left: { heading: string; tone?: "good" | "bad" | "neutral"; items: string[] };
+  right: { heading: string; tone?: "good" | "bad" | "neutral"; items: string[] };
+  banner?: string;
+}
+
 /** Матрица 2×2 (четыре карточки равного веса). */
 export interface MatrixSlide {
   layout: "matrix";
@@ -107,6 +117,7 @@ export type HandoutSlide =
   | CardsSlide
   | NumberedSlide
   | StripsSlide
+  | SplitSlide
   | MatrixSlide
   | FigureSlide
   | QuoteSlide
