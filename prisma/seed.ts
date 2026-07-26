@@ -584,7 +584,6 @@ const COURSES: CourseSpec[] = [
   },
   {
     slug: "sales-shoes",
-    inDevelopment: true,
     title: "Продажи в магазине обуви и одежды",
     subtitle: "Семь этапов продажи в торговом зале: от контакта до второй пары",
     description:
