@@ -64,7 +64,15 @@ export function psqlRows(sql: string): string[][] {
 }
 
 /**
- * Rsync одного файла на VPS в /tmp/salesup-publish/<key>.
+ * Промежуточный каталог выгрузки на VPS — свой у каждого процесса фабрики.
+ * Общий путь ловил гонку: cleanupRemoteTmp одного скрипта (например slides-import)
+ * сносил каталог параллельно работающего publish-video, и docker cp падал с
+ * «lstat /tmp/salesup-publish: no such file or directory».
+ */
+const REMOTE_TMP = `/tmp/salesup-publish-${process.pid}`;
+
+/**
+ * Rsync одного файла на VPS в <REMOTE_TMP>/<key>.
  * Создаёт родительские каталоги на VPS автоматически.
  * Возвращает путь к файлу на VPS.
  *
@@ -72,7 +80,7 @@ export function psqlRows(sql: string): string[][] {
  * macOS rsync (BSD) не поддерживает --no-delete; просто не передаём --delete.
  */
 export function rsyncFile(localPath: string, remoteKey: string, dryRun: boolean): string {
-  const remoteTmp = `/tmp/salesup-publish/${remoteKey}`;
+  const remoteTmp = `${REMOTE_TMP}/${remoteKey}`;
   const remoteDir = dirname(remoteTmp);
 
   // Создать каталог на VPS (пропускаем в dry-run — ssh всё равно нужен)
@@ -156,8 +164,8 @@ export function updateProdMediaKey(
 export function cleanupRemoteTmp(dryRun: boolean): void {
   if (dryRun) return;
   try {
-    sshExec("rm -rf /tmp/salesup-publish", true);
+    sshExec(`rm -rf ${REMOTE_TMP}`, true);
   } catch {
-    log.warn("Не удалось удалить /tmp/salesup-publish на VPS (некритично)");
+    log.warn(`Не удалось удалить ${REMOTE_TMP} на VPS (некритично)`);
   }
 }

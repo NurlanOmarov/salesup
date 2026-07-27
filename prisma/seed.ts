@@ -888,7 +888,6 @@ const COURSES: CourseSpec[] = [
   },
   {
     slug: "sales-kitchens",
-    inDevelopment: true,
     title: "Эффективные продажи кухонь 2.0",
     subtitle: "Полный курс дизайнера кухонь: от лида в мессенджере до подписанного договора",
     description:
