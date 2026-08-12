@@ -102,9 +102,79 @@ body {
   animation-play-state: paused;
 }
 
+/* ── Сетка форматов: карточка под курсором в фокусе, соседние приглушаются ──
+   Только CSS (:has + псевдоэлементы), чтобы секция осталась серверной.
+   На тач-устройствах эффекты не включаются (@media hover: hover). */
+
+.spotlight-card {
+  position: relative;
+  overflow: hidden;
+  /* мягкий бренд-тинт в углу; background-color приходит из bg-background */
+  background-image: radial-gradient(
+    ellipse at 15% 0%,
+    color-mix(in srgb, var(--color-brand) 6%, transparent),
+    transparent 60%
+  );
+}
+
+/* косой блик, пробегающий по карточке при наведении */
+.spotlight-card::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: 55%;
+  translate: -100% 0;
+  transform: skewX(-12deg);
+  background: linear-gradient(
+    to right,
+    transparent,
+    color-mix(in srgb, var(--color-brand) 12%, transparent),
+    transparent
+  );
+  transition: translate 0.7s ease-out;
+  pointer-events: none;
+}
+
+/* акцентная линия, растущая по нижней кромке */
+.spotlight-card::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  width: 0;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--color-brand) 70%, transparent),
+    transparent
+  );
+  transition: width 0.5s ease;
+  pointer-events: none;
+}
+
+@media (hover: hover) {
+  .spotlight-grid:has(.spotlight-card:hover) .spotlight-card {
+    opacity: 0.55;
+    scale: 0.97;
+  }
+  .spotlight-grid:has(.spotlight-card:hover) .spotlight-card:hover {
+    opacity: 1;
+    scale: 1;
+  }
+  .spotlight-card:hover::before { translate: 280% 0; }
+  .spotlight-card:hover::after { width: 100%; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .aurora-a, .aurora-b, .float-y, .float-y-delayed, .marquee-track, .hero-word {
     animation: none;
   }
+  .spotlight-grid:has(.spotlight-card:hover) .spotlight-card {
+    opacity: 1;
+    scale: 1;
+  }
+  .spotlight-card::before, .spotlight-card::after { display: none; }
 }

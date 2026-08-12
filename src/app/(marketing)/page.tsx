@@ -49,13 +49,13 @@ import {
 // ISR: страница статична, отзывы обновляются раз в 10 минут.
 export const revalidate = 600;
 
+// openGraph здесь намеренно не объявляется: объект со страницы заменяет
+// родительский целиком, а не дополняет его. Своё объявление без images стирало
+// картинку из opengraph-image.tsx, а заодно siteName и locale из layout —
+// репост уходил без изображения. og:title и og:description Next соберёт из
+// title и description страницы.
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
-  openGraph: {
-    title: "Бизнес-платформа ACTIVE SALES — курсы по продажам с AI-наставником",
-    description: hero.subtitle,
-    type: "website",
-  },
 };
 
 const stepIcons = {
@@ -215,17 +215,19 @@ export default async function LandingPage() {
               {formats.subtitle}
             </p>
           </Reveal>
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="spotlight-grid mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {formats.items.map((f, i) => {
               const Icon = formatIcons[f.icon];
               return (
                 <Reveal key={f.title} delay={(i % 3) * 0.05}>
-                  <div className="group h-full rounded-2xl border border-foreground/10 bg-background p-6 transition-all duration-300 hover:-translate-y-1 hover:border-brand/40 hover:shadow-lg hover:shadow-brand/5">
-                    <div className="flex size-11 items-center justify-center rounded-xl bg-brand/10 text-brand-strong transition-colors group-hover:bg-brand group-hover:text-white">
+                  <div className="spotlight-card group h-full rounded-2xl border border-foreground/10 bg-background p-6 transition-all duration-300 hover:-translate-y-1 hover:border-brand/40 hover:shadow-lg hover:shadow-brand/5">
+                    <div className="relative flex size-11 items-center justify-center rounded-xl bg-brand/10 text-brand-strong transition-colors group-hover:bg-brand group-hover:text-white">
                       <Icon className="size-6" />
                     </div>
-                    <h3 className="mt-4 font-semibold">{f.title}</h3>
-                    <p className="mt-2 text-sm text-foreground/70">{f.text}</p>
+                    <h3 className="relative mt-4 font-semibold">{f.title}</h3>
+                    <p className="relative mt-2 text-sm text-foreground/70">
+                      {f.text}
+                    </p>
                   </div>
                 </Reveal>
               );
