@@ -28,16 +28,16 @@ export function Funnel({ data }: { data: FunnelData }) {
                 {stepConv !== null ? `${fmtPct(stepConv)} переходят дальше` : "—"}
               </div>
             )}
-            <div className="flex items-center gap-3">
-              <div className="h-9 flex-1">
-                <div
-                  className={cn("flex h-full min-w-[3rem] items-center rounded-lg px-3", s.color)}
-                  style={{ width: `${Math.max((s.value / top) * 100, 8)}%` }}
-                >
-                  <span className="truncate text-xs font-semibold text-white drop-shadow-sm">{s.label}</span>
-                </div>
-              </div>
-              <span className="w-16 shrink-0 text-right text-sm font-bold tabular-nums">{fmtInt(s.value)}</span>
+            {/* Подпись — над полосой: полоса узких ступеней не обрезает текст */}
+            <div className="mb-1 flex items-baseline justify-between gap-3">
+              <span className="text-xs font-semibold text-foreground/80">{s.label}</span>
+              <span className="shrink-0 text-sm font-bold tabular-nums">{fmtInt(s.value)}</span>
+            </div>
+            <div className="h-2.5 w-full overflow-hidden rounded-full bg-foreground/5">
+              <div
+                className={cn("h-full min-w-[0.625rem] rounded-full", s.color)}
+                style={{ width: `${Math.max((s.value / top) * 100, 2)}%` }}
+              />
             </div>
           </div>
         );
