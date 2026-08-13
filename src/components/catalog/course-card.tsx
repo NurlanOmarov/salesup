@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Clock } from "lucide-react";
-import { formatPrice, coverPublicUrl } from "@/lib/utils";
+import { formatPrice, coverPublicUrl, cn } from "@/lib/utils";
 
 const industryGradients: Record<string, string> = {
   "Туризм": "from-sky-700 via-sky-800 to-slate-900",
@@ -40,7 +40,14 @@ export type CourseCardData = {
   _count: { modules: number };
 };
 
-export function CourseCard({ course }: { course: CourseCardData }) {
+export function CourseCard({
+  course,
+  highlight = false,
+}: {
+  course: CourseCardData;
+  /** Бегущая бренд-рамка по периметру — чтобы выделить курс в общей сетке. */
+  highlight?: boolean;
+}) {
   const gradient =
     course.industry && industryGradients[course.industry]
       ? industryGradients[course.industry]
@@ -51,7 +58,10 @@ export function CourseCard({ course }: { course: CourseCardData }) {
   return (
     <Link
       href={`/courses/${course.slug}`}
-      className="group flex flex-col overflow-hidden rounded-2xl border border-foreground/10 bg-background transition-all duration-300 hover:-translate-y-1 hover:border-brand/40 hover:shadow-lg hover:shadow-brand/5"
+      className={cn(
+        "group relative flex flex-col overflow-hidden rounded-2xl border border-foreground/10 bg-background transition-all duration-300 hover:-translate-y-1 hover:border-brand/40 hover:shadow-lg hover:shadow-brand/5",
+        highlight && "beam-card",
+      )}
     >
       {/* Обложка */}
       <div className={`relative aspect-video bg-gradient-to-br ${gradient}`}>

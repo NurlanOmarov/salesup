@@ -167,6 +167,64 @@ body {
   .spotlight-card:hover::after { width: 100%; }
 }
 
+/* ── Связь между шагами «Как проходит обучение» ─────────────────────────
+   Линия в зазоре между карточками с бегущим по ней бликом: четыре шага
+   читаются как процесс, а не как четыре независимых пункта. Только на широких
+   экранах — в одну колонку линия вела бы в пустоту. */
+@keyframes step-flow {
+  from { background-position: 100% 0; }
+  to   { background-position: -100% 0; }
+}
+@media (min-width: 1024px) {
+  .step-connector::after {
+    content: "";
+    position: absolute;
+    /* по центру иконки: padding карточки 24px + половина бейджа 44px */
+    top: 46px;
+    /* зазор gap-5 между колонками */
+    right: -20px;
+    width: 20px;
+    height: 2px;
+    background-color: color-mix(in srgb, var(--color-brand) 18%, transparent);
+    background-image: linear-gradient(90deg, transparent, var(--color-brand), transparent);
+    background-size: 200% 100%;
+    animation: step-flow 2.6s linear infinite;
+    pointer-events: none;
+  }
+}
+
+/* ── Бегущая рамка выделенной карточки курса ────────────────────────────
+   Луч по периметру: подсвечивает курс со скидкой в каталоге. Рамка рисуется
+   псевдоэлементом с маской, поэтому карточка остаётся серверной. */
+@property --beam-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+@keyframes beam-spin {
+  to { --beam-angle: 360deg; }
+}
+.beam-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: conic-gradient(
+    from var(--beam-angle),
+    transparent 0deg,
+    color-mix(in srgb, var(--color-brand) 85%, transparent) 40deg,
+    transparent 95deg
+  );
+  /* вырезаем середину — красится только кромка */
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  animation: beam-spin 4s linear infinite;
+  pointer-events: none;
+}
+
 /* ── Анимации кабинета ученика ──────────────────────────────────────────
    Прогресс приезжает от нуля к своему значению, а не появляется заполненным.
    Оба блока серверные: конечное значение задаётся инлайновым стилем, кейфрейм
@@ -220,6 +278,14 @@ body {
   }
   .spotlight-card::before, .spotlight-card::after { display: none; }
   .ring-progress, .bar-progress { animation: none; }
+  .step-connector::after {
+    animation: none;
+    background-image: none;
+  }
+  .beam-card::after {
+    animation: none;
+    background: color-mix(in srgb, var(--color-brand) 45%, transparent);
+  }
   /* без анимации градиент по буквам бессмыслен — возвращаем обычный текст */
   .shimmer-text {
     animation: none;

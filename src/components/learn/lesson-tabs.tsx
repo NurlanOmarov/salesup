@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import {
   PlayCircle,
@@ -175,6 +175,11 @@ export function LessonTabs({
   defaultSubtitleLang?: string | null;
 }) {
   const [tab, setTab] = useState<Tab>("video");
+  const reduceMotion = useReducedMotion();
+  /** Подложка активной вкладки переезжает пружиной; при «уменьшить движение» — мгновенно. */
+  const indicatorTransition = reduceMotion
+    ? { duration: 0 }
+    : ({ type: "spring", stiffness: 350, damping: 30 } as const);
 
   const tabs: { key: Tab; label: string; icon: typeof PlayCircle; show: boolean; group: Group }[] = [
     { key: "video", label: "Видео", icon: PlayCircle, show: true, group: "watch" },
@@ -233,7 +238,7 @@ export function LessonTabs({
                 <motion.span
                   layoutId="lesson-group"
                   className="absolute inset-0 rounded-lg bg-background shadow-sm"
-                  transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                  transition={indicatorTransition}
                 />
               ) : null}
               <span className={`relative z-10 flex items-center gap-1.5 ${active ? "text-amber-700" : "text-foreground/60"}`}>
@@ -268,12 +273,22 @@ export function LessonTabs({
                 className={[
                   "relative flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors",
                   active
-                    ? "border-amber-500/40 bg-amber-500/10 text-amber-700"
+                    ? "border-transparent text-amber-700"
                     : "border-foreground/10 text-foreground/60 hover:bg-foreground/5",
                 ].join(" ")}
               >
-                <t.icon className="size-4" />
-                {t.label}
+                {/* Подложка одна на весь ряд и переезжает между вкладками (как на уровне групп) */}
+                {active ? (
+                  <motion.span
+                    layoutId="lesson-tab"
+                    className="absolute inset-0 rounded-lg border border-amber-500/40 bg-amber-500/10"
+                    transition={indicatorTransition}
+                  />
+                ) : null}
+                <span className="relative z-10 flex items-center gap-1.5">
+                  <t.icon className="size-4" />
+                  {t.label}
+                </span>
               </button>
             );
           })}

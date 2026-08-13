@@ -190,7 +190,13 @@ export default async function LandingPage() {
             const Icon = stepIcons[s.icon];
             return (
               <Reveal key={s.title} delay={i * 0.05}>
-                <div className="group h-full rounded-2xl border border-foreground/10 p-6 transition-all duration-300 hover:-translate-y-1 hover:border-brand/40 hover:shadow-lg hover:shadow-brand/5">
+                <div
+                  className={cn(
+                    "group relative h-full rounded-2xl border border-foreground/10 p-6 transition-all duration-300 hover:-translate-y-1 hover:border-brand/40 hover:shadow-lg hover:shadow-brand/5",
+                    // линия к следующему шагу — у всех, кроме последнего
+                    i < steps.length - 1 && "step-connector",
+                  )}
+                >
                   <div className="flex size-11 items-center justify-center rounded-xl bg-brand/10 text-brand-strong transition-colors group-hover:bg-brand group-hover:text-white">
                     <Icon className="size-6" />
                   </div>

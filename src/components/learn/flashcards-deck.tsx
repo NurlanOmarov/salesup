@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { ChevronLeft, ChevronRight, RotateCw, RefreshCw, Check } from "lucide-react";
 import type { FlashcardsData } from "@/lib/interactive";
 
@@ -15,6 +15,7 @@ export function FlashcardsDeck({ deck }: { deck: FlashcardsData }) {
   const total = cards.length;
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
+  const reduceMotion = useReducedMotion();
   const [known, setKnown] = useState<Set<number>>(new Set());
 
   const go = (next: number) => {
@@ -54,23 +55,30 @@ export function FlashcardsDeck({ deck }: { deck: FlashcardsData }) {
         className="group relative mt-3 flex min-h-[200px] w-full items-center justify-center overflow-hidden rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/[0.07] to-transparent p-6 text-center transition-colors hover:from-amber-500/[0.12] sm:min-h-[240px]"
         style={{ perspective: 1000 }}
       >
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.div
-            key={flipped ? "back" : "front"}
-            initial={{ rotateX: 90, opacity: 0 }}
-            animate={{ rotateX: 0, opacity: 1 }}
-            exit={{ rotateX: -90, opacity: 0 }}
-            transition={{ duration: 0.22 }}
-            className="flex flex-col items-center gap-2"
-          >
+        {/* Настоящий переворот: обе грани живут на одной карточке и вращаются
+            вместе с ней, а не подменяют друг друга. Грид кладёт их в одну
+            ячейку — высота карточки считается по самой длинной стороне. */}
+        <motion.div
+          className="grid w-full"
+          style={{ transformStyle: "preserve-3d" }}
+          animate={{ rotateY: flipped ? 180 : 0 }}
+          transition={
+            reduceMotion ? { duration: 0 } : { duration: 0.5, ease: [0.22, 1, 0.36, 1] }
+          }
+        >
+          <div className="col-start-1 row-start-1 flex flex-col items-center gap-2 [backface-visibility:hidden]">
             <span className="text-xs font-medium uppercase tracking-wide text-amber-700">
-              {flipped ? "Ответ" : "Вопрос"}
+              Вопрос
             </span>
-            <p className={flipped ? "text-base text-foreground/80" : "text-lg font-semibold"}>
-              {flipped ? card.back : card.front}
-            </p>
-          </motion.div>
-        </AnimatePresence>
+            <p className="text-lg font-semibold">{card.front}</p>
+          </div>
+          <div className="col-start-1 row-start-1 flex flex-col items-center gap-2 [backface-visibility:hidden] [transform:rotateY(180deg)]">
+            <span className="text-xs font-medium uppercase tracking-wide text-amber-700">
+              Ответ
+            </span>
+            <p className="text-base text-foreground/80">{card.back}</p>
+          </div>
+        </motion.div>
         <span className="absolute bottom-3 right-3 inline-flex items-center gap-1 text-xs text-foreground/40 transition-colors group-hover:text-foreground/60">
           <RotateCw className="size-3.5" />
           перевернуть
