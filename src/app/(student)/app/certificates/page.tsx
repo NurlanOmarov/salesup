@@ -3,6 +3,11 @@ import { Award, Mail, Clock, CheckCircle2 } from "lucide-react";
 import { requireUser } from "@/lib/auth/guards";
 import { db } from "@/lib/db";
 import { CERTIFICATE_REQUEST_EMAIL } from "@/lib/certificates/constants";
+import { CertificateCelebration } from "@/components/student/certificate-celebration";
+
+/** Салютуем только свежим сертификатам: иначе первый заход после релиза
+ *  осыпал бы конфетти всех, кто получил документ месяцы назад. */
+const CELEBRATION_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
 export const metadata: Metadata = {
   title: "Мои сертификаты",
@@ -27,8 +32,19 @@ export default async function CertificatesPage() {
     },
   });
 
+  const now = Date.now();
+  const freshlyIssued = certs
+    .filter(
+      (c) =>
+        c.status === "ISSUED" &&
+        c.issuedAt != null &&
+        now - c.issuedAt.getTime() < CELEBRATION_WINDOW_MS,
+    )
+    .map((c) => c.id);
+
   return (
     <main className="mx-auto max-w-3xl px-4 py-8">
+      <CertificateCelebration certificateIds={freshlyIssued} />
       <h1 className="text-2xl font-bold">Мои сертификаты</h1>
 
       {certs.length === 0 ? (

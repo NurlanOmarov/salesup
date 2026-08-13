@@ -58,7 +58,7 @@ export function ProgressPanel({
         aria-valuemax={100}
         aria-label={`Прогресс до уровня ${p.level + 1}`}
       >
-        <div className="h-full rounded-full bg-amber-500 transition-all" style={{ width: `${p.percent}%` }} />
+        <div className="bar-progress h-full rounded-full bg-amber-500" style={{ width: `${p.percent}%` }} />
       </div>
 
       {/* Компактно: только ссылка на достижения; полная сетка бейджей — на /app/achievements */}

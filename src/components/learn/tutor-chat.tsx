@@ -93,8 +93,11 @@ export function TutorChat({ lessonId }: { lessonId: string }) {
             <div className="flex size-8 items-center justify-center rounded-full bg-slate-200 text-slate-600">
               <Bot className="size-4" />
             </div>
-            <div className="rounded-2xl rounded-tl-sm bg-foreground/[0.04] px-3.5 py-2.5 text-sm text-foreground/40">
-              Думаю…
+            <div className="rounded-2xl rounded-tl-sm bg-foreground/[0.04] px-3.5 py-2.5 text-sm">
+              {/* Бегущий блик по буквам: ожидание читается как работа, а не как зависание */}
+              <span className="shimmer-text font-medium">
+                Ищу ответ в материалах курса…
+              </span>
             </div>
           </div>
         ) : null}

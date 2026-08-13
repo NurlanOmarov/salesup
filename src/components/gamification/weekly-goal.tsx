@@ -1,8 +1,10 @@
+import type { CSSProperties } from "react";
 import { Target, Check } from "lucide-react";
 
 /**
  * Виджет учебной цели: кольцо «уроков завершено за неделю / цель». Цель задаётся в
- * настройках (User.weeklyGoal). Чистый SVG, без клиентского кода.
+ * настройках (User.weeklyGoal). Чистый SVG, без клиентского кода: кольцо
+ * дорисовывается от пустого до текущего значения CSS-анимацией (.ring-progress).
  */
 export function WeeklyGoal({ done, goal }: { done: number; goal: number }) {
   const safeGoal = Math.max(1, goal);
@@ -38,7 +40,8 @@ export function WeeklyGoal({ done, goal }: { done: number; goal: number }) {
             strokeLinecap="round"
             strokeDasharray={c}
             strokeDashoffset={offset}
-            className={reached ? "text-emerald-500" : "text-amber-500"}
+            className={`ring-progress ${reached ? "text-emerald-500" : "text-amber-500"}`}
+            style={{ "--ring-c": c } as CSSProperties}
           />
         </svg>
         <span className="absolute inset-0 flex flex-col items-center justify-center">

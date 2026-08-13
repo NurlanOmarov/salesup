@@ -167,6 +167,48 @@ body {
   .spotlight-card:hover::after { width: 100%; }
 }
 
+/* ── Анимации кабинета ученика ──────────────────────────────────────────
+   Прогресс приезжает от нуля к своему значению, а не появляется заполненным.
+   Оба блока серверные: конечное значение задаётся инлайновым стилем, кейфрейм
+   отвечает только за стартовую точку, поэтому клиентский JS не нужен. */
+
+/* кольцо цели недели: --ring-c = длина окружности (пустое кольцо) */
+@keyframes ring-fill {
+  from { stroke-dashoffset: var(--ring-c); }
+}
+.ring-progress {
+  animation: ring-fill 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* полоса XP до следующего уровня */
+@keyframes bar-fill {
+  from { width: 0; }
+}
+.bar-progress {
+  animation: bar-fill 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* «Думаю…» у AI-наставника: блик бежит по буквам, пока ждём ответ */
+@keyframes shimmer-text {
+  from { background-position: 180% center; }
+  to   { background-position: -80% center; }
+}
+.shimmer-text {
+  background-image: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--foreground) 35%, transparent) 0%,
+    color-mix(in srgb, var(--foreground) 35%, transparent) 40%,
+    var(--foreground) 50%,
+    color-mix(in srgb, var(--foreground) 35%, transparent) 60%,
+    color-mix(in srgb, var(--foreground) 35%, transparent) 100%
+  );
+  background-size: 200% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: shimmer-text 2s linear infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .aurora-a, .aurora-b, .float-y, .float-y-delayed, .marquee-track, .hero-word {
@@ -177,4 +219,11 @@ body {
     scale: 1;
   }
   .spotlight-card::before, .spotlight-card::after { display: none; }
+  .ring-progress, .bar-progress { animation: none; }
+  /* без анимации градиент по буквам бессмыслен — возвращаем обычный текст */
+  .shimmer-text {
+    animation: none;
+    background-image: none;
+    color: color-mix(in srgb, var(--foreground) 45%, transparent);
+  }
 }
