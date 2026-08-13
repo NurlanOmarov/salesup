@@ -1,13 +1,16 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
 import { BookOpen } from "lucide-react";
 import { db } from "@/lib/db";
-import { buildSafe } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
+import { cn, buildSafe } from "@/lib/utils";
 import { currency, buildMultiPrice } from "@/lib/currency";
 import { getStaticPageSeo } from "@/lib/seo/static-pages";
 import { Reveal } from "@/components/landing/reveal";
 import type { CourseCardData } from "@/components/catalog/course-card";
 import { CoursesCatalog } from "@/components/catalog/courses-catalog";
+import { audience, difference, faq, howItWorks } from "@/content/courses-page";
 
 export const revalidate = 60;
 
@@ -19,11 +22,10 @@ export async function generateMetadata(): Promise<Metadata> {
     description: s.description,
     alternates: { canonical: "/courses" },
     robots: { index: !s.noindex },
-    openGraph: {
-      title: "Каталог курсов по продажам — Бизнес-платформа ACTIVE SALES",
-      description: s.description,
-      type: "website",
-    },
+    // openGraph не объявляется: собственный объект заменяет родительский
+    // целиком и без images стирает картинку из opengraph-image.tsx вместе с
+    // siteName и locale из layout. og:title и og:description Next возьмёт из
+    // полей выше — они и так редактируются в /admin/seo.
   };
 }
 
@@ -73,6 +75,18 @@ export default async function CoursesPage() {
     })),
   };
 
+  // Вопросы страницы отвечают на выбор курса, а не на общие вопросы о платформе
+  // (те живут в FAQ главной), поэтому разметка здесь своя.
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faq.map((f) => ({
+      "@type": "Question",
+      name: f.q,
+      acceptedAnswer: { "@type": "Answer", text: f.a },
+    })),
+  };
+
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -96,6 +110,10 @@ export default async function CoursesPage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
 
       <Reveal>
@@ -125,6 +143,98 @@ export default async function CoursesPage() {
           <CoursesCatalog courses={courses} />
         </Suspense>
       )}
+
+      {/* Содержательные блоки — под каталогом: карточки нужны посетителю сразу,
+          а текст отвечает тем, кто пришёл из поиска и ещё выбирает. */}
+      <section className="mt-20">
+        <Reveal>
+          <h2 className="text-2xl font-bold sm:text-3xl">{audience.title}</h2>
+          <p className="mt-3 max-w-3xl text-foreground/70">{audience.intro}</p>
+        </Reveal>
+        <div className="mt-8 grid gap-5 sm:grid-cols-2">
+          {audience.items.map((item, i) => (
+            <Reveal key={item.title} delay={(i % 2) * 0.05}>
+              <div className="h-full rounded-2xl border border-foreground/10 p-6">
+                <h3 className="font-semibold">{item.title}</h3>
+                <p className="mt-2 text-sm text-foreground/70">{item.text}</p>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-16">
+        <Reveal>
+          <h2 className="text-2xl font-bold sm:text-3xl">{howItWorks.title}</h2>
+          <p className="mt-3 max-w-3xl text-foreground/70">{howItWorks.intro}</p>
+        </Reveal>
+        <ol className="mt-8 space-y-5">
+          {howItWorks.steps.map((step, i) => (
+            <li key={step.title}>
+              <Reveal delay={i * 0.04}>
+                <div className="rounded-2xl border border-foreground/10 p-6">
+                  <h3 className="font-semibold">
+                    <span className="mr-1.5 text-brand-strong">{i + 1}.</span>
+                    {step.title}
+                  </h3>
+                  <p className="mt-2 text-sm text-foreground/70">{step.text}</p>
+                </div>
+              </Reveal>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section className="mt-16">
+        <Reveal>
+          <h2 className="text-2xl font-bold sm:text-3xl">{difference.title}</h2>
+        </Reveal>
+        <div className="mt-8 grid gap-5 sm:grid-cols-2">
+          {difference.items.map((item, i) => (
+            <Reveal key={item.title} delay={(i % 2) * 0.05}>
+              <div className="h-full rounded-2xl border border-foreground/10 p-6">
+                <h3 className="font-semibold">{item.title}</h3>
+                <p className="mt-2 text-sm text-foreground/70">{item.text}</p>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      </section>
+
+      {/* FAQ на нативном <details>: ответы остаются в HTML и без JavaScript —
+          свёрнутый аккордеон на клиенте отдал бы поиску и AI пустую страницу. */}
+      <section className="mt-16">
+        <Reveal>
+          <h2 className="text-2xl font-bold sm:text-3xl">Частые вопросы о курсах</h2>
+        </Reveal>
+        <div className="mt-8 divide-y divide-foreground/10 rounded-2xl border border-foreground/10">
+          {faq.map((item) => (
+            <details key={item.q} className="group px-5 py-4">
+              <summary className="cursor-pointer list-none font-medium marker:content-none">
+                {item.q}
+              </summary>
+              <p className="mt-2 text-foreground/70">{item.a}</p>
+            </details>
+          ))}
+        </div>
+      </section>
+
+      <Reveal>
+        <div className="mt-16 rounded-2xl border border-foreground/10 p-6 text-center sm:p-8">
+          <p className="text-lg font-semibold">Не знаете, с какого курса начать?</p>
+          <p className="mx-auto mt-2 max-w-2xl text-foreground/70">
+            Опишите, что продаёте и где буксует разговор с клиентом, — подскажем
+            подходящую программу. Первый урок в любом курсе бесплатный, а
+            онлайн-оплата не требуется.
+          </p>
+          <Link
+            href="/#zayavka"
+            className={cn(buttonVariants({ size: "lg", variant: "brand" }), "mt-6")}
+          >
+            Оставить заявку
+          </Link>
+        </div>
+      </Reveal>
     </main>
   );
 }
