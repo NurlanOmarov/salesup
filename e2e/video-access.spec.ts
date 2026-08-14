@@ -85,7 +85,7 @@ test("без сессии playlist/key/сегмент → 401", async ({ request
 
 async function login(page: import("@playwright/test").Page) {
   await page.goto("/login");
-  await page.getByLabel("E-mail").fill(STUDENT_EMAIL);
+  await page.getByLabel("Логин или e-mail").fill(STUDENT_EMAIL);
   await page.getByLabel("Пароль").fill(STUDENT_PASS);
   await page.getByRole("button", { name: "Войти" }).click();
   await expect(page).toHaveURL(/\/app/);

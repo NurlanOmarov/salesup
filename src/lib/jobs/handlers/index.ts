@@ -53,7 +53,10 @@ export const handlers: Record<string, JobHandler> = {
   },
 
   // Ежедневное обслуживание (диск/БД, антишаринг-эвристики) — S6.1/S6.3.
+  // Здесь же — истечение корпоративных лицензий: срок наступает сам, события нет.
   "maintenance.daily": async () => {
+    const { syncAllOrgAccess } = await import("@/lib/org/sync.js");
+    await syncAllOrgAccess();
     log.info("maintenance.daily: ежедневные проверки (заглушка до S6.1/S6.3)");
   },
 
@@ -63,6 +66,16 @@ export const handlers: Record<string, JobHandler> = {
     const { buildDailyReminders } = await import("@/lib/learn/reminders.js");
     const r = await buildDailyReminders();
     log.info({ candidates: r.candidates, enqueued: r.enqueued }, "reminders.daily: напоминания поставлены");
+  },
+
+  // B2B: привести места организации в соответствие с её статусом и лицензиями.
+  // Идемпотентна: повторный запуск ничего не меняет, если всё уже согласовано.
+  // Без orgId в payload синхронизирует все организации (ежедневный проход).
+  "org.sync-access": async (payload) => {
+    const { orgId } = (payload ?? {}) as { orgId?: string };
+    const { syncOrgAccess, syncAllOrgAccess } = await import("@/lib/org/sync.js");
+    const result = orgId ? await syncOrgAccess(orgId) : await syncAllOrgAccess();
+    log.info({ orgId: orgId ?? "all", ...result }, "org.sync-access выполнена");
   },
 
   // Пустая задача — для проверки воркера/тестов.

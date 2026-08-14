@@ -31,7 +31,11 @@ enum UserRole {
 
 model User {
   id            String    @id @default(cuid())
-  email         String    @unique
+  // B2B (docs/B2B-PLAN.md §5.1): учётка работника организации создаётся БЕЗ e-mail —
+  // платформа не получает ПДн (оферта /offer-b2b, п. 10.1). Поэтому e-mail опционален,
+  // а входить можно по login (acme-0042) либо по e-mail. Хотя бы одно из полей задано.
+  email         String?   @unique
+  login         String?   @unique
   emailVerified DateTime?
   name          String? // ФИО для сертификата
   phone         String?
@@ -40,6 +44,11 @@ model User {
   // v1.2: вход по логину/паролю; учётку и временный пароль выдаёт админ
   passwordHash       String? // argon2id
   mustChangePassword Boolean @default(true)
+  // Акцепт оферты и политики ПДн при первом входе: доказательство заключения
+  // договора (ст. 408 ГК РБ) и согласия по Закону № 99-З. Версия — LEGAL_VERSION
+  // из src/content/legal, чтобы было видно, какую редакцию принял ученик.
+  termsAcceptedAt    DateTime?
+  termsVersion       String?
   industry      String? // отрасль — для персонализации AI-задач
   position      String?
   locale        String    @default("ru")
@@ -70,6 +79,8 @@ model User {
   events          Event[]
   llmUsage        LlmUsage[]
   cardReviews     CardReview[]
+  orgMemberships  OrgMembership[]
+  orgKeyWraps     OrgKeyWrap[]
 }
 
 // Auth.js v5
@@ -219,6 +230,7 @@ model Course {
   certificates Certificate[]
   reviews      Review[]
   quizzes      Quiz[]
+  orgLicenses  OrgLicense[]
 
   @@index([status, type])
 }
@@ -482,6 +494,7 @@ enum EnrollmentSource {
   PURCHASE
   MANUAL
   FREE
+  B2B // место из корпоративной лицензии (OrgLicense)
 }
 
 model Enrollment {
@@ -490,14 +503,26 @@ model Enrollment {
   courseId  String
   source    EnrollmentSource @default(MANUAL) // v1.2: доступ выдаёт админ после устной оплаты
   orderId   String?
+  // B2B: из какой лицензии выдано место. Занятые места считаются как
+  // count(Enrollment where licenseId = X and revokedAt is null) — отдельного
+  // счётчика нет, чтобы нечему было рассинхронизироваться.
+  licenseId String?
   startsAt  DateTime         @default(now())
   expiresAt DateTime?
   revokedAt DateTime?
-  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course    Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  /// Почему место отозвано: 'manual' — решением человека (владелец/ответственный
+  /// представитель), 'org_suspended' — заморозка организации, 'member_inactive' —
+  /// работник деактивирован. Нужно, чтобы возобновление организации вернуло только
+  /// автоматически снятые доступы и не воскресило отозванные вручную.
+  /// lib/access.ts это поле НЕ читает — доступ по-прежнему решает revokedAt.
+  revokedReason String?
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course    Course      @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  license   OrgLicense? @relation(fields: [licenseId], references: [id], onDelete: SetNull)
 
   @@unique([userId, courseId])
   @@index([courseId])
+  @@index([licenseId])
 }
 
 enum OrderStatus {
@@ -887,6 +912,157 @@ model Job {
   @@index([status, runAfter])
 }
 
+// ─────────────────────────── B2B: ОРГАНИЗАЦИИ, ЛИЦЕНЗИИ, МЕСТА ───────────────────────────
+// docs/B2B-PLAN.md + публичная оферта для организаций (src/content/legal/offer-b2b.ts).
+// Терминология совпадает с офертой: Место = Enrollment из Лицензии, Условное
+// обозначение = User.login, Ответственный представитель = OrgMembership.role ORG_ADMIN.
+//
+// ГЛАВНОЕ: доступ к контенту по-прежнему определяется ТОЛЬКО Enrollment (правило 1
+// CLAUDE.md). Организации и лицензии — слой ВЫДАЧИ, порождающий обычные Enrollment;
+// lib/access.ts об организациях не знает. Заморозка организации и истечение лицензии
+// проставляют Enrollment.revokedAt джобом org.sync-access, а не создают вторую ветку
+// проверки доступа.
+
+enum OrgStatus {
+  ACTIVE
+  SUSPENDED // просрочена оплата (оферта B2B, п. 5.5) — доступы работников отозваны
+  ARCHIVED
+}
+
+enum OrgRole {
+  ORG_ADMIN // «Ответственный представитель»: кабинет организации, места, отчёты
+  ORG_LEARNER // работник-ученик
+}
+
+/// Клиент-организация. Реквизиты юрлица персональными данными не являются;
+/// единственная ПДн-точка — контакты ответственного представителя (оферта, п. 10.7).
+model Organization {
+  id           String    @id @default(cuid())
+  slug         String    @unique // короткий код: acme → логины работников acme-0042
+  name         String // наименование клиента
+  unp          String? // УНП (для счёта); не ПДн — реквизит юрлица
+  contactEmail String? // e-mail ответственного представителя
+  contactNote  String? // Telegram/телефон — как удобно клиенту
+  note         String?   @db.Text // заметки владельца (номер счёта, договорённости)
+  status       OrgStatus @default(ACTIVE)
+  /// Счётчик выданных логинов: acme-0001, acme-0002… Инкрементируется в транзакции
+  /// самозаписи — гарантирует уникальность без гонок.
+  loginSeq     Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  memberships OrgMembership[]
+  licenses    OrgLicense[]
+  groups      OrgGroup[]
+  invites     OrgInvite[]
+  keyWraps    OrgKeyWrap[]
+
+  @@index([status])
+}
+
+/// Подразделение/филиал — ось группировки отчётности (оферта, п. 8.1). Название
+/// вносит клиент; по п. 6 Приложения 1 он обязуется не помещать сюда ФИО.
+model OrgGroup {
+  id    String @id @default(cuid())
+  orgId String
+  name  String
+
+  org         Organization    @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  memberships OrgMembership[]
+
+  @@unique([orgId, name])
+}
+
+/// Членство в организации. Открытым текстом хранится только платформенный код
+/// (User.login). Кто за ним стоит — знает клиент; на платформе это лежит лишь
+/// в labelEnc, зашифрованном в браузере ключом организации (docs/B2B-PLAN.md §5.2).
+model OrgMembership {
+  id       String  @id @default(cuid())
+  orgId    String
+  userId   String
+  role     OrgRole @default(ORG_LEARNER)
+  groupId  String?
+  /// Условное обозначение работника, зашифрованное на клиенте (AES-GCM под ключом
+  /// организации). Сервер хранит непрозрачный blob и не может его прочитать.
+  labelEnc String?
+  isActive Boolean @default(true)
+
+  joinedAt      DateTime  @default(now())
+  deactivatedAt DateTime?
+
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user  User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group OrgGroup?    @relation(fields: [groupId], references: [id], onDelete: SetNull)
+
+  @@unique([orgId, userId])
+  @@index([orgId, isActive])
+}
+
+/// Обёртка ключа организации (L2). Случайный AES-256 ключ существует только в
+/// браузере; на сервере лежат его копии, зашифрованные под парольной фразой каждого
+/// ORG_ADMIN и под recovery-кодом. Ни ключ, ни фраза на сервер не передаются.
+model OrgKeyWrap {
+  id         String   @id @default(cuid())
+  orgId      String
+  userId     String? // владелец обёртки; null — обёртка под recovery-код
+  kind       String // 'admin' | 'recovery'
+  wrappedKey String // base64(AES-GCM(orgKey)) — iv включён в blob
+  kdfSalt    String // base64
+  kdfParams  Json // { alg: 'PBKDF2-SHA256', hash: 'SHA-256', iterations: 600000 }
+  createdAt  DateTime @default(now())
+
+  org  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, userId, kind])
+  @@index([orgId])
+}
+
+/// Лицензия = ОДИН курс × N мест × срок (единица лицензии — курс×человек).
+/// Работник, которому открыли 3 курса, занимает по одному месту в трёх лицензиях.
+model OrgLicense {
+  id             String         @id @default(cuid())
+  orgId          String
+  courseId       String
+  seatsTotal     Int
+  accessDuration AccessDuration @default(MONTHS_12) // срок доступа одного места
+  startsAt       DateTime       @default(now())
+  /// Общий дедлайн лицензии: если задан, доступ места не может пережить его
+  /// (оферта, п. 4.5 — по истечении срока доступ прекращается автоматически).
+  expiresAt      DateTime?
+  priceTiyn      Int? // цена места по счёту — для аналитики выручки
+  note           String? // номер счёта/договорённость
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  course      Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  enrollments Enrollment[]
+
+  @@unique([orgId, courseId])
+  @@index([orgId])
+}
+
+/// Код самозаписи: работник вводит его на /join и создаёт себе анонимную учётку.
+/// Коды раздаёт клиент вне платформы (оферта, п. 4.2) — мы не знаем, кому именно.
+model OrgInvite {
+  id         String    @id @default(cuid())
+  orgId      String
+  code       String    @unique // 8 символов без похожих букв (0/O, 1/I)
+  groupId    String?
+  licenseIds Json // string[]: какие лицензии выдать при активации
+  maxUses    Int       @default(1)
+  usedCount  Int       @default(0)
+  expiresAt  DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  createdBy  String? // userId ORG_ADMIN либо OWNER
+
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([orgId, revokedAt])
+}
+
 // ─────────────────────────── ЗАЯВКИ / АДМИН-ЖУРНАЛ / БЕЗОПАСНОСТЬ (v1.2) ───────────────────────────
 
 enum LeadStatus {
@@ -896,6 +1072,13 @@ enum LeadStatus {
   DECLINED
 }
 
+// Тип заявки: розничный ученик или организация. Без него корпоративные заявки
+// тонут в общем списке и различаются только по тексту сообщения.
+enum LeadKind {
+  B2C
+  B2B
+}
+
 // Заявка с лендинга/страницы курса (в MVP заменяет онлайн-чекаут)
 model Lead {
   id        String     @id @default(cuid())
@@ -903,8 +1086,17 @@ model Lead {
   contact   String // телефон / e-mail / @username — как оставил человек
   courseId  String?
   message   String?    @db.Text
+  kind      LeadKind   @default(B2C)
+  /// Сколько сотрудников хочет обучать — только для B2B: по нему сразу видно
+  /// уровень корпоративной сетки скидок (docs/PRICING-PLAN.md §8).
+  seatsWanted Int?
+  company     String? // наименование организации, если оставили
   status    LeadStatus @default(NEW)
   comment   String?    @db.Text // заметки владельца
+  // Отметка о согласии на обработку ПДн в форме заявки (Закон № 99-З, ст. 5):
+  // момент и версия редакции политики. IP/user-agent не храним (правило 9).
+  consentAt      DateTime?
+  consentVersion String?
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 

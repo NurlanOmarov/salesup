@@ -3,7 +3,16 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutGrid, Repeat, Trophy, Award, Settings, Search, LayoutDashboard } from "lucide-react";
+import {
+  LayoutGrid,
+  Repeat,
+  Trophy,
+  Award,
+  Settings,
+  Search,
+  LayoutDashboard,
+  Building2,
+} from "lucide-react";
 import { LogoutButton } from "@/components/logout-button";
 
 /**
@@ -24,7 +33,16 @@ function isActive(pathname: string, href: string, exact?: boolean) {
   return exact ? pathname === href : pathname.startsWith(href);
 }
 
-export function StudentHeader({ dueCount = 0, isOwner = false }: { dueCount?: number; isOwner?: boolean }) {
+export function StudentHeader({
+  dueCount = 0,
+  isOwner = false,
+  orgAdminId = null,
+}: {
+  dueCount?: number;
+  isOwner?: boolean;
+  /** id организации, если пользователь — её ответственный представитель. */
+  orgAdminId?: string | null;
+}) {
   const pathname = usePathname();
 
   return (
@@ -76,6 +94,17 @@ export function StudentHeader({ dueCount = 0, isOwner = false }: { dueCount?: nu
             >
               <LayoutDashboard className="size-4" />
               <span className="hidden sm:inline">Консоль</span>
+            </Link>
+          ) : null}
+          {/* Ответственный представитель организации учится в общем кабинете —
+              вход в кабинет компании должен быть у него под рукой. */}
+          {orgAdminId ? (
+            <Link
+              href={`/org/${orgAdminId}`}
+              className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-foreground/65 transition-colors hover:bg-foreground/5 hover:text-foreground"
+            >
+              <Building2 className="size-4" />
+              <span className="hidden sm:inline">Кабинет компании</span>
             </Link>
           ) : null}
           <Link

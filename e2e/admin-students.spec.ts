@@ -73,7 +73,7 @@ test.afterAll(async () => {
 
 async function loginUI(page: Page, email: string, password: string) {
   await page.goto("/login");
-  await page.getByLabel("E-mail").fill(email);
+  await page.getByLabel("Логин или e-mail").fill(email);
   await page.getByLabel("Пароль").fill(password);
   await page.getByRole("button", { name: "Войти" }).click();
 }
@@ -124,6 +124,7 @@ test("полный цикл: создание ученика+доступ → в
   await page.getByLabel("Текущий (временный) пароль").fill(tempPassword!);
   await page.getByLabel("Новый пароль", { exact: true }).fill(newPass);
   await page.getByLabel("Повторите новый пароль").fill(newPass);
+  await page.getByRole("checkbox", { name: /Я принимаю условия/ }).check(); // акцепт оферты при первом входе
   await page.getByRole("button", { name: "Сохранить и продолжить" }).click();
   await expect(page).toHaveURL(/\/app/);
 

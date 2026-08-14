@@ -50,14 +50,16 @@ export function LoginForm({
         ) : null}
 
         <div className="space-y-1.5">
-          <Label htmlFor="email">E-mail</Label>
+          <Label htmlFor="identity">Логин или e-mail</Label>
           <Input
-            id="email"
-            name="email"
-            type="email"
-            autoComplete="email"
+            id="identity"
+            name="identity"
+            type="text"
+            autoComplete="username"
+            autoCapitalize="none"
+            spellCheck={false}
             required
-            placeholder="you@example.kz"
+            placeholder="you@example.by или acme-0042"
           />
         </div>
 

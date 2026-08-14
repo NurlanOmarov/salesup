@@ -12,9 +12,10 @@ import {
   recordLoginAttempt,
 } from "@/lib/auth/login-attempts";
 import { registerDevice } from "@/lib/antishare/devices";
+import { identityWhere, parseIdentity } from "@/lib/auth/identity";
 
 const schema = z.object({
-  email: z.string().email("Введите корректный e-mail"),
+  identity: z.string().min(1, "Введите логин или e-mail"),
   password: z.string().min(1, "Введите пароль"),
   callbackUrl: z.string().optional(),
 });
@@ -29,39 +30,48 @@ export async function loginAction(
   formData: FormData,
 ): Promise<LoginState> {
   const parsed = schema.safeParse({
-    email: formData.get("email"),
+    identity: formData.get("identity"),
     password: formData.get("password"),
     callbackUrl: formData.get("callbackUrl") || undefined,
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Проверьте поля" };
   }
-  const { email, password, callbackUrl } = parsed.data;
+  const { password, callbackUrl } = parsed.data;
   const ip = clientIpFromHeaders(await headers());
 
-  if (await isLoginBlocked(email, ip)) {
+  // Логин работника организации (acme-0042) или e-mail розничного ученика.
+  const identity = parseIdentity(parsed.data.identity);
+  if (!identity) return { error: "Неверный логин или пароль" };
+  const identityValue = identity.value;
+
+  if (await isLoginBlocked(identityValue, ip)) {
     return {
       error: "Слишком много попыток входа. Попробуйте через 15 минут.",
     };
   }
 
   try {
-    await signIn("credentials", { email, password, redirect: false });
+    await signIn("credentials", {
+      identity: identityValue,
+      password,
+      redirect: false,
+    });
   } catch (e) {
     if (e instanceof AuthError) {
-      await recordLoginAttempt(email, ip, false);
-      return { error: "Неверный e-mail или пароль" };
+      await recordLoginAttempt(identityValue, ip, false);
+      return { error: "Неверный логин или пароль" };
     }
     throw e;
   }
 
-  await recordLoginAttempt(email, ip, true);
+  await recordLoginAttempt(identityValue, ip, true);
 
   // Редиректим напрямую: при навигации из server action клиентский роутер не
   // отображает промежуточный middleware-редирект, поэтому решаем назначение здесь.
   // (middleware остаётся как защита для прямых заходов.)
   const user = await db.user.findUnique({
-    where: { email },
+    where: identityWhere(identity),
     select: { id: true, role: true, mustChangePassword: true },
   });
 

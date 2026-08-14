@@ -1,5 +1,5 @@
 import type { NextAuthConfig } from "next-auth";
-import type { UserRole } from "@prisma/client";
+import type { OrgRole, UserRole } from "@prisma/client";
 import { NextResponse } from "next/server";
 
 /** Поля, которые мы кладём в JWT (augmentation в callback-параметрах ненадёжна в beta). */
@@ -7,6 +7,8 @@ type AppToken = {
   uid?: string;
   role?: UserRole;
   mustChangePassword?: boolean;
+  orgId?: string | null;
+  orgRole?: OrgRole | null;
 };
 
 /**
@@ -20,6 +22,7 @@ const cookieInsecure = process.env.AUTH_COOKIE_INSECURE === "true";
 
 const PUBLIC_PREFIXES = [
   "/login",
+  "/join", // самозапись работника организации по коду (учётки ещё нет)
   "/courses",
   "/verify",
   "/offer",
@@ -73,6 +76,8 @@ export const authConfig = {
         t.uid = user.id;
         t.role = user.role;
         t.mustChangePassword = user.mustChangePassword;
+        t.orgId = user.orgId ?? null;
+        t.orgRole = user.orgRole ?? null;
       }
       // принудительная смена пароля завершена → обновляем токен (unstable_update)
       if (
@@ -89,6 +94,8 @@ export const authConfig = {
       if (t.uid) session.user.id = t.uid;
       if (t.role) session.user.role = t.role;
       session.user.mustChangePassword = t.mustChangePassword ?? false;
+      session.user.orgId = t.orgId ?? null;
+      session.user.orgRole = t.orgRole ?? null;
       return session;
     },
     /**
@@ -134,6 +141,8 @@ export const authConfig = {
         pathname.startsWith("/app/") ||
         pathname === "/admin" ||
         pathname.startsWith("/admin/") ||
+        pathname === "/org" ||
+        pathname.startsWith("/org/") ||
         pathname === "/change-password" ||
         pathname.startsWith("/change-password/");
       if (!isProtected) return true;
@@ -153,6 +162,16 @@ export const authConfig = {
       // зона владельца
       if (pathname.startsWith("/admin") && auth!.user.role !== "OWNER") {
         return NextResponse.redirect(new URL("/app", request.nextUrl));
+      }
+
+      // Кабинет организации: грубый гейт по токену. Владелец платформы заходит
+      // в конкретную организацию из своей консоли, поэтому его тоже пускаем.
+      // Точная проверка членства — в lib/org/guards.ts (БД, каждый запрос).
+      if (pathname.startsWith("/org")) {
+        const u = auth!.user;
+        if (u.role !== "OWNER" && u.orgRole !== "ORG_ADMIN") {
+          return NextResponse.redirect(new URL("/app", request.nextUrl));
+        }
       }
 
       return true;

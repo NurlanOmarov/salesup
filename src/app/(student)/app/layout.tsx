@@ -12,10 +12,13 @@ export default async function StudentLayout({ children }: { children: React.Reac
   const session = await auth();
   const due = session?.user ? await dueCount(session.user.id).catch(() => 0) : 0;
   const isOwner = session?.user?.role === "OWNER";
+  // Ответственный представитель организации: показываем ему вход в кабинет компании.
+  const orgAdminId =
+    session?.user?.orgRole === "ORG_ADMIN" ? (session.user.orgId ?? null) : null;
 
   return (
     <div className="min-h-dvh pb-20 lg:pb-0">
-      <StudentHeader dueCount={due} isOwner={isOwner} />
+      <StudentHeader dueCount={due} isOwner={isOwner} orgAdminId={orgAdminId} />
       {children}
       <StudentTabBar dueCount={due} />
       <PwaManager />

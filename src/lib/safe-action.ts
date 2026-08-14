@@ -12,8 +12,13 @@ export type ActionResult<T> =
 
 interface Options<S extends z.ZodTypeAny> {
   schema: S;
-  /** Требовать аутентификацию (и опционально роль). */
-  auth?: "user" | "owner";
+  /**
+   * Требовать аутентификацию (и опционально роль).
+   * "orgAdmin" — ответственный представитель организации; сам факт членства
+   * и принадлежность сущностей проверяет lib/org/guards (БД, каждый запрос),
+   * здесь только грубый отсев по токену.
+   */
+  auth?: "user" | "owner" | "orgAdmin";
 }
 
 export function safeAction<S extends z.ZodTypeAny, T>(
@@ -35,6 +40,13 @@ export function safeAction<S extends z.ZodTypeAny, T>(
       session = await auth();
       if (!session?.user) return { ok: false, error: "Требуется вход" };
       if (opts.auth === "owner" && session.user.role !== "OWNER") {
+        return { ok: false, error: "Недостаточно прав" };
+      }
+      if (
+        opts.auth === "orgAdmin" &&
+        session.user.role !== "OWNER" &&
+        session.user.orgRole !== "ORG_ADMIN"
+      ) {
         return { ok: false, error: "Недостаточно прав" };
       }
     }

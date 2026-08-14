@@ -23,7 +23,26 @@ export type AdminAction =
   | "seo.redirect.create"
   | "seo.redirect.update"
   | "seo.redirect.delete"
-  | "certificate.issue";
+  | "certificate.issue"
+  // B2B: действия владельца и ответственного представителя организации.
+  // Приложение 1 к оферте /offer-b2b, п. 7 требует вести журнал действий
+  // администратора — это он. meta.orgId проставляется всегда.
+  | "org.create"
+  | "org.update"
+  | "org.status"
+  | "org.license.grant"
+  | "org.license.update"
+  | "org.admin.create"
+  | "org.seat.grant"
+  | "org.seat.revoke"
+  | "org.member.deactivate"
+  | "org.member.activate"
+  | "org.member.password_reset"
+  | "org.invite.create"
+  | "org.invite.revoke"
+  | "org.group.create"
+  | "org.group.delete"
+  | "org.key.setup";
 
 export function writeAdminLog(params: {
   actorId: string;

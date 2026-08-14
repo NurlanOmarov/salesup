@@ -47,7 +47,7 @@ export default async function FlagsPage() {
                   </div>
                   <div>
                     <Link href={`/admin/students/${s.userId}`} className="font-semibold text-amber-800 hover:underline">
-                      {s.name ?? s.email}
+                      {s.name ?? s.email ?? s.login ?? "Работник организации"}
                     </Link>
                     <p className="text-xs text-foreground/50">
                       {s.activeDevices} устройств · {s.distinctIps} IP за неделю

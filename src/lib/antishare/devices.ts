@@ -65,7 +65,10 @@ export async function registerDevice(
 export interface FlaggedStudent {
   userId: string;
   name: string | null;
-  email: string;
+  /** null у работников организаций: их учётки заводятся без e-mail (B2B, ПДн не собираем). */
+  email: string | null;
+  /** Логин вида acme-0042 — идентификатор работника организации. */
+  login: string | null;
   activeDevices: number;
   distinctIps: number;
   reasons: FlagReason[];
@@ -111,7 +114,14 @@ export async function getFlaggedStudents(): Promise<FlaggedStudent[]> {
 
   const users = await db.user.findMany({
     where: { id: { in: [...candidateIds] }, role: "STUDENT" },
-    select: { id: true, name: true, email: true, deletedAt: true, deviceLimit: true },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      login: true,
+      deletedAt: true,
+      deviceLimit: true,
+    },
   });
 
   const result: FlaggedStudent[] = [];
@@ -130,6 +140,7 @@ export async function getFlaggedStudents(): Promise<FlaggedStudent[]> {
       userId: u.id,
       name: u.name,
       email: u.email,
+      login: u.login,
       activeDevices: dev.count,
       distinctIps: dev.ips.size,
       reasons,

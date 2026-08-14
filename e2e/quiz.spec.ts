@@ -47,7 +47,7 @@ test.afterAll(async () => {
 
 async function login(page: Page) {
   await page.goto("/login");
-  await page.getByLabel("E-mail").fill(EMAIL);
+  await page.getByLabel("Логин или e-mail").fill(EMAIL);
   await page.getByLabel("Пароль").fill(PASS);
   await page.getByRole("button", { name: "Войти" }).click();
   await expect(page).toHaveURL(/\/app/);
