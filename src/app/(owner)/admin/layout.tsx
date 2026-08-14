@@ -48,6 +48,12 @@ export default async function AdminLayout({
               Курсы
             </Link>
             <Link
+              href="/admin/pricing"
+              className="rounded-md px-3 py-1.5 text-foreground/70 transition-colors hover:bg-foreground/5 hover:text-foreground"
+            >
+              Тарифы
+            </Link>
+            <Link
               href="/admin/leads"
               className="rounded-md px-3 py-1.5 text-foreground/70 transition-colors hover:bg-foreground/5 hover:text-foreground"
             >
