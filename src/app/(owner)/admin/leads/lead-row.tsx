@@ -15,6 +15,11 @@ type Status = (typeof STATUS_OPTIONS)[number]["value"];
 
 export interface LeadView {
   id: string;
+  /** B2C — розничный ученик, B2B — заявка со страницы /business. */
+  kind: "B2C" | "B2B";
+  company: string | null;
+  /** Сколько сотрудников хотят обучать: сразу виден уровень корпоративной сетки. */
+  seatsWanted: number | null;
   name: string | null;
   contact: string;
   courseTitle: string | null;
@@ -22,6 +27,8 @@ export interface LeadView {
   status: Status;
   comment: string | null;
   createdAt: string;
+  /** Дата и редакция принятого согласия на обработку ПДн; null — заявка до ввода отметки. */
+  consent: string | null;
 }
 
 function looksLikeEmail(s: string): boolean {
@@ -50,14 +57,32 @@ export function LeadRow({ lead }: { lead: LeadView }) {
     <div className="rounded-xl border border-foreground/10 bg-background p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="font-medium">{lead.name ?? "Без имени"}</p>
+          <p className="flex flex-wrap items-center gap-2 font-medium">
+            {lead.name ?? "Без имени"}
+            {lead.kind === "B2B" ? (
+              <span className="rounded-full bg-brand/10 px-2 py-0.5 text-xs font-semibold text-brand">
+                Компания
+              </span>
+            ) : null}
+          </p>
           <p className="text-sm text-foreground/70">{lead.contact}</p>
+          {lead.kind === "B2B" ? (
+            <p className="mt-0.5 text-xs text-foreground/60">
+              {lead.company ?? "организация не указана"}
+              {lead.seatsWanted ? ` · ${lead.seatsWanted} сотрудников` : ""}
+            </p>
+          ) : null}
           {lead.courseTitle ? (
             <p className="mt-0.5 text-xs text-amber-700">Курс: {lead.courseTitle}</p>
           ) : null}
           {lead.message ? (
             <p className="mt-1 text-sm text-foreground/60">«{lead.message}»</p>
           ) : null}
+          <p className="mt-1 text-xs text-foreground/40">
+            {lead.consent
+              ? `Согласие на обработку ПДн: ${lead.consent}`
+              : "Согласие на обработку ПДн не зафиксировано"}
+          </p>
         </div>
         <span className="text-xs text-foreground/40">{lead.createdAt}</span>
       </div>

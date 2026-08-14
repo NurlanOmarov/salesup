@@ -11,17 +11,27 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // Оферта/политика — в карте только когда владелец снял noindex в /admin/seo
   // (noindex-страница в sitemap — противоречивый сигнал поисковику).
-  const [offerSeo, privacySeo] = await Promise.all([
+  const [offerSeo, offerB2bSeo, privacySeo, businessSeo] = await Promise.all([
     getStaticPageSeo("/offer"),
+    getStaticPageSeo("/offer-b2b"),
     getStaticPageSeo("/privacy"),
+    getStaticPageSeo("/business"),
   ]);
 
   const staticPages: MetadataRoute.Sitemap = [
     { url: `${base}/`, changeFrequency: "weekly", priority: 1 },
     { url: `${base}/courses`, changeFrequency: "weekly", priority: 0.8 },
+    // Корпоративный регистр лендинга — самостоятельная посадочная под дорогие
+    // B2B-запросы, поэтому в карте с высоким приоритетом.
+    ...(businessSeo.noindex
+      ? []
+      : [{ url: `${base}/business`, changeFrequency: "monthly" as const, priority: 0.8 }]),
     ...(offerSeo.noindex
       ? []
       : [{ url: `${base}/offer`, changeFrequency: "yearly" as const, priority: 0.3 }]),
+    ...(offerB2bSeo.noindex
+      ? []
+      : [{ url: `${base}/offer-b2b`, changeFrequency: "yearly" as const, priority: 0.3 }]),
     ...(privacySeo.noindex
       ? []
       : [{ url: `${base}/privacy`, changeFrequency: "yearly" as const, priority: 0.3 }]),

@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { log } from "@/lib/log";
+import { LEGAL_VERSION } from "@/content/legal";
 
 const schema = z.object({
   name: z.string().trim().max(120).optional().or(z.literal("")),
@@ -13,6 +14,16 @@ const schema = z.object({
     .max(160),
   message: z.string().trim().max(2000).optional().or(z.literal("")),
   courseId: z.string().trim().max(40).optional().or(z.literal("")),
+  // B2B-заявка со страницы /business: сколько сотрудников и какая организация.
+  // По числу мест сразу виден уровень корпоративной сетки (lib/pricing).
+  kind: z.enum(["B2C", "B2B"]).default("B2C"),
+  company: z.string().trim().max(160).optional().or(z.literal("")),
+  seatsWanted: z.coerce.number().int().min(1).max(100000).optional(),
+  // Согласие на обработку ПДн — обязательное условие приёма заявки (Закон № 99-З):
+  // без отметки заявка не сохраняется вовсе, а не сохраняется «без согласия».
+  consent: z.literal("on", {
+    errorMap: () => ({ message: "Отметьте согласие на обработку персональных данных" }),
+  }),
 });
 
 export interface LeadFormState {
@@ -34,12 +45,16 @@ export async function createLeadAction(
     contact: formData.get("contact") ?? "",
     message: formData.get("message") ?? "",
     courseId: formData.get("courseId") ?? "",
+    kind: formData.get("kind") ?? "B2C",
+    company: formData.get("company") ?? "",
+    seatsWanted: formData.get("seatsWanted") || undefined,
+    consent: formData.get("consent") ?? "",
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Проверьте поля" };
   }
 
-  const { name, contact, message, courseId } = parsed.data;
+  const { name, contact, message, courseId, kind, company, seatsWanted } = parsed.data;
 
   // courseId привязываем только если такой курс существует (форма на странице курса)
   let validCourseId: string | undefined;
@@ -57,10 +72,16 @@ export async function createLeadAction(
       contact,
       message: message || null,
       courseId: validCourseId ?? null,
+      kind,
+      company: kind === "B2B" ? company || null : null,
+      seatsWanted: kind === "B2B" ? (seatsWanted ?? null) : null,
       status: "NEW",
+      // Доказательство согласия: момент + принятая редакция документов.
+      consentAt: new Date(),
+      consentVersion: LEGAL_VERSION,
     },
   });
 
-  log.info({ courseId: validCourseId ?? null }, "lead.created");
+  log.info({ courseId: validCourseId ?? null, kind }, "lead.created");
   return { ok: true };
 }

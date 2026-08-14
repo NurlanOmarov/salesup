@@ -22,6 +22,11 @@ export default async function LeadsPage() {
       status: true,
       comment: true,
       createdAt: true,
+      consentAt: true,
+      consentVersion: true,
+      kind: true,
+      company: true,
+      seatsWanted: true,
     },
   });
 
@@ -37,6 +42,9 @@ export default async function LeadsPage() {
 
   const views: LeadView[] = leads.map((l) => ({
     id: l.id,
+    kind: l.kind,
+    company: l.company,
+    seatsWanted: l.seatsWanted,
     name: l.name,
     contact: l.contact,
     courseTitle: l.courseId ? (titleById.get(l.courseId) ?? null) : null,
@@ -44,6 +52,10 @@ export default async function LeadsPage() {
     status: l.status,
     comment: l.comment,
     createdAt: l.createdAt.toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" }),
+    // Отметка о согласии на обработку ПДн — доказательство по Закону № 99-З.
+    consent: l.consentAt
+      ? `${l.consentAt.toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" })}, ред. ${l.consentVersion ?? "—"}`
+      : null,
   }));
 
   return (
@@ -51,6 +63,7 @@ export default async function LeadsPage() {
       <h1 className="text-2xl font-bold">Заявки с лендинга</h1>
       <p className="mt-1 text-foreground/60">
         После устного подтверждения оплаты создайте ученика и выдайте доступ.
+        Корпоративные заявки помечены — по ним заводится организация, а не ученик.
       </p>
 
       <div className="mt-6 space-y-3">

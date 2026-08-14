@@ -7,6 +7,11 @@ import type { RatesMap } from "@/lib/currency";
 import { coverPublicUrl } from "@/lib/utils";
 import { ACCESS_DURATIONS, ACCESS_DURATION_LABELS } from "@/lib/admin/enrollment";
 import {
+  defaultCoursePriceTiyn,
+  isPriceWithinRange,
+  PRICE_RANGE_TIYN,
+} from "@/lib/pricing";
+import {
   updateCourseAction,
   uploadCoverAction,
   uploadOgImageAction,
@@ -410,6 +415,24 @@ export function CourseEditForm({
               value={priceByn}
               onChange={(e) => setPriceByn(Number(e.target.value) || 0)}
             />
+            {/* Подсказка по сетке docs/PRICING-PLAN.md: отраслевой — 490 Br,
+                общая тема — 320 Br. Не запрет, а напоминание: цену вне коридора
+                легко поставить случайно, а заметить потом трудно. */}
+            <p className="mt-1 text-xs text-foreground/50">
+              Рекомендовано для этого класса:{" "}
+              <button
+                type="button"
+                onClick={() => setPriceByn(defaultCoursePriceTiyn(audience) / 100)}
+                className="underline hover:text-foreground"
+              >
+                {defaultCoursePriceTiyn(audience) / 100} Br
+              </button>{" "}
+              (коридор {PRICE_RANGE_TIYN[audience].min / 100}–
+              {PRICE_RANGE_TIYN[audience].max / 100} Br)
+              {!isPriceWithinRange(audience, Math.round(priceByn * 100)) ? (
+                <span className="ml-1 text-amber-700">— цена вне коридора</span>
+              ) : null}
+            </p>
           </div>
           <div>
             <label className={labelCls} htmlFor="oldPrice">

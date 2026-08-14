@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { getSupportContacts } from "@/lib/seo/settings";
+import { REQUISITES } from "@/content/legal";
 
 export async function SiteFooter() {
   // Контакты — из SeoSettings (правятся в /admin/seo без деплоя).
@@ -18,6 +19,17 @@ export async function SiteFooter() {
           <p className="mt-2 text-sm text-white/50">
             Онлайн-курсы по продажам с AI-наставником. Беларусь.
           </p>
+          {/*
+            Сведения об исполнителе обязательны к доведению до потребителя
+            (ст. 7 Закона РБ «О защите прав потребителей»). Правятся в
+            src/content/legal/requisites.ts — там же, откуда их берут оферта
+            и политика обработки ПДн.
+          */}
+          <address className="mt-3 space-y-0.5 text-xs not-italic leading-relaxed text-white/40">
+            <p>{REQUISITES.legalName}</p>
+            <p>УНП {REQUISITES.unp}</p>
+            <p>{REQUISITES.address}</p>
+          </address>
         </div>
 
         <div className="text-sm">
@@ -31,6 +43,11 @@ export async function SiteFooter() {
             <li>
               <Link href="/courses" className="transition-colors hover:text-brand-light">
                 Каталог курсов
+              </Link>
+            </li>
+            <li>
+              <Link href="/business" className="transition-colors hover:text-brand-light">
+                Обучение для компаний
               </Link>
             </li>
             <li>
@@ -81,7 +98,15 @@ export async function SiteFooter() {
           <ul className="mt-2 space-y-1 text-white/60">
             <li>
               <Link href="/offer" className="transition-colors hover:text-brand-light">
-                Публичная оферта
+                Оферта для физических лиц
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/offer-b2b"
+                className="transition-colors hover:text-brand-light"
+              >
+                Оферта для организаций
               </Link>
             </li>
             <li>
@@ -89,7 +114,7 @@ export async function SiteFooter() {
                 href="/privacy"
                 className="transition-colors hover:text-brand-light"
               >
-                Политика конфиденциальности
+                Обработка персональных данных
               </Link>
             </li>
           </ul>

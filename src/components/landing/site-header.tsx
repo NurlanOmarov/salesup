@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
+import { AudienceSwitch } from "@/components/landing/audience-switch";
 
 export function SiteHeader() {
   return (
@@ -16,6 +17,9 @@ export function SiteHeader() {
           </span>
         </Link>
         <nav className="flex items-center gap-2 sm:gap-4">
+          {/* Регистр «Себе | Команде» — ссылки на / и /business (обе версии
+              индексируются). Доступен с любой страницы, поэтому живёт в шапке. */}
+          <AudienceSwitch onDark className="hidden sm:inline-flex" />
           <Link
             href="/courses"
             className="px-2 text-sm font-medium text-white/70 transition-colors hover:text-white"

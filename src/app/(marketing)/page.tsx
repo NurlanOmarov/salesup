@@ -440,6 +440,51 @@ export default async function LandingPage() {
         </section>
       ) : null}
 
+      {/* Тизер корпоративного регистра. Формы здесь нет намеренно: она на
+          /business, чтобы корпоративные заявки не смешивались с розничными,
+          а страница набирала собственную поисковую выдачу. */}
+      <section className="mx-auto max-w-6xl px-4 py-16">
+        <Reveal>
+          <div className="grid gap-6 rounded-3xl border border-foreground/10 bg-foreground/[0.02] p-6 sm:p-8 lg:grid-cols-[1.2fr_1fr] lg:items-center">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-wide text-brand">
+                Для компаний
+              </p>
+              <h2 className="mt-2 text-2xl font-bold sm:text-3xl">
+                Обучить весь отдел продаж
+              </h2>
+              <p className="mt-3 max-w-xl text-foreground/70">
+                Годовой доступ ко всем курсам для команды, кабинет компании с
+                прогрессом каждого сотрудника и AI-тренажёры. Персональные данные
+                сотрудников при этом остаются у вас — мы их не получаем.
+              </p>
+              <Link
+                href="/business"
+                className={cn(
+                  buttonVariants({ variant: "brand", size: "lg" }),
+                  "mt-5 inline-flex",
+                )}
+              >
+                Рассчитать для команды
+              </Link>
+            </div>
+            <ul className="grid gap-2.5 text-sm text-foreground/75">
+              {[
+                "Прогресс и результаты тестов по каждому",
+                "Место переносится на нового сотрудника",
+                "Обучение по кодам — без передачи нам ФИО",
+                "Счёт на юрлицо, акт, оферта для организаций",
+              ].map((item) => (
+                <li key={item} className="flex items-start gap-2.5">
+                  <CheckCircle2 className="mt-0.5 size-4.5 shrink-0 text-emerald-600" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </Reveal>
+      </section>
+
       {/* FAQ */}
       <section className="mx-auto max-w-3xl px-4 py-16">
         <Reveal>
