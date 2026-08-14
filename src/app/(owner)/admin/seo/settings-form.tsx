@@ -358,7 +358,7 @@ export function SeoSettingsForm({
           <div>
             <h2 className="font-semibold">Организация и контакты</h2>
             <p className="mt-1 text-xs text-foreground/50">
-              Название/описание/страна → разметка EducationalOrganization. Телефон и
+              Название/описание/страна → разметка Organization. Телефон и
               WhatsApp показываются везде: футер, лендинг, страница курса, «забыли
               пароль», кабинет ученика.
             </p>

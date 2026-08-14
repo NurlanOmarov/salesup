@@ -137,10 +137,7 @@ export function CoursesCatalog({ courses }: { courses: CourseCardData[] }) {
         <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {visible.map((c, i) => (
             <Reveal key={c.slug} delay={i * 0.04}>
-              {/* Подсвечиваем курсы со скидкой — единственный признак «выгодно»,
-                  который сейчас есть в данных. Если скидка будет у большинства,
-                  подсветку надо перевести на отдельный флаг курса. */}
-              <CourseCard course={c} highlight={c.oldPriceTiyn != null} />
+              <CourseCard course={c} />
             </Reveal>
           ))}
         </div>

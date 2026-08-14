@@ -5,6 +5,7 @@ import { z } from "zod";
 import { auth, updateSession } from "@/auth";
 import { db } from "@/lib/db";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
+import { LEGAL_VERSION } from "@/content/legal";
 
 const schema = z
   .object({
@@ -47,6 +48,13 @@ export async function changePasswordAction(
   const user = await db.user.findUnique({ where: { id: session.user.id } });
   if (!user?.passwordHash) redirect("/login");
 
+  // Акцепт оферты и согласие на обработку ПДн: требуем отметку у тех, кто ещё
+  // не принимал документы, и фиксируем момент с версией редакции.
+  const needsTerms = !user.termsAcceptedAt;
+  if (needsTerms && formData.get("terms") !== "on") {
+    return { error: "Примите условия оферты и политики обработки данных" };
+  }
+
   const ok = await verifyPassword(user.passwordHash, parsed.data.currentPassword);
   if (!ok) return { error: "Текущий пароль неверен" };
 
@@ -55,6 +63,9 @@ export async function changePasswordAction(
     data: {
       passwordHash: await hashPassword(parsed.data.newPassword),
       mustChangePassword: false,
+      ...(needsTerms
+        ? { termsAcceptedAt: new Date(), termsVersion: LEGAL_VERSION }
+        : {}),
     },
   });
 

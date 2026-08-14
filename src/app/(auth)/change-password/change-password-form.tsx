@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 
 const initialState: ChangePasswordState = {};
 
-export function ChangePasswordForm() {
+export function ChangePasswordForm({ needsTerms }: { needsTerms: boolean }) {
   const [state, formAction, isPending] = useActionState(
     changePasswordAction,
     initialState,
@@ -72,6 +72,43 @@ export function ChangePasswordForm() {
             required
           />
         </div>
+
+        {/*
+          Первый вход — момент заключения договора (ст. 408 ГК РБ) и дачи согласия
+          на обработку ПДн (Закон № 99-З). Отметка обязательна, факт и версия
+          редакции сохраняются в User.termsAcceptedAt/termsVersion. Показываем
+          только тем, кто ещё не принимал документы.
+        */}
+        {needsTerms ? (
+          <label className="flex items-start gap-2.5 text-xs text-foreground/60">
+            <input
+              type="checkbox"
+              name="terms"
+              value="on"
+              required
+              className="mt-0.5 size-4 shrink-0 accent-brand"
+            />
+            <span>
+              Я принимаю условия{" "}
+              <Link
+                href="/offer"
+                target="_blank"
+                className="underline hover:text-brand"
+              >
+                публичной оферты
+              </Link>{" "}
+              и даю согласие на обработку персональных данных на условиях{" "}
+              <Link
+                href="/privacy"
+                target="_blank"
+                className="underline hover:text-brand"
+              >
+                Политики
+              </Link>
+              , включая трансграничную передачу.
+            </span>
+          </label>
+        ) : null}
 
         {state.error ? (
           <p role="alert" className="text-sm text-red-600">

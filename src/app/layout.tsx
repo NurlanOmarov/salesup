@@ -52,7 +52,9 @@ export default async function RootLayout({
   const orgPhone = s.orgPhone;
   const orgJsonLd = {
     "@context": "https://schema.org",
-    "@type": "EducationalOrganization",
+    // Organization, а не EducationalOrganization: по D-012 услуги оформлены как
+    // информационные, платформа не является учреждением образования.
+    "@type": "Organization",
     name: s.orgName,
     url: env.NEXT_PUBLIC_SITE_URL,
     logo: `${env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "")}/logo.png`,

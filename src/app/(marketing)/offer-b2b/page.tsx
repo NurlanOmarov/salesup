@@ -1,0 +1,31 @@
+import type { Metadata } from "next";
+import { getStaticPageSeo } from "@/lib/seo/static-pages";
+import { StaticPageBody } from "@/components/landing/static-page-body";
+import { DraftRequisitesNotice } from "@/components/landing/draft-requisites-notice";
+import { OFFER_B2B_MARKDOWN } from "@/content/legal";
+
+export const revalidate = 300;
+
+// Оферта для организаций. Отдельный документ, а не раздел /offer: у юрлица нет
+// статуса потребителя, другой акцепт, предмет (места в лицензии) и приёмка по акту.
+// Текст по умолчанию — src/content/legal/offer-b2b.ts, переопределяется в /admin/seo.
+export async function generateMetadata(): Promise<Metadata> {
+  const s = await getStaticPageSeo("/offer-b2b");
+  return {
+    title: s.title,
+    description: s.description,
+    alternates: { canonical: "/offer-b2b" },
+    robots: { index: !s.noindex, follow: true },
+  };
+}
+
+export default async function OfferB2bPage() {
+  const s = await getStaticPageSeo("/offer-b2b");
+  return (
+    <main className="mx-auto max-w-3xl px-4 py-16">
+      <h1 className="text-3xl font-bold">Публичная оферта для организаций</h1>
+      <DraftRequisitesNotice />
+      <StaticPageBody text={s.body ?? OFFER_B2B_MARKDOWN} />
+    </main>
+  );
+}

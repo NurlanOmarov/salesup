@@ -340,7 +340,7 @@ export async function draftStaticPageAction(
     return { ok: false, error: "Недостаточно прав" };
   }
   const parsed = z
-    .object({ path: z.enum(["/offer", "/privacy"]) })
+    .object({ path: z.enum(["/offer", "/offer-b2b", "/privacy"]) })
     .safeParse(raw);
   if (!parsed.success) return { ok: false, error: "Неизвестная страница" };
 

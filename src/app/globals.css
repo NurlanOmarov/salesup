@@ -193,38 +193,6 @@ body {
   }
 }
 
-/* ── Бегущая рамка выделенной карточки курса ────────────────────────────
-   Луч по периметру: подсвечивает курс со скидкой в каталоге. Рамка рисуется
-   псевдоэлементом с маской, поэтому карточка остаётся серверной. */
-@property --beam-angle {
-  syntax: "<angle>";
-  inherits: false;
-  initial-value: 0deg;
-}
-@keyframes beam-spin {
-  to { --beam-angle: 360deg; }
-}
-.beam-card::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1.5px;
-  background: conic-gradient(
-    from var(--beam-angle),
-    transparent 0deg,
-    color-mix(in srgb, var(--color-brand) 85%, transparent) 40deg,
-    transparent 95deg
-  );
-  /* вырезаем середину — красится только кромка */
-  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  mask-composite: exclude;
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  animation: beam-spin 4s linear infinite;
-  pointer-events: none;
-}
-
 /* ── Анимации кабинета ученика ──────────────────────────────────────────
    Прогресс приезжает от нуля к своему значению, а не появляется заполненным.
    Оба блока серверные: конечное значение задаётся инлайновым стилем, кейфрейм
@@ -281,10 +249,6 @@ body {
   .step-connector::after {
     animation: none;
     background-image: none;
-  }
-  .beam-card::after {
-    animation: none;
-    background: color-mix(in srgb, var(--color-brand) 45%, transparent);
   }
   /* без анимации градиент по буквам бессмыслен — возвращаем обычный текст */
   .shimmer-text {

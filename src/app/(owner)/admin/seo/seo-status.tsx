@@ -95,13 +95,16 @@ export async function CoursesSeoStatus() {
 /** Статус sitemap/robots: сколько URL отдаётся и ссылки для проверки. */
 export async function SitemapStatus() {
   const base = env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "");
-  const [publishedIndexable, offerSeo, privacySeo] = await Promise.all([
+  const [publishedIndexable, offerSeo, offerB2bSeo, privacySeo] = await Promise.all([
     db.course.count({ where: { status: "PUBLISHED", seoNoindex: false } }),
     getStaticPageSeo("/offer"),
+    getStaticPageSeo("/offer-b2b"),
     getStaticPageSeo("/privacy"),
   ]);
-  // Зеркалит src/app/sitemap.ts: / и /courses всегда, оферта/политика — если index.
-  const staticCount = 2 + (offerSeo.noindex ? 0 : 1) + (privacySeo.noindex ? 0 : 1);
+  // Зеркалит src/app/sitemap.ts: / и /courses всегда, юридические страницы — если index.
+  const staticCount =
+    2 +
+    [offerSeo, offerB2bSeo, privacySeo].filter((s) => !s.noindex).length;
   const total = staticCount + publishedIndexable;
 
   return (
