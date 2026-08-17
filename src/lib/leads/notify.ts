@@ -1,12 +1,13 @@
 import type { EmailMessage } from "@/lib/email/send";
+import { escapeHtml } from "@/lib/notify/escape";
 
 /**
- * Письма по новой заявке с публичной формы: уведомление владельцу (чтобы он
- * перезвонил и выдал доступ — оплаты онлайн нет) и подтверждение заявителю,
- * если контактом он оставил e-mail.
+ * Уведомления по новой заявке с публичной формы. Основной канал — сообщение
+ * владельцу в Telegram (чтобы он перезвонил и выдал доступ — оплаты онлайн нет).
+ * Письма оставлены на будущее: включаются флагом EMAIL_ENABLED.
  *
- * Только формирование текста — отправка идёт через очередь (`email.send`),
- * поэтому модуль чистый и покрыт unit-тестами.
+ * Только формирование текста — отправка идёт через очередь (`telegram.send`,
+ * `email.send`), поэтому модуль чистый и покрыт unit-тестами.
  */
 
 /** Достаточно строгая проверка: адрес без пробелов, с одним @ и точкой в домене. */
@@ -32,6 +33,31 @@ export interface LeadNotification {
 function line(label: string, value: string | number | null | undefined): string | null {
   if (value === null || value === undefined || value === "") return null;
   return `${label}: ${value}`;
+}
+
+/**
+ * Сообщение владельцу в Telegram (parse_mode=HTML): всё для звонка — в одном
+ * экране, без похода в админку. Пользовательский ввод экранируем, иначе
+ * «<директор>» в имени сломает разметку и Telegram отклонит сообщение.
+ */
+export function leadTelegramText(lead: LeadNotification, siteUrl?: string): string {
+  const title =
+    lead.kind === "B2B"
+      ? `🏢 <b>Новая B2B-заявка</b>${lead.company ? ` — ${escapeHtml(lead.company)}` : ""}`
+      : `🎓 <b>Новая заявка на курс</b>${lead.courseTitle ? ` — ${escapeHtml(lead.courseTitle)}` : ""}`;
+
+  const rows = [
+    line("👤 Имя", lead.name ? escapeHtml(lead.name) : null),
+    // Контакт в <code> — удобно скопировать одним тапом.
+    line("📞 Контакт", `<code>${escapeHtml(lead.contact)}</code>`),
+    line("🏢 Организация", lead.company ? escapeHtml(lead.company) : null),
+    line("💺 Мест", lead.seatsWanted),
+    line("📚 Курс", lead.courseTitle ? escapeHtml(lead.courseTitle) : null),
+    line("💬 Сообщение", lead.message ? escapeHtml(lead.message) : null),
+  ].filter((l): l is string => l !== null);
+
+  const footer = siteUrl ? `\n\n${siteUrl.replace(/\/$/, "")}/admin/leads` : "";
+  return `${title}\n\n${rows.join("\n")}${footer}`;
 }
 
 /** Письмо владельцу: всё, что нужно для звонка, прямо в теле — без похода в админку. */

@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { env } from "@/env";
 import { log } from "@/lib/log";
 import { enqueue } from "@/lib/jobs/enqueue";
-import { applicantLeadEmail, contactEmail, ownerLeadEmail } from "@/lib/leads/notify";
+import { leadTelegramText, ownerLeadEmail } from "@/lib/leads/notify";
 import { LEGAL_VERSION } from "@/content/legal";
 
 const schema = z.object({
@@ -102,23 +102,22 @@ export async function createLeadAction(
   };
 
   try {
-    // Владельцу — всегда.
-    await enqueue("email.send", {
-      ...ownerLeadEmail(env.LEADS_NOTIFY_EMAIL, notification),
+    await enqueue("telegram.send", {
+      text: leadTelegramText(notification, env.NEXT_PUBLIC_SITE_URL),
       kind: "lead-owner",
       leadId: lead.id,
     });
-    // Заявителю — только если контактом он оставил e-mail (иначе связь по телефону/telegram).
-    const applicant = contactEmail(contact);
-    if (applicant) {
+    // Дубль на почту — опционально, одним флагом EMAIL_ENABLED (SMTP настраивается
+    // в secrets). По умолчанию выключено: основной канал — Telegram.
+    if (env.EMAIL_ENABLED) {
       await enqueue("email.send", {
-        ...applicantLeadEmail(applicant, notification),
-        kind: "lead-applicant",
+        ...ownerLeadEmail(env.LEADS_NOTIFY_EMAIL, notification),
+        kind: "lead-owner",
         leadId: lead.id,
       });
     }
   } catch (e) {
-    log.error({ err: e, leadId: lead.id }, "lead.notify: не удалось поставить письма в очередь");
+    log.error({ err: e, leadId: lead.id }, "lead.notify: не удалось поставить уведомление в очередь");
   }
 
   log.info({ courseId: validCourseId ?? null, kind }, "lead.created");

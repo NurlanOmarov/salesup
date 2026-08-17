@@ -56,6 +56,11 @@ const serverSchema = z.object({
   OWNER_EMAIL: z.string().email(),
   // Куда падают уведомления о новых заявках с сайта. По умолчанию — почта владельца.
   LEADS_NOTIFY_EMAIL: z.string().email().default("omarov.nb@gmail.com"),
+
+  // Telegram-бот владельца: основной канал уведомлений о новых заявках.
+  // Пусто → уведомления просто не отправляются (заявка всё равно в админке).
+  TELEGRAM_BOT_TOKEN: z.string().optional(),
+  TELEGRAM_CHAT_ID: z.string().optional(),
 });
 
 const clientSchema = z.object({

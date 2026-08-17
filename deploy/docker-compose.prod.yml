@@ -89,6 +89,9 @@ services:
       SMTP_FROM: ${SMTP_FROM:-}
       OWNER_EMAIL: ${OWNER_EMAIL}
       LEADS_NOTIFY_EMAIL: ${LEADS_NOTIFY_EMAIL:-omarov.nb@gmail.com}
+      # Telegram-уведомления о заявках отправляет именно worker
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
     volumes:
       - media:/media                             # worker (фабрика) пишет медиа

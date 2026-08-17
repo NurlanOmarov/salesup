@@ -116,9 +116,9 @@ jobs:
             VIDEO_KEY_ENC_SECRET=${{ secrets.VIDEO_KEY_ENC_SECRET }}
             STORAGE_DRIVER=fs
             AUTH_COOKIE_INSECURE=false
-            # Письма (уведомления о заявках) шлёт worker через SMTP Zoho.
-            # Включается, когда в секретах репозитория заданы SMTP_*; иначе остаётся false.
-            EMAIL_ENABLED=${{ secrets.SMTP_HOST != '' && 'true' || 'false' }}
+            # Почта — необязательный дубль Telegram-уведомлений: включается,
+            # когда в секретах заданы EMAIL_ENABLED=true и SMTP_* (Gmail/Zoho).
+            EMAIL_ENABLED=${{ secrets.EMAIL_ENABLED || 'false' }}
             SMTP_HOST=${{ secrets.SMTP_HOST }}
             SMTP_PORT=${{ secrets.SMTP_PORT || '465' }}
             SMTP_USER=${{ secrets.SMTP_USER }}
@@ -126,6 +126,10 @@ jobs:
             SMTP_FROM=${{ secrets.SMTP_FROM }}
             OWNER_EMAIL=${{ secrets.OWNER_EMAIL }}
             LEADS_NOTIFY_EMAIL=${{ secrets.LEADS_NOTIFY_EMAIL || 'omarov.nb@gmail.com' }}
+            # Уведомления о заявках в Telegram (docs/TELEGRAM.md): секреты репозитория.
+            # Пусто → worker молча пропускает отправку.
+            TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
+            TELEGRAM_CHAT_ID=${{ secrets.TELEGRAM_CHAT_ID }}
             NEXT_PUBLIC_SITE_URL=${{ secrets.NEXT_PUBLIC_SITE_URL }}
             IMAGE_APP=ghcr.io/nurlanomarov/salesup-app:${{ github.sha }}
             IMAGE_WORKER=ghcr.io/nurlanomarov/salesup-worker:${{ github.sha }}

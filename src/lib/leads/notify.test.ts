@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applicantLeadEmail, contactEmail, ownerLeadEmail } from "./notify.js";
+import { applicantLeadEmail, contactEmail, leadTelegramText, ownerLeadEmail } from "./notify.js";
 
 const base = {
   kind: "B2C" as const,
@@ -16,6 +16,46 @@ describe("contactEmail", () => {
     expect(contactEmail("+375291234567")).toBeNull();
     expect(contactEmail("@nurlan")).toBeNull();
     expect(contactEmail("почта: a@b")).toBeNull();
+  });
+});
+
+describe("leadTelegramText", () => {
+  it("собирает карточку заявки со ссылкой на админку", () => {
+    const text = leadTelegramText(
+      { ...base, name: "Иван", courseTitle: "Продажи в аптеке", message: "перезвоните вечером" },
+      "https://example.by/",
+    );
+    expect(text).toContain("Новая заявка на курс");
+    expect(text).toContain("Продажи в аптеке");
+    expect(text).toContain("<code>student@example.com</code>");
+    expect(text).toContain("перезвоните вечером");
+    expect(text).toContain("https://example.by/admin/leads");
+  });
+
+  it("для B2B показывает организацию и число мест", () => {
+    const text = leadTelegramText({
+      ...base,
+      kind: "B2B",
+      contact: "+375291234567",
+      company: "ООО Ромашка",
+      seatsWanted: 25,
+    });
+    expect(text).toContain("Новая B2B-заявка");
+    expect(text).toContain("ООО Ромашка");
+    expect(text).toContain("Мест: 25");
+  });
+
+  it("экранирует ввод, чтобы не сломать HTML-разметку Telegram", () => {
+    const text = leadTelegramText({ ...base, name: "<b>Иван</b> & Co" });
+    expect(text).toContain("&lt;b&gt;Иван&lt;/b&gt; &amp; Co");
+    // Единственный <b> в сообщении — наш заголовок.
+    expect(text.match(/<b>/g)).toHaveLength(1);
+  });
+
+  it("не печатает пустые поля", () => {
+    const text = leadTelegramText({ ...base, name: null, message: null });
+    expect(text).not.toContain("Имя");
+    expect(text).not.toContain("Сообщение");
   });
 });
 
