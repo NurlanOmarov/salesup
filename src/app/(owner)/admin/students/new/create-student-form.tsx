@@ -13,6 +13,8 @@ interface CourseOption {
   id: string;
   title: string;
   industry: string | null;
+  /** Срок «по тарифу курса»: именно его получит ученик, если не переопределить. */
+  accessDuration: (typeof ACCESS_DURATIONS)[number] | "LIFETIME";
 }
 
 interface Created {
@@ -37,6 +39,13 @@ export function CreateStudentForm({
   const [copied, setCopied] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [accessDuration, setAccessDuration] = useState("");
+
+  // Какие сроки принесут выбранные курсы, если не переопределять вручную.
+  const chosenDurations = [
+    ...new Set(
+      courses.filter((c) => selected.has(c.id)).map((c) => c.accessDuration),
+    ),
+  ];
 
   const toggle = (id: string) => {
     setSelected((prev) => {
@@ -167,9 +176,14 @@ export function CreateStudentForm({
                   className="size-4 accent-amber-500"
                 />
                 <span className="text-sm">{c.title}</span>
-                {c.industry ? (
-                  <span className="ml-auto text-xs text-foreground/40">{c.industry}</span>
-                ) : null}
+                <span className="ml-auto flex items-center gap-2 text-xs text-foreground/40">
+                  {c.industry}
+                  {/* Срок курса виден сразу: иначе «по тарифу курса» —
+                      это выбор вслепую. */}
+                  <span className="rounded bg-foreground/[0.06] px-1.5 py-0.5">
+                    {ACCESS_DURATION_LABELS[c.accessDuration]}
+                  </span>
+                </span>
               </label>
             ))}
           </div>
@@ -188,8 +202,16 @@ export function CreateStudentForm({
                 </option>
               ))}
             </select>
-            <p className="text-xs text-foreground/40">
-              Применяется ко всем выбранным курсам. Отсчёт — с момента создания.
+            <p className="text-xs text-foreground/50">
+              {accessDuration
+                ? `Переопределяет тариф: все выбранные курсы получат «${ACCESS_DURATION_LABELS[accessDuration as (typeof ACCESS_DURATIONS)[number]]}». Отсчёт — с момента создания.`
+                : chosenDurations.length === 0
+                  ? "Каждый курс выдаётся на свой срок — он указан рядом с названием."
+                  : chosenDurations.length === 1
+                    ? `Выбранные курсы выдаются на срок «${ACCESS_DURATION_LABELS[chosenDurations[0]!]}». Отсчёт — с момента создания.`
+                    : `У выбранных курсов разные сроки: ${chosenDurations
+                        .map((d) => ACCESS_DURATION_LABELS[d])
+                        .join(", ")}. Каждый выдаётся на свой.`}
             </p>
           </div>
         </fieldset>

@@ -1,4 +1,4 @@
-import type { CourseAudience } from "@prisma/client";
+import type { AccessDuration, CourseAudience } from "@prisma/client";
 
 /**
  * Ценообразование платформы (docs/PRICING-PLAN.md, редакция 2 от 2026-08-14).
@@ -148,6 +148,32 @@ export function isPriceWithinRange(
 ): boolean {
   const band = priceBand(audience, totalSeconds);
   return priceTiyn >= band.min && priceTiyn <= band.max;
+}
+
+/**
+ * Как срок доступа называется покупателю. Отличается от админских подписей:
+ * на витрине это обещание, а не настройка, поэтому «Бессрочно» превращается в
+ * «Пожизненный доступ», а месяцы — в «Доступ N месяцев».
+ */
+export function accessDurationLabel(duration: AccessDuration): string {
+  switch (duration) {
+    case "LIFETIME":
+      return "Пожизненный доступ";
+    case "MONTHS_1":
+      return "Доступ 1 месяц";
+    case "MONTHS_3":
+      return "Доступ 3 месяца";
+    case "MONTHS_6":
+      return "Доступ 6 месяцев";
+    case "MONTHS_12":
+      return "Доступ 1 год";
+    case "MONTHS_24":
+      return "Доступ 2 года";
+    case "MONTHS_36":
+      return "Доступ 3 года";
+    default:
+      return "Доступ по тарифу курса";
+  }
 }
 
 /** «5 ч 51 м» / «39 мин» / «нет видео» — подпись объёма для интерфейса. */

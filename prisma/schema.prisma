@@ -196,7 +196,11 @@ model Course {
   promoVideoKey  String? // ключ HLS-папки трейлера в lib/storage (публичный, без шифрования)
   priceTiyn      Int
   oldPriceTiyn   Int?
-  accessDuration AccessDuration @default(LIFETIME)
+  /// Срок доступа, который получает ученик по умолчанию («по тарифу курса» в
+  /// админке). Год — базовое решение тарифного плана: материалы остаются у
+  /// ученика, а AI-практика тратит токены и не может быть бессрочной
+  /// (docs/PRICING-PLAN.md §9). Бессрочный доступ — осознанный выбор в сделке.
+  accessDuration AccessDuration @default(MONTHS_12)
   status         PublishStatus  @default(DRAFT)
   inDevelopment  Boolean        @default(false) // бейдж «В разработке» на витрине (курс виден, но контент ещё не готов)
   sortOrder      Int            @default(0)

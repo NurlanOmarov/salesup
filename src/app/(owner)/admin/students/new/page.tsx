@@ -20,7 +20,14 @@ export default async function NewStudentPage({
   const courses = await db.course.findMany({
     where: { status: "PUBLISHED" },
     orderBy: { sortOrder: "asc" },
-    select: { id: true, title: true, industry: true },
+    select: {
+      id: true,
+      title: true,
+      industry: true,
+      // Срок «по тарифу курса» показывается прямо в списке — чтобы выдача
+      // доступа не была выбором вслепую.
+      accessDuration: true,
+    },
   });
 
   return (

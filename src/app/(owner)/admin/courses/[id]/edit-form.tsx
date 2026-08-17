@@ -513,6 +513,11 @@ export function CourseEditForm({
                 </option>
               ))}
             </select>
+            <p className="mt-1 text-xs text-foreground/50">
+              Столько ученик будет видеть курс, если при выдаче доступа оставить
+              «по тарифу курса». Эта же подпись показывается покупателю на странице
+              курса.
+            </p>
           </div>
           <div>
             <label className={labelCls} htmlFor="sort">

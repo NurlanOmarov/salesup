@@ -24,6 +24,7 @@ import {
   PER_BYN,
   RATES_AS_OF,
 } from "@/lib/pricing/markets";
+import { ACCESS_DURATION_LABELS } from "@/lib/admin/enrollment";
 import { B2bCalculator } from "./b2b-calculator";
 
 export const metadata: Metadata = {
@@ -50,6 +51,7 @@ export default async function PricingPage() {
       audience: true,
       priceTiyn: true,
       status: true,
+      accessDuration: true,
       modules: {
         select: {
           lessons: {
@@ -72,6 +74,7 @@ export default async function PricingPage() {
       audience: c.audience,
       priceTiyn: c.priceTiyn,
       status: c.status,
+      accessDuration: c.accessDuration,
       lessons: lessons.length,
       totalSec: totalSec || null,
       band: priceBand(c.audience, totalSec || null),
@@ -206,6 +209,7 @@ export default async function PricingPage() {
                   <th className="px-4 py-3 font-medium">Курс</th>
                   <th className="px-4 py-3 font-medium">Класс</th>
                   <th className="px-4 py-3 font-medium">Объём</th>
+                  <th className="px-4 py-3 font-medium">Доступ</th>
                   <th className="px-4 py-3 font-medium">Цена</th>
                   <th className="px-4 py-3 font-medium">Рекомендовано</th>
                   <th className="px-4 py-3 font-medium">Статус</th>
@@ -238,6 +242,9 @@ export default async function PricingPage() {
                           {c.lessons} уроков · {c.band.tier.label}
                         </p>
                       </td>
+                      <td className="px-4 py-3 text-foreground/70">
+                        {ACCESS_DURATION_LABELS[c.accessDuration]}
+                      </td>
                       <td className="px-4 py-3 font-medium tabular-nums">
                         {formatAmount(c.priceTiyn / 100)} BYN
                       </td>
@@ -262,6 +269,13 @@ export default async function PricingPage() {
             </table>
           )}
         </div>
+
+        <p className="mt-2 text-xs text-foreground/55">
+          «Доступ» — срок, который получит ученик, если при выдаче оставить «по
+          тарифу курса». Задаётся в карточке курса, в сделке его можно
+          переопределить. По тарифному плану базовый срок — год: материалы
+          остаются у ученика, а AI-практика тратит токены и бессрочной быть не может.
+        </p>
 
         {offGrid.length > 0 ? (
           <p className="mt-2 text-sm text-amber-700">

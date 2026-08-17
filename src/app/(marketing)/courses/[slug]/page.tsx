@@ -12,6 +12,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { db } from "@/lib/db";
+import { accessDurationLabel } from "@/lib/pricing";
 import { env } from "@/env";
 import { formatPrice, buildSafe, coverPublicUrl } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -279,7 +280,9 @@ export default async function CoursePage({
                   </span>
                   <span className="flex items-center gap-1.5">
                     <Users className="size-4" />
-                    Пожизненный доступ
+                    {/* Реальный срок из карточки курса: обещание на витрине
+                        должно совпадать с тем, что получит ученик. */}
+                    {accessDurationLabel(course.accessDuration)}
                   </span>
                 </div>
               </Reveal>
