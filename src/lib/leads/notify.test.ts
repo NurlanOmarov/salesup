@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { applicantLeadEmail, contactEmail, leadTelegramText, ownerLeadEmail } from "./notify.js";
+import { leadQuote } from "./quote.js";
 
 const base = {
   kind: "B2C" as const,
@@ -52,8 +53,40 @@ describe("leadTelegramText", () => {
     expect(text.match(/<b>/g)).toHaveLength(1);
   });
 
+  it("показывает выбранный тариф и расчёт по местам", () => {
+    const text = leadTelegramText({
+      ...base,
+      kind: "B2B",
+      seatsWanted: 20,
+      quote: leadQuote({ kind: "B2B", plan: "LIBRARY", seats: 20 }),
+    });
+    expect(text).toContain("Тариф: вся библиотека на год");
+    expect(text).toContain("× 20 =");
+    expect(text).toContain("«Компания», −35%");
+  });
+
+  it("предупреждает, когда мест меньше минимального пакета", () => {
+    const text = leadTelegramText({
+      ...base,
+      kind: "B2B",
+      seatsWanted: 3,
+      quote: leadQuote({ kind: "B2B", plan: "LIBRARY", seats: 3 }),
+    });
+    expect(text).toContain("Мест меньше минимального пакета");
+  });
+
+  it("для розницы показывает цену выбранного курса", () => {
+    const text = leadTelegramText({
+      ...base,
+      courseTitle: "Продажи в аптеке",
+      quote: leadQuote({ kind: "B2C", courseTiyn: 49000 }),
+    });
+    expect(text).toContain("Тариф: курс, 490 Br");
+  });
+
   it("не печатает пустые поля", () => {
     const text = leadTelegramText({ ...base, name: null, message: null });
+    expect(text).not.toContain("Тариф");
     expect(text).not.toContain("Имя");
     expect(text).not.toContain("Сообщение");
   });

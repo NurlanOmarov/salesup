@@ -24,6 +24,8 @@ export function LeadForm({
   kind = "B2C",
   defaultSeats,
   defaultMessage,
+  plan,
+  planCourseIds,
 }: {
   courseId?: string;
   className?: string;
@@ -31,6 +33,10 @@ export function LeadForm({
   defaultSeats?: number;
   /** Предзаполненный комментарий: например, курсы, выбранные в калькуляторе. */
   defaultMessage?: string;
+  /** Тариф из калькулятора; цену по нему пересчитывает сервер. */
+  plan?: "LIBRARY" | "COURSES";
+  /** id выбранных курсов — по ним сервер считает ту же сумму, что на экране. */
+  planCourseIds?: string[];
 }) {
   const isB2b = kind === "B2B";
   const [state, formAction, isPending] = useActionState(
@@ -69,6 +75,10 @@ export function LeadForm({
     <form action={formAction} className={className}>
       {courseId ? <input type="hidden" name="courseId" value={courseId} /> : null}
       <input type="hidden" name="kind" value={kind} />
+      {plan ? <input type="hidden" name="plan" value={plan} /> : null}
+      {planCourseIds && planCourseIds.length > 0 ? (
+        <input type="hidden" name="planCourseIds" value={planCourseIds.join(",")} />
+      ) : null}
       <div className="space-y-1.5">
         <Label htmlFor="lead-name">Имя</Label>
         <Input id="lead-name" name="name" placeholder="Как к вам обращаться" />

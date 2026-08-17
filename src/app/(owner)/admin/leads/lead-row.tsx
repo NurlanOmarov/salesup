@@ -27,6 +27,8 @@ export interface LeadView {
   status: Status;
   comment: string | null;
   createdAt: string;
+  /** Выбранный тариф и цена, которую человек видел на экране («вся библиотека на год · 839 Br × 12 = 10 068 Br»). */
+  plan: string | null;
   /** Дата и редакция принятого согласия на обработку ПДн; null — заявка до ввода отметки. */
   consent: string | null;
 }
@@ -48,10 +50,35 @@ export function LeadRow({ lead }: { lead: LeadView }) {
       setTimeout(() => setSaved(false), 1500);
     });
 
-  // Префилл формы создания ученика (имя + e-mail, если контакт похож на e-mail).
+  const isB2b = lead.kind === "B2B";
+  const contactIsEmail = looksLikeEmail(lead.contact);
+
+  // Куда ведёт кнопка, зависит от типа заявки: по корпоративной заводится
+  // организация, а не ученик. Раньше кнопка всегда вела в розничную форму, и по
+  // свежей заявке об этом легко было забыть.
   const createUrl = new URLSearchParams();
-  if (lead.name) createUrl.set("name", lead.name);
-  if (looksLikeEmail(lead.contact)) createUrl.set("email", lead.contact);
+  if (isB2b) {
+    if (lead.company) createUrl.set("name", lead.company);
+    else if (lead.name) createUrl.set("name", lead.name);
+    if (contactIsEmail) createUrl.set("email", lead.contact);
+    else createUrl.set("contact", lead.contact);
+    // Заметка владельцу: с чем пришёл клиент — число мест и выбранный тариф.
+    const note = [
+      lead.seatsWanted ? `${lead.seatsWanted} сотрудников` : null,
+      lead.plan,
+      `заявка от ${lead.createdAt}`,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+    createUrl.set("note", note);
+  } else {
+    if (lead.name) createUrl.set("name", lead.name);
+    if (contactIsEmail) createUrl.set("email", lead.contact);
+  }
+
+  const createHref = isB2b
+    ? `/admin/orgs/new?${createUrl.toString()}`
+    : `/admin/students/new?${createUrl.toString()}`;
 
   return (
     <div className="rounded-xl border border-foreground/10 bg-background p-4">
@@ -74,6 +101,9 @@ export function LeadRow({ lead }: { lead: LeadView }) {
           ) : null}
           {lead.courseTitle ? (
             <p className="mt-0.5 text-xs text-amber-700">Курс: {lead.courseTitle}</p>
+          ) : null}
+          {lead.plan ? (
+            <p className="mt-0.5 text-xs font-medium text-foreground/70">{lead.plan}</p>
           ) : null}
           {lead.message ? (
             <p className="mt-1 text-sm text-foreground/60">«{lead.message}»</p>
@@ -114,10 +144,10 @@ export function LeadRow({ lead }: { lead: LeadView }) {
         />
 
         <Link
-          href={`/admin/students/new?${createUrl.toString()}`}
+          href={createHref}
           className="rounded-md bg-amber-500 px-3 py-1.5 text-sm font-semibold text-slate-950 transition-colors hover:bg-amber-400"
         >
-          Создать ученика
+          {isB2b ? "Создать организацию" : "Создать ученика"}
         </Link>
 
         {saved ? <span className="text-xs text-emerald-600">Сохранено</span> : null}

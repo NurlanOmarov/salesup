@@ -13,12 +13,22 @@ import { Label } from "@/components/ui/label";
  * контакт — для связи с ответственным. Лицензии и представителя добавляем на
  * следующем шаге, в карточке организации.
  */
-export function CreateOrgForm() {
+export function CreateOrgForm({
+  defaultName,
+  defaultContactEmail,
+  defaultContactNote,
+  defaultNote,
+}: {
+  defaultName?: string;
+  defaultContactEmail?: string;
+  defaultContactNote?: string;
+  defaultNote?: string;
+}) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
-  const [name, setName] = useState("");
+  const [name, setName] = useState(defaultName ?? "");
   const [slug, setSlug] = useState("");
 
   // Код организации задаёт вид логинов работников — показываем это сразу,
@@ -95,6 +105,7 @@ export function CreateOrgForm() {
           id="contactEmail"
           name="contactEmail"
           type="email"
+          defaultValue={defaultContactEmail}
           placeholder="hr@company.by"
         />
         {fieldErrors.contactEmail ? (
@@ -104,12 +115,22 @@ export function CreateOrgForm() {
 
       <div className="space-y-1.5">
         <Label htmlFor="contactNote">Другой контакт</Label>
-        <Input id="contactNote" name="contactNote" placeholder="Telegram, телефон" />
+        <Input
+          id="contactNote"
+          name="contactNote"
+          defaultValue={defaultContactNote}
+          placeholder="Telegram, телефон"
+        />
       </div>
 
       <div className="space-y-1.5">
         <Label htmlFor="note">Заметка для себя</Label>
-        <Input id="note" name="note" placeholder="Счёт №12 от 14.08, оплата до 20.08" />
+        <Input
+          id="note"
+          name="note"
+          defaultValue={defaultNote}
+          placeholder="Счёт №12 от 14.08, оплата до 20.08"
+        />
       </div>
 
       {error ? (

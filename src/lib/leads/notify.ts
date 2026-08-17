@@ -1,4 +1,6 @@
 import type { EmailMessage } from "@/lib/email/send";
+import { PLAN_LABELS, type LeadQuote } from "@/lib/leads/quote";
+import { formatCurrency } from "@/lib/currency/format";
 import { escapeHtml } from "@/lib/notify/escape";
 
 /**
@@ -27,12 +29,39 @@ export interface LeadNotification {
   company?: string | null;
   seatsWanted?: number | null;
   courseTitle?: string | null;
+  /** Выбранный тариф и его цена — то, что человек видел на экране. */
+  quote?: LeadQuote | null;
   createdAt: Date;
 }
 
 function line(label: string, value: string | number | null | undefined): string | null {
   if (value === null || value === undefined || value === "") return null;
   return `${label}: ${value}`;
+}
+
+/** «1 290 Br» — базовая валюта, кросс-курсы для уведомления не нужны. */
+function br(tiyn: number): string {
+  return formatCurrency(tiyn, "BYN", {});
+}
+
+/**
+ * Тариф одной строкой: что выбрано и почём. Для B2B — цена места и годовой чек
+ * с уровнем сетки, чтобы владелец шёл на звонок с готовой цифрой.
+ */
+export function quoteLine(quote: LeadQuote | null | undefined): string | null {
+  if (!quote) return null;
+
+  if (quote.plan === "COURSE") return `💰 Тариф: курс, ${br(quote.totalTiyn)}`;
+
+  const subject = PLAN_LABELS[quote.plan];
+  const perSeat = quote.perSeatTiyn ?? 0;
+  const discount =
+    quote.discount > 0
+      ? ` (${quote.tierLabel ? `«${quote.tierLabel}», ` : ""}−${Math.round(quote.discount * 100)}%)`
+      : "";
+  const warn = quote.belowMinSeats ? "\n⚠️ Мест меньше минимального пакета — скидка не действует" : "";
+
+  return `💰 Тариф: ${subject}\n💵 Расчёт: ${br(perSeat)} × ${quote.seats} = ${br(quote.totalTiyn)}${discount}${warn}`;
 }
 
 /**
@@ -53,6 +82,7 @@ export function leadTelegramText(lead: LeadNotification, siteUrl?: string): stri
     line("🏢 Организация", lead.company ? escapeHtml(lead.company) : null),
     line("💺 Мест", lead.seatsWanted),
     line("📚 Курс", lead.courseTitle ? escapeHtml(lead.courseTitle) : null),
+    quoteLine(lead.quote),
     line("💬 Сообщение", lead.message ? escapeHtml(lead.message) : null),
   ].filter((l): l is string => l !== null);
 
@@ -76,6 +106,8 @@ export function ownerLeadEmail(to: string, lead: LeadNotification): EmailMessage
     line("Организация", lead.company),
     line("Мест", lead.seatsWanted),
     line("Курс", lead.courseTitle),
+    // В письме те же цифры, что и в Telegram, но без эмодзи-разметки.
+    quoteLine(lead.quote)?.replace(/[💰💵⚠️]\s?/gu, ""),
     line("Сообщение", lead.message),
     line("Дата", lead.createdAt.toISOString()),
     "",

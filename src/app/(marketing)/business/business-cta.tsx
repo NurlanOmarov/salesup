@@ -21,6 +21,10 @@ export function BusinessCta({
 }) {
   const [seats, setSeats] = useState(10);
   const [courseTitles, setCourseTitles] = useState<string[]>([]);
+  // Выбранный тариф уходит в заявку: иначе в уведомлении не видно, считал ли
+  // человек библиотеку или пару курсов — и какую сумму он уже держит в голове.
+  const [plan, setPlan] = useState<"library" | "courses">("library");
+  const [courseIds, setCourseIds] = useState<string[]>([]);
 
   return (
     <div className="grid gap-5 lg:grid-cols-[1.1fr_1fr]">
@@ -30,6 +34,8 @@ export function BusinessCta({
         onQuote={(v) => {
           setSeats(v.seats);
           setCourseTitles(v.courseTitles);
+          setPlan(v.mode);
+          setCourseIds(v.courseIds);
         }}
       />
       <div className="rounded-2xl border border-foreground/10 bg-background p-5 sm:p-6">
@@ -40,6 +46,8 @@ export function BusinessCta({
         <LeadForm
           kind="B2B"
           defaultSeats={seats}
+          plan={plan === "courses" ? "COURSES" : "LIBRARY"}
+          planCourseIds={courseIds}
           defaultMessage={
             courseTitles.length > 0
               ? `Интересуют курсы: ${courseTitles.join(", ")}`

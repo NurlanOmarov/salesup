@@ -29,7 +29,13 @@ export function SeatsCalculator({
   subscriptionYearTiyn: number;
   courses?: CalculatorCourse[];
   /** Прокидываем выбор в форму заявки, чтобы менеджер не переспрашивал. */
-  onQuote?: (value: { seats: number; courseTitles: string[] }) => void;
+  onQuote?: (value: {
+    seats: number;
+    courseTitles: string[];
+    courseIds: string[];
+    /** Выбранный тариф — уходит в заявку, чтобы в уведомлении была та же цена. */
+    mode: "library" | "courses";
+  }) => void;
 }) {
   const [seats, setSeats] = useState(10);
   const [mode, setMode] = useState<"library" | "courses">("library");
@@ -46,10 +52,28 @@ export function SeatsCalculator({
 
   const quote = quoteSeats(seats, retailTiyn);
 
+  /** Один выход наружу: любое изменение отдаёт форме полный выбор целиком. */
+  function emit(next: { seats?: number; mode?: "library" | "courses"; selected?: Set<string> }) {
+    const nextMode = next.mode ?? mode;
+    const nextSelected = next.selected ?? selected;
+    const picked = nextMode === "courses" ? courses.filter((c) => nextSelected.has(c.id)) : [];
+    onQuote?.({
+      seats: next.seats ?? seats,
+      courseTitles: picked.map((c) => c.title),
+      courseIds: picked.map((c) => c.id),
+      mode: nextMode,
+    });
+  }
+
   function change(next: number) {
     const clamped = Math.max(1, Math.min(500, next));
     setSeats(clamped);
-    onQuote?.({ seats: clamped, courseTitles: chosen.map((c) => c.title) });
+    emit({ seats: clamped });
+  }
+
+  function changeMode(next: "library" | "courses") {
+    setMode(next);
+    emit({ mode: next });
   }
 
   function toggleCourse(id: string) {
@@ -57,8 +81,7 @@ export function SeatsCalculator({
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
-      const titles = courses.filter((c) => next.has(c.id)).map((c) => c.title);
-      onQuote?.({ seats, courseTitles: titles });
+      emit({ selected: next });
       return next;
     });
   }
@@ -121,10 +144,7 @@ export function SeatsCalculator({
           <div className="mt-2 flex gap-2">
             <button
               type="button"
-              onClick={() => {
-                setMode("library");
-                onQuote?.({ seats, courseTitles: [] });
-              }}
+              onClick={() => changeMode("library")}
               className={cn(
                 "rounded-lg border px-3 py-1.5 text-sm transition-colors",
                 mode === "library"
@@ -136,7 +156,7 @@ export function SeatsCalculator({
             </button>
             <button
               type="button"
-              onClick={() => setMode("courses")}
+              onClick={() => changeMode("courses")}
               className={cn(
                 "rounded-lg border px-3 py-1.5 text-sm transition-colors",
                 mode === "courses"

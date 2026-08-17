@@ -8,7 +8,23 @@ export const metadata: Metadata = {
   robots: { index: false },
 };
 
-export default function NewOrgPage() {
+/**
+ * Заведение клиента. Поля можно предзаполнить из корпоративной заявки
+ * (`/admin/leads` → «Создать организацию»): по свежей заявке владелец не должен
+ * переписывать название и контакт руками.
+ */
+export default async function NewOrgPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    name?: string;
+    email?: string;
+    contact?: string;
+    note?: string;
+  }>;
+}) {
+  const prefill = await searchParams;
+
   return (
     <main>
       <Link
@@ -25,7 +41,12 @@ export default function NewOrgPage() {
       </p>
 
       <div className="mt-6">
-        <CreateOrgForm />
+        <CreateOrgForm
+          defaultName={prefill.name}
+          defaultContactEmail={prefill.email}
+          defaultContactNote={prefill.contact}
+          defaultNote={prefill.note}
+        />
       </div>
     </main>
   );

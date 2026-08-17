@@ -18,6 +18,7 @@ const ADMIN_PASS = "hr-b2b-pass-123";
 const WORKER_PASS = "worker-b2b-pass-123";
 const ORG_SLUG = "e2eorg";
 const OTHER_ORG_SLUG = "e2eother";
+const LEAD_CONTACT = "e2e-b2b-lead@test.local";
 
 let ownerId = "";
 let orgId = "";
@@ -97,6 +98,7 @@ async function cleanup() {
   // Сценарий логинится десятки раз с одного IP: без очистки срабатывает защита
   // от перебора и вход перестаёт проходить (rate-limit по IP и идентификатору).
   await db.loginAttempt.deleteMany({ where: { ip: "10.88.0.9" } });
+  await db.lead.deleteMany({ where: { contact: LEAD_CONTACT } });
   if (ownerId) await db.adminLog.deleteMany({ where: { actorId: ownerId } });
 }
 
@@ -173,6 +175,40 @@ test("владелец заводит организацию, лицензию �
     where: { orgId, userId: admin.id },
   });
   expect(membership.role).toBe("ORG_ADMIN");
+});
+
+test("корпоративная заявка ведёт на создание организации, а не ученика", async ({
+  page,
+}) => {
+  // Розничная и корпоративная заявки требуют разных действий: по первой заводят
+  // ученика, по второй — организацию. Кнопка вела в розничную форму всегда, и по
+  // свежей заявке об этом легко было забыть.
+  await db.lead.deleteMany({ where: { contact: LEAD_CONTACT } });
+  await db.lead.create({
+    data: {
+      name: "Мария",
+      contact: LEAD_CONTACT,
+      kind: "B2B",
+      company: "E2E Заявочная компания",
+      seatsWanted: 12,
+      status: "NEW",
+    },
+  });
+
+  await login(page, OWNER_EMAIL, OWNER_PASS);
+  await page.goto("/admin/leads");
+
+  const button = page.getByRole("link", { name: "Создать организацию" }).first();
+  await expect(button).toBeVisible();
+  await button.click();
+  await page.waitForURL(/\/admin\/orgs\/new/);
+
+  // Название и контакт переносятся, число мест — в заметку владельцу.
+  await expect(page.getByLabel("Наименование организации *")).toHaveValue(
+    "E2E Заявочная компания",
+  );
+  await expect(page.getByLabel("E-mail ответственного")).toHaveValue(LEAD_CONTACT);
+  await expect(page.getByLabel("Заметка для себя")).toHaveValue(/12 сотрудников/);
 });
 
 test("работник регистрируется по коду без единого персонального данного", async ({

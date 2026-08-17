@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
+import { describeStoredPlan } from "@/lib/leads/quote";
 import { LeadRow, type LeadView } from "./lead-row";
 
 export const metadata: Metadata = {
@@ -27,6 +28,9 @@ export default async function LeadsPage() {
       kind: true,
       company: true,
       seatsWanted: true,
+      plan: true,
+      quotedPerSeatTiyn: true,
+      quotedTotalTiyn: true,
     },
   });
 
@@ -48,6 +52,14 @@ export default async function LeadsPage() {
     name: l.name,
     contact: l.contact,
     courseTitle: l.courseId ? (titleById.get(l.courseId) ?? null) : null,
+    // Тариф и цена на момент подачи: с тех пор прайс мог измениться, поэтому
+    // показываем зафиксированное, а не пересчитываем.
+    plan: describeStoredPlan({
+      plan: l.plan,
+      seats: l.seatsWanted,
+      perSeatTiyn: l.quotedPerSeatTiyn,
+      totalTiyn: l.quotedTotalTiyn,
+    }),
     message: l.message,
     status: l.status,
     comment: l.comment,
