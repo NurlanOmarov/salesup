@@ -378,6 +378,62 @@ export function parseHotspot(content: string | null | undefined): HotspotData | 
   }
 }
 
+// ─── Типы клиента (зелёный/синий/красный/жёлтый: узнать тип и реакцию) ────────
+
+/**
+ * Тренажёр типологии клиента: реплика клиента → ученик определяет тип →
+ * выбирает реакцию. Механика несёт смысл урока: ошибка в типе меняет и то,
+ * какая реакция окажется эффективной, поэтому шаги идут именно в таком порядке,
+ * а шкала доверия показывает накопленный результат разговора.
+ */
+export type ClientTypeKey = "green" | "blue" | "red" | "yellow";
+
+const CLIENT_TYPE_KEYS: ClientTypeKey[] = ["green", "blue", "red", "yellow"];
+
+export interface ClientTypeReaction {
+  text: string;
+  correct: boolean;
+  feedback: string;
+}
+
+export interface ClientTypeCard {
+  /** Реплика клиента, по которой определяется тип. */
+  quote: string;
+  type: ClientTypeKey;
+  /** Почему это именно он: скрытая установка типа. */
+  hint: string;
+  reactions: ClientTypeReaction[];
+}
+
+export interface ClientTypesData {
+  title?: string;
+  prompt?: string;
+  cards: ClientTypeCard[];
+}
+
+/** Безопасный парсинг тренажёра типов клиента. Нужна ≥1 карточка с верной реакцией. */
+export function parseClientTypes(content: string | null | undefined): ClientTypesData | null {
+  if (!content) return null;
+  try {
+    const data = JSON.parse(content) as ClientTypesData;
+    if (!data || !Array.isArray(data.cards)) return null;
+    const cards = data.cards.filter(
+      (c) =>
+        c &&
+        typeof c.quote === "string" &&
+        typeof c.hint === "string" &&
+        CLIENT_TYPE_KEYS.includes(c.type) &&
+        Array.isArray(c.reactions) &&
+        c.reactions.length >= 2 &&
+        c.reactions.every((r) => r && typeof r.text === "string" && typeof r.feedback === "string") &&
+        c.reactions.some((r) => r.correct),
+    );
+    return cards.length > 0 ? { title: data.title, prompt: data.prompt, cards } : null;
+  } catch {
+    return null;
+  }
+}
+
 // ─── Ветвящийся сценарий (branching: выбор реплики ведёт к разным исходам) ─────
 
 export type BranchOutcome = "win" | "lose" | "neutral";

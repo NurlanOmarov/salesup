@@ -14,6 +14,7 @@ import {
   parseRule6040,
   parseSmartGoal,
   parseTimeAudit,
+  parseClientTypes,
   type BranchingData,
 } from "./interactive";
 
@@ -282,5 +283,37 @@ describe("parseTimeAudit", () => {
   it("null без обязательных полей", () => {
     expect(parseTimeAudit(JSON.stringify({ title: "t" }))).toBeNull();
     expect(parseTimeAudit(null)).toBeNull();
+  });
+});
+
+describe("parseClientTypes", () => {
+  const card = {
+    quote: "А поговорить?",
+    type: "green",
+    hint: "Зелёный ищет одобрения",
+    reactions: [
+      { text: "Расспросить", correct: true, feedback: "верно" },
+      { text: "Поверить «да-да»", correct: false, feedback: "слабо" },
+    ],
+  };
+
+  it("парсит валидный набор карточек", () => {
+    const r = parseClientTypes(JSON.stringify({ title: "t", prompt: "p", cards: [card] }));
+    expect(r?.cards).toHaveLength(1);
+    expect(r?.cards[0]?.type).toBe("green");
+  });
+
+  it("отбрасывает карточку с неизвестным типом", () => {
+    expect(parseClientTypes(JSON.stringify({ cards: [{ ...card, type: "purple" }] }))).toBeNull();
+  });
+
+  it("отбрасывает карточку без верной реакции", () => {
+    const reactions = card.reactions.map((r) => ({ ...r, correct: false }));
+    expect(parseClientTypes(JSON.stringify({ cards: [{ ...card, reactions }] }))).toBeNull();
+  });
+
+  it("null на битом JSON и пустом контенте", () => {
+    expect(parseClientTypes("{")).toBeNull();
+    expect(parseClientTypes(null)).toBeNull();
   });
 });

@@ -73,6 +73,22 @@ import {
   SHOES_EXAM_PASS_SCORE,
 } from "./seed-data/shoes-content.js";
 import {
+  TOURISM_LESSON_QUIZZES,
+  TOURISM_SUMMARIES,
+  TOURISM_SLIDES,
+  TOURISM_FLASHCARDS,
+  TOURISM_OBJECTIONS,
+  TOURISM_CHECKLISTS,
+  TOURISM_SCRIPTS,
+  TOURISM_AUDITS,
+  TOURISM_HOTSPOTS,
+  TOURISM_BRANCHING,
+  TOURISM_CLIENT_TYPES,
+  TOURISM_SCENARIOS,
+  TOURISM_EXAM,
+  TOURISM_EXAM_PASS_SCORE,
+} from "./seed-data/tourism-content.js";
+import {
   TIME_LESSON_QUIZZES,
   TIME_FLASHCARDS,
   TIME_CHECKLISTS,
@@ -714,6 +730,110 @@ const PHARMA_MODULES: ModuleSpec[] = [
   },
 ];
 
+// ── Курс «Техники продаж в туризме» (реальный YouTube-плейлист) ──────────────
+// Источник: https://www.youtube.com/playlist?list=PLbPgy5BEZoQUj4UuzLiAajlHp5dD-0k_Y
+// Тренер: Виталий Дубовик (activesales.by). 12 содержательных роликов (~1 ч 8 мин) +
+// промо-ролик, который стоит первым как бесплатное превью «о курсе». Второй промо-ролик
+// плейлиста (та же нарезка с титрами) — дубль, в курс не входит.
+//
+// Порядок уроков — педагогический, а не как в плейлисте: сначала из чего складывается
+// решение туриста и кто ему продаёт, потом где теряются сделки, затем сам звонок и
+// вопросы, дальше типы туристов и возражения, и в финале — закрытие сделки и работа
+// на возврат (воронка продаж с удержанием закрывает курс, а не открывает его).
+const TOURISM_MODULES: ModuleSpec[] = [
+  {
+    title: "Модуль 1. Что покупает турист",
+    lessons: [
+      {
+        title: "О курсе: техники продаж в туризме",
+        yt: "https://www.youtube.com/watch?v=z-EXqgFaZ3g",
+        durationSec: 61,
+        free: true,
+      },
+      {
+        title: "Три вещи, которые покупает турист: продукт, компания, продавец",
+        yt: "https://www.youtube.com/watch?v=1v4Odxe87_I",
+        durationSec: 568,
+      },
+      {
+        title: "Четыре вида продавца: шоумен, ходячий словарь, киллер, партнёр",
+        yt: "https://www.youtube.com/watch?v=B6PPYgXGOIQ",
+        durationSec: 309,
+      },
+      {
+        title: "Цикл сделки в туризме: четыре этапа глазами туриста",
+        yt: "https://www.youtube.com/watch?v=EFSNao0UExA",
+        durationSec: 141,
+      },
+    ],
+  },
+  {
+    title: "Модуль 2. Где теряются сделки",
+    lessons: [
+      {
+        title: "Типичные ошибки в продажах туристических услуг",
+        yt: "https://www.youtube.com/watch?v=JKBdMoZFPfU",
+        durationSec: 152,
+      },
+      {
+        title: "Зоны опасности: приветствие, имя, вода и незакрытая сделка",
+        yt: "https://www.youtube.com/watch?v=kEK5AqTV4Z0",
+        durationSec: 423,
+      },
+    ],
+  },
+  {
+    title: "Модуль 3. Звонок: алгоритм и вопросы",
+    lessons: [
+      {
+        title: "Алгоритм звонка против скрипта: девять шагов входящего",
+        yt: "https://www.youtube.com/watch?v=Wz8FDVVEy_w",
+        durationSec: 361,
+      },
+      {
+        title: "Воронка вопросов: открытые, альтернативные, закрытые",
+        yt: "https://www.youtube.com/watch?v=C8GkIv-6YEk",
+        durationSec: 281,
+      },
+    ],
+  },
+  {
+    title: "Модуль 4. Типы туристов и возражения",
+    lessons: [
+      {
+        title: "Типы туристов: зелёный, синий, красный, жёлтый",
+        yt: "https://www.youtube.com/watch?v=vnbMbUO5Lbs",
+        durationSec: 672,
+      },
+      {
+        title: "Работа с возражениями: «дорого», «просто изучаю», «я подумаю»",
+        yt: "https://www.youtube.com/watch?v=sljN2A4s0oU",
+        durationSec: 473,
+      },
+      {
+        title: "Конфликтный турист: как погасить эмоцию и вернуть разговор",
+        yt: "https://www.youtube.com/watch?v=7XuuFeUksQE",
+        durationSec: 60,
+      },
+    ],
+  },
+  {
+    title: "Модуль 5. Закрытие сделки и возврат туриста",
+    lessons: [
+      {
+        title: "Пять способов закрыть сделку в туризме",
+        yt: "https://www.youtube.com/watch?v=qG0D1gfzqJg",
+        durationSec: 108,
+      },
+      {
+        title: "Воронка продаж в туризме: от лида до постоянного туриста",
+        yt: "https://www.youtube.com/watch?v=z6FWKffe5wA",
+        durationSec: 522,
+      },
+    ],
+  },
+];
+
 const COURSES: CourseSpec[] = [
   {
     slug: "sales-pharma",
@@ -848,48 +968,50 @@ const COURSES: CourseSpec[] = [
     modules: TIME_MODULES,
     coverUrl: "/images/courses/time-management.png",
   },
-  // ── Прочие курсы (каркасы, контент собирает фабрика) ──────────────────────
+  // ── Курс «Техники продаж в туризме» (реальный плейлист) ───────────────────
   {
     slug: "sales-tourism",
-    inDevelopment: true,
     title: "Техники продаж в туризме",
-    subtitle: "Как продавать туры дорого и без скидок",
+    subtitle: "От входящего звонка до повторной поездки: алгоритм, вопросы, типы туристов",
     description:
-      "Базовый курс для турагентов и менеджеров туроператоров. Разбираем, как вести клиента от первого звонка до повторной покупки: работа с возражениями «дорого», «подумаю», «сравниваю», защита цены, допродажи.",
+      "Практический видеокурс бизнес-тренера Виталия Дубовика (activesales.by) для менеджеров турагентств и туроператоров. 13 уроков по реальному тренингу: из чего складывается решение туриста (продукт, компания и продавец — на продавца приходится до 87 % влияния), четыре роли продавца, цикл сделки глазами туриста, типичные ошибки и зоны опасности, алгоритм входящего звонка из девяти шагов, воронка вопросов (открытые → альтернативные → закрытые), четыре типа туристов и подстройка под каждый, готовые ответы на «дорого», «я просто изучаю» и «я подумаю», работа с конфликтом, пять способов закрыть сделку и возврат туриста после поездки.",
     industry: "Туризм",
-    hoursLabel: "6 часов",
+    hoursLabel: "~1 час 9 минут",
     learnPoints: [
-      "Техника первого контакта: как за 3 минуты создать доверие",
-      "5 методов работы с возражением «дорого» без скидок",
-      "Алгоритм закрытия сделки на месте без «подумаю»",
-      "Скрипт допродажи страховки, трансфера и экскурсий",
-      "Работа с базой: как получать повторные заявки и рекомендации",
+      "Понимать, из чего складывается решение туриста: продукт, компания и продавец — и почему продавец решает до 87 %",
+      "Сознательно переключать четыре роли продавца: шоумен, ходячий словарь, киллер и партнёр",
+      "Вести входящий звонок по алгоритму из девяти шагов — от «трубка до третьего гудка» до записи в CRM",
+      "Задавать вопросы воронкой: открытые → альтернативные → закрытые, накапливая согласие к финалу",
+      "Узнавать зелёного, синего, красного и жёлтого туриста и менять поведение под каждый тип",
+      "Отвечать на «дорого», «я просто изучаю» и «я подумаю» по схеме «амортизация → потребность → проверка понимания → обоснование»",
+      "Гасить конфликт без скидок: инициатива, пауза, общая цель, бонус вместо денег",
+      "Закрывать сделку пятью способами и возвращать туриста после поездки",
     ],
     targetAudience: [
-      "Менеджеры и владельцы турагентств",
-      "Менеджеры туроператоров по работе с клиентами",
+      "Менеджеры турагентств и туроператоров",
+      "Владельцы небольших агентств, которые продают сами",
       "Руководители отделов продаж в туризме",
+      "Новички в турбизнесе — на онбординге в первый месяц работы",
     ],
     faq: [
-      { q: "Подойдёт ли курс новичку?", a: "Да. Курс разработан для любого уровня — от стажёра до руководителя отдела." },
-      { q: "Есть ли доступ к материалам после окончания?", a: "Да, доступ пожизненный. Все видео, конспекты и задания остаются у вас." },
-    ],
-    modules: [
       {
-        title: "Модуль 1. Установление контакта",
-        lessons: [
-          { title: "Первое впечатление и доверие", yt: "https://youtu.be/PLACEHOLDER1", free: true },
-          { title: "Выявление потребностей туриста", yt: "https://youtu.be/PLACEHOLDER2" },
-        ],
+        q: "Подойдёт ли курс новичку?",
+        a: "Да. Курс начинается с азов: что вообще покупает турист, как устроен цикл сделки и по какому алгоритму вести входящий звонок. Опытному менеджеру полезны разборы типов туристов и готовые ответы на возражения.",
       },
       {
-        title: "Модуль 2. Работа с возражениями",
-        lessons: [
-          { title: "Возражение «дорого»", yt: "https://youtu.be/PLACEHOLDER3" },
-          { title: "Закрытие сделки и допродажи", yt: "https://youtu.be/PLACEHOLDER4" },
-        ],
+        q: "Сколько времени займёт прохождение?",
+        a: "Около 1 часа 9 минут видео плюс задания, тренажёры и итоговый экзамен. Уроки короткие — от 1 до 11 минут, их реально пройти за пару вечеров или между заявками.",
+      },
+      {
+        q: "Курс только про телефонные звонки?",
+        a: "Нет. Алгоритм разбирается на входящем звонке, но те же шаги — приветствие с именем, воронка вопросов, обоснование цены, договорённость о следующем шаге — работают в переписке в мессенджерах и на встрече в офисе.",
+      },
+      {
+        q: "Будет ли сертификат?",
+        a: "Да. После прохождения уроков и итогового экзамена вы получаете именной сертификат с уникальным номером и публичной страницей проверки.",
       },
     ],
+    modules: TOURISM_MODULES,
     coverUrl: "/images/courses/sales-tourism.png",
   },
   {
@@ -1789,7 +1911,8 @@ async function seedArtifacts(
     | "EISENHOWER"
     | "RULE_6040"
     | "SMART_GOAL"
-    | "TIME_AUDIT",
+    | "TIME_AUDIT"
+    | "CLIENT_TYPES",
   rows: { titleMatch: string; data: unknown }[],
 ) {
   const lessons = await db.lesson.findMany({
@@ -2040,6 +2163,37 @@ async function main() {
     // Уроки с готовым HLS публикуем: поурочный контент к ним собран.
     await db.lesson.updateMany({
       where: { module: { courseId: shoesCourse.id }, videoStatus: "READY" },
+      data: { status: "PUBLISHED" },
+    });
+  }
+
+  // ── Курс «Техники продаж в туризме» ──────────────────────────────────────
+  // Контент по видео Виталия Дубовика (транскрипты в «Презентации/Техники продаж
+  // в туризме»), см. prisma/seed-data/tourism-content.ts. Раздатки уроков — PDF
+  // (factory:handout + factory:publish), поэтому здесь только колоды кабинета.
+  const tourismCourse = courses.find((c) => c.slug === "sales-tourism");
+  if (tourismCourse) {
+    await seedSummaries(tourismCourse.id, TOURISM_SUMMARIES);
+    await seedSlides(tourismCourse.id, TOURISM_SLIDES);
+    await seedLessonQuizzes(tourismCourse.id, TOURISM_LESSON_QUIZZES);
+    await seedFlashcards(tourismCourse.id, TOURISM_FLASHCARDS);
+    await seedObjections(tourismCourse.id, TOURISM_OBJECTIONS);
+    await seedArtifacts(tourismCourse.id, "CHECKLIST", TOURISM_CHECKLISTS);
+    await seedArtifacts(tourismCourse.id, "SCRIPT_BUILDER", TOURISM_SCRIPTS);
+    await seedArtifacts(tourismCourse.id, "DIALOGUE_AUDIT", TOURISM_AUDITS);
+    await seedArtifacts(tourismCourse.id, "HOTSPOT", TOURISM_HOTSPOTS);
+    await seedArtifacts(tourismCourse.id, "BRANCHING", TOURISM_BRANCHING);
+    await seedArtifacts(tourismCourse.id, "CLIENT_TYPES", TOURISM_CLIENT_TYPES);
+    await seedScenarios(tourismCourse.id, TOURISM_SCENARIOS);
+    await seedFinalExam(tourismCourse.id, {
+      questions: TOURISM_EXAM,
+      description:
+        "Проверка знаний по курсу: что покупает турист, четыре вида продавца, цикл сделки, зоны опасности, алгоритм звонка, воронка вопросов, типы туристов, возражения, конфликт и закрытие сделки.",
+      passScore: TOURISM_EXAM_PASS_SCORE,
+    });
+    // Уроки с готовым HLS публикуем: поурочный контент к ним собран.
+    await db.lesson.updateMany({
+      where: { module: { courseId: tourismCourse.id }, videoStatus: "READY" },
       data: { status: "PUBLISHED" },
     });
   }

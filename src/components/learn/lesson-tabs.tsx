@@ -29,6 +29,7 @@ import {
   PieChart,
   Target,
   Hourglass,
+  Users,
 } from "lucide-react";
 import { SecurePlayer, type SubtitleTrackInfo } from "@/components/player/secure-player";
 import { PlayerProvider } from "@/components/player/player-context";
@@ -52,6 +53,7 @@ import { EisenhowerMatrix } from "@/components/learn/eisenhower-matrix";
 import { Rule6040 } from "@/components/learn/rule-6040";
 import { SmartGoal } from "@/components/learn/smart-goal";
 import { TimeAudit } from "@/components/learn/time-audit";
+import { ClientTypesTrainer } from "@/components/learn/client-types";
 import type { SlideDeckData } from "@/lib/slides";
 import type {
   FlashcardsData,
@@ -66,6 +68,7 @@ import type {
   Rule6040Data,
   SmartGoalData,
   TimeAuditData,
+  ClientTypesData,
 } from "@/lib/interactive";
 
 export interface SimulationInfo {
@@ -103,6 +106,7 @@ type Tab =
   | "rule6040"
   | "smart"
   | "timeaudit"
+  | "clienttypes"
   | "simulation"
   | "transcript"
   | "notes"
@@ -141,6 +145,7 @@ export function LessonTabs({
   rule6040 = null,
   smart = null,
   timeaudit = null,
+  clientTypes = null,
   simulation = null,
   voiceEnabled = false,
   subtitles = [],
@@ -169,6 +174,7 @@ export function LessonTabs({
   rule6040?: Rule6040Data | null;
   smart?: SmartGoalData | null;
   timeaudit?: TimeAuditData | null;
+  clientTypes?: ClientTypesData | null;
   simulation?: SimulationInfo | null;
   voiceEnabled?: boolean;
   subtitles?: SubtitleTrackInfo[];
@@ -202,6 +208,7 @@ export function LessonTabs({
     { key: "rule6040", label: "60/40", icon: PieChart, show: !!rule6040, group: "practice" },
     { key: "smart", label: "SMART-цель", icon: Target, show: !!smart, group: "practice" },
     { key: "timeaudit", label: "Пожиратели", icon: Hourglass, show: !!timeaudit, group: "practice" },
+    { key: "clienttypes", label: "Типы клиента", icon: Users, show: !!clientTypes, group: "practice" },
     { key: "simulation", label: "Симулятор", icon: MessagesSquare, show: !!simulation, group: "practice" },
     { key: "tutor", label: "Наставник", icon: Bot, show: true, group: "tutor" },
   ];
@@ -474,6 +481,12 @@ export function LessonTabs({
         {tab === "timeaudit" && timeaudit ? (
           <motion.div key="timeaudit" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
             <TimeAudit data={timeaudit} />
+          </motion.div>
+        ) : null}
+
+        {tab === "clienttypes" && clientTypes ? (
+          <motion.div key="clienttypes" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
+            <ClientTypesTrainer data={clientTypes} />
           </motion.div>
         ) : null}
 

@@ -24,6 +24,7 @@ import {
   parseRule6040,
   parseSmartGoal,
   parseTimeAudit,
+  parseClientTypes,
 } from "@/lib/interactive";
 import { loadScenario } from "@/lib/ai/simulate";
 import { listLessonNotes } from "@/lib/learn/notes";
@@ -133,7 +134,7 @@ export default async function LearnPage({
       loadScenario(lessonId),
     ]);
 
-  const [metaphorArtifact, eisenhowerArtifact, rule6040Artifact, smartArtifact, timeAuditArtifact] = await Promise.all([
+  const [metaphorArtifact, eisenhowerArtifact, rule6040Artifact, smartArtifact, timeAuditArtifact, clientTypesArtifact] = await Promise.all([
     db.aiArtifact.findUnique({
       where: { lessonId_type: { lessonId, type: "TASK_METAPHOR" } },
       select: { content: true, validation: true },
@@ -152,6 +153,10 @@ export default async function LearnPage({
     }),
     db.aiArtifact.findUnique({
       where: { lessonId_type: { lessonId, type: "TIME_AUDIT" } },
+      select: { content: true, validation: true },
+    }),
+    db.aiArtifact.findUnique({
+      where: { lessonId_type: { lessonId, type: "CLIENT_TYPES" } },
       select: { content: true, validation: true },
     }),
   ]);
@@ -183,6 +188,8 @@ export default async function LearnPage({
     smartArtifact?.validation === "VALIDATED" ? parseSmartGoal(smartArtifact.content) : null;
   const timeaudit =
     timeAuditArtifact?.validation === "VALIDATED" ? parseTimeAudit(timeAuditArtifact.content) : null;
+  const clientTypes =
+    clientTypesArtifact?.validation === "VALIDATED" ? parseClientTypes(clientTypesArtifact.content) : null;
   const transcriptText =
     transcript && transcript.status === "CLEANED" ? transcript.cleanText : null;
 
@@ -298,6 +305,7 @@ export default async function LearnPage({
             rule6040={rule6040}
             smart={smart}
             timeaudit={timeaudit}
+            clientTypes={clientTypes}
             simulation={simulation}
             voiceEnabled={env.VOICE_ENABLED}
             subtitles={subtitles}
