@@ -1,13 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import {
-  BarChart3,
-  CheckCircle2,
-  KeyRound,
-  RefreshCw,
-  ShieldCheck,
-  Sparkles,
-} from "lucide-react";
+import { BarChart3, CheckCircle2, RefreshCw, Sparkles } from "lucide-react";
 import { db } from "@/lib/db";
 import { buildSafe } from "@/lib/utils";
 import { getStaticPageSeo } from "@/lib/seo/static-pages";
@@ -62,11 +54,6 @@ const BENEFITS = [
     body: "Видно, кто учится, а кто нет: доля пройденных уроков, результаты тестов, активность за период, разрез по подразделениям.",
   },
   {
-    icon: ShieldCheck,
-    title: "Мы не получаем данные ваших сотрудников",
-    body: "Работники учатся под условными обозначениями вида «acme-0042». Фамилии, почты и телефоны сотрудников на платформе не хранятся — соответствие ведёте вы у себя.",
-  },
-  {
     icon: Sparkles,
     title: "AI-наставник и тренажёры 24/7",
     body: "Не разовый тренинг, а ежедневная практика: симулятор клиента, отработка возражений, голосовой ролплей с разбором речи. Новичок начинает в первый же день.",
@@ -82,10 +69,6 @@ const FAQ_ITEMS = [
   {
     q: "Что такое «место»?",
     a: "Место — это доступ одного сотрудника к обучению на год. Купили 10 мест — одновременно учатся 10 человек. Если сотрудник уволился, место освобождается и передаётся другому.",
-  },
-  {
-    q: "Нужно ли передавать вам данные сотрудников?",
-    a: "Нет. Вы получаете коды доступа и раздаёте их сами. Сотрудник регистрируется по коду, а платформа присваивает ему условное обозначение. Мы не запрашиваем ни фамилий, ни почт, ни телефонов — оператором персональных данных остаётесь вы. Условия зафиксированы в оферте для организаций и приложении к ней.",
   },
   {
     q: "Можно ли обучить сотрудников из разных городов?",
@@ -108,10 +91,19 @@ const FAQ_ITEMS = [
 export default async function BusinessPage() {
   // На сборке БД недоступна — buildSafe отдаёт запасное значение вместо падения
   // пререндера (тот же приём, что в sitemap).
-  const coursesCount = await buildSafe(
-    () => db.course.count({ where: { status: "PUBLISHED" } }),
-    0,
+  // Курсы для калькулятора: цена места считается либо по всей библиотеке, либо
+  // по выбранным курсам — компании часто нужен один отраслевой, и цена подписки
+  // отпугнула бы её втрое большей суммой.
+  const courses = await buildSafe(
+    () =>
+      db.course.findMany({
+        where: { status: "PUBLISHED", inDevelopment: false },
+        orderBy: { sortOrder: "asc" },
+        select: { id: true, title: true, priceTiyn: true },
+      }),
+    [] as { id: string; title: string; priceTiyn: number }[],
   );
+  const coursesCount = courses.length;
 
   // Крайние точки сетки: лучшая цена места (максимальный объём) и цена на входе.
   const bestPerSeat = quoteSeats(20, SUBSCRIPTION_YEAR_TIYN).pricePerSeatTiyn / 100;
@@ -163,7 +155,6 @@ export default async function BusinessPage() {
                   : "Курсы по продажам в отраслях и общим навыкам",
                 "Кабинет компании с прогрессом по каждому сотруднику",
                 "AI-тренажёры: симулятор клиента и отработка возражений",
-                "Персональные данные сотрудников остаются у вас",
               ].map((item) => (
                 <li key={item} className="flex items-start gap-2.5 text-foreground/80">
                   <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-emerald-600" />
@@ -174,7 +165,10 @@ export default async function BusinessPage() {
           </div>
 
           <Reveal>
-            <BusinessCta subscriptionYearTiyn={SUBSCRIPTION_YEAR_TIYN} />
+            <BusinessCta
+              subscriptionYearTiyn={SUBSCRIPTION_YEAR_TIYN}
+              courses={courses}
+            />
           </Reveal>
         </div>
       </section>
@@ -215,57 +209,6 @@ export default async function BusinessPage() {
         </div>
       </section>
 
-      {/* ── Приватность ────────────────────────────────────────────── */}
-      <section className="mx-auto max-w-6xl px-4 py-14">
-        <div className="grid gap-8 rounded-2xl border border-foreground/10 bg-background p-6 sm:p-8 lg:grid-cols-2">
-          <div>
-            <div className="flex size-11 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-700">
-              <KeyRound className="size-5" />
-            </div>
-            <h2 className="mt-4 text-2xl font-bold">
-              Согласовывать нечего: данных сотрудников у нас нет
-            </h2>
-            <p className="mt-3 text-foreground/70">
-              Обычно корпоративное обучение начинается с выгрузки списка сотрудников
-              поставщику — и с долгого согласования со службой безопасности. У нас
-              этого шага нет вовсе.
-            </p>
-            <p className="mt-3 text-foreground/70">
-              Оператором персональных данных работников остаётесь вы; платформа
-              обрабатывает только условные обозначения и сведения о ходе обучения —
-              это зафиксировано в{" "}
-              <Link href="/offer-b2b" className="underline hover:text-brand">
-                оферте для организаций
-              </Link>{" "}
-              и приложении о поручении на обработку.
-            </p>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-xl border border-emerald-600/20 bg-emerald-500/[0.05] p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800">
-                Что видим мы
-              </p>
-              <ul className="mt-2 space-y-1.5 text-sm text-foreground/75">
-                <li>код сотрудника: acme-0042</li>
-                <li>подразделение, если указали</li>
-                <li>прогресс, баллы, сертификаты</li>
-              </ul>
-            </div>
-            <div className="rounded-xl border border-foreground/10 bg-foreground/[0.02] p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-foreground/50">
-                Чего не видим
-              </p>
-              <ul className="mt-2 space-y-1.5 text-sm text-foreground/60">
-                <li>фамилий и имён</li>
-                <li>почт и телефонов</li>
-                <li>кто скрывается за кодом</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* ── FAQ ────────────────────────────────────────────────────── */}
       <section className="mx-auto max-w-3xl px-4 py-14">
         <h2 className="text-2xl font-bold sm:text-3xl">Вопросы закупщика</h2>
@@ -283,7 +226,10 @@ export default async function BusinessPage() {
             Если команда меньше пяти человек, подберём обычные доступы.
           </p>
           <div className="mt-6">
-            <BusinessCta subscriptionYearTiyn={SUBSCRIPTION_YEAR_TIYN} />
+            <BusinessCta
+              subscriptionYearTiyn={SUBSCRIPTION_YEAR_TIYN}
+              courses={courses}
+            />
           </div>
         </div>
       </section>

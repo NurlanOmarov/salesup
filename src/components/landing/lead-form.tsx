@@ -23,11 +23,14 @@ export function LeadForm({
   className,
   kind = "B2C",
   defaultSeats,
+  defaultMessage,
 }: {
   courseId?: string;
   className?: string;
   kind?: "B2C" | "B2B";
   defaultSeats?: number;
+  /** Предзаполненный комментарий: например, курсы, выбранные в калькуляторе. */
+  defaultMessage?: string;
 }) {
   const isB2b = kind === "B2B";
   const [state, formAction, isPending] = useActionState(
@@ -108,6 +111,8 @@ export function LeadForm({
         <Input
           id="lead-message"
           name="message"
+          key={defaultMessage}
+          defaultValue={defaultMessage}
           placeholder={isB2b ? "Отрасль, задачи обучения" : "Какой курс интересует"}
         />
       </div>
