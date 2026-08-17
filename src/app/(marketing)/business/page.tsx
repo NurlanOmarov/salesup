@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { BarChart3, CheckCircle2, RefreshCw, Sparkles } from "lucide-react";
 import { db } from "@/lib/db";
 import { buildSafe } from "@/lib/utils";
@@ -25,6 +26,22 @@ export async function generateMetadata(): Promise<Metadata> {
     description: s.description,
     alternates: { canonical: "/business" },
     robots: { index: !s.noindex, follow: true },
+    // Ссылку на эту страницу отправляют в мессенджере и почтой, поэтому картинка
+    // репоста своя: дефолтная — про розничные курсы, а тут разговор с компанией.
+    openGraph: {
+      type: "website",
+      url: "/business",
+      title: s.title,
+      description: s.description,
+      images: [
+        {
+          url: "/images/landing/og-business.webp",
+          width: 1200,
+          height: 675,
+          alt: "Руководитель смотрит отчёт по обучению команды",
+        },
+      ],
+    },
   };
 }
 
@@ -195,6 +212,19 @@ export default async function BusinessPage() {
       <section className="border-y border-foreground/8 bg-foreground/[0.015]">
         <div className="mx-auto max-w-6xl px-4 py-14">
           <h2 className="text-2xl font-bold sm:text-3xl">Как это работает</h2>
+
+          <Reveal>
+            <div className="relative mt-6 aspect-[16/7] overflow-hidden rounded-2xl border border-foreground/10">
+              <Image
+                src="/images/landing/business-how.webp"
+                alt="Сотрудники отдела продаж учатся каждый на своём ноутбуке в переговорной"
+                fill
+                sizes="(max-width: 1024px) 100vw, 1152px"
+                className="object-cover"
+              />
+            </div>
+          </Reveal>
+
           <ol className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {STEPS.map((s, i) => (
               <Reveal key={s.title} delay={i * 0.05}>

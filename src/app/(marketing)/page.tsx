@@ -511,6 +511,17 @@ export default async function LandingPage() {
       {/* Заявка — тёмный блок, закольцовывает страницу с hero */}
       <section id="zayavka" className="mx-auto max-w-6xl px-4 pb-20 pt-4">
         <div className="relative overflow-hidden rounded-3xl bg-slate-950 p-8 text-white md:p-12">
+          {/* Фон: размытый вечерний офис. Поверх — плотная затемняющая заливка,
+              иначе белый текст на светлых бликах теряет контраст. */}
+          <Image
+            src="/images/landing/cta-bg.webp"
+            alt=""
+            aria-hidden
+            fill
+            sizes="(max-width: 1152px) 100vw, 1152px"
+            className="pointer-events-none select-none object-cover opacity-40"
+          />
+          <div className="pointer-events-none absolute inset-0 bg-slate-950/70" />
           <div className="pointer-events-none absolute -top-24 right-0 h-72 w-72 rounded-full bg-brand/15 blur-3xl" />
           <div className="relative grid items-center gap-10 md:grid-cols-2">
             <Reveal>
