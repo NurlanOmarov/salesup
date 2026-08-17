@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { ProgressBar, relativeDays } from "@/app/(owner)/admin/orgs/org-ui";
 import { EmployeeActions, type SeatInfo } from "./employee-row";
 import { MemberLabel } from "./member-label";
+import { CreateMembers } from "./create-members";
 import { OrgKeyBar } from "../org-key-bar";
 
 export const metadata: Metadata = {
@@ -89,12 +90,19 @@ export default async function EmployeesPage({
               : "Пока никто не зарегистрировался"}
           </p>
         </div>
-        <Link
-          href={`/org/${ctx.orgId}/invites`}
-          className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-slate-950 transition-colors hover:bg-amber-400"
-        >
-          + Коды доступа
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <CreateMembers
+            orgId={ctx.orgId}
+            licenses={licenseOptions}
+            groups={groups}
+          />
+          <Link
+            href={`/org/${ctx.orgId}/invites`}
+            className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-slate-950 transition-colors hover:bg-amber-400"
+          >
+            + Коды доступа
+          </Link>
+        </div>
       </div>
 
       {/* Управление подписями сотрудников: включение шифрования / ввод фразы.
@@ -110,6 +118,10 @@ export default async function EmployeesPage({
             <p className="mx-auto mt-1 max-w-md text-sm text-foreground/55">
               Создайте коды доступа и раздайте их сотрудникам: каждый введёт свой код
               на странице регистрации, придумает пароль и сразу начнёт обучение.
+            </p>
+            <p className="mt-1 text-sm text-foreground/55">
+              Либо создайте учётные записи сами — получите список логинов и
+              временных паролей.
             </p>
             <Link
               href={`/org/${ctx.orgId}/invites`}

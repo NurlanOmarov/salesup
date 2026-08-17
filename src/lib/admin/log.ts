@@ -35,6 +35,7 @@ export type AdminAction =
   | "org.admin.create"
   | "org.seat.grant"
   | "org.seat.revoke"
+  | "org.member.create"
   | "org.member.deactivate"
   | "org.member.activate"
   | "org.member.password_reset"

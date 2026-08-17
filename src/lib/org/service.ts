@@ -204,7 +204,12 @@ export async function activateInvite(input: {
   // удалённой организации остаются в базе, а новая организация с тем же кодом
   // начинает нумерацию сначала. Раньше это приводило к 500 на странице
   // регистрации — работник видел «ошибка сервера» вместо понятного текста.
-  const login = await allocateLogin(code);
+  const inviteOrg = await db.orgInvite.findUnique({
+    where: { code },
+    select: { orgId: true },
+  });
+  if (!inviteOrg) throw new JoinError("Код не найден. Проверьте, верно ли он введён.");
+  const login = await allocateLogin(inviteOrg.orgId);
 
   return db.$transaction(async (tx) => {
     const invite = await tx.orgInvite.findUnique({
@@ -285,16 +290,10 @@ export async function activateInvite(input: {
  * уронил бы всю самозапись. Проверяем занятость и при необходимости берём
  * следующий номер.
  */
-async function allocateLogin(code: string): Promise<string> {
-  const invite = await db.orgInvite.findUnique({
-    where: { code },
-    select: { orgId: true },
-  });
-  if (!invite) throw new JoinError("Код не найден. Проверьте, верно ли он введён.");
-
+async function allocateLogin(orgId: string): Promise<string> {
   for (let attempt = 0; attempt < 25; attempt += 1) {
     const org = await db.organization.update({
-      where: { id: invite.orgId },
+      where: { id: orgId },
       data: { loginSeq: { increment: 1 } },
       select: { slug: true, loginSeq: true },
     });
@@ -308,6 +307,90 @@ async function allocateLogin(code: string): Promise<string> {
   throw new JoinError(
     "Не удалось создать учётную запись. Обратитесь к ответственному за обучение.",
   );
+}
+
+export interface CreatedMember {
+  login: string;
+  password: string;
+}
+
+/**
+ * Создать сразу несколько учётных записей работников — на случай «заведите нам
+ * десять человек прямо сейчас», когда объяснять сотрудникам регистрацию по коду
+ * некогда.
+ *
+ * Обезличивание сохраняется: учётки создаются без e-mail, имени и телефона, под
+ * теми же логинами `acme-0042`. Разница только в том, что пароль генерирует
+ * платформа, а не работник, — поэтому он временный и меняется при первом входе.
+ *
+ * Пароли возвращаются вызывающему ОДИН раз: в базе лежит только их хеш.
+ */
+export async function createMembers(input: {
+  orgId: string;
+  count: number;
+  licenseIds: string[];
+  groupId?: string | null;
+  now?: Date;
+}): Promise<CreatedMember[]> {
+  const now = input.now ?? new Date();
+
+  // Свободных мест может не хватить на всех: проверяем заранее, чтобы не создать
+  // учётки, которым нечего открыть.
+  for (const licenseId of input.licenseIds) {
+    const license = await db.orgLicense.findUnique({
+      where: { id: licenseId },
+      select: { seatsTotal: true, orgId: true, course: { select: { title: true } } },
+    });
+    if (!license || license.orgId !== input.orgId) {
+      throw new SeatError("Лицензия не найдена");
+    }
+    const used = await db.enrollment.count({
+      where: { licenseId, revokedAt: null },
+    });
+    const free = Math.max(0, license.seatsTotal - used);
+    if (free < input.count) {
+      throw new SeatError(
+        `Свободных мест на курсе «${license.course.title}» — ${free}, а работников создаётся ${input.count}.`,
+      );
+    }
+  }
+
+  const created: CreatedMember[] = [];
+  for (let i = 0; i < input.count; i += 1) {
+    const login = await allocateLogin(input.orgId);
+    const password = generateTempPassword();
+    const passwordHash = await hashPassword(password);
+
+    await db.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          login,
+          // ПДн не собираем и здесь: ни e-mail, ни имени, ни телефона.
+          role: "STUDENT",
+          passwordHash,
+          mustChangePassword: true,
+        },
+        select: { id: true },
+      });
+
+      await tx.orgMembership.create({
+        data: {
+          orgId: input.orgId,
+          userId: user.id,
+          role: "ORG_LEARNER",
+          groupId: input.groupId ?? null,
+        },
+      });
+
+      for (const licenseId of input.licenseIds) {
+        await grantSeat({ orgId: input.orgId, userId: user.id, licenseId, now, tx });
+      }
+    });
+
+    created.push({ login, password });
+  }
+
+  return created;
 }
 
 /**

@@ -6,7 +6,12 @@ import { safeAction } from "@/lib/safe-action";
 import { db } from "@/lib/db";
 import { writeAdminLog } from "@/lib/admin/log";
 import { assertOrgScope, assertOrgWritable, requireOrgAdmin } from "@/lib/org/guards";
-import { createInvite, grantSeat, revokeSeat } from "@/lib/org/service";
+import {
+  createInvite,
+  createMembers,
+  grantSeat,
+  revokeSeat,
+} from "@/lib/org/service";
 import { hashPassword } from "@/lib/auth/password";
 import { generateTempPassword } from "@/lib/auth/temp-password";
 import { enqueue } from "@/lib/jobs/enqueue";
@@ -124,6 +129,63 @@ export const revokeInviteAction = safeAction(
 
     revalidatePath("/org/invites");
     return { ok: true };
+  },
+);
+
+/**
+ * Создать работников пачкой: логины и временные пароли генерирует платформа.
+ * Персональные данные по-прежнему не принимаются — ни одного поля для них в
+ * схеме нет, и появиться оно не должно (оферта /offer-b2b, п. 10.1).
+ */
+export const createMembersAction = safeAction(
+  {
+    schema: z.object({
+      orgId: z.string().optional(),
+      count: z.coerce.number().int().min(1).max(100),
+      licenseIds: z.array(z.string()).min(1, "Выберите хотя бы один курс"),
+      groupId: z.string().optional(),
+    }),
+    auth: "orgAdmin",
+  },
+  async (input) => {
+    const ctx = await writableCtx(input.orgId);
+
+    const licenses = await db.orgLicense.findMany({
+      where: { id: { in: input.licenseIds } },
+      select: { id: true, orgId: true },
+    });
+    if (licenses.length !== input.licenseIds.length) {
+      throw new Error("Лицензия не найдена");
+    }
+    for (const l of licenses) assertOrgScope(l, ctx);
+
+    if (input.groupId) {
+      const group = await db.orgGroup.findUnique({
+        where: { id: input.groupId },
+        select: { orgId: true },
+      });
+      assertOrgScope(group, ctx);
+    }
+
+    const members = await createMembers({
+      orgId: ctx.orgId,
+      count: input.count,
+      licenseIds: input.licenseIds,
+      groupId: input.groupId ?? null,
+    });
+
+    await writeAdminLog({
+      actorId: ctx.userId,
+      action: "org.member.create",
+      meta: {
+        orgId: ctx.orgId,
+        count: members.length,
+        licenseIds: input.licenseIds,
+      },
+    });
+
+    revalidatePath(`/org/${ctx.orgId}/employees`);
+    return { members };
   },
 );
 

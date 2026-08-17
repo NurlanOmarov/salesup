@@ -260,6 +260,39 @@ test("работник регистрируется по коду без еди�
   expect(res).toBe(200);
 });
 
+test("ответственный создаёт работников сам: логины, пароли и места", async ({
+  page,
+}) => {
+  await login(page, ADMIN_EMAIL, ADMIN_PASS);
+  await page.goto(`/org/${orgId}/employees`);
+
+  await page.getByRole("button", { name: "Создать работников" }).click();
+  await page.getByLabel("Сколько работников").fill("1");
+  await page.getByRole("button", { name: "Создать", exact: true }).click();
+
+  await expect(page.getByText(/Создано учётных записей: 1/)).toBeVisible();
+
+  // Учётка создана без единого персонального данного — как и при самозаписи.
+  const membership = await db.orgMembership.findFirstOrThrow({
+    where: { orgId, role: "ORG_LEARNER" },
+    orderBy: { joinedAt: "desc" },
+    include: { user: true },
+  });
+  expect(membership.user.email).toBeNull();
+  expect(membership.user.name).toBeNull();
+  expect(membership.user.phone).toBeNull();
+  expect(membership.user.login).toMatch(new RegExp(`^${ORG_SLUG}-\\d{4}$`));
+  // Пароль временный: при первом входе платформа заставит его сменить.
+  expect(membership.user.mustChangePassword).toBe(true);
+
+  // Место выдано из той же лицензии, что и при регистрации по коду.
+  const enrollment = await db.enrollment.findFirstOrThrow({
+    where: { userId: membership.userId, licenseId },
+  });
+  expect(enrollment.revokedAt).toBeNull();
+  expect(enrollment.source).toBe("B2B");
+});
+
 test("код одноразовый: повторная регистрация отклоняется", async ({ page }) => {
   const invite = await db.orgInvite.findFirstOrThrow({
     where: { orgId },
@@ -313,10 +346,12 @@ test("отзыв места освобождает его в пуле лицен
   const worker = await db.user.findUniqueOrThrow({
     where: { login: `${ORG_SLUG}-0001` },
   });
+  // Считаем относительно: сколько мест занято сейчас — зависит от того, сколько
+  // работников завели предыдущие тесты. Проверяем сам факт освобождения места.
   const before = await db.enrollment.count({
     where: { licenseId, revokedAt: null },
   });
-  expect(before).toBe(1);
+  expect(before).toBeGreaterThan(0);
 
   await login(page, ADMIN_EMAIL, ADMIN_PASS);
   await page.goto(`/org/${orgId}/employees`);
@@ -329,10 +364,11 @@ test("отзыв места освобождает его в пуле лицен
   await revokeSeat({ orgId, enrollmentId: enrollment.id });
 
   const after = await db.enrollment.count({ where: { licenseId, revokedAt: null } });
-  expect(after).toBe(0);
+  expect(after).toBe(before - 1);
 
-  // Доступ к уроку закрылся сразу.
+  // Доступ к уроку закрылся сразу. Проверяем по ключу AES: он в БД, а плейлист
+  // читает файл из медиатеки, которой в тестовой среде может не быть.
   await login(page, `${ORG_SLUG}-0001`, WORKER_PASS);
-  const res = await pageFetchStatus(page, `/api/video/playlist/${paidLessonId}`);
+  const res = await pageFetchStatus(page, `/api/video/key/${paidLessonId}`);
   expect(res).toBe(403);
 });
