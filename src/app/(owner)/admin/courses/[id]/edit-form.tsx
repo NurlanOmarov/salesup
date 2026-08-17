@@ -6,11 +6,7 @@ import { Loader2, Upload, CheckCircle2, AlertCircle, Sparkles, Gauge } from "luc
 import type { RatesMap } from "@/lib/currency";
 import { coverPublicUrl } from "@/lib/utils";
 import { ACCESS_DURATIONS, ACCESS_DURATION_LABELS } from "@/lib/admin/enrollment";
-import {
-  defaultCoursePriceTiyn,
-  isPriceWithinRange,
-  PRICE_RANGE_TIYN,
-} from "@/lib/pricing";
+import { formatDuration, isPriceWithinRange, priceBand } from "@/lib/pricing";
 import {
   updateCourseAction,
   uploadCoverAction,
@@ -87,9 +83,12 @@ function preview(
 export function CourseEditForm({
   course,
   rates,
+  totalSec,
 }: {
   course: CourseFields;
   rates: RatesMap;
+  /** Суммарная длительность опубликованных уроков — задаёт ступень цены. */
+  totalSec: number | null;
 }) {
   const [title, setTitle] = useState(course.title);
   const [subtitle, setSubtitle] = useState(course.subtitle ?? "");
@@ -97,6 +96,8 @@ export function CourseEditForm({
   const [audience, setAudience] = useState(course.audience);
   const [description, setDescription] = useState(course.description);
   const [priceByn, setPriceByn] = useState(course.priceTiyn / 100);
+  // Ступень и коридор пересчитываются при смене класса прямо в форме.
+  const band = priceBand(audience, totalSec);
   const [oldPriceByn, setOldPriceByn] = useState(
     course.oldPriceTiyn ? course.oldPriceTiyn / 100 : 0,
   );
@@ -415,21 +416,21 @@ export function CourseEditForm({
               value={priceByn}
               onChange={(e) => setPriceByn(Number(e.target.value) || 0)}
             />
-            {/* Подсказка по сетке docs/PRICING-PLAN.md: отраслевой — 490 Br,
-                общая тема — 320 Br. Не запрет, а напоминание: цену вне коридора
-                легко поставить случайно, а заметить потом трудно. */}
+            {/* Подсказка по сетке docs/PRICING-PLAN.md: цена зависит от класса
+                И объёма курса. Не запрет, а напоминание: цену вне коридора легко
+                поставить случайно, а заметить потом трудно. */}
             <p className="mt-1 text-xs text-foreground/50">
-              Рекомендовано для этого класса:{" "}
+              {formatDuration(totalSec)} · ступень «{band.tier.label}» ·
+              рекомендовано{" "}
               <button
                 type="button"
-                onClick={() => setPriceByn(defaultCoursePriceTiyn(audience) / 100)}
+                onClick={() => setPriceByn(band.price / 100)}
                 className="underline hover:text-foreground"
               >
-                {defaultCoursePriceTiyn(audience) / 100} Br
+                {band.price / 100} Br
               </button>{" "}
-              (коридор {PRICE_RANGE_TIYN[audience].min / 100}–
-              {PRICE_RANGE_TIYN[audience].max / 100} Br)
-              {!isPriceWithinRange(audience, Math.round(priceByn * 100)) ? (
+              (коридор {band.min / 100}–{band.max / 100} Br)
+              {!isPriceWithinRange(audience, Math.round(priceByn * 100), totalSec) ? (
                 <span className="ml-1 text-amber-700">— цена вне коридора</span>
               ) : null}
             </p>

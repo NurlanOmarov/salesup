@@ -4,13 +4,16 @@ import { AlertTriangle, CheckCircle2, Info } from "lucide-react";
 import { db } from "@/lib/db";
 import {
   BASE_PRICE_TIYN,
+  formatDuration,
   isPriceWithinRange,
   MIN_B2B_SEATS,
-  PRICE_RANGE_TIYN,
+  PRICE_MATRIX,
+  priceBand,
   quoteSeats,
   SEAT_TIERS,
   SUBSCRIPTION_MONTH_TIYN,
   SUBSCRIPTION_YEAR_TIYN,
+  VOLUME_TIERS,
 } from "@/lib/pricing";
 import {
   AUDIENCE_EXAMPLES,
@@ -38,7 +41,7 @@ export const dynamic = "force-dynamic";
  * Обоснование каждой цифры — docs/PRICING-PLAN.md; здесь только рабочая выжимка.
  */
 export default async function PricingPage() {
-  const courses = await db.course.findMany({
+  const rows = await db.course.findMany({
     orderBy: [{ status: "asc" }, { sortOrder: "asc" }],
     select: {
       id: true,
@@ -46,11 +49,38 @@ export default async function PricingPage() {
       audience: true,
       priceTiyn: true,
       status: true,
+      modules: {
+        select: {
+          lessons: {
+            where: { status: "PUBLISHED" },
+            select: { durationSec: true },
+          },
+        },
+      },
     },
   });
 
+  // Объём курса — сумма длительностей опубликованных уроков. Он же определяет
+  // ступень цены: 39-минутный курс и шестичасовой не могут стоить одинаково.
+  const courses = rows.map((c) => {
+    const lessons = c.modules.flatMap((m) => m.lessons);
+    const totalSec = lessons.reduce((sum, l) => sum + (l.durationSec ?? 0), 0);
+    return {
+      id: c.id,
+      title: c.title,
+      audience: c.audience,
+      priceTiyn: c.priceTiyn,
+      status: c.status,
+      lessons: lessons.length,
+      totalSec: totalSec || null,
+      band: priceBand(c.audience, totalSec || null),
+    };
+  });
+
   const published = courses.filter((c) => c.status === "PUBLISHED");
-  const offGrid = courses.filter((c) => !isPriceWithinRange(c.audience, c.priceTiyn));
+  const offGrid = courses.filter(
+    (c) => !isPriceWithinRange(c.audience, c.priceTiyn, c.totalSec),
+  );
 
   return (
     <main>
@@ -69,27 +99,55 @@ export default async function PricingPage() {
           витрины. Отраслевой дороже: у́же аудитория и меньше конкурентов.
         </p>
 
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          {(["SPECIALIZED", "EVERYONE"] as const).map((audience) => (
-            <div
-              key={audience}
-              className="rounded-xl border border-foreground/10 bg-background p-4"
-            >
-              <p className="text-sm font-semibold">{AUDIENCE_TITLE[audience]}</p>
-              <p className="mt-0.5 text-xs text-foreground/55">
-                {AUDIENCE_EXAMPLES[audience]}
-              </p>
-              <p className="mt-3 text-3xl font-bold tabular-nums">
-                {formatAmount(BASE_PRICE_TIYN[audience] / 100)}{" "}
-                <span className="text-base font-medium text-foreground/60">BYN</span>
-              </p>
-              <p className="mt-1 text-sm text-foreground/60">
-                коридор {formatAmount(PRICE_RANGE_TIYN[audience].min / 100)}–
-                {formatAmount(PRICE_RANGE_TIYN[audience].max / 100)} BYN
-              </p>
-            </div>
-          ))}
+        <div className="mt-4 overflow-hidden rounded-xl border border-foreground/10 bg-background">
+          <table className="w-full text-sm">
+            <thead className="border-b border-foreground/10 bg-foreground/[0.02] text-left text-xs uppercase tracking-wide text-foreground/50">
+              <tr>
+                <th className="px-4 py-3 font-medium">Объём видео</th>
+                {(["SPECIALIZED", "EVERYONE"] as const).map((a) => (
+                  <th key={a} className="px-4 py-3 font-medium">
+                    {AUDIENCE_TITLE[a]}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {VOLUME_TIERS.map((tier) => (
+                <tr key={tier.key} className="border-b border-foreground/5 last:border-0">
+                  <td className="px-4 py-3">
+                    <span className="font-medium">{tier.label}</span>
+                    <span className="ml-2 text-xs text-foreground/50">{tier.hint}</span>
+                  </td>
+                  {(["SPECIALIZED", "EVERYONE"] as const).map((a) => {
+                    const band = PRICE_MATRIX[a][tier.key];
+                    return (
+                      <td key={a} className="px-4 py-3">
+                        <span className="text-lg font-bold tabular-nums">
+                          {formatAmount(band.price / 100)} BYN
+                        </span>
+                        <p className="text-xs text-foreground/50">
+                          коридор {formatAmount(band.min / 100)}–
+                          {formatAmount(band.max / 100)}
+                        </p>
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
+
+        <p className="mt-2 text-xs text-foreground/55">
+          {AUDIENCE_TITLE.SPECIALIZED}: {AUDIENCE_EXAMPLES.SPECIALIZED}.{" "}
+          {AUDIENCE_TITLE.EVERYONE}: {AUDIENCE_EXAMPLES.EVERYONE}.
+        </p>
+        <p className="mt-2 text-xs text-foreground/55">
+          Цена растёт с объёмом ступенями, а не пропорционально часам: мы продаём
+          результат, а не хронометраж, а AI-практика собирается на любой курс
+          независимо от его длины. Курс без видео считается стандартным, пока
+          фабрика не зальёт уроки.
+        </p>
 
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
           <MiniCard
@@ -132,6 +190,7 @@ export default async function PricingPage() {
                 <tr>
                   <th className="px-4 py-3 font-medium">Курс</th>
                   <th className="px-4 py-3 font-medium">Класс</th>
+                  <th className="px-4 py-3 font-medium">Объём</th>
                   <th className="px-4 py-3 font-medium">Цена</th>
                   <th className="px-4 py-3 font-medium">Рекомендовано</th>
                   <th className="px-4 py-3 font-medium">Статус</th>
@@ -139,7 +198,7 @@ export default async function PricingPage() {
               </thead>
               <tbody>
                 {courses.map((c) => {
-                  const ok = isPriceWithinRange(c.audience, c.priceTiyn);
+                  const ok = isPriceWithinRange(c.audience, c.priceTiyn, c.totalSec);
                   return (
                     <tr key={c.id} className="border-b border-foreground/5 last:border-0">
                       <td className="px-4 py-3">
@@ -158,11 +217,17 @@ export default async function PricingPage() {
                       <td className="px-4 py-3 text-foreground/70">
                         {AUDIENCE_TITLE[c.audience]}
                       </td>
+                      <td className="px-4 py-3 text-foreground/70">
+                        {formatDuration(c.totalSec)}
+                        <p className="text-xs text-foreground/45">
+                          {c.lessons} уроков · {c.band.tier.label}
+                        </p>
+                      </td>
                       <td className="px-4 py-3 font-medium tabular-nums">
                         {formatAmount(c.priceTiyn / 100)} BYN
                       </td>
                       <td className="px-4 py-3 text-foreground/60 tabular-nums">
-                        {formatAmount(BASE_PRICE_TIYN[c.audience] / 100)} BYN
+                        {formatAmount(c.band.price / 100)} BYN
                       </td>
                       <td className="px-4 py-3">
                         {ok ? (

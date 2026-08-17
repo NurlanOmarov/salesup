@@ -9,6 +9,8 @@ import {
   quoteSeats,
   seatTier,
   SUBSCRIPTION_YEAR_TIYN,
+  volumeTier,
+  formatDuration,
 } from "./index";
 
 describe("базовые цены", () => {
@@ -118,5 +120,78 @@ describe("quoteSeats", () => {
     const q = quoteSeats(50, byn(490));
     expect(q.pricePerSeatTiyn).toBeLessThan(byn(490));
     expect(q.pricePerSeatTiyn).toBeGreaterThan(byn(300));
+  });
+});
+
+describe("ступени объёма", () => {
+  it("границы 1 и 3 часа определяют ступень", () => {
+    expect(volumeTier(39 * 60).key).toBe("express"); // медпреды — 39 минут
+    expect(volumeTier(3599).key).toBe("express");
+    expect(volumeTier(3600).key).toBe("standard"); // ровно час — уже стандарт
+    expect(volumeTier(2 * 3600).key).toBe("standard");
+    expect(volumeTier(3 * 3600).key).toBe("extended");
+    expect(volumeTier(5 * 3600 + 51 * 60).key).toBe("extended"); // кухни
+  });
+
+  it("курс без видео считается стандартным, а не бесплатным", () => {
+    // Каркас «в разработке»: цена пересчитается, когда фабрика зальёт уроки.
+    expect(volumeTier(null).key).toBe("standard");
+    expect(volumeTier(0).key).toBe("standard");
+    expect(defaultCoursePriceTiyn("SPECIALIZED", null)).toBe(byn(490));
+  });
+
+  it("цена растёт с объёмом, но не пропорционально часам", () => {
+    const express = defaultCoursePriceTiyn("SPECIALIZED", 40 * 60);
+    const standard = defaultCoursePriceTiyn("SPECIALIZED", 2 * 3600);
+    const extended = defaultCoursePriceTiyn("SPECIALIZED", 6 * 3600);
+
+    expect(express).toBe(byn(350));
+    expect(standard).toBe(byn(490));
+    expect(extended).toBe(byn(590));
+
+    // Девятикратная разница в длительности даёт менее чем двукратную в цене:
+    // AI-практика собирается на любой курс независимо от его длины.
+    expect(extended / express).toBeLessThan(2);
+  });
+
+  it("отраслевой дороже общей темы на каждой ступени", () => {
+    for (const seconds of [30 * 60, 2 * 3600, 8 * 3600]) {
+      expect(defaultCoursePriceTiyn("SPECIALIZED", seconds)).toBeGreaterThan(
+        defaultCoursePriceTiyn("EVERYONE", seconds),
+      );
+    }
+  });
+
+  it("коридор считается по фактическому объёму курса", () => {
+    // 350 корректно для 40-минутного курса и мало для шестичасового.
+    expect(isPriceWithinRange("SPECIALIZED", byn(350), 40 * 60)).toBe(true);
+    expect(isPriceWithinRange("SPECIALIZED", byn(350), 6 * 3600)).toBe(false);
+    // 490 велика для экспресса — ровно тот случай, который и надо было поймать.
+    expect(isPriceWithinRange("SPECIALIZED", byn(490), 40 * 60)).toBe(false);
+  });
+
+  it("ступени не пересекаются и покрывают всю шкалу", () => {
+    const keys = [0, 1, 3599, 3600, 10_799, 10_800, 100_000].map(
+      (s) => volumeTier(s).key,
+    );
+    expect(keys).toEqual([
+      "standard", // 0 — видео нет
+      "express",
+      "express",
+      "standard",
+      "standard",
+      "extended",
+      "extended",
+    ]);
+  });
+});
+
+describe("formatDuration", () => {
+  it("человекочитаемая подпись объёма", () => {
+    expect(formatDuration(39 * 60)).toBe("39 мин");
+    expect(formatDuration(3600)).toBe("1 ч");
+    expect(formatDuration(5 * 3600 + 51 * 60)).toBe("5 ч 51 мин");
+    expect(formatDuration(null)).toBe("нет видео");
+    expect(formatDuration(0)).toBe("нет видео");
   });
 });

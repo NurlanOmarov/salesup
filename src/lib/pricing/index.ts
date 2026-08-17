@@ -17,22 +17,107 @@ export const TIYN_PER_BYN = 100;
 export const byn = (amount: number): number => Math.round(amount * TIYN_PER_BYN);
 
 /**
- * Класс курса определяет цену. Совпадает с осью витрины `Course.audience`:
- * SPECIALIZED — отраслевой курс (туризм, кухни, обувь, недвижимость, медпреды,
- * B2B), EVERYONE — общая тема (тайм-менеджмент, СПИН, переговоры).
+ * Цену определяют две оси: КЛАСС курса и его ОБЪЁМ.
  *
- * Отраслевые дороже: у́же аудитория, выше готовность платить, меньше конкурентов.
- * Общие темы держим на уровне legacy-видео — сегмент насыщеннее.
+ * Класс совпадает с осью витрины `Course.audience`: SPECIALIZED — отраслевой
+ * курс (туризм, кухни, обувь, недвижимость, медпреды, B2B), EVERYONE — общая
+ * тема (тайм-менеджмент, СПИН, переговоры). Отраслевые дороже: у́же аудитория,
+ * выше готовность платить, меньше конкурентов.
+ *
+ * Объём — вторая ось, и вот почему она понадобилась: курсы различаются по
+ * длительности в девять раз (39 минут у медпредов против 5 ч 51 м у кухонь).
+ * Одна цена на такой разброс злит покупателя короткого курса — он видит
+ * длительность прямо на странице и делает вывод сам.
+ *
+ * При этом цена НЕ пропорциональна часам: мы продаём результат, а не хронометраж,
+ * иначе выгодно лить воду. К тому же AI-практика (наставник, тренажёры,
+ * симулятор, карточки) собирается на любой курс независимо от его длины — эта
+ * часть ценности от объёма не зависит вовсе. Отсюда ступени, а не коэффициент.
  */
-export const BASE_PRICE_TIYN: Record<CourseAudience, number> = {
-  SPECIALIZED: byn(490),
-  EVERYONE: byn(320),
+export type VolumeKey = "express" | "standard" | "extended";
+
+export interface VolumeTier {
+  key: VolumeKey;
+  label: string;
+  hint: string;
+  /** Верхняя граница суммарной длительности видео, секунды. */
+  maxSeconds: number;
+}
+
+/** Порядок важен: ищем первую ступень, в которую укладывается длительность. */
+export const VOLUME_TIERS: readonly VolumeTier[] = [
+  { key: "express", label: "Экспресс", hint: "до 1 часа", maxSeconds: 3600 },
+  { key: "standard", label: "Стандарт", hint: "1–3 часа", maxSeconds: 3 * 3600 },
+  {
+    key: "extended",
+    label: "Расширенный",
+    hint: "от 3 часов",
+    maxSeconds: Number.POSITIVE_INFINITY,
+  },
+] as const;
+
+export interface PriceBand {
+  min: number;
+  price: number;
+  max: number;
+}
+
+/**
+ * Матрица «класс × объём». Стандартная ступень совпадает с медианами тарифного
+ * исследования (490 и 320), экспресс и расширенный отходят от них в пределах,
+ * которые ещё читаются как та же продуктовая линейка.
+ */
+export const PRICE_MATRIX: Record<CourseAudience, Record<VolumeKey, PriceBand>> = {
+  SPECIALIZED: {
+    express: { min: byn(290), price: byn(350), max: byn(420) },
+    standard: { min: byn(450), price: byn(490), max: byn(590) },
+    extended: { min: byn(540), price: byn(590), max: byn(690) },
+  },
+  EVERYONE: {
+    express: { min: byn(190), price: byn(250), max: byn(290) },
+    standard: { min: byn(250), price: byn(320), max: byn(390) },
+    extended: { min: byn(350), price: byn(390), max: byn(460) },
+  },
 };
 
-/** Допустимый коридор цены по классу — подсказка админу, а не жёсткий запрет. */
+/**
+ * Ступень объёма по суммарной длительности видео. `null` (видео ещё не залито,
+ * курс-каркас) считаем стандартом — это нейтральное предположение, которое
+ * пересчитается само, когда фабрика зальёт уроки.
+ */
+export function volumeTier(totalSeconds: number | null): VolumeTier {
+  if (totalSeconds === null || totalSeconds <= 0) return VOLUME_TIERS[1]!;
+  return VOLUME_TIERS.find((t) => totalSeconds < t.maxSeconds) ?? VOLUME_TIERS[2]!;
+}
+
+/** Рекомендованная цена и коридор для конкретного курса. */
+export function priceBand(
+  audience: CourseAudience,
+  totalSeconds: number | null,
+): PriceBand & { tier: VolumeTier } {
+  const tier = volumeTier(totalSeconds);
+  return { ...PRICE_MATRIX[audience][tier.key], tier };
+}
+
+/**
+ * Базовая цена класса (стандартный объём). Оставлена для мест, где длительность
+ * курса недоступна, — например для витринных прикидок.
+ */
+export const BASE_PRICE_TIYN: Record<CourseAudience, number> = {
+  SPECIALIZED: PRICE_MATRIX.SPECIALIZED.standard.price,
+  EVERYONE: PRICE_MATRIX.EVERYONE.standard.price,
+};
+
+/** Коридор класса при стандартном объёме. */
 export const PRICE_RANGE_TIYN: Record<CourseAudience, { min: number; max: number }> = {
-  SPECIALIZED: { min: byn(450), max: byn(590) },
-  EVERYONE: { min: byn(250), max: byn(390) },
+  SPECIALIZED: {
+    min: PRICE_MATRIX.SPECIALIZED.standard.min,
+    max: PRICE_MATRIX.SPECIALIZED.standard.max,
+  },
+  EVERYONE: {
+    min: PRICE_MATRIX.EVERYONE.standard.min,
+    max: PRICE_MATRIX.EVERYONE.standard.max,
+  },
 };
 
 /** Годовая подписка на библиотеку — ориентир 2,5–3 медианных отраслевых курса. */
@@ -44,18 +129,34 @@ export const SUBSCRIPTION_MONTH_TIYN = byn(129);
 /** Скидка пакета «отраслевой + 2 общих» к сумме отдельных цен. */
 export const BUNDLE_DISCOUNT = 0.17;
 
-/** Цена курса по умолчанию для его класса. */
-export function defaultCoursePriceTiyn(audience: CourseAudience): number {
-  return BASE_PRICE_TIYN[audience];
+/**
+ * Цена курса по умолчанию. `totalSeconds` — суммарная длительность видео
+ * опубликованных уроков; без неё берётся стандартная ступень.
+ */
+export function defaultCoursePriceTiyn(
+  audience: CourseAudience,
+  totalSeconds: number | null = null,
+): number {
+  return priceBand(audience, totalSeconds).price;
 }
 
 /** Внутри ли цена рекомендованного коридора (для предупреждения в админке). */
 export function isPriceWithinRange(
   audience: CourseAudience,
   priceTiyn: number,
+  totalSeconds: number | null = null,
 ): boolean {
-  const range = PRICE_RANGE_TIYN[audience];
-  return priceTiyn >= range.min && priceTiyn <= range.max;
+  const band = priceBand(audience, totalSeconds);
+  return priceTiyn >= band.min && priceTiyn <= band.max;
+}
+
+/** «5 ч 51 м» / «39 мин» / «нет видео» — подпись объёма для интерфейса. */
+export function formatDuration(totalSeconds: number | null): string {
+  if (!totalSeconds || totalSeconds <= 0) return "нет видео";
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.round((totalSeconds % 3600) / 60);
+  if (hours === 0) return `${minutes} мин`;
+  return minutes === 0 ? `${hours} ч` : `${hours} ч ${minutes} мин`;
 }
 
 /** Цена пакета из нескольких курсов: сумма минус скидка, округление до 10 BYN вниз. */

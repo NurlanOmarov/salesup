@@ -1285,9 +1285,14 @@ async function upsertCourse(spec: CourseSpec) {
     }
   }
 
-  // Цена — из класса курса (lib/pricing), если спек её не переопределяет.
-  const coursePriceTiyn = (s: CourseSpec): number =>
-    s.priceTiyn ?? defaultCoursePriceTiyn(s.audience ?? "SPECIALIZED");
+  // Цена — из класса курса и его объёма (lib/pricing), если спек не переопределяет.
+  const coursePriceTiyn = (s: CourseSpec): number => {
+    if (s.priceTiyn) return s.priceTiyn;
+    const totalSec = s.modules
+      .flatMap((m) => m.lessons)
+      .reduce((sum, l) => sum + (l.durationSec ?? 0), 0);
+    return defaultCoursePriceTiyn(s.audience ?? "SPECIALIZED", totalSec || null);
+  };
 
   const course = await db.course.upsert({
     where: { slug: spec.slug },

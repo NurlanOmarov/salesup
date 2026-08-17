@@ -49,12 +49,29 @@ export default async function CourseEditPage({
         coverAlt: true,
         seoNoindex: true,
         certificateEnabled: true,
-        modules: { select: { id: true, title: true, _count: { select: { lessons: true } } } },
+        modules: {
+          select: {
+            id: true,
+            title: true,
+            _count: { select: { lessons: true } },
+            // Длительность опубликованных уроков определяет ступень цены
+            // (lib/pricing): 40-минутный курс не может стоить как шестичасовой.
+            lessons: {
+              where: { status: "PUBLISHED" },
+              select: { durationSec: true },
+            },
+          },
+        },
       },
     }),
     currency.getRates(),
   ]);
   if (!course) notFound();
+
+  const totalSec =
+    course.modules
+      .flatMap((m) => m.lessons)
+      .reduce((sum, l) => sum + (l.durationSec ?? 0), 0) || null;
 
   const rates = ratesPayload.rates;
   const prices = buildMultiPrice(course.priceTiyn, rates);
@@ -90,7 +107,7 @@ export default async function CourseEditPage({
         </div>
       </div>
 
-      <CourseEditForm course={course} rates={rates} />
+      <CourseEditForm course={course} rates={rates} totalSec={totalSec} />
     </main>
   );
 }
