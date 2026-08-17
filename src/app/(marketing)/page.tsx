@@ -21,6 +21,7 @@ import {
 import { db } from "@/lib/db";
 import { getSupportContacts } from "@/lib/seo/settings";
 import { buttonVariants } from "@/components/ui/button";
+import { quoteSeats, SUBSCRIPTION_YEAR_TIYN } from "@/lib/pricing";
 import { cn, buildSafe } from "@/lib/utils";
 import { Reveal } from "@/components/landing/reveal";
 import { Faq } from "@/components/landing/faq";
@@ -93,6 +94,9 @@ async function getReviews(): Promise<ReviewItem[]> {
 
 export default async function LandingPage() {
   const reviews = await getReviews();
+  // Лучшая цена корпоративного места — для тизера «Для компаний».
+  const b2bBestPerSeat = quoteSeats(20, SUBSCRIPTION_YEAR_TIYN).pricePerSeatTiyn / 100;
+  const b2bBestPerMonth = Math.round(b2bBestPerSeat / 12);
   // Контакты — из SeoSettings (правятся в /admin/seo без деплоя).
   const { whatsapp: wa, telegram: tg } = await getSupportContacts();
 
@@ -457,6 +461,15 @@ export default async function LandingPage() {
                 Годовой доступ ко всем курсам для команды, кабинет компании с
                 прогрессом каждого сотрудника и AI-тренажёры. Персональные данные
                 сотрудников при этом остаются у вас — мы их не получаем.
+              </p>
+              {/* Порядок суммы прямо в тизере: иначе часть читателей не кликнет,
+                  не понимая, их ли это ценовой сегмент. Считает lib/pricing. */}
+              <p className="mt-3 text-foreground/80">
+                <span className="text-xl font-bold">
+                  от {b2bBestPerSeat.toLocaleString("ru-RU")} BYN
+                </span>{" "}
+                за сотрудника в год — {b2bBestPerMonth.toLocaleString("ru-RU")} BYN
+                в месяц
               </p>
               <Link
                 href="/business"

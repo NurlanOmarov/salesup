@@ -11,7 +11,7 @@ import {
 import { db } from "@/lib/db";
 import { buildSafe } from "@/lib/utils";
 import { getStaticPageSeo } from "@/lib/seo/static-pages";
-import { SUBSCRIPTION_YEAR_TIYN } from "@/lib/pricing";
+import { MIN_B2B_SEATS, quoteSeats, SUBSCRIPTION_YEAR_TIYN } from "@/lib/pricing";
 import { AudienceSwitch } from "@/components/landing/audience-switch";
 import { Reveal } from "@/components/landing/reveal";
 import { Faq } from "@/components/landing/faq";
@@ -113,6 +113,12 @@ export default async function BusinessPage() {
     0,
   );
 
+  // Крайние точки сетки: лучшая цена места (максимальный объём) и цена на входе.
+  const bestPerSeat = quoteSeats(20, SUBSCRIPTION_YEAR_TIYN).pricePerSeatTiyn / 100;
+  const entryPerSeat =
+    quoteSeats(MIN_B2B_SEATS, SUBSCRIPTION_YEAR_TIYN).pricePerSeatTiyn / 100;
+  const bestPerMonth = Math.round(bestPerSeat / 12);
+
   return (
     <main>
       {/* ── Первый экран ───────────────────────────────────────────── */}
@@ -130,6 +136,24 @@ export default async function BusinessPage() {
               Тренинг забывается за месяц. Годовой доступ к платформе учит каждого
               сотрудника — включая тех, кто придёт к вам через полгода, — и показывает,
               кто действительно занимается.
+            </p>
+
+            {/* Цена в первом экране: человек, который сканирует страницу за пять
+                секунд, должен понять свой ли это ценовой сегмент, не долистывая
+                до калькулятора. Цифры считает lib/pricing — расхождение с
+                калькулятором и счётом невозможно. */}
+            <div className="mt-6 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <p className="text-2xl font-bold sm:text-3xl">
+                от {bestPerSeat.toLocaleString("ru-RU")} BYN
+              </p>
+              <p className="text-foreground/70">
+                за сотрудника в год — это{" "}
+                {bestPerMonth.toLocaleString("ru-RU")} BYN в месяц
+              </p>
+            </div>
+            <p className="mt-1 text-sm text-foreground/55">
+              При команде от 20 человек. Для {MIN_B2B_SEATS} сотрудников —{" "}
+              {entryPerSeat.toLocaleString("ru-RU")} BYN за каждого.
             </p>
 
             <ul className="mt-6 space-y-2.5">
