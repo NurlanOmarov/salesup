@@ -54,6 +54,8 @@ const serverSchema = z.object({
   SMTP_PASSWORD: z.string().optional(),
   SMTP_FROM: z.string().optional(),
   OWNER_EMAIL: z.string().email(),
+  // Куда падают уведомления о новых заявках с сайта. По умолчанию — почта владельца.
+  LEADS_NOTIFY_EMAIL: z.string().email().default("omarov.nb@gmail.com"),
 });
 
 const clientSchema = z.object({

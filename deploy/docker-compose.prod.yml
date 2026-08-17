@@ -54,6 +54,8 @@ services:
       AUTH_COOKIE_INSECURE: ${AUTH_COOKIE_INSECURE:-true}  # IP без TLS → cookie без Secure
       EMAIL_ENABLED: ${EMAIL_ENABLED:-false}
       OWNER_EMAIL: ${OWNER_EMAIL}
+      # app только ставит письма в очередь (адресат заявок), сам SMTP не трогает
+      LEADS_NOTIFY_EMAIL: ${LEADS_NOTIFY_EMAIL:-omarov.nb@gmail.com}
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
     volumes:
       - media:/media                              # app пишет обложки/OG сам (admin upload) + читает медиа фабрики
@@ -86,6 +88,7 @@ services:
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_FROM: ${SMTP_FROM:-}
       OWNER_EMAIL: ${OWNER_EMAIL}
+      LEADS_NOTIFY_EMAIL: ${LEADS_NOTIFY_EMAIL:-omarov.nb@gmail.com}
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
     volumes:
       - media:/media                             # worker (фабрика) пишет медиа

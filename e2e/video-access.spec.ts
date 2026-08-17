@@ -2,6 +2,19 @@ import { test, expect } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
 import { hashPassword } from "../src/lib/auth/password";
 import { signSegment } from "../src/lib/video/signing";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+
+/**
+ * Есть ли HLS-файлы урока на диске. Плейлист читает master.m3u8 из MEDIA_ROOT,
+ * а медиатека живёт на сервере и в репозиторий не попадает: без файлов проверка
+ * отдачи вернула бы 404 и выглядела бы поломкой прав, которой нет.
+ */
+function mediaPresent(videoKey: string | null): boolean {
+  if (!videoKey) return false;
+  const root = process.env.MEDIA_ROOT ?? "media";
+  return existsSync(join(root, videoKey, "master.m3u8"));
+}
 
 /**
  * S2.2 AC: защита видео-раздачи.
@@ -18,6 +31,7 @@ const STUDENT_PASS = "video-pass-123";
 const PAID_LESSON_VIDEOKEY = "courses/sales-pharma/lessons/_e2e_paid";
 
 let freeLessonId = "";
+let freeVideoKey: string | null = null;
 let paidLessonId = "";
 let aesKeyEnc = "";
 
@@ -42,9 +56,10 @@ test.beforeAll(async () => {
   // Реальный закодированный бесплатный урок медпреда (videoStatus READY).
   const intro = await db.lesson.findFirstOrThrow({
     where: { isFreePreview: true, videoStatus: "READY" },
-    select: { id: true, videoAesKeyEnc: true },
+    select: { id: true, videoAesKeyEnc: true, videoKey: true },
   });
   freeLessonId = intro.id;
+  freeVideoKey = intro.videoKey;
   aesKeyEnc = intro.videoAesKeyEnc ?? "";
 
   // Фикстура «платный опубликованный урок без enrollment»: тот же медиа-префикс
@@ -117,6 +132,7 @@ test("залогинен без enrollment на платный урок → 403"
 });
 
 test("бесплатное превью с доступом → playlist и key отдаются", async ({ page }) => {
+  test.skip(!mediaPresent(freeVideoKey), "нет HLS-файлов локально (медиатека на сервере)");
   await login(page);
 
   const playlist = await pageFetch(page, `/api/video/playlist/${freeLessonId}`);
@@ -130,6 +146,7 @@ test("бесплатное превью с доступом → playlist и key 
 });
 
 test("вариантный плейлист содержит подписанные сегменты и URI ключа", async ({ page }) => {
+  test.skip(!mediaPresent(freeVideoKey), "нет HLS-файлов локально (медиатека на сервере)");
   await login(page);
   const variant = await pageFetch(page, `/api/video/playlist/${freeLessonId}?v=720p`);
   expect(variant.status).toBe(200);

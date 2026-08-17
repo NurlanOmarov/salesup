@@ -1,5 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { hashPassword } from "../src/lib/auth/password";
 
 /**
@@ -17,6 +19,8 @@ const STUDENT_EMAIL = "e2e-newstudent@test.local";
 let ownerId = "";
 let paidLessonId = "";
 let pharmaCourseId = "";
+let courseTitle = "";
+let hasMedia = false;
 
 test.describe.configure({ mode: "serial" });
 // Свой IP — изолированный rate-limit bucket (в e2e nginx нет, IP общий).
@@ -38,11 +42,23 @@ test.beforeAll(async () => {
 
   // Платный опубликованный урок медпредов с реальным зашифрованным ключом —
   // чтобы проверить, что enrollment даёт доступ, а отзыв его закрывает.
+  // Берём любой курс с готовым видео и его же отмечаем в форме: жёсткая привязка
+  // к медпредам ломалась, когда видео заливали другим курсам, а проверка искала
+  // доступ не к тому курсу, который выдали.
   const intro = await db.lesson.findFirstOrThrow({
     where: { isFreePreview: true, videoStatus: "READY" },
-    select: { videoKey: true, videoAesKeyEnc: true, module: { select: { courseId: true } } },
+    select: {
+      videoKey: true,
+      videoAesKeyEnc: true,
+      module: { select: { courseId: true, course: { select: { title: true } } } },
+    },
   });
   pharmaCourseId = intro.module.courseId;
+  courseTitle = intro.module.course.title;
+  // Медиатека живёт на сервере: без HLS-файлов плейлист отвечает 404, и проверка
+  // доступа показывала бы поломку прав, которой нет.
+  hasMedia = !!intro.videoKey &&
+    existsSync(join(process.env.MEDIA_ROOT ?? "media", intro.videoKey, "master.m3u8"));
   const someModule = await db.module.findFirstOrThrow({
     where: { courseId: pharmaCourseId },
     select: { id: true },
@@ -72,6 +88,13 @@ test.afterAll(async () => {
 });
 
 async function loginUI(page: Page, email: string, password: string) {
+  // Сценарий последовательно меняет пользователей. Мало сбросить cookies:
+  // клиентский роутер Next отдаёт закешированную навигацию и возвращает на
+  // страницу прежнего пользователя — поэтому дожимаем переход перезагрузкой.
+  await page.context().clearCookies();
+  // about:blank сбрасывает клиентский кеш роутера: иначе переход на /login
+  // отдаёт закешированную страницу прежнего пользователя.
+  await page.goto("about:blank");
   await page.goto("/login");
   await page.getByLabel("Логин или e-mail").fill(email);
   await page.getByLabel("Пароль").fill(password);
@@ -90,9 +113,7 @@ test("полный цикл: создание ученика+доступ → в
   await page.goto("/admin/students/new");
   await page.getByLabel("Имя (как в сертификате) *").fill("Айгерим Тест");
   await page.getByLabel("E-mail (логин) *").fill(STUDENT_EMAIL);
-  await page
-    .getByRole("checkbox", { name: /медицинских представителей/i })
-    .check();
+  await page.getByRole("checkbox", { name: courseTitle }).check();
   await page.getByRole("button", { name: "Создать и выдать доступ" }).click();
 
   // 2) Перехватываем показанный один раз временный пароль
@@ -128,8 +149,13 @@ test("полный цикл: создание ученика+доступ → в
   await page.getByRole("button", { name: "Сохранить и продолжить" }).click();
   await expect(page).toHaveURL(/\/app/);
 
-  // 4) Ученик имеет доступ к платному уроку выданного курса (enrollment активен)
-  expect(await pageFetchStatus(page, `/api/video/playlist/${paidLessonId}`)).toBe(200);
+  // 4) Ученик имеет доступ к платному уроку выданного курса (enrollment активен).
+  // Ключ AES лежит в БД и не зависит от медиатеки — проверяем права по нему,
+  // а отдачу плейлиста только там, где файлы действительно есть.
+  expect(await pageFetchStatus(page, `/api/video/key/${paidLessonId}`)).toBe(200);
+  if (hasMedia) {
+    expect(await pageFetchStatus(page, `/api/video/playlist/${paidLessonId}`)).toBe(200);
+  }
   expect(await pageFetchStatus(page, `/api/video/key/${paidLessonId}`)).toBe(200);
 });
 
@@ -137,7 +163,9 @@ test("отзыв доступа закрывает видео немедленн
   // Ученик входит (пароль уже сменён в предыдущем тесте)
   await loginUI(page, STUDENT_EMAIL, "student-new-pass-789");
   await expect(page).toHaveURL(/\/app/);
-  expect(await pageFetchStatus(page, `/api/video/playlist/${paidLessonId}`)).toBe(200);
+  // Доступ подтверждаем ключом (он в БД), а не плейлистом: без медиатеки тот
+  // ответил бы 404 и проверка выглядела бы падением прав.
+  expect(await pageFetchStatus(page, `/api/video/key/${paidLessonId}`)).toBe(200);
 
   // Владелец отзывает доступ (через action-эффект — ставим revokedAt как делает revokeEnrollmentAction)
   await db.enrollment.updateMany({

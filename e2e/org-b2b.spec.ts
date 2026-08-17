@@ -27,6 +27,13 @@ let courseId = "";
 let paidLessonId = "";
 
 test.describe.configure({ mode: "serial" });
+// Один прогон на всю БД: сценарий создаёт записи с уникальными e-mail и slug,
+// поэтому параллельный запуск во втором проекте падал бы на unique-констрейнте.
+// Адаптивность здесь не проверяется — вьюпорт роли не играет.
+test.skip(
+  () => test.info().project.name !== "chromium",
+  "сценарий выполняется один раз, в проекте chromium",
+);
 test.use({ extraHTTPHeaders: { "x-forwarded-for": "10.88.0.9" } });
 
 test.beforeAll(async () => {
@@ -87,14 +94,35 @@ async function cleanup() {
     await db.user.deleteMany({ where: { id: { in: memberUserIds } } });
   }
   await db.user.deleteMany({ where: { email: { in: [OWNER_EMAIL, ADMIN_EMAIL] } } });
+  // Сценарий логинится десятки раз с одного IP: без очистки срабатывает защита
+  // от перебора и вход перестаёт проходить (rate-limit по IP и идентификатору).
+  await db.loginAttempt.deleteMany({ where: { ip: "10.88.0.9" } });
   if (ownerId) await db.adminLog.deleteMany({ where: { actorId: ownerId } });
 }
 
+/**
+ * Статус запроса из контекста страницы: page.request идёт мимо cookies сессии,
+ * поэтому приватные API отвечали бы 401 даже вошедшему пользователю.
+ */
+async function pageFetchStatus(page: Page, url: string): Promise<number> {
+  return page.evaluate(async (u) => (await fetch(u)).status, url);
+}
+
 async function login(page: Page, identity: string, password: string) {
+  // Сценарий последовательно меняет пользователей. Одного сброса cookies мало:
+  // клиентский роутер Next отдаёт закешированную навигацию прежнего пользователя,
+  // поэтому сначала уходим на about:blank и только затем на форму входа.
+  await page.context().clearCookies();
+  await page.goto("about:blank");
   await page.goto("/login");
   await page.getByLabel("Логин или e-mail").fill(identity);
   await page.getByLabel("Пароль").fill(password);
   await page.getByRole("button", { name: "Войти" }).click();
+  // Дожидаемся ухода со страницы входа: без этого следующий goto уходит раньше,
+  // чем установится сессия, и приватная страница отвечает редиректом на /login.
+  await page.waitForURL((url) => !url.pathname.startsWith("/login"), {
+    timeout: 15_000,
+  });
 }
 
 test("владелец заводит организацию, лицензию и ответственного представителя", async ({
@@ -108,14 +136,22 @@ test("владелец заводит организацию, лицензию �
   await page.getByLabel("Код организации").fill(ORG_SLUG);
   await page.getByRole("button", { name: "Создать организацию" }).click();
 
-  await expect(page).toHaveURL(/\/admin\/orgs\/[a-z0-9]+/);
+  // Ждём именно карточку организации: `new` тоже подходит под [a-z0-9]+, и с
+  // широким шаблоном проверка проходила бы до создания записи.
+  await expect(page).toHaveURL(/\/admin\/orgs\/(?!new)[a-z0-9]+$/);
   const org = await db.organization.findUniqueOrThrow({ where: { slug: ORG_SLUG } });
   orgId = org.id;
 
-  // Лицензия: 2 места на курс.
-  await page.getByLabel("Мест").fill("2");
+  // Лицензия: 2 места на тестовый курс. Курс выбираем явно — по умолчанию форма
+  // подставляет первый опубликованный, и лицензия ушла бы не на тот курс.
+  await page.getByLabel("Курс").selectOption(courseId);
+  await page.getByLabel("Мест", { exact: true }).fill("2");
   await page.getByRole("button", { name: /Выдать лицензию/ }).click();
-  await expect(page.getByText(/Мест занято/)).toBeVisible();
+  // Ждём саму запись, а не текст: «Мест занято» есть на странице всегда, и
+  // проверка по нему проходила бы до того, как действие успеет отработать.
+  await expect
+    .poll(() => db.orgLicense.count({ where: { orgId } }), { timeout: 15_000 })
+    .toBe(1);
 
   const license = await db.orgLicense.findFirstOrThrow({ where: { orgId } });
   licenseId = license.id;
@@ -181,9 +217,11 @@ test("работник регистрируется по коду без еди�
   expect(enrollment.source).toBe("B2B");
   expect(enrollment.revokedAt).toBeNull();
 
-  // И доступ к платному уроку реально работает.
-  const res = await page.request.get(`/api/video/playlist/${paidLessonId}`);
-  expect(res.status()).toBe(200);
+  // Доступ к платному уроку реально работает. Проверяем по ключу AES: он живёт
+  // в БД, тогда как playlist читает файл с диска — без медиа он вернул бы 404
+  // и скрыл бы настоящий результат проверки прав.
+  const res = await pageFetchStatus(page, `/api/video/key/${paidLessonId}`);
+  expect(res).toBe(200);
 });
 
 test("код одноразовый: повторная регистрация отклоняется", async ({ page }) => {
@@ -225,14 +263,14 @@ test("заморозка организации закрывает доступ,
   await syncOrgAccess(orgId);
 
   await login(page, `${ORG_SLUG}-0001`, WORKER_PASS);
-  const denied = await page.request.get(`/api/video/playlist/${paidLessonId}`);
-  expect(denied.status()).toBe(403);
+  const denied = await pageFetchStatus(page, `/api/video/playlist/${paidLessonId}`);
+  expect(denied).toBe(403);
 
   await db.organization.update({ where: { id: orgId }, data: { status: "ACTIVE" } });
   await syncOrgAccess(orgId);
 
-  const restored = await page.request.get(`/api/video/playlist/${paidLessonId}`);
-  expect(restored.status()).toBe(200);
+  const restored = await pageFetchStatus(page, `/api/video/key/${paidLessonId}`);
+  expect(restored).toBe(200);
 });
 
 test("отзыв места освобождает его в пуле лицензии", async ({ page }) => {
@@ -259,6 +297,6 @@ test("отзыв места освобождает его в пуле лицен
 
   // Доступ к уроку закрылся сразу.
   await login(page, `${ORG_SLUG}-0001`, WORKER_PASS);
-  const res = await page.request.get(`/api/video/playlist/${paidLessonId}`);
-  expect(res.status()).toBe(403);
+  const res = await pageFetchStatus(page, `/api/video/playlist/${paidLessonId}`);
+  expect(res).toBe(403);
 });

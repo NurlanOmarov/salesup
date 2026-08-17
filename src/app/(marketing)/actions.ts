@@ -2,7 +2,10 @@
 
 import { z } from "zod";
 import { db } from "@/lib/db";
+import { env } from "@/env";
 import { log } from "@/lib/log";
+import { enqueue } from "@/lib/jobs/enqueue";
+import { applicantLeadEmail, contactEmail, ownerLeadEmail } from "@/lib/leads/notify";
 import { LEGAL_VERSION } from "@/content/legal";
 
 const schema = z.object({
@@ -58,15 +61,17 @@ export async function createLeadAction(
 
   // courseId привязываем только если такой курс существует (форма на странице курса)
   let validCourseId: string | undefined;
+  let courseTitle: string | undefined;
   if (courseId) {
     const course = await db.course.findUnique({
       where: { id: courseId },
-      select: { id: true },
+      select: { id: true, title: true },
     });
     validCourseId = course?.id;
+    courseTitle = course?.title;
   }
 
-  await db.lead.create({
+  const lead = await db.lead.create({
     data: {
       name: name || null,
       contact,
@@ -80,7 +85,41 @@ export async function createLeadAction(
       consentAt: new Date(),
       consentVersion: LEGAL_VERSION,
     },
+    select: { id: true, createdAt: true },
   });
+
+  // Уведомления ставим в очередь: отправляет их worker, форма не ждёт SMTP и не
+  // падает, если почта недоступна (сама заявка уже сохранена — это главное).
+  const notification = {
+    kind,
+    name: name || null,
+    contact,
+    message: message || null,
+    company: kind === "B2B" ? company || null : null,
+    seatsWanted: kind === "B2B" ? (seatsWanted ?? null) : null,
+    courseTitle: courseTitle ?? null,
+    createdAt: lead.createdAt,
+  };
+
+  try {
+    // Владельцу — всегда.
+    await enqueue("email.send", {
+      ...ownerLeadEmail(env.LEADS_NOTIFY_EMAIL, notification),
+      kind: "lead-owner",
+      leadId: lead.id,
+    });
+    // Заявителю — только если контактом он оставил e-mail (иначе связь по телефону/telegram).
+    const applicant = contactEmail(contact);
+    if (applicant) {
+      await enqueue("email.send", {
+        ...applicantLeadEmail(applicant, notification),
+        kind: "lead-applicant",
+        leadId: lead.id,
+      });
+    }
+  } catch (e) {
+    log.error({ err: e, leadId: lead.id }, "lead.notify: не удалось поставить письма в очередь");
+  }
 
   log.info({ courseId: validCourseId ?? null, kind }, "lead.created");
   return { ok: true };

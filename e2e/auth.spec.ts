@@ -73,7 +73,9 @@ test("блокировка после серии неудачных попыто
     await page.getByLabel("Пароль").fill("wrong-pass");
     await page.getByRole("button", { name: "Войти" }).click();
     await expect(
-      page.getByText("Неверный e-mail или пароль"),
+      // Вход принимает и e-mail, и логин работника организации — сообщение
+      // об ошибке общее для обоих случаев.
+      page.getByText("Неверный логин или пароль"),
     ).toBeVisible();
   }
 
@@ -90,11 +92,16 @@ test("блокировка после серии неудачных попыто
 test("саморегистрация недоступна (нет страницы регистрации)", async ({
   page,
 }) => {
-  // Нет публичного пути регистрации: /register уводит на вход, на форме входа
-  // нет ссылки «зарегистрироваться» — учётки создаёт только админ.
-  await page.goto("/register");
-  await expect(page).toHaveURL(/\/login/);
-  await expect(page.getByText(/регистрац/i)).toHaveCount(0);
+  // Публичной регистрации нет: /register отдаёт честный 404. Именно 404, а не
+  // редирект на вход — неизвестные пути не уводятся на /login намеренно
+  // (src/auth.config.ts: это ломало бы SEO и журнал битых ссылок).
+  const res = await page.goto("/register");
+  expect(res?.status()).toBe(404);
+
+  // И на самой форме входа нет приглашения зарегистрироваться: учётки розничным
+  // ученикам создаёт админ, работники организаций приходят по коду на /join.
+  await page.goto("/login");
+  await expect(page.getByText(/зарегистрироваться/i)).toHaveCount(0);
 });
 
 test("приватная зона требует входа", async ({ page }) => {

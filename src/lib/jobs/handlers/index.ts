@@ -18,16 +18,24 @@ export const handlers: Record<string, JobHandler> = {
     await markCertificateReadyIfEligible(userId, courseId);
   },
 
-  // Отправка письма — фактическая отправка появится в S5.5 (nodemailer). Пока:
-  // при выключенном EMAIL_ENABLED просто логируем (уведомления не критичны в MVP).
+  // Отправка письма через SMTP (S5.5). При выключенном EMAIL_ENABLED просто
+  // логируем (уведомления не критичны в MVP). Адрес получателя редактируется
+  // логгером (правило 9), в лог идёт только тема.
   "email.send": async (payload) => {
-    const { to, subject } = payload as { to?: string; subject?: string };
+    const { to, subject, text, html, replyTo } = payload as {
+      to?: string;
+      subject?: string;
+      text?: string;
+      html?: string;
+      replyTo?: string;
+    };
     if (!env.EMAIL_ENABLED) {
-      log.info({ to, subject }, "email.send пропущен: EMAIL_ENABLED=false");
+      log.info({ subject }, "email.send пропущен: EMAIL_ENABLED=false");
       return;
     }
-    // TODO(S5.5): nodemailer SMTP
-    log.info({ to, subject }, "email.send: отправка (заглушка)");
+    if (!to || !subject) throw new Error("email.send: нет to/subject");
+    const { sendEmail } = await import("@/lib/email/send.js");
+    await sendEmail({ to, subject, text: text ?? "", html, replyTo });
   },
 
   // Еженедельный дайджест владельцу (S6.2): собираем сводку, при EMAIL_ENABLED

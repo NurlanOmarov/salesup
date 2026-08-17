@@ -32,6 +32,10 @@ test.beforeAll(async () => {
       scorePct: 95,
       hoursLabel: "~40 минут",
       verifyHash: VALID_HASH,
+      // Подлинным считается только выданный сертификат: READY — это «готов к
+      // выдаче», владелец подтверждает выдачу вручную (ПДн не формируем сами).
+      status: "ISSUED",
+      issuedAt: new Date(),
     },
   });
   await db.certificate.create({
@@ -55,8 +59,10 @@ test.afterAll(async () => {
 test("публичная проверка подлинного сертификата (без входа)", async ({ page }) => {
   await page.goto(`/verify/${VALID_HASH}`);
   await expect(page.getByText("Сертификат подлинный")).toBeVisible();
-  await expect(page.getByText("Проверочный Ученик")).toBeVisible();
   await expect(page.getByText("AS-2026-900001")).toBeVisible();
+  // ФИО на публичной странице не показывается намеренно (CLAUDE.md, правило 9):
+  // проверить подлинность можно по номеру, раскрывать личность для этого незачем.
+  await expect(page.getByText("Проверочный Ученик")).toHaveCount(0);
 });
 
 test("несуществующий сертификат → не найден", async ({ page }) => {

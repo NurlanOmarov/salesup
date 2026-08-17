@@ -199,6 +199,13 @@ export async function activateInvite(input: {
   const code = normalizeInviteCode(input.code);
   const passwordHash = await hashPassword(input.password);
 
+  // Логин выделяем ДО транзакции и повторяем при коллизии. Номер берётся из
+  // счётчика организации, но занятым он может оказаться и без гонки: работники
+  // удалённой организации остаются в базе, а новая организация с тем же кодом
+  // начинает нумерацию сначала. Раньше это приводило к 500 на странице
+  // регистрации — работник видел «ошибка сервера» вместо понятного текста.
+  const login = await allocateLogin(code);
+
   return db.$transaction(async (tx) => {
     const invite = await tx.orgInvite.findUnique({
       where: { code },
@@ -221,14 +228,6 @@ export async function activateInvite(input: {
     if (invite.org.status !== "ACTIVE") {
       throw new JoinError("Доступ организации приостановлен. Обратитесь к ответственному за обучение.");
     }
-
-    // Инкремент счётчика логинов — источник уникальности acme-0042 без гонок.
-    const org = await tx.organization.update({
-      where: { id: invite.orgId },
-      data: { loginSeq: { increment: 1 } },
-      select: { slug: true, loginSeq: true },
-    });
-    const login = formatLogin(org.slug, org.loginSeq);
 
     const user = await tx.user.create({
       data: {
@@ -276,6 +275,39 @@ export async function activateInvite(input: {
 
     return { userId: user.id, login, courses: granted };
   });
+}
+
+/**
+ * Выделить свободный логин работника: `<slug>-0042`.
+ *
+ * Счётчик организации инкрементируется вне транзакции регистрации — «дырки» в
+ * нумерации допустимы и безопасны, а вот выдать занятый логин нельзя: unique-индекс
+ * уронил бы всю самозапись. Проверяем занятость и при необходимости берём
+ * следующий номер.
+ */
+async function allocateLogin(code: string): Promise<string> {
+  const invite = await db.orgInvite.findUnique({
+    where: { code },
+    select: { orgId: true },
+  });
+  if (!invite) throw new JoinError("Код не найден. Проверьте, верно ли он введён.");
+
+  for (let attempt = 0; attempt < 25; attempt += 1) {
+    const org = await db.organization.update({
+      where: { id: invite.orgId },
+      data: { loginSeq: { increment: 1 } },
+      select: { slug: true, loginSeq: true },
+    });
+    const login = formatLogin(org.slug, org.loginSeq);
+    const taken = await db.user.findUnique({
+      where: { login },
+      select: { id: true },
+    });
+    if (!taken) return login;
+  }
+  throw new JoinError(
+    "Не удалось создать учётную запись. Обратитесь к ответственному за обучение.",
+  );
 }
 
 /**
