@@ -4,6 +4,7 @@ import { AlertTriangle, CheckCircle2, Info } from "lucide-react";
 import { db } from "@/lib/db";
 import {
   BASE_PRICE_TIYN,
+  bundlePriceTiyn,
   formatDuration,
   isPriceWithinRange,
   MIN_B2B_SEATS,
@@ -90,6 +91,14 @@ export default async function PricingPage() {
         назначаем цену новому курсу и готовим договор. Полное обоснование — в{" "}
         <span className="font-mono text-foreground/80">docs/PRICING-PLAN.md</span>.
       </p>
+      <p className="mt-2 flex max-w-3xl items-start gap-2 rounded-lg bg-foreground/[0.03] p-3 text-sm text-foreground/65">
+        <Info className="mt-0.5 size-4 shrink-0" />
+        {/* Цена — решение владельца, а не системы: справочник подсказывает и
+            предупреждает, но ничего не навязывает и не переписывает. */}
+        Это подсказка, а не ограничение. Фактическую цену любого курса вы меняете
+        в его карточке, и она сохраняется — сетка лишь показывает, где значение
+        расходится с рекомендацией.
+      </p>
 
       {/* ── Физлица ──────────────────────────────────────────────── */}
       <section className="mt-8">
@@ -152,7 +161,13 @@ export default async function PricingPage() {
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
           <MiniCard
             title="Пакет из 3 курсов"
-            value="930 BYN"
+            value={`${formatAmount(
+              bundlePriceTiyn([
+                BASE_PRICE_TIYN.SPECIALIZED,
+                BASE_PRICE_TIYN.EVERYONE,
+                BASE_PRICE_TIYN.EVERYONE,
+              ]) / 100,
+            )} BYN`}
             hint="отраслевой + 2 общих, −17 % к сумме"
           />
           <MiniCard

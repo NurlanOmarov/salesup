@@ -1,4 +1,13 @@
 import type { CourseAudience } from "@prisma/client";
+import {
+  bundlePriceTiyn,
+  BASE_PRICE_TIYN,
+  PRICE_MATRIX,
+  SUBSCRIPTION_YEAR_TIYN,
+} from "./index";
+
+/** BYN-копейки → рубли: справочник оперирует целыми суммами. */
+const toByn = (tiyn: number): number => Math.round(tiyn / 100);
 
 /**
  * Справочные цены по рынкам присутствия (docs/PRICING-PLAN.md, редакция 2).
@@ -46,18 +55,39 @@ export interface Market {
   benchmark: string;
 }
 
+/**
+ * Цены рынков даны для СТАНДАРТНОЙ ступени объёма (1–3 часа видео). Экспресс и
+ * расширенный отходят от неё так же, как в PRICE_MATRIX; отдельных исследований
+ * по ступеням для России, Казахстана и Узбекистана нет.
+ */
 export const MARKETS: readonly Market[] = [
   {
     code: "BY",
     country: "Беларусь",
     currency: "BYN",
     domain: "study.activesales.by",
+    // Беларусь — базовый рынок: цифры выводятся из PRICE_MATRIX, а не дублируются.
+    // Иначе правка матрицы разошлась бы с этой таблицей и заметили бы это нескоро.
     prices: {
-      SPECIALIZED: { min: 450, max: 590, median: 490 },
-      EVERYONE: { min: 250, max: 390, median: 320 },
+      SPECIALIZED: {
+        min: toByn(PRICE_MATRIX.SPECIALIZED.standard.min),
+        max: toByn(PRICE_MATRIX.SPECIALIZED.standard.max),
+        median: toByn(PRICE_MATRIX.SPECIALIZED.standard.price),
+      },
+      EVERYONE: {
+        min: toByn(PRICE_MATRIX.EVERYONE.standard.min),
+        max: toByn(PRICE_MATRIX.EVERYONE.standard.max),
+        median: toByn(PRICE_MATRIX.EVERYONE.standard.price),
+      },
     },
-    bundle: 930,
-    subscriptionYear: 1290,
+    bundle: toByn(
+      bundlePriceTiyn([
+        BASE_PRICE_TIYN.SPECIALIZED,
+        BASE_PRICE_TIYN.EVERYONE,
+        BASE_PRICE_TIYN.EVERYONE,
+      ]),
+    ),
+    subscriptionYear: toByn(SUBSCRIPTION_YEAR_TIYN),
     benchmark:
       "Свой каталог без AI — 300–400 BYN; Skillbox-эквивалент «Тайм-менеджмент» — около 750 BYN",
   },
