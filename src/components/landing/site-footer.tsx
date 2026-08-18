@@ -1,11 +1,12 @@
 import Image from "next/image";
 import { Link } from "@/components/i18n/link";
-import { getSupportContacts } from "@/lib/seo/settings";
+import { getSeoSettings, getSupportContacts, socialProfiles } from "@/lib/seo/settings";
 import { REQUISITES } from "@/content/legal";
 import { currentSite } from "@/lib/seo/site";
 import { messagesFor } from "@/i18n/messages";
 import { getLocale } from "@/i18n/server";
 import { CountrySwitcher } from "@/components/landing/country-switcher";
+import { SocialLinks } from "@/components/landing/social-links";
 
 export async function SiteFooter() {
   // Контакты — из SeoSettings (правятся в /admin/seo без деплоя).
@@ -14,6 +15,8 @@ export async function SiteFooter() {
   // Домен захода: подсветка страны в переключателе и честная строка «работаем в …».
   // Юрлицо и реквизиты при этом одни (РБ) — их показываем на всех доменах.
   const site = await currentSite();
+  // Соцсети школы — правятся в /admin/seo, попадают и в sameAs разметки организации.
+  const socials = socialProfiles(await getSeoSettings());
   const t = messagesFor(await getLocale());
 
   return (
@@ -29,16 +32,12 @@ export async function SiteFooter() {
             {site ? ` ${site.country}.` : ""}
           </p>
           {/*
-            Сведения об исполнителе обязательны к доведению до потребителя
-            (ст. 7 Закона РБ «О защите прав потребителей»). Правятся в
-            src/content/legal/requisites.ts — там же, откуда их берут оферта
-            и политика обработки ПДн.
+            Реквизиты ИП (наименование, УНП, адрес) убраны из футера по решению
+            владельца. Сведения об исполнителе остаются доступны потребителю в
+            разделе «Реквизиты Исполнителя» публичной оферты и в политике
+            обработки ПДн — обе страницы в футере рядом.
           */}
-          <address className="mt-3 space-y-0.5 text-xs not-italic leading-relaxed text-white/40">
-            <p>{REQUISITES.legalName}</p>
-            <p>{t.footer.unp} {REQUISITES.unp}</p>
-            <p>{REQUISITES.address}</p>
-          </address>
+          <SocialLinks links={socials} />
         </div>
 
         <div className="text-sm">
@@ -75,6 +74,21 @@ export async function SiteFooter() {
                 {phone}
               </a>
             </li>
+            {/*
+              Почта для обращений — на белорусском домене: адрес в зоне .by,
+              совпадает с реквизитами в оферте и политике (ст. 7 Закона РБ
+              «О защите прав потребителей», обращения субъектов ПДн).
+            */}
+            {site?.code === "BY" ? (
+              <li>
+                <a
+                  href={`mailto:${REQUISITES.email}`}
+                  className="transition-colors hover:text-brand-light"
+                >
+                  {REQUISITES.email}
+                </a>
+              </li>
+            ) : null}
             {wa ? (
               <li>
                 <a

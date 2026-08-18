@@ -1232,6 +1232,9 @@ model SeoSettings {
   socialTelegram  String?
   socialYoutube   String?
   socialTiktok    String?
+  socialFacebook  String?
+  socialLinkedin  String?
+  socialVk        String?
 
   // Дефолтная OG-картинка (относительный ключ lib/storage). Пусто → авто-opengraph-image.
   defaultOgKey String?

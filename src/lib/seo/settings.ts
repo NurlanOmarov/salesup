@@ -27,10 +27,15 @@ export const SEO_DEFAULTS = {
   defaultTitle: "Бизнес-платформа ACTIVE SALES — курсы по продажам с AI-наставником",
   defaultDescription:
     "Онлайн-курсы по техникам продаж: видеоуроки, AI-тренажёр на материале тренера, тесты и сертификаты.",
-  socialInstagram: null,
+  // Адреса школы по умолчанию: владелец меняет их в /admin/seo, но до первой
+  // правки футер и sameAs в разметке организации уже работают.
+  socialInstagram: "https://www.instagram.com/activesales.by/",
   socialTelegram: null,
-  socialYoutube: null,
-  socialTiktok: null,
+  socialYoutube: "https://www.youtube.com/channel/UCI9_MiDDbAsfctHtXtsG5Bw",
+  socialTiktok: "https://www.tiktok.com/@dubovikvitaliy",
+  socialFacebook: "https://www.facebook.com/groups/activesales/",
+  socialLinkedin: "https://www.linkedin.com/in/vitaly-dubovik-1ab9204a/",
+  socialVk: "https://vk.com/activesalesby",
   defaultOgKey: null,
   googleVerification: null,
   yandexVerification: null,
@@ -120,11 +125,7 @@ export function revalidateSeoSettings() {
 }
 
 /** Ссылки соцпрофилей → массив для sameAs (пустые отбрасываются). */
-export function socialLinks(s: SeoSettings): string[] {
-  return [s.socialInstagram, s.socialTelegram, s.socialYoutube, s.socialTiktok].filter(
-    (v): v is string => Boolean(v),
-  );
-}
+export { socialLinks, socialProfiles } from "./social";
 
 export interface SupportContacts {
   phone: string; // человекочитаемый, "+375 (29) 605-30-32"

@@ -25,6 +25,9 @@ export interface SeoSettingsFields {
   socialTelegram: string | null;
   socialYoutube: string | null;
   socialTiktok: string | null;
+  socialFacebook: string | null;
+  socialLinkedin: string | null;
+  socialVk: string | null;
   defaultOgKey: string | null;
   googleVerification: string | null;
   yandexVerification: string | null;
@@ -63,6 +66,9 @@ export function SeoSettingsForm({
     settings.socialYoutube ?? "",
   );
   const [socialTiktok, setSocialTiktok] = useState(settings.socialTiktok ?? "");
+  const [socialFacebook, setSocialFacebook] = useState(settings.socialFacebook ?? "");
+  const [socialLinkedin, setSocialLinkedin] = useState(settings.socialLinkedin ?? "");
+  const [socialVk, setSocialVk] = useState(settings.socialVk ?? "");
   const [googleVerification, setGoogleVerification] = useState(
     settings.googleVerification ?? "",
   );
@@ -101,6 +107,9 @@ export function SeoSettingsForm({
     setSocialTelegram(settings.socialTelegram ?? "");
     setSocialYoutube(settings.socialYoutube ?? "");
     setSocialTiktok(settings.socialTiktok ?? "");
+    setSocialFacebook(settings.socialFacebook ?? "");
+    setSocialLinkedin(settings.socialLinkedin ?? "");
+    setSocialVk(settings.socialVk ?? "");
     setGoogleVerification(settings.googleVerification ?? "");
     setYandexVerification(settings.yandexVerification ?? "");
     setGa4Id(settings.ga4Id ?? "");
@@ -127,6 +136,9 @@ export function SeoSettingsForm({
         socialTelegram,
         socialYoutube,
         socialTiktok,
+        socialFacebook,
+        socialLinkedin,
+        socialVk,
         googleVerification,
         yandexVerification,
         ga4Id,
@@ -348,6 +360,42 @@ export function SeoSettingsForm({
                 placeholder="https://tiktok.com/@…"
                 value={socialTiktok}
                 onChange={(e) => setSocialTiktok(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className={labelCls} htmlFor="fb">
+                Facebook
+              </label>
+              <input
+                id="fb"
+                className={inputCls}
+                placeholder="https://facebook.com/…"
+                value={socialFacebook}
+                onChange={(e) => setSocialFacebook(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className={labelCls} htmlFor="vk">
+                ВКонтакте
+              </label>
+              <input
+                id="vk"
+                className={inputCls}
+                placeholder="https://vk.com/…"
+                value={socialVk}
+                onChange={(e) => setSocialVk(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className={labelCls} htmlFor="li">
+                LinkedIn
+              </label>
+              <input
+                id="li"
+                className={inputCls}
+                placeholder="https://linkedin.com/in/…"
+                value={socialLinkedin}
+                onChange={(e) => setSocialLinkedin(e.target.value)}
               />
             </div>
           </div>
