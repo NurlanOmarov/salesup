@@ -1,13 +1,14 @@
 import type { MetadataRoute } from "next";
 import { db } from "@/lib/db";
-import { env } from "@/env";
 import { buildSafe } from "@/lib/utils";
 import { getStaticPageSeo } from "@/lib/seo/static-pages";
+import { siteOrigin } from "@/lib/seo/site";
 
-export const revalidate = 3600;
+// Карта строится под хост запроса (мультидомен): на каждом домене свой sitemap
+// с его же URL. Из-за headers() маршрут динамический — ответ кэширует nginx.
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const base = env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "");
+  const base = await siteOrigin();
 
   // Оферта/политика — в карте только когда владелец снял noindex в /admin/seo
   // (noindex-страница в sitemap — противоречивый сигнал поисковику).

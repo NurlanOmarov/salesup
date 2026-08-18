@@ -2,6 +2,11 @@ import { StudentHeader, StudentTabBar } from "@/components/student/student-nav";
 import { PwaManager } from "@/components/pwa-manager";
 import { auth } from "@/auth";
 import { dueCount } from "@/lib/learn/review";
+import type { Metadata } from "next";
+
+// Приватная зона: в robots.txt путь уже закрыт, мета-тег — второй барьер
+// (одинаково на всех доменах).
+export const metadata: Metadata = { robots: { index: false, follow: false } };
 
 /**
  * Общий каркас кабинета ученика: единая верхняя шапка (десктоп) и нижний таб-бар

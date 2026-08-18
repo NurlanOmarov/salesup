@@ -1,18 +1,22 @@
 import type { Metadata, Viewport } from "next";
-import { env } from "@/env";
 import "./globals.css";
 import { ThemeScript } from "@/components/theme-script";
 import { getSeoSettings, socialLinks } from "@/lib/seo/settings";
+import { currentSite, siteOrigin } from "@/lib/seo/site";
 
 /**
  * Метаданные читаются из SeoSettings (админка «SEO-настройки»): шаблон title,
  * дефолтные title/description, подтверждение прав в Search Console / Вебмастере.
  * Кэшируется тегом seo-settings — сбрасывается при сохранении в админке.
+ *
+ * metadataBase берётся из хоста запроса (мультидомен, docs/MULTI-DOMAIN-PLAN.md):
+ * относительные canonical на публичных страницах разворачиваются в свой домен —
+ * .kz ранжируется в РК, .ru в РФ, .by в РБ.
  */
 export async function generateMetadata(): Promise<Metadata> {
-  const s = await getSeoSettings();
+  const [s, origin] = await Promise.all([getSeoSettings(), siteOrigin()]);
   return {
-    metadataBase: new URL(env.NEXT_PUBLIC_SITE_URL),
+    metadataBase: new URL(origin),
     title: { default: s.defaultTitle, template: s.titleTemplate },
     description: s.defaultDescription,
     appleWebApp: {
@@ -44,22 +48,25 @@ export const viewport: Viewport = {
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const s = await getSeoSettings();
+  const [s, origin, site] = await Promise.all([getSeoSettings(), siteOrigin(), currentSite()]);
 
   // Сайт-вайд разметка организации (Knowledge Panel, брендовая выдача).
   // Название/описание/телефон/страна редактируются в /admin/seo (SeoSettings).
   const sameAs = socialLinks(s);
   const orgPhone = s.orgPhone;
+  // Страна обслуживания — по домену захода (гео-сигнал для поиска своей страны),
+  // для неизвестного хоста — значение из /admin/seo.
+  const areaCountry = site?.country ?? s.orgCountry;
   const orgJsonLd = {
     "@context": "https://schema.org",
     // Organization, а не EducationalOrganization: по D-012 услуги оформлены как
     // информационные, платформа не является учреждением образования.
     "@type": "Organization",
     name: s.orgName,
-    url: env.NEXT_PUBLIC_SITE_URL,
-    logo: `${env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "")}/logo.png`,
+    url: origin,
+    logo: `${origin}/logo.png`,
     description: s.orgDescription ?? s.defaultDescription,
-    areaServed: { "@type": "Country", name: s.orgCountry },
+    areaServed: { "@type": "Country", name: areaCountry },
     ...(sameAs.length ? { sameAs } : {}),
     ...(orgPhone
       ? {
@@ -67,7 +74,7 @@ export default async function RootLayout({
             "@type": "ContactPoint",
             telephone: orgPhone,
             contactType: "customer support",
-            areaServed: s.orgCountry,
+            areaServed: areaCountry,
             availableLanguage: ["Russian"],
           },
         }

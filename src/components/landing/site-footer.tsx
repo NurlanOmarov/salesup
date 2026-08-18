@@ -2,11 +2,16 @@ import Image from "next/image";
 import Link from "next/link";
 import { getSupportContacts } from "@/lib/seo/settings";
 import { REQUISITES } from "@/content/legal";
+import { currentSite } from "@/lib/seo/site";
+import { CountrySwitcher } from "@/components/landing/country-switcher";
 
 export async function SiteFooter() {
   // Контакты — из SeoSettings (правятся в /admin/seo без деплоя).
   const { phone, phoneHref, whatsapp: wa, telegram: tg } = await getSupportContacts();
   const year = 2026;
+  // Домен захода: подсветка страны в переключателе и честная строка «работаем в …».
+  // Юрлицо и реквизиты при этом одни (РБ) — их показываем на всех доменах.
+  const site = await currentSite();
 
   return (
     <footer className="bg-slate-950 text-white">
@@ -17,7 +22,7 @@ export async function SiteFooter() {
             <p className="text-lg font-bold text-brand">ACTIVE SALES</p>
           </div>
           <p className="mt-2 text-sm text-white/50">
-            Онлайн-курсы по продажам с AI-наставником. Беларусь.
+            Онлайн-курсы по продажам с AI-наставником.{site ? ` ${site.country}.` : ""}
           </p>
           {/*
             Сведения об исполнителе обязательны к доведению до потребителя
@@ -120,8 +125,9 @@ export async function SiteFooter() {
           </ul>
         </div>
       </div>
-      <div className="border-t border-white/10 py-4 text-center text-xs text-white/60">
-        © {year} ACTIVE SALES. Все права защищены.
+      <div className="space-y-2 border-t border-white/10 py-4 text-center text-xs text-white/60">
+        <CountrySwitcher currentHost={site?.host ?? null} />
+        <p>© {year} ACTIVE SALES. Все права защищены.</p>
       </div>
     </footer>
   );

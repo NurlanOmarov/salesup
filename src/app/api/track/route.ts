@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { env } from "@/env";
 import { clientIp, countryFromIp } from "@/lib/analytics/geo";
 import { recordPageView } from "@/lib/analytics/collect";
+import { isOwnHost } from "@/lib/seo/site";
 
 // geoip-lite — нативная работа с файлами баз, только Node-рантайм (не edge).
 export const runtime = "nodejs";
@@ -26,13 +26,12 @@ function courseSlug(path: string): string | null {
   return m ? m[1]! : null;
 }
 
-/** Хост внешнего реферера; наш собственный домен и мусор отбрасываем. */
+/** Хост внешнего реферера; наши домены (все три ccTLD) и мусор отбрасываем. */
 function externalRefHost(ref: string | null | undefined): string | null {
   if (!ref) return null;
   try {
     const host = new URL(ref).host;
-    const self = new URL(env.NEXT_PUBLIC_SITE_URL).host;
-    if (!host || host === self) return null;
+    if (!host || isOwnHost(host)) return null;
     return host.slice(0, 128);
   } catch {
     return null;

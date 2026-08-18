@@ -6,8 +6,12 @@ import { authConfig } from "@/auth.config";
 export default NextAuth(authConfig).auth;
 
 export const config = {
-  // исключаем статику, изображения, favicon, robots/sitemap; остальное — через authorized
+  // Исключаем статику, изображения, favicon, robots/sitemap; остальное — через authorized.
+  // /api/auth тоже исключён: на нём middleware Auth.js ставил второй cookie
+  // callback-url со значением https://0.0.0.0:3000, перебивавший host-based —
+  // из-за этого домены не могли держать собственные сессии (мультидомен,
+  // docs/MULTI-DOMAIN-PLAN.md). Там работает только route-handler, он host-aware.
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|.*\\.(?:svg|png|jpg|jpeg|webp|ico|mp4|webm|glb|gltf|mp3)$).*)",
+    "/((?!api/auth|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|.*\\.(?:svg|png|jpg|jpeg|webp|ico|mp4|webm|glb|gltf|mp3)$).*)",
   ],
 };
