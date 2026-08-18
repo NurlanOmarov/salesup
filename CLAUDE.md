@@ -65,7 +65,9 @@ deploy/  # docker-compose.yml, nginx.conf, Dockerfile, crontab-заметки
 - UI — русский; код/коммиты — английский. Деньги в tiyn (Int) — поля сохранены в схеме для будущего платёжного модуля; базовая валюта — BYN (белорусский рубль, 1 Br = 100 tiyn), KZT/RUB — витринная конвертация по курсу НБ РК (см. D-010 в docs/DECISIONS.md). ID — cuid, slug — kebab-case.
 - RSC по умолчанию; мутации — Server Actions через `safeAction` (auth+zod+ошибки). Логика в `lib/`, enum-ы из Prisma.
 - Медиа-файлы адресуются ТОЛЬКО относительным ключом через `lib/storage`; запрещено `fs.readFile('/var/...')` в src/.
-- Фича = ветка; перед merge: lint+typecheck+test.
+- Фича = ветка; перед merge: lint+typecheck+test. Если менялись схемы-иллюстрации
+  (`public/images/**/*.svg`) — ещё и `pnpm factory:check-svg`: подписи не должны
+  вылезать за фигуры и за холст, у схемы обязана быть светлая подложка (docs/PRESENTATIONS.md §6).
 
 ## Критические правила
 
