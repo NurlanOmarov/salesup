@@ -107,7 +107,9 @@ export default async function BusinessPage() {
         <div className="relative mx-auto max-w-6xl px-4 pb-12 pt-12 sm:pt-16 lg:pb-16">
         <AudienceSwitch current="b2b" size="hero" onDark />
 
-        <div className="mt-6 grid gap-10 lg:grid-cols-[1.05fr_1fr] lg:items-start">
+        {/* [&>*]:min-w-0 — иначе колонка не сжимается ниже своего min-content
+            и на телефоне страница получает горизонтальный скролл. */}
+        <div className="mt-6 grid gap-10 lg:grid-cols-[1.05fr_1fr] lg:items-start [&>*]:min-w-0">
           <div>
             <h1 className="text-balance text-3xl font-bold leading-tight drop-shadow-lg sm:text-4xl lg:text-5xl">
               {c.hero.title}
@@ -121,7 +123,7 @@ export default async function BusinessPage() {
                 до калькулятора. Цифры считает lib/pricing — расхождение с
                 калькулятором и счётом невозможно. */}
             <div className="mt-6 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-              <p className="text-2xl font-bold sm:text-3xl">
+              <p className="whitespace-nowrap text-2xl font-bold sm:text-3xl">
                 {c.hero.priceFrom} {money(bestPerSeat)}
               </p>
               <p className="text-white/75">

@@ -56,9 +56,11 @@ export function formatCurrency(
 ): string {
   const amount = convertTiyn(tiyn, code, rates);
   if (amount <= 0) return "—";
+  // Неразрывный пробел перед символом: с обычным «147 800 ₸» переносится знаком
+  // валюты на следующую строку, и цифра выглядит оборванной.
   return (
     Math.round(amount).toLocaleString("ru-RU", { maximumFractionDigits: 0 }) +
-    " " +
+    "\u00A0" +
     SYMBOLS[code]
   );
 }

@@ -469,7 +469,7 @@ export default async function LandingPage() {
               {/* Порядок суммы прямо в тизере: иначе часть читателей не кликнет,
                   не понимая, их ли это ценовой сегмент. Считает lib/pricing. */}
               <p className="mt-3 text-foreground/80">
-                <span className="text-xl font-bold">
+                <span className="whitespace-nowrap text-xl font-bold">
                   {t.b2b.priceFrom} {formatCurrency(b2bBestPerSeat * 100, b2bCode, rates)}
                 </span>{" "}
                 {t.b2b.perSeatYear} {formatCurrency(b2bBestPerMonth * 100, b2bCode, rates)}{" "}

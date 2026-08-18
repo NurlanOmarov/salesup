@@ -150,7 +150,7 @@ describe("уведомления", () => {
       isNewUser: true,
     });
     expect(text).toContain("30412");
-    expect(text).toContain("590 Br");
+    expect(text).toContain("590\u00A0Br");
     expect(text).not.toContain("@");
   });
 });

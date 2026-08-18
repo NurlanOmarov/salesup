@@ -55,15 +55,15 @@ const NBSP = " ";
 
 describe("formatCurrency / buildMultiPrice", () => {
   it("форматирует BYN с символом Br", () => {
-    expect(formatCurrency(30_000, "BYN", rates)).toBe("300 Br");
+    expect(formatCurrency(30_000, "BYN", rates)).toBe(`300${NBSP}Br`);
   });
 
   it("форматирует KZT с символом ₸", () => {
-    expect(formatCurrency(30_000, "KZT", rates)).toBe(`50${NBSP}900 ₸`);
+    expect(formatCurrency(30_000, "KZT", rates)).toBe(`50${NBSP}900${NBSP}₸`);
   });
 
   it("форматирует RUB с символом ₽", () => {
-    expect(formatCurrency(30_000, "RUB", rates)).toBe(`8${NBSP}000 ₽`);
+    expect(formatCurrency(30_000, "RUB", rates)).toBe(`8${NBSP}000${NBSP}₽`);
   });
 
   it("возвращает «—» если кросс-курс BYN недоступен", () => {
@@ -72,16 +72,16 @@ describe("formatCurrency / buildMultiPrice", () => {
 
   it("buildMultiPrice отдаёт все три валюты", () => {
     const p = buildMultiPrice(30_000, rates);
-    expect(p.byn).toBe("300 Br");
-    expect(p.kzt).toBe(`50${NBSP}900 ₸`);
-    expect(p.rub).toBe(`8${NBSP}000 ₽`);
+    expect(p.byn).toBe(`300${NBSP}Br`);
+    expect(p.kzt).toBe(`50${NBSP}900${NBSP}₸`);
+    expect(p.rub).toBe(`8${NBSP}000${NBSP}₽`);
     expect(p.ready).toBe(true);
   });
 
   it("buildMultiPrice: ready=false при отсутствии курсов", () => {
     const p = buildMultiPrice(30_000, { KZT: 1 });
     expect(p.ready).toBe(false);
-    expect(p.byn).toBe("300 Br");
+    expect(p.byn).toBe(`300${NBSP}Br`);
     expect(p.kzt).toBe("—");
   });
 });
@@ -105,5 +105,16 @@ describe("buildMultiPrice — валюта страны домена", () => {
     const noRates = buildMultiPrice(100_00, {}, "kzt");
     expect(noRates.main).toBe(noRates.byn);
     expect(noRates.alt).toBe("");
+  });
+});
+
+describe("перенос строки внутри суммы", () => {
+  it("между числом и символом валюты стоит неразрывный пробел", () => {
+    // с обычным пробелом «147 800 ₸» переносился знаком валюты на новую строку
+    for (const code of ["BYN", "KZT", "RUB"] as const) {
+      const value = formatCurrency(30_000, code, rates);
+      expect(value).not.toMatch(/\d /);
+      expect(value.includes(" ")).toBe(false);
+    }
   });
 });

@@ -81,7 +81,7 @@ describe("leadTelegramText", () => {
       courseTitle: "Продажи в аптеке",
       quote: leadQuote({ kind: "B2C", courseTiyn: 49000 }),
     });
-    expect(text).toContain("Тариф: курс, 490 Br");
+    expect(text).toContain("Тариф: курс, 490\u00A0Br");
   });
 
   it("не печатает пустые поля", () => {

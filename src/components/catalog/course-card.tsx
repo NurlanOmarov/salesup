@@ -94,7 +94,7 @@ export function CourseCard({ course }: { course: CourseCardData }) {
         <div className="mt-auto pt-4 flex items-end justify-between gap-2">
           <div>
             <div className="flex items-baseline gap-2">
-              <span className="text-lg font-bold">
+              <span className="whitespace-nowrap text-lg font-bold">
                 {course.prices?.main ?? formatPrice(course.priceTiyn)}
               </span>
               {course.oldPriceTiyn ? (

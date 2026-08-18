@@ -106,7 +106,11 @@ export function SeatsCalculator({
     <div className="rounded-2xl border border-foreground/10 bg-background p-5 sm:p-6">
       <p className="text-sm font-semibold">{c.seats}</p>
 
-      <div className="mt-3 flex items-center gap-3">
+      {/*
+        flex-wrap обязателен: степпер и пресеты в одну нерушимую строку требовали
+        ~400px, и на телефоне вся секция уезжала за край экрана.
+      */}
+      <div className="mt-3 flex flex-wrap items-center gap-3">
         <button
           type="button"
           onClick={() => change(seats - 1)}
@@ -122,7 +126,7 @@ export function SeatsCalculator({
           value={seats}
           onChange={(e) => change(Number(e.target.value) || 1)}
           aria-label={c.seatsInput}
-          className="h-11 w-24 rounded-lg border border-foreground/15 bg-background text-center text-lg font-semibold tabular-nums"
+          className="h-11 w-20 rounded-lg border border-foreground/15 bg-background text-center text-lg font-semibold tabular-nums"
         />
         <button
           type="button"
@@ -133,7 +137,7 @@ export function SeatsCalculator({
           <Plus className="size-4" />
         </button>
 
-        <div className="ml-auto flex gap-1.5">
+        <div className="ml-auto flex flex-wrap gap-1.5">
           {[5, 10, 20, 50].map((n) => (
             <button
               key={n}
@@ -197,7 +201,7 @@ export function SeatsCalculator({
                   )}
                 >
                   {c.title}
-                  <span className="ml-1.5 text-xs text-foreground/50">
+                  <span className="ml-1.5 whitespace-nowrap text-xs text-foreground/50">
                     {money(c.priceTiyn)}
                   </span>
                 </button>
@@ -219,30 +223,40 @@ export function SeatsCalculator({
         </div>
       ) : null}
 
-      <dl className="mt-5 grid gap-3 sm:grid-cols-3">
-        <div>
-          <dt className="text-xs uppercase tracking-wide text-foreground/50">
-            {c.perSeatYear}
-          </dt>
-          <dd className="mt-0.5 text-2xl font-bold tabular-nums">
-            {money(quote.pricePerSeatTiyn)}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-xs uppercase tracking-wide text-foreground/50">
-            {c.totalYear}
-          </dt>
-          <dd className="mt-0.5 text-2xl font-bold tabular-nums">
-            {money(quote.totalTiyn)}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-xs uppercase tracking-wide text-foreground/50">
-            {c.perMonth}
-          </dt>
-          <dd className="mt-0.5 text-2xl font-bold tabular-nums">
-            {money(Math.round(quote.pricePerSeatTiyn / 12))}
-          </dd>
+      {/*
+        Суммы: раньше три равные колонки с одинаково крупным шрифтом. В тенге
+        числа семизначные — они не помещались, а знак валюты уезжал на
+        следующую строку. Теперь цена за сотрудника (по ней и принимают решение)
+        идёт крупно на всю ширину, годовая сумма и помесячная — под ней мельче;
+        whitespace-nowrap не даёт разорвать сумму со знаком валюты.
+      */}
+      <dl className="mt-5 rounded-xl border border-foreground/10 bg-foreground/[0.03] p-4">
+        <dt className="text-xs uppercase tracking-wide text-foreground/50">
+          {c.perSeatYear}
+        </dt>
+        <dd className="mt-1 whitespace-nowrap text-3xl font-bold tabular-nums">
+          {money(quote.pricePerSeatTiyn)}
+        </dd>
+
+        {/* justify-between: подпись «В месяц на человека» переносится на две
+            строки, и без него суммы во втором ряду вставали на разной высоте. */}
+        <div className="mt-3 grid grid-cols-2 gap-3 border-t border-foreground/10 pt-3">
+          <div className="flex flex-col justify-between">
+            <dt className="text-xs uppercase tracking-wide text-foreground/50">
+              {c.totalYear}
+            </dt>
+            <dd className="mt-0.5 whitespace-nowrap text-lg font-semibold tabular-nums">
+              {money(quote.totalTiyn)}
+            </dd>
+          </div>
+          <div className="flex flex-col justify-between">
+            <dt className="text-xs uppercase tracking-wide text-foreground/50">
+              {c.perMonth}
+            </dt>
+            <dd className="mt-0.5 whitespace-nowrap text-lg font-semibold tabular-nums">
+              {money(Math.round(quote.pricePerSeatTiyn / 12))}
+            </dd>
+          </div>
         </div>
       </dl>
 
