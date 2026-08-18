@@ -38,11 +38,13 @@ export function BusinessCta({
   const isOffline = format === "OFFLINE";
 
   return (
-    <div className="space-y-4">
+    // Блок кладётся на тёмный hero, поэтому цвет текста задаём явно: иначе
+    // карточки наследуют белый от секции и цифры пропадают на светлом фоне.
+    <div className="space-y-4 text-foreground">
       <div
         role="group"
         aria-label="Формат обучения"
-        className="inline-flex rounded-xl border border-foreground/12 bg-background p-1"
+        className="inline-flex rounded-xl border border-foreground/12 bg-background p-1 shadow-sm"
       >
         <FormatButton
           active={!isOffline}

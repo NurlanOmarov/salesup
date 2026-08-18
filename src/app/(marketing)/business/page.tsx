@@ -147,17 +147,15 @@ export default async function BusinessPage() {
         />
         {/* Слева заливка плотнее: под заголовком кадр почти чёрный, справа —
             видно команду. Без градиента белый текст спорил бы с окнами. */}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/85 to-slate-950/45" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/75 to-slate-950/25" />
 
         <div className="relative mx-auto max-w-6xl px-4 pb-12 pt-12 sm:pt-16 lg:pb-16">
         <AudienceSwitch current="b2b" size="hero" onDark />
 
         <div className="mt-6 grid gap-10 lg:grid-cols-[1.05fr_1fr] lg:items-start">
           <div>
-            <h1 className="text-3xl font-bold leading-tight drop-shadow-lg sm:text-4xl lg:text-5xl">
-              Обучение отдела продаж,
-              <br />
-              которое не заканчивается в пятницу
+            <h1 className="text-balance text-3xl font-bold leading-tight drop-shadow-lg sm:text-4xl lg:text-5xl">
+              Обучение отдела продаж, которое не заканчивается в пятницу
             </h1>
             <p className="mt-5 max-w-xl text-lg text-white/75">
               Тренинг забывается за месяц. Годовой доступ к платформе учит каждого
