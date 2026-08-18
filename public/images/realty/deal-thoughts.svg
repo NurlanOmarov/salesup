@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" width="640" height="400" role="img" aria-label="Что на самом деле думают трое участников сделки с недвижимостью: два риэлтора и клиент">
+  <defs>
+    <style>
+      .agent { fill: #e11d48; fill-opacity: .12; stroke: #be123c; stroke-width: 2.5; stroke-linejoin: round; }
+      .client { fill: #0ea5e9; fill-opacity: .14; stroke: #0284c7; stroke-width: 2.5; stroke-linejoin: round; }
+      .said { font: 600 13px/1.3 system-ui, -apple-system, "Segoe UI", sans-serif; fill: #0f172a; text-anchor: middle; }
+      .thought { font: italic 600 13px/1.3 system-ui, -apple-system, "Segoe UI", sans-serif; fill: #be123c; text-anchor: middle; }
+      .thought-c { fill: #0369a1; }
+      .role { font: 800 15px/1.2 system-ui, -apple-system, "Segoe UI", sans-serif; fill: #0f172a; text-anchor: middle; }
+      .title { font: 700 15px/1.2 system-ui, -apple-system, "Segoe UI", sans-serif; fill: #94a3b8; text-anchor: middle; letter-spacing: 1.5px; }
+      .hint { font: 500 13px/1.3 system-ui, -apple-system, "Segoe UI", sans-serif; fill: #64748b; text-anchor: middle; }
+      .body { fill: #cbd5e1; }
+      .head { fill: #94a3b8; }
+      .body-c { fill: #bae6fd; }
+      .head-c { fill: #7dd3fc; }
+      .verdict { fill: #f1f5f9; stroke: #cbd5e1; stroke-width: 2; }
+    </style>
+  </defs>
+
+  <!-- Светлая подложка: схема живёт и в тёмном кабинете, и на белой раздатке. -->
+  <rect x="0" y="0" width="640" height="400" rx="14" fill="#ffffff" />
+
+  <text class="title" x="320" y="32">ОДИН РАЗГОВОР — ТРИ РАЗНЫЕ ГОЛОВЫ</text>
+
+  <!-- Риэлтор 1 -->
+  <rect class="agent" x="20" y="52" width="188" height="176" rx="12" />
+  <circle class="head" cx="114" cy="84" r="13" />
+  <path class="body" d="M96 112 q18 -14 36 0 v16 h-36 z" />
+  <text class="role" x="114" y="152">Риэлтор</text>
+  <text class="said" x="114" y="176">потирает руки</text>
+  <text class="thought" x="114" y="200">«Кажется,</text>
+  <text class="thought" x="114" y="216">он повёлся»</text>
+
+  <!-- Клиент -->
+  <rect class="client" x="226" y="52" width="188" height="176" rx="12" />
+  <circle class="head-c" cx="320" cy="84" r="13" />
+  <path class="body-c" d="M302 112 q18 -14 36 0 v16 h-36 z" />
+  <text class="role" x="320" y="152">Клиент</text>
+  <text class="said" x="320" y="176">слушает предложение</text>
+  <text class="thought thought-c" x="320" y="200">«Звучит-то ничего,</text>
+  <text class="thought thought-c" x="320" y="216">но что-то тут не так»</text>
+
+  <!-- Риэлтор 2 -->
+  <rect class="agent" x="432" y="52" width="188" height="176" rx="12" />
+  <circle class="head" cx="526" cy="84" r="13" />
+  <path class="body" d="M508 112 q18 -14 36 0 v16 h-36 z" />
+  <text class="role" x="526" y="152">Риэлтор</text>
+  <text class="said" x="526" y="176">«Мы вам как себе сделаем»</text>
+  <text class="thought" x="526" y="200">«Вот лопух,</text>
+  <text class="thought" x="526" y="216">не догадался»</text>
+
+  <!-- Вывод -->
+  <rect class="verdict" x="60" y="256" width="520" height="104" rx="12" />
+  <text class="role" x="320" y="288">Манипуляция всегда чувствуется</text>
+  <text class="hint" x="320" y="314">Для клиента это сделка пару раз в жизни и его собственность:</text>
+  <text class="hint" x="320" y="332">он относится к ней трепетно и считывает недосказанность.</text>
+  <text class="hint" x="320" y="350" style="font-style: italic">«Если мы агенты — давайте думать об истинных потребностях клиента»</text>
+</svg>

@@ -89,6 +89,21 @@ import {
   TOURISM_EXAM_PASS_SCORE,
 } from "./seed-data/tourism-content.js";
 import {
+  REALTY_LESSON_QUIZZES,
+  REALTY_SUMMARIES,
+  REALTY_SLIDES,
+  REALTY_FLASHCARDS,
+  REALTY_OBJECTIONS,
+  REALTY_CHECKLISTS,
+  REALTY_SCRIPTS,
+  REALTY_AUDITS,
+  REALTY_HOTSPOTS,
+  REALTY_BRANCHING,
+  REALTY_SCENARIOS,
+  REALTY_EXAM,
+  REALTY_EXAM_PASS_SCORE,
+} from "./seed-data/realty-content.js";
+import {
   TIME_LESSON_QUIZZES,
   TIME_FLASHCARDS,
   TIME_CHECKLISTS,
@@ -834,6 +849,79 @@ const TOURISM_MODULES: ModuleSpec[] = [
   },
 ];
 
+// ── Курс «Техники продаж недвижимости» (реальный YouTube-плейлист) ──────────
+// Источник: https://www.youtube.com/playlist?list=PLbPgy5BEZoQXK5puNilaLSME1PLvuCLFA
+// Тренер: Виталий Дубовик (activesales.by). В плейлисте 10 роликов, в курс вошли 9:
+// «Эффективные продажи недвижимости» (2 мин) — музыкальная заставка без речи.
+//
+// Порядок уроков педагогический, а не как в плейлисте: ролик «Как стать риэлтором»
+// (роль агента и тактика трёх шагов) поднят из середины в первый модуль, потому что
+// он отвечает на вопрос «за что риэлтору платят» и даёт тактику, на которую опираются
+// все дальнейшие разборы ошибок. Модули 2–3 идут по авторской нумерации ошибок №1–6.
+const REALTY_MODULES: ModuleSpec[] = [
+  {
+    title: "Модуль 1. Профессия риэлтора: за что вам платят",
+    lessons: [
+      {
+        title: "О курсе: четыре темы и почему риэлтору нужны стальные нервы",
+        yt: "https://www.youtube.com/watch?v=oHbuiKJAKhs",
+        durationSec: 563,
+        free: true,
+      },
+      {
+        title: "Чем продажа недвижимости отличается от любых других продаж",
+        yt: "https://www.youtube.com/watch?v=iaJVnYPjSlg",
+        durationSec: 565,
+      },
+      {
+        title: "Роль риэлтора сегодня: тактика трёх шагов вместо спора о цене",
+        yt: "https://www.youtube.com/watch?v=odCO7qbvfk0",
+        durationSec: 194,
+      },
+    ],
+  },
+  {
+    title: "Модуль 2. Первые три ошибки: лень, обещания, манипуляции",
+    lessons: [
+      {
+        title: "Ошибка №1: банальная лень и скорость реакции на просьбу клиента",
+        yt: "https://www.youtube.com/watch?v=Jr7kg0cavDo",
+        durationSec: 251,
+      },
+      {
+        title: "Ошибка №2: клиент думает, что вы хотите слить его квартиру",
+        yt: "https://www.youtube.com/watch?v=rPQJ_HCu4vI",
+        durationSec: 240,
+      },
+      {
+        title: "Ошибка №3: манипуляции, которые ломают сделку",
+        yt: "https://www.youtube.com/watch?v=oCnoD5Easbg",
+        durationSec: 467,
+      },
+    ],
+  },
+  {
+    title: "Модуль 3. Потребности, возражения, репутация",
+    lessons: [
+      {
+        title: "Ошибка №4: истинные потребности и квартира мечты",
+        yt: "https://www.youtube.com/watch?v=JTmZT3YqSa4",
+        durationSec: 316,
+      },
+      {
+        title: "Ошибка №5: неумение работать с возражениями",
+        yt: "https://www.youtube.com/watch?v=P0DqPxmXA88",
+        durationSec: 429,
+      },
+      {
+        title: "Ошибка №6: репутация агентства и конфликты, которые нельзя делегировать",
+        yt: "https://www.youtube.com/watch?v=qJeKTO5LaX0",
+        durationSec: 221,
+      },
+    ],
+  },
+];
+
 const COURSES: CourseSpec[] = [
   {
     slug: "sales-pharma",
@@ -1014,6 +1102,52 @@ const COURSES: CourseSpec[] = [
     modules: TOURISM_MODULES,
     coverUrl: "/images/courses/sales-tourism.png",
   },
+  // ── Курс «Техники продаж недвижимости» (реальный плейлист) ────────────────
+  {
+    slug: "sales-realty",
+    title: "Техники продаж недвижимости",
+    subtitle: "Шесть ошибок риэлтора и тактика, которая доводит клиента до сделки",
+    description:
+      "Практический видеокурс бизнес-тренера Виталия Дубовика (activesales.by) для риэлторов, агентов и руководителей агентств недвижимости. 9 уроков про частные продажи физлицам: чем продажа квартиры отличается от любых других продаж и в чём ценность услуги риэлтора, что на самом деле происходит в голове у продавца квартиры (айсберг из восьми родственников, тёщи и СМИ), тактика трёх шагов, после которой клиент сам говорит о снижении цены, и сквозной разбор шести типичных ошибок: банальная лень и скорость реакции, попытка «слить» квартиру ниже рынка, манипуляции с семьёй и эксклюзивом, поверхностно выясненные потребности, неумение работать с возражениями и потеря репутации на конфликте.",
+    industry: "Недвижимость",
+    hoursLabel: "~54 минуты",
+    learnPoints: [
+      "Объяснять ценность услуги риэлтора так, чтобы клиент не ушёл продавать сам",
+      "Читать айсберг решения: кто ЛПР, кто влияет из семьи и что давит снаружи",
+      "Вести клиента тактикой трёх шагов — ответственность, активность, факты — и не спорить о цене",
+      "Держать скорость реакции: что должно произойти в первые 48 часов после договора",
+      "Не попадать в пять манипуляций, которые ломают сделку и репутацию агентства",
+      "Выяснять истинные потребности и подбирать квартиру мечты до продажи текущей",
+      "Отвечать на «дорого за услуги» и «я сам продам» и вести свою книгу продаж",
+      "Разруливать конфликт и расторжение лично, сохраняя лицо и сарафанное радио",
+    ],
+    targetAudience: [
+      "Риэлторы и агенты по недвижимости",
+      "Руководители и владельцы агентств недвижимости",
+      "Новички в профессии — на онбординге в первые месяцы",
+      "Частные маклеры, которые ведут сделки самостоятельно",
+    ],
+    faq: [
+      {
+        q: "Подойдёт ли курс новичку?",
+        a: "Да. Курс начинается с азов профессии: чем продажа недвижимости отличается от других продаж, за что клиент платит комиссию и что происходит в голове у продавца квартиры. Опытному агенту полезен сквозной разбор шести ошибок и тактика трёх шагов.",
+      },
+      {
+        q: "Курс про сделки с физлицами или про коммерческую недвижимость?",
+        a: "Тренер прямо оговаривает: речь о частных продажах физическим лицам — там, где эмоций и влияющих на решение людей больше всего. Приёмы работы с семьёй, ценой и возражениями применимы и к другим сегментам, но примеры взяты из жилой недвижимости.",
+      },
+      {
+        q: "Сколько времени займёт прохождение?",
+        a: "Около 54 минут видео плюс задания, тренажёры и итоговый экзамен. Уроки короткие — от 3 до 10 минут, курс реально пройти за вечер и сразу применить.",
+      },
+      {
+        q: "Будет ли сертификат?",
+        a: "Да. После прохождения уроков и итогового экзамена вы получаете именной сертификат с уникальным номером и публичной страницей проверки.",
+      },
+    ],
+    modules: REALTY_MODULES,
+    coverUrl: "/images/courses/sales-realty.png",
+  },
   {
     slug: "sales-kitchens",
     title: "Эффективные продажи кухонь 2.0",
@@ -1102,48 +1236,6 @@ const COURSES: CourseSpec[] = [
     ],
     modules: SHOES_MODULES,
     coverUrl: "/images/courses/sales-shoes.png",
-  },
-  {
-    slug: "sales-realty",
-    inDevelopment: true,
-    title: "Техники продаж недвижимости",
-    subtitle: "От первого звонка до подписания договора",
-    description:
-      "Специализированный курс для риэлторов и менеджеров застройщиков. Полный цикл сделки: холодный звонок, показ объекта, переговоры о цене, работа с юридическими сомнениями клиента.",
-    industry: "Недвижимость",
-    hoursLabel: "8 часов",
-    learnPoints: [
-      "Скрипт холодного звонка для назначения встречи",
-      "Техника показа объекта: маршрут, акценты, вопросы",
-      "Работа с возражением «подумаем» на поздней стадии",
-      "Переговоры о цене: как защитить стоимость или предложить альтернативу",
-      "Ускорение сделки: работа с ипотечными и юридическими вопросами",
-    ],
-    targetAudience: [
-      "Риэлторы и агенты по недвижимости",
-      "Менеджеры отделов продаж застройщиков",
-      "Руководители агентств недвижимости",
-    ],
-    faq: [
-      { q: "Есть ли казахстанская специфика?", a: "Да. Примеры — из казахстанского рынка: ипотека, рассрочка от застройщика." },
-    ],
-    modules: [
-      {
-        title: "Модуль 1. Входящий и исходящий трафик",
-        lessons: [
-          { title: "Холодный звонок и квалификация клиента", yt: "https://youtu.be/PLACEHOLDER", free: true },
-          { title: "Обработка входящей заявки", yt: "https://youtu.be/PLACEHOLDER" },
-        ],
-      },
-      {
-        title: "Модуль 2. Показ и закрытие",
-        lessons: [
-          { title: "Техника показа объекта", yt: "https://youtu.be/PLACEHOLDER" },
-          { title: "Переговоры о цене и закрытие сделки", yt: "https://youtu.be/PLACEHOLDER" },
-        ],
-      },
-    ],
-    coverUrl: "/images/courses/sales-realty.png",
   },
   {
     slug: "sales-b2b",
@@ -2194,6 +2286,36 @@ async function main() {
     // Уроки с готовым HLS публикуем: поурочный контент к ним собран.
     await db.lesson.updateMany({
       where: { module: { courseId: tourismCourse.id }, videoStatus: "READY" },
+      data: { status: "PUBLISHED" },
+    });
+  }
+
+  // ── Курс «Техники продаж недвижимости» ───────────────────────────────────
+  // Контент по видео Виталия Дубовика (транскрипты в «Презентации/Техники продаж
+  // недвижимости»), см. prisma/seed-data/realty-content.ts. Раздатки уроков — PDF
+  // (factory:handout + factory:publish), поэтому здесь только колоды кабинета.
+  const realtyCourse = courses.find((c) => c.slug === "sales-realty");
+  if (realtyCourse) {
+    await seedSummaries(realtyCourse.id, REALTY_SUMMARIES);
+    await seedSlides(realtyCourse.id, REALTY_SLIDES);
+    await seedLessonQuizzes(realtyCourse.id, REALTY_LESSON_QUIZZES);
+    await seedFlashcards(realtyCourse.id, REALTY_FLASHCARDS);
+    await seedObjections(realtyCourse.id, REALTY_OBJECTIONS);
+    await seedArtifacts(realtyCourse.id, "CHECKLIST", REALTY_CHECKLISTS);
+    await seedArtifacts(realtyCourse.id, "SCRIPT_BUILDER", REALTY_SCRIPTS);
+    await seedArtifacts(realtyCourse.id, "DIALOGUE_AUDIT", REALTY_AUDITS);
+    await seedArtifacts(realtyCourse.id, "HOTSPOT", REALTY_HOTSPOTS);
+    await seedArtifacts(realtyCourse.id, "BRANCHING", REALTY_BRANCHING);
+    await seedScenarios(realtyCourse.id, REALTY_SCENARIOS);
+    await seedFinalExam(realtyCourse.id, {
+      questions: REALTY_EXAM,
+      description:
+        "Проверка знаний по курсу: ценность услуги риэлтора, айсберг решения о продаже, тактика трёх шагов и шесть типичных ошибок — лень, «слив» квартиры, манипуляции, потребности, возражения и репутация.",
+      passScore: REALTY_EXAM_PASS_SCORE,
+    });
+    // Уроки с готовым HLS публикуем: поурочный контент к ним собран.
+    await db.lesson.updateMany({
+      where: { module: { courseId: realtyCourse.id }, videoStatus: "READY" },
       data: { status: "PUBLISHED" },
     });
   }

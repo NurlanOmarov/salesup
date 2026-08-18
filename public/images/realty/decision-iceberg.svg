@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" width="640" height="400" role="img" aria-label="Айсберг решения о продаже квартиры: лицо принимающее решение на виду, под водой — семья, родственники и внешнее давление">
+  <defs>
+    <style>
+      .water { fill: #0ea5e9; fill-opacity: .08; }
+      .line { stroke: #38bdf8; stroke-width: 2.5; stroke-dasharray: 8 6; }
+      .ice-top { fill: #fef3c7; stroke: #d97706; stroke-width: 2.5; stroke-linejoin: round; }
+      .ice-deep { fill: #e0f2fe; stroke: #0284c7; stroke-width: 2.5; stroke-linejoin: round; }
+      .cap { font: 800 16px/1.2 system-ui, -apple-system, "Segoe UI", sans-serif; fill: #0f172a; text-anchor: middle; }
+      .role { font: 600 12.5px/1.3 system-ui, -apple-system, "Segoe UI", sans-serif; fill: #0f172a; text-anchor: middle; }
+      .hint { font: 500 11.5px/1.3 system-ui, -apple-system, "Segoe UI", sans-serif; fill: #64748b; text-anchor: middle; }
+      .title { font: 700 15px/1.2 system-ui, -apple-system, "Segoe UI", sans-serif; fill: #94a3b8; text-anchor: middle; letter-spacing: 1.5px; }
+      .band { font: 700 11px/1.2 system-ui, -apple-system, "Segoe UI", sans-serif; fill: #0284c7; text-anchor: start; letter-spacing: 1.2px; }
+      .band-top { fill: #b45309; }
+      .chip { fill: #ffffff; stroke: #bae6fd; stroke-width: 2; }
+      .chip-out { fill: #ffffff; stroke: #cbd5e1; stroke-width: 2; stroke-dasharray: 5 4; }
+    </style>
+  </defs>
+
+  <!-- Светлая подложка: схема живёт и в тёмном кабинете, и на белой раздатке. -->
+  <rect x="0" y="0" width="640" height="400" rx="14" fill="#ffffff" />
+  <rect class="water" x="0" y="112" width="640" height="288" rx="14" />
+
+  <text class="title" x="320" y="30">РЕШЕНИЕ ПРИНИМАЕТ ОДИН — ВЛИЯЮТ ДЕСЯТЕРО</text>
+
+  <!-- Вершина: ЛПР -->
+  <path class="ice-top" d="M320 46 L406 110 H234 Z" />
+  <text class="cap" x="320" y="96">Собственник</text>
+  <text class="band band-top" x="24" y="80">НАД ВОДОЙ · С НИМ ВЫ ГОВОРИТЕ</text>
+
+  <!-- Линия воды -->
+  <line class="line" x1="16" y1="112" x2="624" y2="112" />
+  <text class="hint" x="320" y="128">лицо, принимающее решение: сомневается, доверчив, легко меняет мнение</text>
+
+  <!-- Подводная часть -->
+  <path class="ice-deep" d="M234 138 H406 L516 300 H124 Z" fill-opacity=".35" />
+  <text class="band" x="24" y="160">ПОД ВОДОЙ</text>
+  <text class="band" x="24" y="176">СЕМЬЯ</text>
+
+  <rect class="chip" x="150" y="150" width="108" height="42" rx="9" />
+  <text class="role" x="204" y="168">Жена</text>
+  <text class="hint" x="204" y="184">чтобы без ссор</text>
+
+  <rect class="chip" x="266" y="150" width="108" height="42" rx="9" />
+  <text class="role" x="320" y="168">Младший сын</text>
+  <text class="hint" x="320" y="184">против кредита</text>
+
+  <rect class="chip" x="382" y="150" width="108" height="42" rx="9" />
+  <text class="role" x="436" y="168">Старший сын</text>
+  <text class="hint" x="436" y="184">ждёт своего</text>
+
+  <rect class="chip" x="150" y="202" width="108" height="42" rx="9" />
+  <text class="role" x="204" y="220">Жена младшего</text>
+  <text class="hint" x="204" y="236">продать быстрее</text>
+
+  <rect class="chip" x="266" y="202" width="108" height="42" rx="9" />
+  <text class="role" x="320" y="220">Жена старшего</text>
+  <text class="hint" x="320" y="236">молчит</text>
+
+  <rect class="chip" x="382" y="202" width="108" height="42" rx="9" />
+  <text class="role" x="436" y="220">Тёща</text>
+  <text class="hint" x="436" y="236">завернула процесс</text>
+
+  <rect class="chip" x="208" y="254" width="108" height="42" rx="9" />
+  <text class="role" x="262" y="272">Тесть</text>
+  <text class="hint" x="262" y="288">молчит</text>
+
+  <rect class="chip-out" x="324" y="254" width="108" height="42" rx="9" />
+  <text class="role" x="378" y="272">Знакомые</text>
+  <text class="hint" x="378" y="288">советуют со всех сторон</text>
+
+  <!-- Внешнее давление -->
+  <rect class="chip-out" x="30" y="316" width="180" height="46" rx="10" />
+  <text class="role" x="120" y="336">СМИ</text>
+  <text class="hint" x="120" y="352">«чёрные риэлторы», обман</text>
+
+  <rect class="chip-out" x="230" y="316" width="180" height="46" rx="10" />
+  <text class="role" x="320" y="336">Родители жены старшего</text>
+  <text class="hint" x="320" y="352">своё мнение о цене</text>
+
+  <rect class="chip-out" x="430" y="316" width="180" height="46" rx="10" />
+  <text class="role" x="520" y="336">Память о ценах</text>
+  <text class="hint" x="520" y="352">«семь лет назад было дороже»</text>
+
+  <text class="hint" x="320" y="384" style="font-style: italic">Понимаем, что внутри айсберга, — понимаем, почему решение не принимается быстро</text>
+</svg>
