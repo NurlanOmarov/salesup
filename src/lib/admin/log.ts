@@ -21,6 +21,9 @@ export type AdminAction =
   | "seo.settings.update"
   | "seo.staticpage.update"
   | "seo.scope.update" // переопределения SEO для домена/языка (мультидомен, D-013)
+  | "review.external.create" // отзыв с Яндекс/Google Карт, перенесённый вручную
+  | "review.external.update"
+  | "review.external.delete"
   | "seo.redirect.create"
   | "seo.redirect.update"
   | "seo.redirect.delete"

@@ -64,6 +64,13 @@ export const updateSeoSettingsAction = safeAction(
       socialFacebook: optStr(300),
       socialLinkedin: optStr(300),
       socialVk: optStr(300),
+      // Оценка вводится вручную (у карт нет бесплатного API); 0 = «не показывать».
+      yandexMapsUrl: optStr(500),
+      yandexRating: z.number().min(0).max(5).nullable(),
+      yandexReviews: z.number().int().min(0).max(100_000).nullable(),
+      googleMapsUrl: optStr(500),
+      googleRating: z.number().min(0).max(5).nullable(),
+      googleReviews: z.number().int().min(0).max(100_000).nullable(),
       googleVerification: optStr(200),
       yandexVerification: optStr(200),
       ga4Id: optStr(40),

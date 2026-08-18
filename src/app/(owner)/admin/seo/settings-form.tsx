@@ -28,6 +28,12 @@ export interface SeoSettingsFields {
   socialFacebook: string | null;
   socialLinkedin: string | null;
   socialVk: string | null;
+  yandexMapsUrl: string | null;
+  yandexRating: number | null;
+  yandexReviews: number | null;
+  googleMapsUrl: string | null;
+  googleRating: number | null;
+  googleReviews: number | null;
   defaultOgKey: string | null;
   googleVerification: string | null;
   yandexVerification: string | null;
@@ -69,6 +75,12 @@ export function SeoSettingsForm({
   const [socialFacebook, setSocialFacebook] = useState(settings.socialFacebook ?? "");
   const [socialLinkedin, setSocialLinkedin] = useState(settings.socialLinkedin ?? "");
   const [socialVk, setSocialVk] = useState(settings.socialVk ?? "");
+  const [yandexMapsUrl, setYandexMapsUrl] = useState(settings.yandexMapsUrl ?? "");
+  const [yandexRating, setYandexRating] = useState(String(settings.yandexRating ?? ""));
+  const [yandexReviews, setYandexReviews] = useState(String(settings.yandexReviews ?? ""));
+  const [googleMapsUrl, setGoogleMapsUrl] = useState(settings.googleMapsUrl ?? "");
+  const [googleRating, setGoogleRating] = useState(String(settings.googleRating ?? ""));
+  const [googleReviews, setGoogleReviews] = useState(String(settings.googleReviews ?? ""));
   const [googleVerification, setGoogleVerification] = useState(
     settings.googleVerification ?? "",
   );
@@ -110,6 +122,12 @@ export function SeoSettingsForm({
     setSocialFacebook(settings.socialFacebook ?? "");
     setSocialLinkedin(settings.socialLinkedin ?? "");
     setSocialVk(settings.socialVk ?? "");
+    setYandexMapsUrl(settings.yandexMapsUrl ?? "");
+    setYandexRating(String(settings.yandexRating ?? ""));
+    setYandexReviews(String(settings.yandexReviews ?? ""));
+    setGoogleMapsUrl(settings.googleMapsUrl ?? "");
+    setGoogleRating(String(settings.googleRating ?? ""));
+    setGoogleReviews(String(settings.googleReviews ?? ""));
     setGoogleVerification(settings.googleVerification ?? "");
     setYandexVerification(settings.yandexVerification ?? "");
     setGa4Id(settings.ga4Id ?? "");
@@ -139,6 +157,12 @@ export function SeoSettingsForm({
         socialFacebook,
         socialLinkedin,
         socialVk,
+        yandexMapsUrl,
+        yandexRating: yandexRating.trim() ? Number(yandexRating.replace(",", ".")) : null,
+        yandexReviews: yandexReviews.trim() ? Number(yandexReviews) : null,
+        googleMapsUrl,
+        googleRating: googleRating.trim() ? Number(googleRating.replace(",", ".")) : null,
+        googleReviews: googleReviews.trim() ? Number(googleReviews) : null,
         googleVerification,
         yandexVerification,
         ga4Id,

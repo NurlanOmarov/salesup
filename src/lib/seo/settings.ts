@@ -36,6 +36,17 @@ export const SEO_DEFAULTS = {
   socialFacebook: "https://www.facebook.com/groups/activesales/",
   socialLinkedin: "https://www.linkedin.com/in/vitaly-dubovik-1ab9204a/",
   socialVk: "https://vk.com/activesalesby",
+  // Ссылки на карточки школы известны, а оценку и число отзывов владелец
+  // проставляет в /admin/seo: без них блок рейтинга не показывается.
+  yandexMapsUrl: "https://yandex.by/maps/org/ektiv_seylz/225492259144/",
+  yandexRating: 4.7,
+  yandexReviews: null,
+  // cid карточки «Бизнес-школа ACTIVE SALES» — устойчивая короткая форма ссылки
+  // на организацию в Google Картах (place_id у нас нет, а выдуманный открывает
+  // пустую карточку).
+  googleMapsUrl: "https://www.google.com/maps?cid=6438951297707191038",
+  googleRating: 4.9,
+  googleReviews: null,
   defaultOgKey: null,
   googleVerification: null,
   yandexVerification: null,
@@ -126,6 +137,8 @@ export function revalidateSeoSettings() {
 
 /** Ссылки соцпрофилей → массив для sameAs (пустые отбрасываются). */
 export { socialLinks, socialProfiles } from "./social";
+
+export { externalRatings } from "./ratings";
 
 export interface SupportContacts {
   phone: string; // человекочитаемый, "+375 (29) 605-30-32"

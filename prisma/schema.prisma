@@ -649,6 +649,34 @@ model Review {
   @@index([courseId, autoModeration])
 }
 
+/// Отзыв с внешней площадки (Яндекс/Google Карты), перенесённый владельцем вручную.
+/// Автопарсинг карт не делаем: он нарушает условия площадок и ломается при смене
+/// вёрстки — тексты переносит владелец, указывая автора и ссылку на первоисточник,
+/// чтобы читатель мог проверить отзыв там же.
+model ExternalReview {
+  id        String       @id @default(cuid())
+  source    ReviewSource
+  author    String
+  text      String       @db.Text
+  /// 1–5, как на площадке. Пусто — если в источнике оценки не видно: выдумывать
+  /// звёзды нельзя, отзыв тогда показывается без цифры.
+  rating    Int?
+  /// Ссылка на карточку организации с этим отзывом (проверяемость).
+  url       String?
+  sortOrder Int          @default(0)
+  published Boolean      @default(true)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@index([published, sortOrder])
+}
+
+enum ReviewSource {
+  YANDEX
+  GOOGLE
+  OTHER
+}
+
 // ─────────────────────────── ПРОГРЕСС / ЗАМЕТКИ / СЕРТИФИКАТЫ ───────────────────────────
 
 model LessonProgress {
@@ -1235,6 +1263,16 @@ model SeoSettings {
   socialFacebook  String?
   socialLinkedin  String?
   socialVk        String?
+
+  /// Рейтинг на внешних площадках — блок доверия на лендинге. Значения владелец
+  /// проставляет вручную (у карт нет бесплатного API): пусто → блок скрыт, чтобы
+  /// на витрине никогда не появилась выдуманная оценка.
+  yandexMapsUrl String?
+  yandexRating  Float?
+  yandexReviews Int?
+  googleMapsUrl String?
+  googleRating  Float?
+  googleReviews Int?
 
   // Дефолтная OG-картинка (относительный ключ lib/storage). Пусто → авто-opengraph-image.
   defaultOgKey String?

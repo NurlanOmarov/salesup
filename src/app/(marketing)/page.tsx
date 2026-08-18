@@ -19,7 +19,7 @@ import {
   Trophy,
 } from "lucide-react";
 import { db } from "@/lib/db";
-import { getSupportContacts } from "@/lib/seo/settings";
+import { externalRatings, getSeoSettings, getSupportContacts } from "@/lib/seo/settings";
 import { buttonVariants } from "@/components/ui/button";
 import { quoteSeats, SUBSCRIPTION_YEAR_TIYN } from "@/lib/pricing";
 import { cn, buildSafe } from "@/lib/utils";
@@ -28,6 +28,11 @@ import { Faq } from "@/components/landing/faq";
 import { Reviews, type ReviewItem } from "@/components/landing/reviews";
 import { LeadForm } from "@/components/landing/lead-form";
 import { AiDemo } from "@/components/landing/ai-demo";
+import { ExternalRatings } from "@/components/landing/external-ratings";
+import {
+  ExternalReviewsMarquee,
+  type ExternalReviewCard,
+} from "@/components/landing/external-reviews-marquee";
 import { HeroVideo } from "@/components/landing/hero-video";
 import { HeroWordStream } from "@/components/landing/hero-word-stream";
 import { StatCounter } from "@/components/landing/stat-counter";
@@ -95,6 +100,19 @@ export default async function LandingPage() {
   const b2bBestPerMonth = Math.round(b2bBestPerSeat / 12);
   // Контакты — из SeoSettings (правятся в /admin/seo без деплоя).
   const { whatsapp: wa, telegram: tg } = await getSupportContacts();
+  // Оценки школы на Яндекс и Google Картах — правятся в /admin/seo.
+  const ratings = externalRatings(await getSeoSettings());
+  // Цитаты с карт: переносятся владельцем в /admin/reviews (парсинг карт не делаем).
+  const externalReviews = await buildSafe(
+    () =>
+      db.externalReview.findMany({
+        where: { published: true },
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
+        take: 12,
+        select: { id: true, author: true, text: true, rating: true, source: true, url: true },
+      }),
+    [] as ExternalReviewCard[],
+  );
   // Домен захода: гео-строка первого экрана («вся Беларусь» / «весь Казахстан»).
   const site = (await currentSite()) ?? DEFAULT_SITE;
   // Язык страницы: русский по умолчанию, казахский на /kk (i18n/routing.ts).
@@ -436,17 +454,43 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* Отзывы */}
-      {reviews.length > 0 ? (
+      {/* Отзывы учеников платформы + оценки школы на внешних картах.
+          Секция показывается, даже когда своих отзывов ещё нет: оценки на
+          картах — самостоятельный блок доверия. */}
+      {reviews.length > 0 || ratings.length > 0 || externalReviews.length > 0 ? (
         <section className="mx-auto max-w-6xl px-4 py-16">
-          <Reveal>
-            <h2 className="text-3xl font-bold">{t.landing.reviewsTitle}</h2>
-          </Reveal>
-          <Reveal delay={0.05}>
-            <div className="mt-8">
-              <Reviews items={reviews} />
+          {reviews.length > 0 ? (
+            <>
+              <Reveal>
+                <h2 className="text-3xl font-bold">
+                  <span className="text-brand">{t.landing.reviewsAccent}</span>{" "}
+                  {t.landing.reviewsTitle}
+                </h2>
+              </Reveal>
+              <Reveal delay={0.05}>
+                <div className="mt-8">
+                  <Reviews items={reviews} />
+                </div>
+              </Reveal>
+            </>
+          ) : null}
+
+          {ratings.length > 0 || externalReviews.length > 0 ? (
+            <div className={reviews.length > 0 ? "mt-12" : ""}>
+              <Reveal>
+                <p className="text-center text-sm uppercase tracking-wide text-foreground/45">
+                  {t.landing.ratingsTitle}
+                </p>
+              </Reveal>
+              <Reveal delay={0.05}>
+                <div className="mt-4">
+                  <ExternalRatings items={ratings} words={t.landing.ratingWords} />
+                </div>
+              </Reveal>
+              <ExternalReviewsMarquee items={externalReviews} />
             </div>
-          </Reveal>
+          ) : null}
+
         </section>
       ) : null}
 
