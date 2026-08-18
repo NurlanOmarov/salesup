@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { Link } from "@/components/i18n/link";
 import { Suspense } from "react";
 import { BookOpen } from "lucide-react";
 import { db } from "@/lib/db";
@@ -10,8 +10,9 @@ import { getStaticPageSeo } from "@/lib/seo/static-pages";
 import { Reveal } from "@/components/landing/reveal";
 import type { CourseCardData } from "@/components/catalog/course-card";
 import { CoursesCatalog } from "@/components/catalog/courses-catalog";
-import { audience, difference, faq, howItWorks } from "@/content/courses-page";
+import { coursesPageContent } from "@/content/courses-page-content";
 import { currentSite, pageAlternates, siteOrigin } from "@/lib/seo/site";
+import { getLocale } from "@/i18n/server";
 
 export const revalidate = 60;
 
@@ -63,6 +64,8 @@ async function getCourses(main: MainCurrency): Promise<CourseCardData[]> {
 export default async function CoursesPage() {
   // Цены показываем в валюте страны домена (мультидомен), остальные — справочно.
   const site = await currentSite();
+  // Тексты каталога — на языке страницы (казахская версия на /kk/courses).
+  const { audience, howItWorks, difference, faq } = coursesPageContent(await getLocale());
   const courses = await getCourses(site?.currency ?? "byn");
 
   const siteUrl = await siteOrigin();

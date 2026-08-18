@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { stripLocale, localizePath, localesForHost, KK_READY } from "./routing.js";
+import {
+  stripLocale,
+  localizePath,
+  localesForHost,
+  hasKazakhVersion,
+  KK_READY,
+} from "./routing.js";
 
 describe("stripLocale", () => {
   it("снимает префикс казахского", () => {
@@ -44,5 +50,19 @@ describe("localesForHost", () => {
     expect(localesForHost("study.activesales.by")).toEqual(["ru"]);
     expect(localesForHost("study.sales-active.ru")).toEqual(["ru"]);
     expect(localesForHost(null)).toEqual(["ru"]);
+  });
+});
+
+describe("hasKazakhVersion", () => {
+  it("переведённые страницы получают казахскую версию", () => {
+    expect(hasKazakhVersion("/")).toBe(true);
+    expect(hasKazakhVersion("/courses")).toBe(true);
+  });
+
+  it("непереведённые — нет: их /kk-адрес уводится на русскую версию", () => {
+    // карточка курса, B2B и юридические страницы ещё не переведены
+    expect(hasKazakhVersion("/courses/spin")).toBe(false);
+    expect(hasKazakhVersion("/business")).toBe(false);
+    expect(hasKazakhVersion("/offer")).toBe(false);
   });
 });

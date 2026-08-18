@@ -22,12 +22,20 @@ export const LOCALE_HEADER = "x-locale";
 export const KK_HOST = "study.activesales.kz";
 
 /**
- * Готовность казахской версии. Пока переводы не завершены, флаг выключен:
- * /kk уводит на русскую версию, hreflang kk-KZ не публикуется. Иначе поисковик
- * получил бы казахский URL с русским текстом — это дубль, а не локаль.
- * Включается вместе с последним переведённым разделом.
+ * Страницы, у которых казахская версия уже переведена. Список пополняется по мере
+ * перевода — это честнее общего флага «готово/не готово»: непереведённый /kk-путь
+ * уводится на русскую версию и не попадает в hreflang, поэтому поисковик никогда
+ * не видит казахский адрес с русским текстом.
  */
-export const KK_READY = false;
+export const KK_PATHS: readonly string[] = ["/", "/courses"];
+
+/** Есть ли казахская версия у этого пути (путь — уже без языкового префикса). */
+export function hasKazakhVersion(pathname: string): boolean {
+  return KK_PATHS.includes(pathname);
+}
+
+/** Казахская версия существует хотя бы для одной страницы. */
+export const KK_READY = KK_PATHS.length > 0;
 
 /** Языки, доступные на хосте: везде русский, на .kz — плюс казахский. */
 export function localesForHost(host: string | null | undefined): readonly Locale[] {

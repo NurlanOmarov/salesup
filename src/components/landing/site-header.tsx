@@ -1,9 +1,19 @@
 import Image from "next/image";
-import Link from "next/link";
+import { Link } from "@/components/i18n/link";
 import { buttonVariants } from "@/components/ui/button";
 import { AudienceSwitch } from "@/components/landing/audience-switch";
+import { LanguageSwitch } from "@/components/landing/language-switch";
+import { messagesFor } from "@/i18n/messages";
+import { getLocale } from "@/i18n/server";
+import { localesForHost } from "@/i18n/routing";
+import { headers } from "next/headers";
 
-export function SiteHeader() {
+export async function SiteHeader() {
+  const locale = await getLocale();
+  const t = messagesFor(locale);
+  // Языки этого домена: казахский есть только на .kz и только когда готов.
+  const h = await headers();
+  const locales = localesForHost(h.get("x-forwarded-host") ?? h.get("host"));
   return (
     <header className="sticky top-0 z-40 border-b border-white/10 bg-slate-950/85 text-white backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
@@ -12,7 +22,7 @@ export function SiteHeader() {
           <span className="flex flex-col leading-tight">
             <span className="text-lg font-bold tracking-tight text-brand">ACTIVE SALES</span>
             <span className="text-[11px] font-medium text-white/60">
-              бизнес-тренинги для менеджеров
+              {t.header.tagline}
             </span>
           </span>
         </Link>
@@ -24,13 +34,14 @@ export function SiteHeader() {
             href="/courses"
             className="px-2 text-sm font-medium text-white/70 transition-colors hover:text-white"
           >
-            Курсы
+            {t.header.courses}
           </Link>
+          <LanguageSwitch locales={locales} />
           <Link
             href="/login"
             className={buttonVariants({ variant: "outline-light", size: "sm" })}
           >
-            Войти
+            {t.header.login}
           </Link>
         </nav>
       </div>

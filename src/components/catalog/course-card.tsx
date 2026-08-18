@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Link } from "@/components/i18n/link";
 import Image from "next/image";
 import { Clock } from "lucide-react";
 import { formatPrice, coverPublicUrl } from "@/lib/utils";

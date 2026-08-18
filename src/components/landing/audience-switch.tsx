@@ -1,16 +1,17 @@
 "use client";
 
-import Link from "next/link";
+import { Link } from "@/components/i18n/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import { Briefcase, User } from "lucide-react";
 import {
-  AUDIENCE_LABEL,
   AUDIENCE_PATH,
   AUDIENCES,
   type Audience,
 } from "@/content/landing/audience";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/i18n/client";
+import { messagesFor } from "@/i18n/messages";
 
 const ICONS = { b2c: User, b2b: Briefcase } as const;
 
@@ -36,6 +37,9 @@ export function AudienceSwitch({
   className?: string;
 }) {
   const pathname = usePathname();
+  // Подписи регистра — на языке страницы (казахская версия витрины).
+  const t = messagesFor(useLocale());
+  const label: Record<Audience, string> = { b2c: t.audience.self, b2b: t.audience.team };
   const active: Audience =
     current ?? (pathname?.startsWith(AUDIENCE_PATH.b2b) ? "b2b" : "b2c");
   const hero = size === "hero";
@@ -84,7 +88,7 @@ export function AudienceSwitch({
               />
             ) : null}
             <Icon className={cn("relative", hero ? "size-4" : "size-3.5")} />
-            <span className="relative font-medium">{AUDIENCE_LABEL[a]}</span>
+            <span className="relative font-medium">{label[a]}</span>
           </Link>
         );
       })}

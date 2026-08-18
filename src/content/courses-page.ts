@@ -113,3 +113,8 @@ export const faq = [
     a: "Да. Оставьте заявку и опишите состав команды и задачи — мы подберём программу под отрасль отдела и подскажем, как организовать доступ для сотрудников.",
   },
 ] as const;
+
+/** Русский каталог целиком — источник структуры для казахской версии. */
+export const coursesPageRu = { audience, howItWorks, difference, faq } as const;
+
+export type CoursesPageContent = import("./localized").Localized<typeof coursesPageRu>;

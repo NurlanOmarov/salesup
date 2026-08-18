@@ -1,7 +1,12 @@
 import NextAuth from "next-auth";
 import { NextResponse, type NextRequest, type NextFetchEvent } from "next/server";
 import { authConfig } from "@/auth.config";
-import { stripLocale, localesForHost, LOCALE_HEADER } from "@/i18n/routing";
+import {
+  stripLocale,
+  localesForHost,
+  hasKazakhVersion,
+  LOCALE_HEADER,
+} from "@/i18n/routing";
 
 // Middleware использует ТОЛЬКО edge-safe authConfig (без Prisma/argon2).
 // Гейтинг маршрутов — в callbacks.authorized.
@@ -18,9 +23,11 @@ function withLocale(req: NextRequest) {
   const url = req.nextUrl.clone();
   url.pathname = pathname;
 
-  // Казахский есть только на казахстанском домене: на .by/.ru это дубль без
-  // аудитории — уводим на русскую версию того же пути, чтобы не плодить URL.
-  if (!localesForHost(req.headers.get("x-forwarded-host") ?? req.headers.get("host")).includes(locale)) {
+  // Казахский есть только на казахстанском домене и только у переведённых
+  // страниц: остальное уводим на русскую версию того же пути, чтобы не плодить
+  // адреса с чужим языком внутри.
+  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
+  if (!localesForHost(host).includes(locale) || !hasKazakhVersion(pathname)) {
     return NextResponse.redirect(url);
   }
 

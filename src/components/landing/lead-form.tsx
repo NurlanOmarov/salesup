@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect } from "react";
-import Link from "next/link";
+import { Link } from "@/components/i18n/link";
 import { motion } from "framer-motion";
 import { createLeadAction, type LeadFormState } from "@/app/(marketing)/actions";
 import { trackEvent } from "@/lib/analytics/track";

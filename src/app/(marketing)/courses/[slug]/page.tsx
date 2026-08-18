@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import Image from "next/image";
-import Link from "next/link";
+import { Link } from "@/components/i18n/link";
 import {
   CheckCircle2,
   Clock,

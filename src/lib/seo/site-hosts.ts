@@ -1,5 +1,11 @@
 import type { Metadata } from "next";
-import { DEFAULT_LOCALE, KK_HOST, KK_READY, localizePath, type Locale } from "@/i18n/routing";
+import {
+  DEFAULT_LOCALE,
+  KK_HOST,
+  hasKazakhVersion,
+  localizePath,
+  type Locale,
+} from "@/i18n/routing";
 
 /**
  * Домены платформы (мультидомен, docs/MULTI-DOMAIN-PLAN.md). Отдельный модуль без
@@ -12,8 +18,8 @@ export const SITE_HOSTS = [
     hreflang: "ru-BY",
     country: "Беларусь",
     code: "BY",
-    /** Гео-строка витрины: «курсы … · <geo>» в первом экране лендинга. */
-    geo: "Минск · вся Беларусь",
+    /** Гео-строка витрины на языках сайта: «курсы … · <geo>» в первом экране. */
+    geo: { ru: "Минск · вся Беларусь", kk: "Минск · бүкіл Беларусь" },
     /** Валюта, которую посетитель видит крупно (остальные — справочно). */
     currency: "byn",
   },
@@ -22,7 +28,7 @@ export const SITE_HOSTS = [
     hreflang: "ru-KZ",
     country: "Казахстан",
     code: "KZ",
-    geo: "Астана · Алматы · весь Казахстан",
+    geo: { ru: "Астана · Алматы · весь Казахстан", kk: "Астана · Алматы · бүкіл Қазақстан" },
     currency: "kzt",
   },
   {
@@ -30,7 +36,7 @@ export const SITE_HOSTS = [
     hreflang: "ru-RU",
     country: "Россия",
     code: "RU",
-    geo: "Москва · вся Россия",
+    geo: { ru: "Москва · вся Россия", kk: "Мәскеу · бүкіл Ресей" },
     currency: "rub",
   },
 ] as const;
@@ -64,9 +70,11 @@ export function alternatesFor(
   const suffix = (p: string) => (p === "/" ? "" : p);
   const languages: Record<string, string> = {};
   for (const s of SITE_HOSTS) languages[s.hreflang] = `https://${s.host}${suffix(path)}`;
-  // Казахская версия существует только на казахстанском домене и только когда
-  // переводы готовы (KK_READY) — иначе hreflang вёл бы на русский текст.
-  if (KK_READY) languages["kk-KZ"] = `https://${KK_HOST}${suffix(localizePath(path, "kk"))}`;
+  // Казахская версия — только на казахстанском домене и только у переведённых
+  // страниц, иначе hreflang вёл бы на русский текст.
+  if (hasKazakhVersion(path)) {
+    languages["kk-KZ"] = `https://${KK_HOST}${suffix(localizePath(path, "kk"))}`;
+  }
   languages["x-default"] = `https://${DEFAULT_SITE.host}${suffix(path)}`;
   return { canonical: localizePath(path, locale), languages };
 }

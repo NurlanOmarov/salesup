@@ -5,6 +5,8 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { BookOpen } from "lucide-react";
 import { Reveal } from "@/components/landing/reveal";
 import { CourseCard, type CourseCardData } from "@/components/catalog/course-card";
+import { useLocale } from "@/i18n/client";
+import { messagesFor, type UiMessages } from "@/i18n/messages";
 
 /**
  * Смысловой фильтр каталога «Для кого + отрасль».
@@ -23,12 +25,12 @@ const INDUSTRY_PREFIX = "industry:";
 
 type Facet = { value: string; label: string; count: number };
 
-function buildFacets(courses: CourseCardData[]): Facet[] {
-  const facets: Facet[] = [{ value: ALL, label: "Все", count: courses.length }];
+function buildFacets(courses: CourseCardData[], t: UiMessages): Facet[] {
+  const facets: Facet[] = [{ value: ALL, label: t.catalog.all, count: courses.length }];
 
   const everyoneCount = courses.filter((c) => c.audience === "EVERYONE").length;
   if (everyoneCount > 0) {
-    facets.push({ value: EVERYONE, label: "Для всех", count: everyoneCount });
+    facets.push({ value: EVERYONE, label: t.catalog.forEveryone, count: everyoneCount });
   }
 
   const industryCounts = new Map<string, number>();
@@ -63,7 +65,8 @@ export function CoursesCatalog({ courses }: { courses: CourseCardData[] }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const facets = useMemo(() => buildFacets(courses), [courses]);
+  const t = messagesFor(useLocale());
+  const facets = useMemo(() => buildFacets(courses, t), [courses, t]);
 
   const rawFilter = searchParams.get("f") ?? ALL;
   // Игнорируем фильтр, под который нет ни одной таблетки (устаревшая ссылка).
@@ -94,7 +97,7 @@ export function CoursesCatalog({ courses }: { courses: CourseCardData[] }) {
         <Reveal>
           <div
             role="tablist"
-            aria-label="Фильтр курсов по направлению"
+            aria-label={t.catalog.filterLabel}
             className="mt-8 flex flex-wrap gap-2"
           >
             {facets.map((f) => {
@@ -129,8 +132,8 @@ export function CoursesCatalog({ courses }: { courses: CourseCardData[] }) {
         <Reveal>
           <div className="mt-16 text-center text-foreground/40">
             <BookOpen className="mx-auto mb-4 size-12 opacity-30" />
-            <p className="font-medium">В этом направлении пока нет курсов</p>
-            <p className="mt-1 text-sm">Скоро добавим — загляните в другие категории.</p>
+            <p className="font-medium">{t.catalog.emptyTitle}</p>
+            <p className="mt-1 text-sm">{t.catalog.emptyText}</p>
           </div>
         </Reveal>
       ) : (

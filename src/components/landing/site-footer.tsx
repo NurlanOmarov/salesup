@@ -1,8 +1,10 @@
 import Image from "next/image";
-import Link from "next/link";
+import { Link } from "@/components/i18n/link";
 import { getSupportContacts } from "@/lib/seo/settings";
 import { REQUISITES } from "@/content/legal";
 import { currentSite } from "@/lib/seo/site";
+import { messagesFor } from "@/i18n/messages";
+import { getLocale } from "@/i18n/server";
 import { CountrySwitcher } from "@/components/landing/country-switcher";
 
 export async function SiteFooter() {
@@ -12,6 +14,7 @@ export async function SiteFooter() {
   // Домен захода: подсветка страны в переключателе и честная строка «работаем в …».
   // Юрлицо и реквизиты при этом одни (РБ) — их показываем на всех доменах.
   const site = await currentSite();
+  const t = messagesFor(await getLocale());
 
   return (
     <footer className="bg-slate-950 text-white">
@@ -22,7 +25,8 @@ export async function SiteFooter() {
             <p className="text-lg font-bold text-brand">ACTIVE SALES</p>
           </div>
           <p className="mt-2 text-sm text-white/50">
-            Онлайн-курсы по продажам с AI-наставником.{site ? ` ${site.country}.` : ""}
+            {t.footer.about}
+            {site ? ` ${site.country}.` : ""}
           </p>
           {/*
             Сведения об исполнителе обязательны к доведению до потребителя
@@ -32,39 +36,39 @@ export async function SiteFooter() {
           */}
           <address className="mt-3 space-y-0.5 text-xs not-italic leading-relaxed text-white/40">
             <p>{REQUISITES.legalName}</p>
-            <p>УНП {REQUISITES.unp}</p>
+            <p>{t.footer.unp} {REQUISITES.unp}</p>
             <p>{REQUISITES.address}</p>
           </address>
         </div>
 
         <div className="text-sm">
-          <p className="font-semibold text-white/90">Навигация</p>
+          <p className="font-semibold text-white/90">{t.footer.navigation}</p>
           <ul className="mt-2 space-y-1 text-white/60">
             <li>
               <Link href="/" className="transition-colors hover:text-brand-light">
-                Главная
+                {t.footer.home}
               </Link>
             </li>
             <li>
               <Link href="/courses" className="transition-colors hover:text-brand-light">
-                Каталог курсов
+                {t.footer.catalog}
               </Link>
             </li>
             <li>
               <Link href="/business" className="transition-colors hover:text-brand-light">
-                Обучение для компаний
+                {t.footer.business}
               </Link>
             </li>
             <li>
               <Link href="/login" className="transition-colors hover:text-brand-light">
-                Вход для учеников
+                {t.footer.studentLogin}
               </Link>
             </li>
           </ul>
         </div>
 
         <div className="text-sm">
-          <p className="font-semibold text-white/90">Контакты</p>
+          <p className="font-semibold text-white/90">{t.footer.contacts}</p>
           <ul className="mt-2 space-y-1 text-white/60">
             <li>
               <a href={phoneHref} className="transition-colors hover:text-brand-light">
@@ -99,11 +103,11 @@ export async function SiteFooter() {
         </div>
 
         <div className="text-sm">
-          <p className="font-semibold text-white/90">Документы</p>
+          <p className="font-semibold text-white/90">{t.footer.documents}</p>
           <ul className="mt-2 space-y-1 text-white/60">
             <li>
               <Link href="/offer" className="transition-colors hover:text-brand-light">
-                Оферта для физических лиц
+                {t.footer.offer}
               </Link>
             </li>
             <li>
@@ -111,7 +115,7 @@ export async function SiteFooter() {
                 href="/offer-b2b"
                 className="transition-colors hover:text-brand-light"
               >
-                Оферта для организаций
+                {t.footer.offerB2b}
               </Link>
             </li>
             <li>
@@ -119,7 +123,7 @@ export async function SiteFooter() {
                 href="/privacy"
                 className="transition-colors hover:text-brand-light"
               >
-                Обработка персональных данных
+                {t.footer.privacy}
               </Link>
             </li>
           </ul>
@@ -127,7 +131,7 @@ export async function SiteFooter() {
       </div>
       <div className="space-y-2 border-t border-white/10 py-4 text-center text-xs text-white/60">
         <CountrySwitcher currentHost={site?.host ?? null} />
-        <p>© {year} ACTIVE SALES. Все права защищены.</p>
+        <p>© {year} ACTIVE SALES. {t.footer.rights}</p>
       </div>
     </footer>
   );

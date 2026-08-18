@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { Link } from "@/components/i18n/link";
 import Image from "next/image";
 import {
   Award,
@@ -34,19 +34,9 @@ import { StatCounter } from "@/components/landing/stat-counter";
 import { AnimatedTitle } from "@/components/landing/animated-title";
 import { IndustriesMarquee } from "@/components/landing/industries-marquee";
 import { VoiceVisualizer } from "@/components/voice-visualizer";
-import {
-  clients,
-  faq,
-  formats,
-  hero,
-  industries,
-  methodology,
-  stats,
-  steps,
-  trainer,
-  voiceShowcase,
-} from "@/content/landing";
+import { landingContent } from "@/content/landing-content";
 import { pageAlternates, currentSite } from "@/lib/seo/site";
+import { getLocale } from "@/i18n/server";
 import { DEFAULT_SITE } from "@/lib/seo/site-hosts";
 
 // ISR: страница статична, отзывы обновляются раз в 10 минут.
@@ -105,6 +95,10 @@ export default async function LandingPage() {
   const { whatsapp: wa, telegram: tg } = await getSupportContacts();
   // Домен захода: гео-строка первого экрана («вся Беларусь» / «весь Казахстан»).
   const site = (await currentSite()) ?? DEFAULT_SITE;
+  // Язык страницы: русский по умолчанию, казахский на /kk (i18n/routing.ts).
+  const locale = await getLocale();
+  const { hero, steps, voiceShowcase, formats, industries, clients, trainer, methodology, stats, aiDemo, faq } =
+    landingContent(locale);
 
   const faqJsonLd = {
     "@context": "https://schema.org",
@@ -141,7 +135,7 @@ export default async function LandingPage() {
             </Reveal>
             <Reveal delay={0.05}>
               <span className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-brand-light/30 bg-brand/10 px-3 py-1 text-xs font-medium text-brand-light">
-                {hero.badge(site.geo)}
+                {hero.badge(site.geo[locale])}
               </span>
             </Reveal>
             <AnimatedTitle
@@ -417,7 +411,7 @@ export default async function LandingPage() {
                 Попробуйте прямо сейчас — задайте вопрос наставнику:
               </p>
               <div className="relative">
-                <AiDemo />
+                <AiDemo aiDemo={aiDemo} />
                 {/* плавающие карточки результата — по краям, не перекрывая контент */}
                 <div className="float-y absolute -left-3 -top-4 hidden rounded-xl border border-white/10 bg-slate-900/90 px-3 py-2 shadow-xl backdrop-blur sm:block lg:-left-7">
                   <p className="flex items-center gap-1.5 text-xs font-semibold text-white">

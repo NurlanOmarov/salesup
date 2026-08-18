@@ -252,3 +252,23 @@ export const faq = [
     a: "Да, платформа рассчитана в первую очередь на смартфон: и видео, и тесты, и AI-тренажёр удобны на мобильном.",
   },
 ] as const;
+
+/**
+ * Русский лендинг целиком — источник структуры для казахской версии
+ * (src/content/landing.kk.ts) и для выбора по языку в src/content/landing/index.ts.
+ */
+export const landingRu = {
+  hero,
+  steps,
+  voiceShowcase,
+  formats,
+  industries,
+  clients,
+  trainer,
+  methodology,
+  stats,
+  aiDemo,
+  faq,
+} as const;
+
+export type LandingContent = import("./localized").Localized<typeof landingRu>;

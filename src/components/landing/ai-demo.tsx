@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Clock, Sparkles } from "lucide-react";
-import { aiDemo } from "@/content/landing";
+import type { LandingContent } from "@/content/landing";
 
 interface Msg {
   role: "user" | "ai";
@@ -16,7 +16,8 @@ interface Msg {
  * Полностью заскриптована (без API): первый обмен проигрывается сам,
  * дальше посетитель кликает готовые вопросы-чипы.
  */
-export function AiDemo() {
+/** Контент приходит с сервера: демо переводится вместе с лендингом (казахская версия). */
+export function AiDemo({ aiDemo }: { aiDemo: LandingContent["aiDemo"] }) {
   const reduce = useReducedMotion();
   const [messages, setMessages] = useState<Msg[]>([]);
   const [typing, setTyping] = useState(false);
@@ -52,7 +53,9 @@ export function AiDemo() {
       }, 2100),
     );
     return () => timers.forEach(clearTimeout);
-  }, [reduce]);
+    // aiDemo приходит пропсом (перевод лендинга) — включаем в зависимости,
+    // хотя startedRef и так не даёт проиграть сценарий дважды.
+  }, [reduce, aiDemo]);
 
   // автоскролл к последнему сообщению внутри виджета
   useEffect(() => {

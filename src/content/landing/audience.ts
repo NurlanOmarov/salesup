@@ -22,6 +22,11 @@ export const AUDIENCE_PATH: Record<Audience, string> = {
   b2b: "/business",
 };
 
+/**
+ * Подписи регистра. Русские значения остаются дефолтом для серверных мест, где
+ * язык не важен; в шапке и на страницах используется словарь i18n/messages.ts —
+ * казахская версия переводит их вместе с остальным интерфейсом.
+ */
 export const AUDIENCE_LABEL: Record<Audience, string> = {
   b2c: "Себе",
   b2b: "Команде",
