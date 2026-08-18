@@ -1,4 +1,5 @@
 import type { NextAuthConfig } from "next-auth";
+import { stripLocale, localizePath, DEFAULT_LOCALE } from "@/i18n/routing";
 import type { OrgRole, UserRole } from "@prisma/client";
 import { NextResponse } from "next/server";
 
@@ -104,7 +105,11 @@ export const authConfig = {
      * грубая защита зон /app и /admin и форс-смены пароля.
      */
     authorized({ auth, request }) {
-      const { pathname } = request.nextUrl;
+      // Казахская версия живёт на /kk/*: гейтинг сверяет «чистый» путь, иначе
+      // /kk/app остался бы незащищённым, а редиректы уводили бы с казахского на
+      // русский (src/i18n/routing.ts).
+      const { locale, pathname } = stripLocale(request.nextUrl.pathname);
+      const to = (path: string) => localizePath(path, locale ?? DEFAULT_LOCALE);
       const token = auth?.user;
       const isLoggedIn = !!token;
 
@@ -117,7 +122,7 @@ export const authConfig = {
             : auth!.user.role === "OWNER"
               ? "/admin"
               : "/app";
-          return NextResponse.redirect(new URL(dest, request.nextUrl));
+          return NextResponse.redirect(new URL(to(dest), request.nextUrl));
         }
         return true;
       }
@@ -149,19 +154,19 @@ export const authConfig = {
 
       // приватные зоны
       if (!isLoggedIn) {
-        const url = new URL("/login", request.nextUrl);
-        url.searchParams.set("callbackUrl", pathname);
+        const url = new URL(to("/login"), request.nextUrl);
+        url.searchParams.set("callbackUrl", to(pathname));
         return NextResponse.redirect(url);
       }
 
       // форс-смена временного пароля — до любого другого действия
       if (auth!.user.mustChangePassword && pathname !== "/change-password") {
-        return NextResponse.redirect(new URL("/change-password", request.nextUrl));
+        return NextResponse.redirect(new URL(to("/change-password"), request.nextUrl));
       }
 
       // зона владельца
       if (pathname.startsWith("/admin") && auth!.user.role !== "OWNER") {
-        return NextResponse.redirect(new URL("/app", request.nextUrl));
+        return NextResponse.redirect(new URL(to("/app"), request.nextUrl));
       }
 
       // Кабинет организации: грубый гейт по токену. Владелец платформы заходит
@@ -170,7 +175,7 @@ export const authConfig = {
       if (pathname.startsWith("/org")) {
         const u = auth!.user;
         if (u.role !== "OWNER" && u.orgRole !== "ORG_ADMIN") {
-          return NextResponse.redirect(new URL("/app", request.nextUrl));
+          return NextResponse.redirect(new URL(to("/app"), request.nextUrl));
         }
       }
 

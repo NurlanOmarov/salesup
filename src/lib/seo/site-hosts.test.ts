@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { SITE_HOSTS, DEFAULT_SITE, matchSiteHost, alternatesFor } from "./site-hosts.js";
+import { KK_READY } from "@/i18n/routing";
 
 describe("matchSiteHost", () => {
   it("узнаёт свои домены с портом, регистром и списком через запятую", () => {
@@ -28,7 +29,20 @@ describe("alternatesFor", () => {
     expect(langs["ru-BY"]).toBe("https://study.activesales.by/courses");
     expect(langs["ru-KZ"]).toBe("https://study.activesales.kz/courses");
     expect(langs["ru-RU"]).toBe("https://study.sales-active.ru/courses");
-    expect(Object.keys(langs)).toHaveLength(SITE_HOSTS.length + 1); // + x-default
+    // + x-default (kk-KZ появляется только при KK_READY)
+    expect(Object.keys(langs)).toHaveLength(SITE_HOSTS.length + (KK_READY ? 2 : 1));
+  });
+
+  it("казахская версия попадает в hreflang только когда переводы готовы", () => {
+    const langs = alternatesFor("/courses")!.languages as Record<string, string>;
+    expect(langs["kk-KZ"]).toBe(
+      KK_READY ? "https://study.activesales.kz/kk/courses" : undefined,
+    );
+  });
+
+  it("на казахской странице canonical ведёт на неё саму, а не на русскую", () => {
+    expect(alternatesFor("/courses", "kk")?.canonical).toBe("/kk/courses");
+    expect(alternatesFor("/", "kk")?.canonical).toBe("/kk");
   });
 
   it("x-default ведёт на канонический домен", () => {

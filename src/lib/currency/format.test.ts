@@ -85,3 +85,25 @@ describe("formatCurrency / buildMultiPrice", () => {
     expect(p.kzt).toBe("—");
   });
 });
+
+describe("buildMultiPrice — валюта страны домена", () => {
+  const rates = { BYN: 163.29, RUB: 3.7 } as Record<string, number>;
+
+  it("главная валюта — из домена, остальные уходят в справочную строку", () => {
+    const kz = buildMultiPrice(100_00, rates, "kzt");
+    expect(kz.main).toBe(kz.kzt);
+    expect(kz.alt).toContain(kz.byn);
+    expect(kz.alt).toContain(kz.rub);
+    expect(kz.alt).not.toContain(kz.kzt);
+  });
+
+  it("по умолчанию — базовая валюта цены (BYN)", () => {
+    expect(buildMultiPrice(100_00, rates).main).toBe(buildMultiPrice(100_00, rates).byn);
+  });
+
+  it("без курсов откатывается на BYN и не показывает пустых эквивалентов", () => {
+    const noRates = buildMultiPrice(100_00, {}, "kzt");
+    expect(noRates.main).toBe(noRates.byn);
+    expect(noRates.alt).toBe("");
+  });
+});

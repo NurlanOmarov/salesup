@@ -5,14 +5,13 @@ import { BookOpen } from "lucide-react";
 import { db } from "@/lib/db";
 import { buttonVariants } from "@/components/ui/button";
 import { cn, buildSafe } from "@/lib/utils";
-import { currency, buildMultiPrice } from "@/lib/currency";
+import { currency, buildMultiPrice, type MainCurrency } from "@/lib/currency";
 import { getStaticPageSeo } from "@/lib/seo/static-pages";
 import { Reveal } from "@/components/landing/reveal";
 import type { CourseCardData } from "@/components/catalog/course-card";
 import { CoursesCatalog } from "@/components/catalog/courses-catalog";
 import { audience, difference, faq, howItWorks } from "@/content/courses-page";
-import { alternatesFor } from "@/lib/seo/site-hosts";
-import { siteOrigin } from "@/lib/seo/site";
+import { currentSite, pageAlternates, siteOrigin } from "@/lib/seo/site";
 
 export const revalidate = 60;
 
@@ -22,7 +21,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: s.title,
     description: s.description,
-    alternates: alternatesFor("/courses"),
+    alternates: await pageAlternates("/courses"),
     robots: { index: !s.noindex },
     // openGraph не объявляется: собственный объект заменяет родительский
     // целиком и без images стирает картинку из opengraph-image.tsx вместе с
@@ -31,7 +30,7 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-async function getCourses(): Promise<CourseCardData[]> {
+async function getCourses(main: MainCurrency): Promise<CourseCardData[]> {
   const [rows, ratesPayload] = await Promise.all([
     buildSafe(
       () =>
@@ -58,11 +57,13 @@ async function getCourses(): Promise<CourseCardData[]> {
     currency.getRates(),
   ]);
   const rates = ratesPayload.rates;
-  return rows.map((r) => ({ ...r, prices: buildMultiPrice(r.priceTiyn, rates) }));
+  return rows.map((r) => ({ ...r, prices: buildMultiPrice(r.priceTiyn, rates, main) }));
 }
 
 export default async function CoursesPage() {
-  const courses = await getCourses();
+  // Цены показываем в валюте страны домена (мультидомен), остальные — справочно.
+  const site = await currentSite();
+  const courses = await getCourses(site?.currency ?? "byn");
 
   const siteUrl = await siteOrigin();
   const listJsonLd = {

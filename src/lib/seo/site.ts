@@ -1,6 +1,8 @@
 import "server-only";
 import { headers } from "next/headers";
 import { env } from "@/env";
+import { getLocale } from "@/i18n/server";
+import type { Metadata } from "next";
 import {
   SITE_HOSTS,
   DEFAULT_SITE,
@@ -49,4 +51,13 @@ export function isOwnHost(host: string): boolean {
   } catch {
     return false;
   }
+}
+
+/**
+ * alternates публичной страницы с учётом языка запроса — то, что подставляется
+ * в generateMetadata. Отдельно от чистой alternatesFor(), потому что язык живёт
+ * в заголовках запроса.
+ */
+export async function pageAlternates(path: string): Promise<Metadata["alternates"]> {
+  return alternatesFor(path, await getLocale());
 }

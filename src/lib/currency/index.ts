@@ -9,6 +9,7 @@ export {
   convertTiyn,
   formatCurrency,
   buildMultiPrice,
+  type MainCurrency,
   ratesAvailable,
   type MultiPrice,
 } from "./format";

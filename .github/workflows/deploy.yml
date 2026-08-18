@@ -77,6 +77,9 @@ jobs:
 
       # Копируем только инфра-файлы деплоя в папку проекта на сервере.
       # strip_components=1 убирает префикс deploy/ → файлы лягут в корень папки проекта.
+      # ⚠️ Список исчерпывающий: новый файл, смонтированный в compose, ОБЯЗАН быть
+      # добавлен сюда. Иначе Docker создаст на его месте каталог, и nginx уйдёт в
+      # рестарт-петлю с «Is a directory» (прод падал так 2026-08-18).
       - name: Copy deploy files to server
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -84,7 +87,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
-          source: "deploy/docker-compose.prod.yml,deploy/nginx.http.conf,deploy/proxy_params.conf"
+          source: "deploy/docker-compose.prod.yml,deploy/nginx.http.conf,deploy/proxy_params.conf,deploy/proxy_cache_public.conf"
           target: "/home/administrator/salesup"
           strip_components: 1
 

@@ -1,10 +1,19 @@
 import type { CourseAudience } from "@prisma/client";
+import { SITE_HOSTS } from "@/lib/seo/site-hosts";
 import {
   bundlePriceTiyn,
   BASE_PRICE_TIYN,
   PRICE_MATRIX,
   SUBSCRIPTION_YEAR_TIYN,
 } from "./index";
+
+/**
+ * Домен рынка берём из единого списка (мультидомен, D-013), а не строкой: домены
+ * менялись (у России это sales-active.ru, а не activesales.ru), и справочник
+ * тарифов не должен расходиться с тем, что реально отдаёт сервис.
+ */
+const hostFor = (code: string): string | null =>
+  SITE_HOSTS.find((s) => s.code === code)?.host ?? null;
 
 /** BYN-копейки → рубли: справочник оперирует целыми суммами. */
 const toByn = (tiyn: number): number => Math.round(tiyn / 100);
@@ -65,7 +74,7 @@ export const MARKETS: readonly Market[] = [
     code: "BY",
     country: "Беларусь",
     currency: "BYN",
-    domain: "study.activesales.by",
+    domain: hostFor("BY"),
     // Беларусь — базовый рынок: цифры выводятся из PRICE_MATRIX, а не дублируются.
     // Иначе правка матрицы разошлась бы с этой таблицей и заметили бы это нескоро.
     prices: {
@@ -95,7 +104,7 @@ export const MARKETS: readonly Market[] = [
     code: "RU",
     country: "Россия",
     currency: "₽",
-    domain: "study.activesales.ru",
+    domain: hostFor("RU"),
     prices: {
       SPECIALIZED: { min: 11_900, max: 16_900, median: 13_900 },
       EVERYONE: { min: 6_900, max: 10_900, median: 8_900 },
@@ -109,7 +118,7 @@ export const MARKETS: readonly Market[] = [
     code: "KZ",
     country: "Казахстан",
     currency: "₸",
-    domain: "study.activesales.kz",
+    domain: hostFor("KZ"),
     prices: {
       SPECIALIZED: { min: 69_900, max: 94_900, median: 79_900 },
       EVERYONE: { min: 39_900, max: 62_900, median: 49_900 },

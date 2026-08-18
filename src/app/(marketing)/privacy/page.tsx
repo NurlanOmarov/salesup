@@ -4,7 +4,7 @@ import { StaticPageBody } from "@/components/landing/static-page-body";
 import { DraftRequisitesNotice } from "@/components/landing/draft-requisites-notice";
 import { privacyMarkdown } from "@/content/legal";
 import { currentSite } from "@/lib/seo/site";
-import { alternatesFor } from "@/lib/seo/site-hosts";
+import { pageAlternates } from "@/lib/seo/site";
 
 export const revalidate = 300;
 
@@ -15,7 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: s.title,
     description: s.description,
-    alternates: alternatesFor("/privacy"),
+    alternates: await pageAlternates("/privacy"),
     robots: { index: !s.noindex, follow: true },
   };
 }

@@ -34,7 +34,7 @@ const inputCls =
   "mt-1 block w-full rounded-lg border border-foreground/15 bg-background px-3 py-2 text-sm outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20";
 const labelCls = "block text-sm font-medium text-foreground/80";
 
-function PageCard({ page }: { page: StaticPageFormRow }) {
+function PageCard({ page, scope }: { page: StaticPageFormRow; scope: string }) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState(page.title);
   const [description, setDescription] = useState(page.description);
@@ -50,6 +50,7 @@ function PageCard({ page }: { page: StaticPageFormRow }) {
     startTransition(async () => {
       const res = await updateStaticPageSeoAction({
         path: page.path,
+        scope,
         title,
         description,
         noindex,
@@ -215,11 +216,18 @@ function PageCard({ page }: { page: StaticPageFormRow }) {
   );
 }
 
-export function StaticPagesForm({ pages }: { pages: StaticPageFormRow[] }) {
+export function StaticPagesForm({
+  pages,
+  scope,
+}: {
+  pages: StaticPageFormRow[];
+  /** Домен/язык, для которого правятся тексты (мультидомен, D-013). */
+  scope: string;
+}) {
   return (
     <div className="mt-3 space-y-3">
       {pages.map((p) => (
-        <PageCard key={p.path} page={p} />
+        <PageCard key={p.path} page={p} scope={scope} />
       ))}
     </div>
   );

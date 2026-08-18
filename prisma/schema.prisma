@@ -30,35 +30,35 @@ enum UserRole {
 }
 
 model User {
-  id            String    @id @default(cuid())
+  id                 String        @id @default(cuid())
   // B2B (docs/B2B-PLAN.md §5.1): учётка работника организации создаётся БЕЗ e-mail —
   // платформа не получает ПДн (оферта /offer-b2b, п. 10.1). Поэтому e-mail опционален,
   // а входить можно по login (acme-0042) либо по e-mail. Хотя бы одно из полей задано.
-  email         String?   @unique
-  login         String?   @unique
-  emailVerified DateTime?
-  name          String? // ФИО для сертификата
-  phone         String?
-  image         String?
-  role          UserRole  @default(STUDENT)
+  email              String?       @unique
+  login              String?       @unique
+  emailVerified      DateTime?
+  name               String? // ФИО для сертификата
+  phone              String?
+  image              String?
+  role               UserRole      @default(STUDENT)
   // v1.2: вход по логину/паролю; учётку и временный пароль выдаёт админ
   passwordHash       String? // argon2id
-  mustChangePassword Boolean @default(true)
+  mustChangePassword Boolean       @default(true)
   // Акцепт оферты и политики ПДн при первом входе: доказательство заключения
   // договора (ст. 408 ГК РБ) и согласия по Закону № 99-З. Версия — LEGAL_VERSION
   // из src/content/legal, чтобы было видно, какую редакцию принял ученик.
   termsAcceptedAt    DateTime?
   termsVersion       String?
-  industry      String? // отрасль — для персонализации AI-задач
-  position      String?
-  locale        String    @default("ru")
-  subtitleLang  SubtitleLang? // язык субтитров по умолчанию в плеере (null = выкл)
-  deviceLimit   Int? // лимит одновременных устройств: null = стандартный (DEVICE_LIMIT), 0 = безлимит, N = N устройств
-  weeklyGoal    Int       @default(3) // учебная цель: сколько уроков завершать в неделю (виджет на дашборде)
-  onboardedAt   DateTime? // когда ученик прошёл онбординг-тур кабинета (null = ещё не видел)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  deletedAt     DateTime? // soft delete / анонимизация
+  industry           String? // отрасль — для персонализации AI-задач
+  position           String?
+  locale             String        @default("ru")
+  subtitleLang       SubtitleLang? // язык субтитров по умолчанию в плеере (null = выкл)
+  deviceLimit        Int? // лимит одновременных устройств: null = стандартный (DEVICE_LIMIT), 0 = безлимит, N = N устройств
+  weeklyGoal         Int           @default(3) // учебная цель: сколько уроков завершать в неделю (виджет на дашборде)
+  onboardedAt        DateTime? // когда ученик прошёл онбординг-тур кабинета (null = ещё не видел)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  deletedAt          DateTime? // soft delete / анонимизация
 
   accounts        Account[]
   sessions        Session[]
@@ -183,50 +183,50 @@ enum AccessDuration {
 }
 
 model Course {
-  id             String         @id @default(cuid())
-  slug           String         @unique
-  type           ProductType    @default(COURSE)
-  title          String
-  subtitle       String?
-  description    String         @db.Text // markdown; генерируется фабрикой из транскриптов
-  industry       String?
-  audience       CourseAudience @default(SPECIALIZED) // ось витрины «для кого» (фильтр /courses)
-  coverUrl       String?
-  coverAlt       String? // alt-текст обложки (image SEO/доступность); генерируется AI по картинке
-  promoVideoKey  String? // ключ HLS-папки трейлера в lib/storage (публичный, без шифрования)
-  priceTiyn      Int
-  oldPriceTiyn   Int?
+  id                  String         @id @default(cuid())
+  slug                String         @unique
+  type                ProductType    @default(COURSE)
+  title               String
+  subtitle            String?
+  description         String         @db.Text // markdown; генерируется фабрикой из транскриптов
+  industry            String?
+  audience            CourseAudience @default(SPECIALIZED) // ось витрины «для кого» (фильтр /courses)
+  coverUrl            String?
+  coverAlt            String? // alt-текст обложки (image SEO/доступность); генерируется AI по картинке
+  promoVideoKey       String? // ключ HLS-папки трейлера в lib/storage (публичный, без шифрования)
+  priceTiyn           Int
+  oldPriceTiyn        Int?
   /// Срок доступа, который получает ученик по умолчанию («по тарифу курса» в
   /// админке). Год — базовое решение тарифного плана: материалы остаются у
   /// ученика, а AI-практика тратит токены и не может быть бессрочной
   /// (docs/PRICING-PLAN.md §9). Бессрочный доступ — осознанный выбор в сделке.
-  accessDuration AccessDuration @default(MONTHS_12)
-  status         PublishStatus  @default(DRAFT)
-  inDevelopment  Boolean        @default(false) // бейдж «В разработке» на витрине (курс виден, но контент ещё не готов)
-  sortOrder      Int            @default(0)
+  accessDuration      AccessDuration @default(MONTHS_12)
+  status              PublishStatus  @default(DRAFT)
+  inDevelopment       Boolean        @default(false) // бейдж «В разработке» на витрине (курс виден, но контент ещё не готов)
+  sortOrder           Int            @default(0)
   // Фабрика курсов
-  sourcePlaylistUrl String? // YouTube-плейлист — источник курса
-  factoryRunAt      DateTime? // когда курс собран/пересобран фабрикой
+  sourcePlaylistUrl   String? // YouTube-плейлист — источник курса
+  factoryRunAt        DateTime? // когда курс собран/пересобран фабрикой
   // Сертификат
-  certificateEnabled  Boolean @default(true)
-  certificateMinScore Int     @default(80)
+  certificateEnabled  Boolean        @default(true)
+  certificateMinScore Int            @default(80)
   hoursLabel          String?
   // SEO (генерируется фабрикой, валидируется критиком; поля *Title/*Description —
   // ручной override владельца поверх фабрики: пусто → берётся сгенерённое/дефолт).
-  seoTitle       String?
-  seoDescription String?
-  ogImageUrl     String?
-  ogTitle        String? // override OG-заголовка (иначе title)
-  ogDescription  String? // override OG-описания (иначе subtitle)
-  canonicalPath  String? // override canonical (иначе /courses/<slug>)
-  focusKeyword   String? // целевой запрос — для AI-скоринга и подсказок
-  seoNoindex     Boolean @default(false) // снять из индекса (напр. черновик-препринт)
-  learnPoints    Json? // string[]
-  targetAudience Json? // string[]
-  faq            Json? // {q,a}[]
-  publishedAt    DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  seoTitle            String?
+  seoDescription      String?
+  ogImageUrl          String?
+  ogTitle             String? // override OG-заголовка (иначе title)
+  ogDescription       String? // override OG-описания (иначе subtitle)
+  canonicalPath       String? // override canonical (иначе /courses/<slug>)
+  focusKeyword        String? // целевой запрос — для AI-скоринга и подсказок
+  seoNoindex          Boolean        @default(false) // снять из индекса (напр. черновик-препринт)
+  learnPoints         Json? // string[]
+  targetAudience      Json? // string[]
+  faq                 Json? // {q,a}[]
+  publishedAt         DateTime?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
 
   modules      Module[]
   enrollments  Enrollment[]
@@ -251,8 +251,8 @@ model Module {
 }
 
 enum VideoStatus {
-  NONE       // видео ещё не загружено фабрикой
-  READY      // HLS на диске VPS (media volume), можно смотреть
+  NONE // видео ещё не загружено фабрикой
+  READY // HLS на диске VPS (media volume), можно смотреть
 }
 
 enum SubtitleLang {
@@ -263,7 +263,7 @@ enum SubtitleLang {
 }
 
 enum SubtitleOrigin {
-  ORIGINAL   // из исходного транскрипта (RU)
+  ORIGINAL // из исходного транскрипта (RU)
   TRANSLATED // перевод LLM-ом в фабрике
 }
 
@@ -284,27 +284,27 @@ model SubtitleTrack {
 }
 
 model Lesson {
-  id            String        @id @default(cuid())
-  moduleId      String
-  title         String
-  description   String?       @db.Text
-  sortOrder     Int           @default(0)
-  status        PublishStatus @default(DRAFT)
-  isFreePreview Boolean       @default(false)
+  id               String        @id @default(cuid())
+  moduleId         String
+  title            String
+  description      String?       @db.Text
+  sortOrder        Int           @default(0)
+  status           PublishStatus @default(DRAFT)
+  isFreePreview    Boolean       @default(false)
   // Видео: HLS AES-128, относительный ключ в lib/storage (fs на VPS сейчас, s3 потом)
-  videoKey      String? // префикс: courses/<slug>/lessons/<id>/ (master.m3u8, сегменты)
-  videoAesKeyEnc String? // 16-байтовый AES-128-ключ HLS, зашифрованный app-секретом (VIDEO_KEY_ENC_SECRET); отдаётся через /api/video/key/<lessonId>
-  videoStatus   VideoStatus @default(NONE)
-  audioKey      String? // аудиоверсия урока: аудиодорожка (m4a), извлечённая фабрикой из видео (factory:audio); ключ в lib/storage
-  podcastKey    String? // AI-подкаст: двухголосый обзор-диалог по уроку (NotebookLM Audio Overview, factory:podcast), m4a; ключ в lib/storage
-  slidesPdfKey  String? // AI-презентация урока: дизайнерская колода NotebookLM Slide Deck (factory:slides-pdf), pdf; ключ в lib/storage. Доп. материал рядом с типизированной колодой SLIDES
-  durationSec   Int?
-  youtubeUrl    String? // источник (видео скачивается и кодируется CLI-фабрикой)
+  videoKey         String? // префикс: courses/<slug>/lessons/<id>/ (master.m3u8, сегменты)
+  videoAesKeyEnc   String? // 16-байтовый AES-128-ключ HLS, зашифрованный app-секретом (VIDEO_KEY_ENC_SECRET); отдаётся через /api/video/key/<lessonId>
+  videoStatus      VideoStatus   @default(NONE)
+  audioKey         String? // аудиоверсия урока: аудиодорожка (m4a), извлечённая фабрикой из видео (factory:audio); ключ в lib/storage
+  podcastKey       String? // AI-подкаст: двухголосый обзор-диалог по уроку (NotebookLM Audio Overview, factory:podcast), m4a; ключ в lib/storage
+  slidesPdfKey     String? // AI-презентация урока: дизайнерская колода NotebookLM Slide Deck (factory:slides-pdf), pdf; ключ в lib/storage. Доп. материал рядом с типизированной колодой SLIDES
+  durationSec      Int?
+  youtubeUrl       String? // источник (видео скачивается и кодируется CLI-фабрикой)
   // Прохождение
-  requiresQuizPass Boolean @default(false)
-  xpReward      Int      @default(10)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  requiresQuizPass Boolean       @default(false)
+  xpReward         Int           @default(10)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
 
   module              Module               @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   transcript          Transcript?
@@ -387,10 +387,10 @@ enum QuestionType {
   TRUE_FALSE
   ORDERING
   FILL_BLANK
-  MATCHING       // сопоставить пары: левый элемент ↔ правый (option.text ↔ option.pairKey)
+  MATCHING // сопоставить пары: левый элемент ↔ правый (option.text ↔ option.pairKey)
   CATEGORIZATION // распределить элементы по категориям (option.text → option.pairKey)
-  PRACTICE       // упражнение «составьте сами»: свободный ввод + эталон и критерии для самопроверки
-  SCENARIO       // диалог: реплика клиента/врача → выбор лучшего ответа (один верный) + разбор
+  PRACTICE // упражнение «составьте сами»: свободный ввод + эталон и критерии для самопроверки
+  SCENARIO // диалог: реплика клиента/врача → выбор лучшего ответа (один верный) + разбор
   OPEN_TEXT // проверяет LLM по rubric; фоллбэк — повтор более сильной моделью (НЕ человек)
   SCALE
 }
@@ -410,29 +410,29 @@ model Quiz {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
-  lesson    Lesson?    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  course    Course?    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lesson    Lesson?       @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  course    Course?       @relation(fields: [courseId], references: [id], onDelete: Cascade)
   questions Question[]
   attempts  QuizAttempt[]
 }
 
 model Question {
-  id          String        @id @default(cuid())
+  id          String           @id @default(cuid())
   quizId      String
   type        QuestionType
-  text        String        @db.Text
-  explanation String?       @db.Text // разбор с цитатой урока и таймкодом
-  points      Int           @default(1)
-  sortOrder   Int           @default(0)
+  text        String           @db.Text
+  explanation String?          @db.Text // разбор с цитатой урока и таймкодом
+  points      Int              @default(1)
+  sortOrder   Int              @default(0)
   rubric      Json? // OPEN_TEXT: [{criterion, weight}]
-  origin      ContentOrigin @default(AI_GENERATED)
+  origin      ContentOrigin    @default(AI_GENERATED)
   // AI-критик (вместо модерации человеком)
-  validation   ValidationStatus @default(PENDING)
-  criticScore  Int? // 0–100 от критика
-  criticNotes  String? @db.Text
-  regenCount   Int     @default(0) // авто-регенераций после FAILED / дизлайков
-  thumbsDown   Int     @default(0) // фидбек учеников; ≥2 → авто-регенерация (Job)
-  validatedAt  DateTime?
+  validation  ValidationStatus @default(PENDING)
+  criticScore Int? // 0–100 от критика
+  criticNotes String?          @db.Text
+  regenCount  Int              @default(0) // авто-регенераций после FAILED / дизлайков
+  thumbsDown  Int              @default(0) // фидбек учеников; ≥2 → авто-регенерация (Job)
+  validatedAt DateTime?
 
   quiz    Quiz             @relation(fields: [quizId], references: [id], onDelete: Cascade)
   options QuestionOption[]
@@ -477,13 +477,13 @@ model QuizAttempt {
 }
 
 model AttemptAnswer {
-  id            String  @id @default(cuid())
+  id            String      @id @default(cuid())
   attemptId     String
   questionId    String
   payload       Json
   isCorrect     Boolean?
-  pointsAwarded Int     @default(0)
-  aiFeedback    String? @db.Text
+  pointsAwarded Int         @default(0)
+  aiFeedback    String?     @db.Text
   attempt       QuizAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
   question      Question    @relation(fields: [questionId], references: [id], onDelete: Cascade)
 
@@ -502,27 +502,27 @@ enum EnrollmentSource {
 }
 
 model Enrollment {
-  id        String           @id @default(cuid())
-  userId    String
-  courseId  String
-  source    EnrollmentSource @default(MANUAL) // v1.2: доступ выдаёт админ после устной оплаты
-  orderId   String?
+  id            String           @id @default(cuid())
+  userId        String
+  courseId      String
+  source        EnrollmentSource @default(MANUAL) // v1.2: доступ выдаёт админ после устной оплаты
+  orderId       String?
   // B2B: из какой лицензии выдано место. Занятые места считаются как
   // count(Enrollment where licenseId = X and revokedAt is null) — отдельного
   // счётчика нет, чтобы нечему было рассинхронизироваться.
-  licenseId String?
-  startsAt  DateTime         @default(now())
-  expiresAt DateTime?
-  revokedAt DateTime?
+  licenseId     String?
+  startsAt      DateTime         @default(now())
+  expiresAt     DateTime?
+  revokedAt     DateTime?
   /// Почему место отозвано: 'manual' — решением человека (владелец/ответственный
   /// представитель), 'org_suspended' — заморозка организации, 'member_inactive' —
   /// работник деактивирован. Нужно, чтобы возобновление организации вернуло только
   /// автоматически снятые доступы и не воскресило отозванные вручную.
   /// lib/access.ts это поле НЕ читает — доступ по-прежнему решает revokedAt.
   revokedReason String?
-  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course    Course      @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  license   OrgLicense? @relation(fields: [licenseId], references: [id], onDelete: SetNull)
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course        Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  license       OrgLicense?      @relation(fields: [licenseId], references: [id], onDelete: SetNull)
 
   @@unique([userId, courseId])
   @@index([courseId])
@@ -626,17 +626,17 @@ model PromoCode {
 
 // Отзывы: модерирует LLM (токсичность/спам/релевантность), не человек
 model Review {
-  id            String   @id @default(cuid())
-  courseId      String
-  userId        String? // автор-ученик; null — отзыв внесён владельцем (например, с живых тренингов)
-  userName      String
-  rating        Int // 1–5
-  text          String   @db.Text
+  id             String           @id @default(cuid())
+  courseId       String
+  userId         String? // автор-ученик; null — отзыв внесён владельцем (например, с живых тренингов)
+  userName       String
+  rating         Int // 1–5
+  text           String           @db.Text
   autoModeration ValidationStatus @default(PENDING) // VALIDATED → виден публично
   moderationNote String?
-  createdAt     DateTime @default(now())
-  course        Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt      DateTime         @default(now())
+  course         Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user           User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([courseId, autoModeration])
 }
@@ -651,8 +651,8 @@ model LessonProgress {
   lastPositionSec Int       @default(0)
   completedAt     DateTime?
   updatedAt       DateTime  @updatedAt
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson          Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
   @@unique([userId, lessonId])
 }
@@ -664,8 +664,8 @@ model Note {
   timecodeSec Int
   text        String   @db.Text
   createdAt   DateTime @default(now())
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson      Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
   @@index([userId, lessonId])
 }
@@ -676,7 +676,7 @@ model Note {
 // изготавливает документ вне системы и вручную помечает ISSUED. Поля holderName/number/
 // verifyHash/pdfKey остаются опциональными на случай ручного заполнения владельцем.
 enum CertificateStatus {
-  READY  // ученик выполнил условия, готов получить сертификат
+  READY // ученик выполнил условия, готов получить сертификат
   ISSUED // владелец выдал сертификат вручную
 }
 
@@ -694,8 +694,8 @@ model Certificate {
   readyAt    DateTime          @default(now()) // когда выполнены условия
   issuedAt   DateTime? // когда владелец пометил «Выдан»
   revokedAt  DateTime?
-  user   User   @relation(fields: [userId], references: [id])
-  course Course @relation(fields: [courseId], references: [id])
+  user       User              @relation(fields: [userId], references: [id])
+  course     Course            @relation(fields: [courseId], references: [id])
 
   @@unique([userId, courseId])
 }
@@ -703,13 +703,13 @@ model Certificate {
 // ─────────────────────────── AI: ЧАТ / СИМУЛЯЦИИ / АРТЕФАКТЫ / ЛИМИТЫ ───────────────────────────
 
 model AiConversation {
-  id        String   @id @default(cuid())
+  id        String      @id @default(cuid())
   userId    String
   lessonId  String
-  createdAt DateTime @default(now())
-  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  lesson   Lesson      @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  messages AiMessage[]
+  createdAt DateTime    @default(now())
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson    Lesson      @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  messages  AiMessage[]
 
   @@index([userId, lessonId])
 }
@@ -720,15 +720,15 @@ enum AiRole {
 }
 
 model AiMessage {
-  id             String  @id @default(cuid())
+  id             String         @id @default(cuid())
   conversationId String
   role           AiRole
-  content        String  @db.Text
+  content        String         @db.Text
   citedChunkIds  Json?
-  thumbsDown     Boolean @default(false) // фидбек-петля
+  thumbsDown     Boolean        @default(false) // фидбек-петля
   inputTokens    Int?
   outputTokens   Int?
-  createdAt      DateTime @default(now())
+  createdAt      DateTime       @default(now())
   conversation   AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@index([conversationId, createdAt])
@@ -744,40 +744,40 @@ enum PersonaArchetype {
 }
 
 model SimulationScenario {
-  id         String           @id @default(cuid())
-  lessonId   String
-  title      String
-  persona    String           @db.Text
-  objectives Json
+  id              String           @id @default(cuid())
+  lessonId        String
+  title           String
+  persona         String           @db.Text
+  objectives      Json
   archetype       PersonaArchetype @default(BUSY_DOCTOR) // тип ЛПР (поведение клиента)
   difficulty      Int              @default(2) // 1..3 — насколько упирается клиент
   complianceRules Json? // string[]: запрещённые/обязательные формулировки для проверки
   rubric          Json? // PhaseSpec[] | null → дефолтная рубрика фаз визита
-  origin     ContentOrigin    @default(AI_GENERATED)
-  validation ValidationStatus @default(PENDING) // публикуется после AI-критика
-  criticScore Int?
-  regenCount  Int             @default(0)
-  thumbsDown  Int             @default(0)
-  lesson     Lesson           @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  runs       SimulationRun[]
+  origin          ContentOrigin    @default(AI_GENERATED)
+  validation      ValidationStatus @default(PENDING) // публикуется после AI-критика
+  criticScore     Int?
+  regenCount      Int              @default(0)
+  thumbsDown      Int              @default(0)
+  lesson          Lesson           @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  runs            SimulationRun[]
 
   @@index([lessonId, validation])
 }
 
 model SimulationRun {
-  id         String    @id @default(cuid())
-  scenarioId String
-  userId     String
-  dialog     Json
-  debrief    String?   @db.Text
-  scorePct   Int?
+  id              String             @id @default(cuid())
+  scenarioId      String
+  userId          String
+  dialog          Json
+  debrief         String?            @db.Text
+  scorePct        Int?
   scorecard       Json? // Scorecard: разбивка по фазам визита
   complianceFlags Json? // ComplianceFlag[]: нарушения требований
   passed          Boolean? // false при любом fail-флаге (compliance instant-fail)
-  finishedAt DateTime?
-  createdAt  DateTime  @default(now())
-  scenario SimulationScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
-  user     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  finishedAt      DateTime?
+  createdAt       DateTime           @default(now())
+  scenario        SimulationScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 enum AiArtifactType {
@@ -800,16 +800,16 @@ enum AiArtifactType {
 }
 
 model AiArtifact {
-  id         String           @id @default(cuid())
-  lessonId   String
-  type       AiArtifactType
-  content    String           @db.Text
-  validation ValidationStatus @default(PENDING)
+  id          String           @id @default(cuid())
+  lessonId    String
+  type        AiArtifactType
+  content     String           @db.Text
+  validation  ValidationStatus @default(PENDING)
   criticScore Int?
-  regenCount  Int             @default(0)
-  thumbsDown  Int             @default(0)
-  createdAt  DateTime         @default(now())
-  lesson     Lesson           @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  regenCount  Int              @default(0)
+  thumbsDown  Int              @default(0)
+  createdAt   DateTime         @default(now())
+  lesson      Lesson           @relation(fields: [lessonId], references: [id], onDelete: Cascade)
   cardReviews CardReview[]
 
   @@unique([lessonId, type])
@@ -819,36 +819,36 @@ model AiArtifact {
 // Карточка адресуется парой (artifactId FLASHCARDS, cardIndex в deck.cards). Тренажёр
 // не использует LLM — повторение чистой механикой по dueAt (CLAUDE.md: один сервер).
 model CardReview {
-  id          String     @id @default(cuid())
-  userId      String
-  artifactId  String
-  cardIndex   Int // индекс карточки в FlashcardsData.cards
-  box         Int        @default(0) // ступень Leitner: 0 — новая/проваленная
-  dueAt       DateTime   @default(now())
-  repetitions Int        @default(0)
-  lapses      Int        @default(0)
-  lastResult  Boolean? // последний ответ: запомнил/нет
+  id             String     @id @default(cuid())
+  userId         String
+  artifactId     String
+  cardIndex      Int // индекс карточки в FlashcardsData.cards
+  box            Int        @default(0) // ступень Leitner: 0 — новая/проваленная
+  dueAt          DateTime   @default(now())
+  repetitions    Int        @default(0)
+  lapses         Int        @default(0)
+  lastResult     Boolean? // последний ответ: запомнил/нет
   lastReviewedAt DateTime? // когда карточку последний раз повторяли (для дневных целей)
-  createdAt   DateTime   @default(now())
-  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  artifact    AiArtifact @relation(fields: [artifactId], references: [id], onDelete: Cascade)
+  createdAt      DateTime   @default(now())
+  user           User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  artifact       AiArtifact @relation(fields: [artifactId], references: [id], onDelete: Cascade)
 
   @@unique([userId, artifactId, cardIndex])
   @@index([userId, dueAt])
 }
 
 model AiUsageDay {
-  id           String   @id @default(cuid())
-  userId       String
-  day          DateTime @db.Date
-  chatMessages Int      @default(0)
-  openChecks   Int      @default(0)
-  simulations  Int      @default(0)
-  tokensIn     Int      @default(0)
-  tokensOut    Int      @default(0)
-  voiceSttSec   Int     @default(0) // секунды распознавания речи (Whisper) за день
-  voiceTtsChars Int     @default(0) // символы озвучки (TTS) за день
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id            String   @id @default(cuid())
+  userId        String
+  day           DateTime @db.Date
+  chatMessages  Int      @default(0)
+  openChecks    Int      @default(0)
+  simulations   Int      @default(0)
+  tokensIn      Int      @default(0)
+  tokensOut     Int      @default(0)
+  voiceSttSec   Int      @default(0) // секунды распознавания речи (Whisper) за день
+  voiceTtsChars Int      @default(0) // символы озвучки (TTS) за день
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, day])
 }
@@ -884,8 +884,8 @@ model ContentGap {
   question  String   @db.Text
   ragScore  Float? // максимальная релевантность найденных чанков
   createdAt DateTime @default(now())
-  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
-  lesson Lesson? @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  lesson    Lesson?  @relation(fields: [lessonId], references: [id], onDelete: SetNull)
 
   @@index([createdAt])
 }
@@ -1073,7 +1073,7 @@ model OrgInvite {
 enum LeadStatus {
   NEW
   CONTACTED
-  PAID      // устно подтверждена оплата → кнопка «создать ученика»
+  PAID // устно подтверждена оплата → кнопка «создать ученика»
   DECLINED
 }
 
@@ -1103,31 +1103,31 @@ enum LeadPlan {
 
 // Заявка с лендинга/страницы курса (в MVP заменяет онлайн-чекаут)
 model Lead {
-  id        String     @id @default(cuid())
-  name      String?
-  contact   String // телефон / e-mail / @username — как оставил человек
-  courseId  String?
-  message   String?    @db.Text
-  kind      LeadKind   @default(B2C)
-  format    LeadFormat @default(ONLINE)
+  id                String     @id @default(cuid())
+  name              String?
+  contact           String // телефон / e-mail / @username — как оставил человек
+  courseId          String?
+  message           String?    @db.Text
+  kind              LeadKind   @default(B2C)
+  format            LeadFormat @default(ONLINE)
   /// Сколько сотрудников хочет обучать — только для B2B: по нему сразу видно
   /// уровень корпоративной сетки скидок (docs/PRICING-PLAN.md §8).
-  seatsWanted Int?
-  company     String? // наименование организации, если оставили
+  seatsWanted       Int?
+  company           String? // наименование организации, если оставили
   /// Выбранный тариф и цена, которую человек видел на экране в момент отправки.
   /// Считает сервер по lib/pricing (клиенту здесь верить нельзя), чтобы цифра в
   /// уведомлении и в счёте совпадала с калькулятором.
   plan              LeadPlan?
   quotedPerSeatTiyn Int? // цена одного места со скидкой, только B2B
   quotedTotalTiyn   Int? // итог: чек за все места (B2B) или цена курса (B2C)
-  status    LeadStatus @default(NEW)
-  comment   String?    @db.Text // заметки владельца
+  status            LeadStatus @default(NEW)
+  comment           String?    @db.Text // заметки владельца
   // Отметка о согласии на обработку ПДн в форме заявки (Закон № 99-З, ст. 5):
   // момент и версия редакции политики. IP/user-agent не храним (правило 9).
-  consentAt      DateTime?
-  consentVersion String?
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  consentAt         DateTime?
+  consentVersion    String?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
 
   @@index([status, createdAt])
 }
@@ -1177,14 +1177,14 @@ model Event {
 // ─────────────────────────── ГЕЙМИФИКАЦИЯ ───────────────────────────
 
 model GamificationProfile {
-  id           String    @id @default(cuid())
-  userId       String    @unique
-  xp           Int       @default(0)
-  level        Int       @default(1)
-  streakDays   Int       @default(0)
-  streakFreezes Int      @default(1) // запас «заморозок» серии (спасает пропущенный день)
-  lastActiveOn DateTime? @db.Date
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id            String    @id @default(cuid())
+  userId        String    @unique
+  xp            Int       @default(0)
+  level         Int       @default(1)
+  streakDays    Int       @default(0)
+  streakFreezes Int       @default(1) // запас «заморозок» серии (спасает пропущенный день)
+  lastActiveOn  DateTime? @db.Date
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Badge {
@@ -1200,8 +1200,8 @@ model UserBadge {
   userId   String
   badgeId  String
   earnedAt DateTime @default(now())
-  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge    Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
 
   @@id([userId, badgeId])
 }
@@ -1212,55 +1212,91 @@ model UserBadge {
 /// опциональные маркетинговые счётчики. Счётчики вставляются ТОЛЬКО на публичных
 /// (marketing)-страницах — не в кабинете ученика (CLAUDE.md D-002 + правило 9 о ПДн).
 model SeoSettings {
-  id                 String  @id @default("singleton")
+  id String @id @default("singleton")
 
   // Шаблоны метаданных. titleTemplate — паттерн Next ("%s · ACTIVE SALES").
-  titleTemplate      String  @default("%s · ACTIVE SALES")
-  defaultTitle       String  @default("Бизнес-платформа ACTIVE SALES — курсы по продажам с AI-наставником")
-  defaultDescription String  @default("Онлайн-курсы по техникам продаж: видеоуроки, AI-тренажёр на материале тренера, тесты и сертификаты.")
+  titleTemplate      String @default("%s · ACTIVE SALES")
+  defaultTitle       String @default("Бизнес-платформа ACTIVE SALES — курсы по продажам с AI-наставником")
+  defaultDescription String @default("Онлайн-курсы по техникам продаж: видеоуроки, AI-тренажёр на материале тренера, тесты и сертификаты.")
 
   // Соцпрофили → sameAs + contactPoint в EducationalOrganization JSON-LD.
-  socialInstagram    String?
-  socialTelegram     String?
-  socialYoutube      String?
-  socialTiktok       String?
+  socialInstagram String?
+  socialTelegram  String?
+  socialYoutube   String?
+  socialTiktok    String?
 
   // Дефолтная OG-картинка (относительный ключ lib/storage). Пусто → авто-opengraph-image.
-  defaultOgKey       String?
+  defaultOgKey String?
 
   // Подтверждение прав (значение content= мета-тега). Публичные страницы, <head>.
   googleVerification String?
   yandexVerification String?
 
   // Маркетинговые счётчики (D-002): вставляются ТОЛЬКО на (marketing). Пусто → выключено.
-  ga4Id              String? // "G-XXXXXXX"
-  yandexMetricaId    String? // числовой id счётчика Метрики
+  ga4Id           String? // "G-XXXXXXX"
+  yandexMetricaId String? // числовой id счётчика Метрики
 
   // Данные организации → EducationalOrganization JSON-LD (Knowledge Panel).
-  orgName            String  @default("Бизнес-платформа ACTIVE SALES")
-  orgDescription     String? // пусто → defaultDescription
-  orgCountry         String  @default("Belarus") // areaServed (англ. название страны)
+  orgName        String  @default("Бизнес-платформа ACTIVE SALES")
+  orgDescription String? // пусто → defaultDescription
+  orgCountry     String  @default("Belarus") // areaServed (англ. название страны)
 
   // Контакты поддержки: футер, лендинг, «забыли пароль», кабинет ученика, JSON-LD.
   // Правятся в /admin/seo без деплоя; env NEXT_PUBLIC_SUPPORT_* больше не источник.
-  orgPhone           String  @default("+375 (29) 605-30-32")
-  supportWhatsapp    String  @default("https://wa.me/375296053032") // ссылка wa.me
+  orgPhone        String @default("+375 (29) 605-30-32")
+  supportWhatsapp String @default("https://wa.me/375296053032") // ссылка wa.me
 
-  updatedAt          DateTime @updatedAt
+  updatedAt DateTime @updatedAt
+}
+
+/// Переопределения SeoSettings для конкретного домена или языка (мультидомен, D-013).
+/// Все поля необязательные: пустое наследуется от глобальных настроек, заполненное
+/// перекрывает их. Отдельные коды подтверждения прав обязательны — Search Console и
+/// Яндекс.Вебмастер выдают свой токен на каждый ресурс.
+model SeoScopeOverride {
+  id    String @id @default(cuid())
+  /// "BY" | "KZ" | "RU" | "KZ-kk" — см. lib/seo/scope.ts
+  scope String @unique
+
+  titleTemplate      String?
+  defaultTitle       String?
+  defaultDescription String?
+  defaultOgKey       String?
+
+  googleVerification String?
+  yandexVerification String?
+  ga4Id              String?
+  yandexMetricaId    String?
+
+  orgDescription  String?
+  orgCountry      String?
+  orgPhone        String?
+  supportWhatsapp String?
+  socialTelegram  String?
+
+  updatedAt DateTime @updatedAt
 }
 
 /// Метаданные статических публичных страниц из админки (каталог, оферта, политика).
 /// path — известный маршрут ("/courses" | "/offer" | "/privacy"). Пустые title/description
 /// → фолбэк на захардкоженные в странице. body (markdown) — текст thin-страниц
 /// (оферта/политика): пусто → заглушка «текст будет добавлен» и noindex по умолчанию.
+///
+/// scope — домен и язык, для которых действует запись (мультидомен, D-013):
+/// "global" (все домены), "KZ", "RU", "BY" либо "KZ-kk" для казахской версии.
+/// Резолв идёт по цепочке от точного к общему — см. lib/seo/scope.ts.
 model StaticPageSeo {
   id          String   @id @default(cuid())
-  path        String   @unique
+  path        String
+  scope       String   @default("global")
   title       String?
   description String?
   noindex     Boolean  @default(false)
-  body        String?  // markdown-контент страницы (только offer/privacy)
+  body        String? // markdown-контент страницы (только offer/privacy)
   updatedAt   DateTime @updatedAt
+
+  @@unique([path, scope])
+  @@index([path])
 }
 
 /// 301/308-редиректы (сохранение позиций при смене slug курса фабрикой и т.п.).
@@ -1269,7 +1305,7 @@ model StaticPageSeo {
 model Redirect {
   id        String   @id @default(cuid())
   from      String   @unique // относительный путь-источник, с ведущим /
-  to        String            // назначение (относительный путь или абсолютный URL)
+  to        String // назначение (относительный путь или абсолютный URL)
   hits      Int      @default(0) // сколько раз сработал — в дайджест владельцу
   createdAt DateTime @default(now())
 

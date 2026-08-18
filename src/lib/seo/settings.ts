@@ -3,11 +3,16 @@ import { unstable_cache, revalidateTag } from "next/cache";
 import type { SeoSettings } from "@prisma/client";
 import { db } from "@/lib/db";
 import { buildSafe } from "@/lib/utils";
+import { applyOverride, scopeChain } from "@/lib/seo/scope";
+import { currentSite } from "@/lib/seo/site";
+import { getLocale } from "@/i18n/server";
 
 /**
- * Глобальные SEO-настройки (singleton). Источник — таблица SeoSettings; если строки
- * ещё нет, отдаём дефолты (из схемы). Кэшируется тегом "seo-settings" и сбрасывается
- * в action при сохранении — чтение в layout не бьёт в БД на каждый запрос.
+ * SEO-настройки текущего домена и языка. База — singleton SeoSettings, поверх неё
+ * накладываются переопределения SeoScopeOverride по цепочке global → KZ → KZ-kk
+ * (мультидомен, D-013): у каждого ресурса свой код подтверждения прав, свои
+ * гео-заголовки и свой номер поддержки, а всё общее заполняется один раз.
+ * Кэшируется тегом "seo-settings" и сбрасывается в action при сохранении.
  */
 
 export const SEO_SETTINGS_TAG = "seo-settings";
@@ -50,9 +55,50 @@ const load = unstable_cache(
   { tags: [SEO_SETTINGS_TAG], revalidate: 300 },
 );
 
-/** Кэшированное чтение настроек (для layout / публичных страниц). */
+const loadOverrides = unstable_cache(
+  async () => buildSafe(() => db.seoScopeOverride.findMany(), []),
+  ["seo-scope-overrides"],
+  { tags: [SEO_SETTINGS_TAG], revalidate: 300 },
+);
+
+/**
+ * Кэшированное чтение настроек текущего домена/языка (layout, публичные страницы).
+ * Переопределения накладываются от общего к частному, поэтому частный вариант
+ * может задать одно поле и унаследовать остальные.
+ */
 export async function getSeoSettings(): Promise<SeoSettings> {
+  const [base, overrides, site, locale] = await Promise.all([
+    load(),
+    loadOverrides(),
+    currentSite(),
+    getLocale(),
+  ]);
+  if (!overrides.length) return base;
+
+  let result = base;
+  // reverse: сначала общее, затем всё более частное — последнее слово за точным.
+  for (const scope of [...scopeChain(site?.code ?? "BY", locale)].reverse()) {
+    result = applyOverride(result, overrides.find((o) => o.scope === scope));
+  }
+  return result;
+}
+
+/**
+ * Базовые настройки без наложений — для формы в /admin/seo: админка правит
+ * значения «для всех доменов», а не то, что показывает её собственный домен.
+ */
+export async function getBaseSeoSettings(): Promise<SeoSettings> {
   return load();
+}
+
+/** Переопределения одного разреза — для формы в /admin/seo. */
+export async function getScopeOverride(scope: string) {
+  return buildSafe(() => db.seoScopeOverride.findUnique({ where: { scope } }), null);
+}
+
+/** Все переопределения — админке нужны, чтобы показать унаследованные значения. */
+export async function getScopeOverrides() {
+  return loadOverrides();
 }
 
 /** Сбросить кэш после сохранения в админке. */

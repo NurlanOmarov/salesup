@@ -46,7 +46,8 @@ import {
   trainer,
   voiceShowcase,
 } from "@/content/landing";
-import { alternatesFor } from "@/lib/seo/site-hosts";
+import { pageAlternates, currentSite } from "@/lib/seo/site";
+import { DEFAULT_SITE } from "@/lib/seo/site-hosts";
 
 // ISR: страница статична, отзывы обновляются раз в 10 минут.
 export const revalidate = 600;
@@ -56,9 +57,11 @@ export const revalidate = 600;
 // картинку из opengraph-image.tsx, а заодно siteName и locale из layout —
 // репост уходил без изображения. og:title и og:description Next соберёт из
 // title и description страницы.
-export const metadata: Metadata = {
-  alternates: alternatesFor("/"),
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+    alternates: await pageAlternates("/"),
+  };
+}
 
 const stepIcons = {
   play: PlayCircle,
@@ -100,6 +103,8 @@ export default async function LandingPage() {
   const b2bBestPerMonth = Math.round(b2bBestPerSeat / 12);
   // Контакты — из SeoSettings (правятся в /admin/seo без деплоя).
   const { whatsapp: wa, telegram: tg } = await getSupportContacts();
+  // Домен захода: гео-строка первого экрана («вся Беларусь» / «весь Казахстан»).
+  const site = (await currentSite()) ?? DEFAULT_SITE;
 
   const faqJsonLd = {
     "@context": "https://schema.org",
@@ -136,7 +141,7 @@ export default async function LandingPage() {
             </Reveal>
             <Reveal delay={0.05}>
               <span className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-brand-light/30 bg-brand/10 px-3 py-1 text-xs font-medium text-brand-light">
-                {hero.badge}
+                {hero.badge(site.geo)}
               </span>
             </Reveal>
             <AnimatedTitle

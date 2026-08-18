@@ -1,7 +1,5 @@
-import Image from "next/image";
-import Link from "next/link";
 import { requireOwner } from "@/lib/auth/guards";
-import { LogoutButton } from "@/components/logout-button";
+import { AdminNav } from "@/components/admin/admin-nav";
 import type { Metadata } from "next";
 
 // Приватная зона: в robots.txt путь уже закрыт, мета-тег — второй барьер
@@ -18,92 +16,7 @@ export default async function AdminLayout({
 
   return (
     <div className="min-h-screen bg-foreground/[0.015]">
-      <header className="border-b border-foreground/10 bg-background">
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
-          <nav className="flex items-center gap-1 text-sm">
-            <Link href="/" className="flex items-center gap-2 pr-2">
-              <Image src="/logo.png" alt="" width={28} height={28} className="size-7" priority />
-              <span className="text-base font-bold tracking-tight text-brand">ACTIVE SALES</span>
-            </Link>
-            <Link href="/admin" className="px-3 py-1.5 font-semibold">
-              Консоль
-            </Link>
-            <Link
-              href="/app"
-              className="rounded-md px-3 py-1.5 text-foreground/70 transition-colors hover:bg-foreground/5 hover:text-foreground"
-            >
-              Обучение
-            </Link>
-            <Link
-              href="/admin/students"
-              className="rounded-md px-3 py-1.5 text-foreground/70 transition-colors hover:bg-foreground/5 hover:text-foreground"
-            >
-              Ученики
-            </Link>
-            <Link
-              href="/admin/orgs"
-              className="rounded-md px-3 py-1.5 text-foreground/70 transition-colors hover:bg-foreground/5 hover:text-foreground"
-            >
-              Организации
-            </Link>
-            <Link
-              href="/admin/courses"
-              className="rounded-md px-3 py-1.5 text-foreground/70 transition-colors hover:bg-foreground/5 hover:text-foreground"
-            >
-              Курсы
-            </Link>
-            <Link
-              href="/admin/pricing"
-              className="rounded-md px-3 py-1.5 text-foreground/70 transition-colors hover:bg-foreground/5 hover:text-foreground"
-            >
-              Тарифы
-            </Link>
-            <Link
-              href="/admin/leads"
-              className="rounded-md px-3 py-1.5 text-foreground/70 transition-colors hover:bg-foreground/5 hover:text-foreground"
-            >
-              Заявки
-            </Link>
-            <Link
-              href="/admin/analytics"
-              className="rounded-md px-3 py-1.5 text-foreground/70 transition-colors hover:bg-foreground/5 hover:text-foreground"
-            >
-              Аналитика
-            </Link>
-            <Link
-              href="/admin/usage"
-              className="rounded-md px-3 py-1.5 text-foreground/70 transition-colors hover:bg-foreground/5 hover:text-foreground"
-            >
-              Расходы LLM
-            </Link>
-            <Link
-              href="/admin/digest"
-              className="rounded-md px-3 py-1.5 text-foreground/70 transition-colors hover:bg-foreground/5 hover:text-foreground"
-            >
-              Дайджест
-            </Link>
-            <Link
-              href="/admin/certificates"
-              className="rounded-md px-3 py-1.5 text-foreground/70 transition-colors hover:bg-foreground/5 hover:text-foreground"
-            >
-              Сертификат
-            </Link>
-            <Link
-              href="/admin/flags"
-              className="rounded-md px-3 py-1.5 text-foreground/70 transition-colors hover:bg-foreground/5 hover:text-foreground"
-            >
-              Активность
-            </Link>
-            <Link
-              href="/admin/seo"
-              className="rounded-md px-3 py-1.5 text-foreground/70 transition-colors hover:bg-foreground/5 hover:text-foreground"
-            >
-              SEO
-            </Link>
-          </nav>
-          <LogoutButton />
-        </div>
-      </header>
+      <AdminNav />
       <div className="mx-auto max-w-6xl px-4 py-8">{children}</div>
     </div>
   );

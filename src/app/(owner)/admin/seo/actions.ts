@@ -29,6 +29,7 @@ import {
   isKnownStaticPage,
   revalidateStaticPageSeo,
 } from "@/lib/seo/static-pages";
+import { isKnownScope, isOverridableScope } from "@/lib/seo/scope";
 import { env } from "@/env";
 
 /** Пустая строка → null (единый способ «очистить» опциональное поле). */
@@ -283,16 +284,68 @@ export const deleteRedirectAction = safeAction(
   },
 );
 
+// ─────────────────────────── Разрезы по доменам и языкам ───────────────────────────
+
+/**
+ * Сохранить переопределения SEO для домена или языка (мультидомен, D-013).
+ * Пустое поле = наследовать значение «для всех доменов», поэтому заполнять нужно
+ * только то, что действительно отличается: коды подтверждения прав (у каждого
+ * ресурса в Search Console и Вебмастере свой), гео-заголовки, местный телефон.
+ * Только OWNER.
+ */
+export const updateSeoScopeOverrideAction = safeAction(
+  {
+    schema: z.object({
+      scope: z.string().refine(isOverridableScope, "Неизвестный разрез"),
+      titleTemplate: optStr(80),
+      defaultTitle: optStr(120),
+      defaultDescription: optStr(320),
+      googleVerification: optStr(200),
+      yandexVerification: optStr(200),
+      ga4Id: optStr(40),
+      yandexMetricaId: optStr(20),
+      orgDescription: optStr(320),
+      orgCountry: optStr(80),
+      orgPhone: optStr(40),
+      supportWhatsapp: optStr(200),
+      socialTelegram: optStr(200),
+    }),
+    auth: "owner",
+  },
+  async (input, { session }) => {
+    const { scope, ...data } = input;
+    await db.seoScopeOverride.upsert({
+      where: { scope },
+      create: { scope, ...data },
+      update: data,
+    });
+
+    await writeAdminLog({
+      actorId: session!.user.id,
+      action: "seo.scope.update",
+      meta: { scope, filled: Object.values(data).filter(Boolean).length },
+    });
+
+    revalidateSeoSettings();
+    revalidatePath("/", "layout");
+    return { ok: true as const };
+  },
+);
+
 // ─────────────────────────── Статические страницы (каталог, оферта, политика) ───────────────────────────
 
 /**
  * Сохранить SEO статической страницы. Пустые title/description → фолбэк страницы;
  * body (markdown) — текст thin-страниц (/offer, /privacy). Только OWNER.
+ *
+ * scope — домен и язык, для которых действует запись (мультидомен, D-013):
+ * "global" пишется один раз для всех доменов, "KZ"/"KZ-kk"/"RU" перекрывают его.
  */
 export const updateStaticPageSeoAction = safeAction(
   {
     schema: z.object({
       path: z.string().refine(isKnownStaticPage, "Неизвестная страница"),
+      scope: z.string().refine(isKnownScope, "Неизвестный разрез"),
       title: optStr(120),
       description: optStr(320),
       noindex: z.boolean(),
@@ -310,15 +363,20 @@ export const updateStaticPageSeoAction = safeAction(
       body: page.hasBody ? input.body : null,
     };
     await db.staticPageSeo.upsert({
-      where: { path: input.path },
-      create: { path: input.path, ...data },
+      where: { path_scope: { path: input.path, scope: input.scope } },
+      create: { path: input.path, scope: input.scope, ...data },
       update: data,
     });
 
     await writeAdminLog({
       actorId: session!.user.id,
       action: "seo.staticpage.update",
-      meta: { path: input.path, noindex: input.noindex, hasBody: Boolean(data.body) },
+      meta: {
+        path: input.path,
+        scope: input.scope,
+        noindex: input.noindex,
+        hasBody: Boolean(data.body),
+      },
     });
 
     revalidateStaticPageSeo();

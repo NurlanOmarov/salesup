@@ -67,19 +67,42 @@ export interface MultiPrice {
   kzt: string;
   rub: string;
   byn: string;
+  /** Цена в валюте страны домена — её посетитель видит крупно. */
+  main: string;
+  /** Остальные валюты одной строкой: «≈ 1 000 Br · ≈ 30 000 ₽». Пусто, пока нет курса. */
+  alt: string;
   /** false, если кросс-курс ещё не загружен (тогда KZT/RUB = «—»). */
   ready: boolean;
 }
 
-/** Три валюты разом — для карточек и блоков цены. */
-export function buildMultiPrice(tiyn: number, rates: RatesMap): MultiPrice {
+/** Валюта витрины по домену (мультидомен): ключ поля MultiPrice. */
+export type MainCurrency = "byn" | "kzt" | "rub";
+
+/**
+ * Три валюты разом — для карточек и блоков цены. main — валюта страны домена:
+ * казахстанскому посетителю цена показывается в тенге, российскому в рублях,
+ * остальные остаются справочными (цена договора — BYN, см. оферту).
+ */
+export function buildMultiPrice(
+  tiyn: number,
+  rates: RatesMap,
+  main: MainCurrency = "byn",
+): MultiPrice {
   const ready = ratesAvailable(rates);
-  return {
+  const values = {
     kzt: formatCurrency(tiyn, "KZT", rates),
     rub: formatCurrency(tiyn, "RUB", rates),
     byn: formatCurrency(tiyn, "BYN", rates),
-    ready,
   };
+  // Без курса конвертация недоступна — показываем базовую цену в BYN.
+  const mainKey: MainCurrency = ready ? main : "byn";
+  const alt = ready
+    ? (["byn", "kzt", "rub"] as const)
+        .filter((c) => c !== mainKey)
+        .map((c) => `≈ ${values[c]}`)
+        .join(" · ")
+    : "";
+  return { ...values, main: values[mainKey], alt, ready };
 }
 
 /** Доступен ли кросс-курс BYN→KZT/RUB (rates.BYN и rates.RUB присутствуют). */

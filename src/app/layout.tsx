@@ -3,6 +3,8 @@ import "./globals.css";
 import { ThemeScript } from "@/components/theme-script";
 import { getSeoSettings, socialLinks } from "@/lib/seo/settings";
 import { currentSite, siteOrigin } from "@/lib/seo/site";
+import { getLocale } from "@/i18n/server";
+import { LocaleProvider } from "@/i18n/client";
 
 /**
  * Метаданные читаются из SeoSettings (админка «SEO-настройки»): шаблон title,
@@ -48,7 +50,12 @@ export const viewport: Viewport = {
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const [s, origin, site] = await Promise.all([getSeoSettings(), siteOrigin(), currentSite()]);
+  const [s, origin, site, locale] = await Promise.all([
+    getSeoSettings(),
+    siteOrigin(),
+    currentSite(),
+    getLocale(),
+  ]);
 
   // Сайт-вайд разметка организации (Knowledge Panel, брендовая выдача).
   // Название/описание/телефон/страна редактируются в /admin/seo (SeoSettings).
@@ -82,7 +89,7 @@ export default async function RootLayout({
   };
 
   return (
-    <html lang="ru" suppressHydrationWarning>
+    <html lang={locale} suppressHydrationWarning>
       <head>
         <ThemeScript />
         <script
@@ -90,7 +97,9 @@ export default async function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
         />
       </head>
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        <LocaleProvider locale={locale}>{children}</LocaleProvider>
+      </body>
     </html>
   );
 }

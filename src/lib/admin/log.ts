@@ -20,6 +20,7 @@ export type AdminAction =
   | "course.cover"
   | "seo.settings.update"
   | "seo.staticpage.update"
+  | "seo.scope.update" // переопределения SEO для домена/языка (мультидомен, D-013)
   | "seo.redirect.create"
   | "seo.redirect.update"
   | "seo.redirect.delete"

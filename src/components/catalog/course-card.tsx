@@ -18,6 +18,8 @@ export interface CoursePrices {
   kzt: string;
   rub: string;
   byn: string;
+  main: string;
+  alt: string;
   ready: boolean;
 }
 
@@ -93,7 +95,7 @@ export function CourseCard({ course }: { course: CourseCardData }) {
           <div>
             <div className="flex items-baseline gap-2">
               <span className="text-lg font-bold">
-                {course.prices?.byn ?? formatPrice(course.priceTiyn)}
+                {course.prices?.main ?? formatPrice(course.priceTiyn)}
               </span>
               {course.oldPriceTiyn ? (
                 <span className="text-sm text-foreground/40 line-through">
@@ -102,9 +104,7 @@ export function CourseCard({ course }: { course: CourseCardData }) {
               ) : null}
             </div>
             {course.prices?.ready ? (
-              <p className="mt-0.5 text-xs text-foreground/45">
-                ≈ {course.prices.kzt} · ≈ {course.prices.rub}
-              </p>
+              <p className="mt-0.5 text-xs text-foreground/45">{course.prices.alt}</p>
             ) : null}
           </div>
           {course.hoursLabel ? (

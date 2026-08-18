@@ -24,8 +24,7 @@ import { trainer } from "@/content/landing";
 import { resolveRedirect } from "@/lib/seo/redirects";
 import { getRelatedCards } from "@/lib/seo/related";
 import { getSupportContacts } from "@/lib/seo/settings";
-import { alternatesFor } from "@/lib/seo/site-hosts";
-import { siteOrigin } from "@/lib/seo/site";
+import { currentSite, pageAlternates, siteOrigin } from "@/lib/seo/site";
 
 export const revalidate = 60;
 
@@ -75,7 +74,7 @@ export async function generateMetadata({
     // обычная карточка курса получает self-canonical + альтернаты по доменам.
     alternates: course.canonicalPath
       ? { canonical: course.canonicalPath }
-      : alternatesFor(`/courses/${slug}`),
+      : await pageAlternates(`/courses/${slug}`),
     robots: course.seoNoindex ? { index: false, follow: true } : undefined,
     openGraph: {
       title: course.ogTitle ?? course.seoTitle ?? course.title,
@@ -121,7 +120,9 @@ export default async function CoursePage({
   ]);
 
   const ratesPayload = await currency.getRates();
-  const prices = buildMultiPrice(course.priceTiyn, ratesPayload.rates);
+  // Валюта страны домена крупно, остальные — справочной строкой.
+  const site = await currentSite();
+  const prices = buildMultiPrice(course.priceTiyn, ratesPayload.rates, site?.currency ?? "byn");
   const hasRates = ratesAvailable(ratesPayload.rates);
 
   // Контакты — из SeoSettings (правятся в /admin/seo без деплоя).
@@ -329,7 +330,7 @@ export default async function CoursePage({
 
                 <div className="flex items-baseline gap-3">
                   <span className="text-3xl font-bold text-white">
-                    {prices.byn}
+                    {prices.main}
                   </span>
                   {course.oldPriceTiyn ? (
                     <span className="text-lg text-white/40 line-through">
@@ -339,7 +340,7 @@ export default async function CoursePage({
                 </div>
                 {hasRates ? (
                   <p className="mt-1 text-sm text-white/50">
-                    ≈ {prices.kzt} · ≈ {prices.rub}
+                    {prices.alt}
                   </p>
                 ) : null}
                 <p className="mt-1 text-sm text-white/50">
@@ -548,8 +549,8 @@ export default async function CoursePage({
           slug={slug}
           courseId={course.id}
           courseTitle={course.title}
-          priceByn={prices.byn}
-          priceOther={hasRates ? `≈ ${prices.kzt} · ≈ ${prices.rub}` : null}
+          priceByn={prices.main}
+          priceOther={hasRates ? prices.alt : null}
         />
       </section>
 

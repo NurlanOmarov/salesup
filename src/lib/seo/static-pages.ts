@@ -3,6 +3,9 @@ import { unstable_cache, revalidateTag } from "next/cache";
 import type { StaticPageSeo } from "@prisma/client";
 import { db } from "@/lib/db";
 import { buildSafe } from "@/lib/utils";
+import { GLOBAL_SCOPE, scopeChain } from "@/lib/seo/scope";
+import { currentSite } from "@/lib/seo/site";
+import { getLocale } from "@/i18n/server";
 import { REQUISITES_FILLED } from "@/content/legal";
 
 /**
@@ -81,9 +84,9 @@ const load = unstable_cache(
   { tags: [STATIC_SEO_TAG], revalidate: 300 },
 );
 
-/** Все сохранённые override-строки (для админ-формы). */
-export async function getStaticPageRows(): Promise<StaticPageSeo[]> {
-  return load();
+/** Сохранённые override-строки одного разреза (для админ-формы). */
+export async function getStaticPageRows(scope: string = GLOBAL_SCOPE): Promise<StaticPageSeo[]> {
+  return (await load()).filter((r) => r.scope === scope);
 }
 
 export interface ResolvedStaticSeo {
@@ -99,12 +102,23 @@ export interface ResolvedStaticSeo {
  */
 export async function getStaticPageSeo(path: StaticPagePath): Promise<ResolvedStaticSeo> {
   const def = STATIC_PAGES.find((p) => p.path === path)!;
-  const row = (await load()).find((r) => r.path === path);
+  const [rows, site, locale] = await Promise.all([load(), currentSite(), getLocale()]);
+
+  // Ищем от точного разреза к общему: у казахстанского домена может быть свой
+  // заголовок, а текст оферты — унаследован (мультидомен, D-013).
+  const chain = scopeChain(site?.code ?? "BY", locale);
+  const candidates = chain
+    .map((scope) => rows.find((r) => r.path === path && r.scope === scope))
+    .filter((r): r is StaticPageSeo => Boolean(r));
+  const pick = <K extends keyof StaticPageSeo>(key: K) =>
+    candidates.find((r) => r[key] !== null && r[key] !== "")?.[key];
+
+  const noindexRow = candidates[0];
   return {
-    title: row?.title || def.fallbackTitle,
-    description: row?.description || def.fallbackDescription,
-    noindex: row ? row.noindex : def.defaultNoindex,
-    body: row?.body || null,
+    title: (pick("title") as string | undefined) || def.fallbackTitle,
+    description: (pick("description") as string | undefined) || def.fallbackDescription,
+    noindex: noindexRow ? noindexRow.noindex : def.defaultNoindex,
+    body: (pick("body") as string | undefined) || null,
   };
 }
 

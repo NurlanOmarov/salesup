@@ -9,7 +9,7 @@ import { AudienceSwitch } from "@/components/landing/audience-switch";
 import { Reveal } from "@/components/landing/reveal";
 import { Faq } from "@/components/landing/faq";
 import { BusinessCta } from "./business-cta";
-import { alternatesFor } from "@/lib/seo/site-hosts";
+import { pageAlternates } from "@/lib/seo/site";
 
 export const revalidate = 300;
 
@@ -25,7 +25,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: s.title,
     description: s.description,
-    alternates: alternatesFor("/business"),
+    alternates: await pageAlternates("/business"),
     robots: { index: !s.noindex, follow: true },
     // Ссылку на эту страницу отправляют в мессенджере и почтой, поэтому картинка
     // репоста своя: дефолтная — про розничные курсы, а тут разговор с компанией.
