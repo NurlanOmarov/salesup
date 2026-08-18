@@ -238,22 +238,25 @@ export function SeatsCalculator({
           {money(quote.pricePerSeatTiyn)}
         </dd>
 
-        {/* justify-between: подпись «В месяц на человека» переносится на две
-            строки, и без него суммы во втором ряду вставали на разной высоте. */}
-        <div className="mt-3 grid grid-cols-2 gap-3 border-t border-foreground/10 pt-3">
-          <div className="flex flex-col justify-between">
+        {/*
+          Строки «подпись — сумма», а не две колонки: в тенге «1 477 900 ₸» шире
+          половины карточки, и в двухколоночной сетке nowrap выталкивал сумму на
+          соседнюю колонку — знак валюты наезжал на соседнее число.
+        */}
+        <div className="mt-3 space-y-2 border-t border-foreground/10 pt-3">
+          <div className="flex items-baseline justify-between gap-3">
             <dt className="text-xs uppercase tracking-wide text-foreground/50">
               {c.totalYear}
             </dt>
-            <dd className="mt-0.5 whitespace-nowrap text-lg font-semibold tabular-nums">
+            <dd className="whitespace-nowrap text-lg font-semibold tabular-nums">
               {money(quote.totalTiyn)}
             </dd>
           </div>
-          <div className="flex flex-col justify-between">
+          <div className="flex items-baseline justify-between gap-3">
             <dt className="text-xs uppercase tracking-wide text-foreground/50">
               {c.perMonth}
             </dt>
-            <dd className="mt-0.5 whitespace-nowrap text-lg font-semibold tabular-nums">
+            <dd className="whitespace-nowrap text-lg font-semibold tabular-nums">
               {money(Math.round(quote.pricePerSeatTiyn / 12))}
             </dd>
           </div>
