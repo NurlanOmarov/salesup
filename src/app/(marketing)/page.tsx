@@ -25,7 +25,7 @@ import { quoteSeats, SUBSCRIPTION_YEAR_TIYN } from "@/lib/pricing";
 import { cn, buildSafe } from "@/lib/utils";
 import { Reveal } from "@/components/landing/reveal";
 import { Faq } from "@/components/landing/faq";
-import { Reviews, type ReviewItem } from "@/components/landing/reviews";
+import type { ReviewItem } from "@/components/landing/reviews";
 import { LeadForm } from "@/components/landing/lead-form";
 import { AiDemo } from "@/components/landing/ai-demo";
 import { ExternalRatings } from "@/components/landing/external-ratings";
@@ -113,6 +113,18 @@ export default async function LandingPage() {
       }),
     [] as ExternalReviewCard[],
   );
+  // Своё и внешнее в одной ленте: сначала отзывы учеников платформы.
+  const allReviews: ExternalReviewCard[] = [
+    ...reviews.map((r) => ({
+      id: r.id,
+      author: r.userName,
+      text: r.text,
+      rating: r.rating,
+      source: "PLATFORM" as const,
+      url: null,
+    })),
+    ...externalReviews,
+  ];
   // Домен захода: гео-строка первого экрана («вся Беларусь» / «весь Казахстан»).
   const site = (await currentSite()) ?? DEFAULT_SITE;
   // Язык страницы: русский по умолчанию, казахский на /kk (i18n/routing.ts).
@@ -454,43 +466,27 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* Отзывы учеников платформы + оценки школы на внешних картах.
-          Секция показывается, даже когда своих отзывов ещё нет: оценки на
-          картах — самостоятельный блок доверия. */}
-      {reviews.length > 0 || ratings.length > 0 || externalReviews.length > 0 ? (
+      {/* Отзывы одной лентой: свои (со звёздами) и цитаты с Яндекс и Google Карт.
+          Раньше рядом стояли статичная карусель своих отзывов и бегущая лента
+          внешних — два блока об одном и том же перегружали страницу. */}
+      {allReviews.length > 0 || ratings.length > 0 ? (
         <section className="mx-auto max-w-6xl px-4 py-16">
-          {reviews.length > 0 ? (
-            <>
-              <Reveal>
-                <h2 className="text-3xl font-bold">
-                  <span className="text-brand">{t.landing.reviewsAccent}</span>{" "}
-                  {t.landing.reviewsTitle}
-                </h2>
-              </Reveal>
-              <Reveal delay={0.05}>
-                <div className="mt-8">
-                  <Reviews items={reviews} />
-                </div>
-              </Reveal>
-            </>
+          <Reveal>
+            <h2 className="text-3xl font-bold">
+              <span className="text-brand">{t.landing.reviewsAccent}</span>{" "}
+              {t.landing.reviewsTitle}
+            </h2>
+          </Reveal>
+
+          {ratings.length > 0 ? (
+            <Reveal delay={0.05}>
+              <div className="mt-6 flex flex-wrap items-center gap-3">
+                <ExternalRatings items={ratings} words={t.landing.ratingWords} />
+              </div>
+            </Reveal>
           ) : null}
 
-          {ratings.length > 0 || externalReviews.length > 0 ? (
-            <div className={reviews.length > 0 ? "mt-12" : ""}>
-              <Reveal>
-                <p className="text-center text-sm uppercase tracking-wide text-foreground/45">
-                  {t.landing.ratingsTitle}
-                </p>
-              </Reveal>
-              <Reveal delay={0.05}>
-                <div className="mt-4">
-                  <ExternalRatings items={ratings} words={t.landing.ratingWords} />
-                </div>
-              </Reveal>
-              <ExternalReviewsMarquee items={externalReviews} />
-            </div>
-          ) : null}
-
+          <ExternalReviewsMarquee items={allReviews} />
         </section>
       ) : null}
 

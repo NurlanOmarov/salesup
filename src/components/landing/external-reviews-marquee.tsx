@@ -1,6 +1,7 @@
 "use client";
 
 import { useReducedMotion } from "framer-motion";
+import { Star } from "lucide-react";
 
 /**
  * Лента реальных отзывов с Яндекс и Google Карт — «титрами», как бегущая
@@ -15,12 +16,14 @@ export interface ExternalReviewCard {
   id: string;
   author: string;
   text: string;
+  /** 1–5, если оценка известна: у своих отзывов есть всегда, у карт — не всегда. */
   rating: number | null;
-  source: "YANDEX" | "GOOGLE" | "OTHER";
+  source: "PLATFORM" | "YANDEX" | "GOOGLE" | "OTHER";
   url: string | null;
 }
 
 const SOURCE_LABEL: Record<ExternalReviewCard["source"], string> = {
+  PLATFORM: "Отзыв ученика",
   YANDEX: "Яндекс Карты",
   GOOGLE: "Google Карты",
   OTHER: "Отзыв",
@@ -31,13 +34,27 @@ function Card({ review, hidden }: { review: ExternalReviewCard; hidden?: boolean
   const initial = review.author.trim().charAt(0).toUpperCase() || "?";
   const body = (
     <div className="flex h-full w-72 shrink-0 flex-col rounded-2xl border border-foreground/10 bg-background p-4 text-left transition-colors hover:border-brand/40 sm:w-80">
-      <div className="flex items-center gap-2">
-        {/* Цифра — только если оценка известна: в выгрузке с карт её может не быть. */}
+      <div className="flex items-center justify-between gap-2">
+        {/* Звёзды — где оценка известна (свои отзывы). В выгрузке с карт оценки
+            нет, и вместо неё карточка показывает только площадку: выдумывать
+            пять звёзд нельзя. */}
         {review.rating ? (
-          <span className="flex size-8 items-center justify-center rounded-lg rounded-bl-sm bg-brand text-sm font-bold tabular-nums text-white">
-            {review.rating}
+          <span className="flex gap-0.5" aria-label={`Оценка ${review.rating} из 5`}>
+            {[1, 2, 3, 4, 5].map((n) => (
+              <Star
+                key={n}
+                aria-hidden
+                className={
+                  n <= review.rating!
+                    ? "size-3.5 fill-amber-400 text-amber-400"
+                    : "size-3.5 text-foreground/20"
+                }
+              />
+            ))}
           </span>
-        ) : null}
+        ) : (
+          <span />
+        )}
         <span className="text-xs text-foreground/45">{SOURCE_LABEL[review.source]}</span>
       </div>
 
