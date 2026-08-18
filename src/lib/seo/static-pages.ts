@@ -109,13 +109,22 @@ export async function getStaticPageSeo(path: StaticPagePath): Promise<ResolvedSt
   // Ищем от точного разреза к общему: у казахстанского домена может быть свой
   // заголовок, а текст оферты — унаследован (мультидомен, D-013).
   const chain = scopeChain(site?.code ?? "BY", locale);
-  const candidates = chain
-    .map((scope) => rows.find((r) => r.path === path && r.scope === scope))
-    .filter((r): r is StaticPageSeo => Boolean(r));
+  const inScope = (scopes: readonly string[]) =>
+    scopes
+      .map((scope) => rows.find((r) => r.path === path && r.scope === scope))
+      .filter((r): r is StaticPageSeo => Boolean(r));
+
+  // Тексты на другом языке НЕ наследуются от русских разрезов: ручной русский
+  // заголовок на казахской странице хуже казахского значения по умолчанию.
+  const textChain =
+    locale === DEFAULT_LOCALE ? chain : chain.filter((scope) => scope.endsWith(`-${locale}`));
+  const candidates = inScope(textChain);
   const pick = <K extends keyof StaticPageSeo>(key: K) =>
     candidates.find((r) => r[key] !== null && r[key] !== "")?.[key];
 
-  const noindexRow = candidates[0];
+  // Запрет индексации, наоборот, наследуется по полной цепочке: если владелец
+  // закрыл страницу для всех доменов, языковая версия тоже закрыта.
+  const noindexRow = inScope(chain)[0];
   // Пока владелец не заполнил вкладку языка в /admin/seo, казахская страница
   // берёт заголовок и описание из словаря, а не русский фолбэк страницы.
   const localized =

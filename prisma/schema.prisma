@@ -196,6 +196,11 @@ model Course {
   promoVideoKey       String? // ключ HLS-папки трейлера в lib/storage (публичный, без шифрования)
   priceTiyn           Int
   oldPriceTiyn        Int?
+  /// ID товара в WooCommerce на activesales.by. Заполнен → на витрине кнопка
+  /// «Купить» ведёт в магазин, а оплаченный заказ открывает доступ автоматически
+  /// (docs/WOO-INTEGRATION.md). Пусто → курс продаётся только вручную.
+  /// Заказ ищет курс сначала по SKU товара (SKU = slug), это поле — запасной ключ.
+  wooProductId        Int?           @unique
   /// Срок доступа, который получает ученик по умолчанию («по тарифу курса» в
   /// админке). Год — базовое решение тарифного плана: материалы остаются у
   /// ученика, а AI-практика тратит токены и не может быть бессрочной
@@ -542,6 +547,9 @@ enum PaymentProvider {
   HALYK
   MANUAL
   MOCK
+  // Магазин WooCommerce на activesales.by: карту принимает эквайринг Альфа-Банка,
+  // к нам приходит только факт оплаты заказа (docs/WOO-INTEGRATION.md).
+  WOOCOMMERCE
 }
 
 model Order {

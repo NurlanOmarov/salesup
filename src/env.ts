@@ -57,6 +57,18 @@ const serverSchema = z.object({
   // Куда падают уведомления о новых заявках с сайта. По умолчанию — почта владельца.
   LEADS_NOTIFY_EMAIL: z.string().email().default("omarov.nb@gmail.com"),
 
+  // ── Магазин WooCommerce на activesales.by (docs/WOO-INTEGRATION.md) ──
+  // Карту принимает эквайринг Альфа-Банка на белорусском домене; к нам приходит
+  // только факт оплаты заказа, поэтому карточных секретов здесь нет.
+  // Пусто → приём отключён: /api/payments/woo отвечает 503, доступы выдаёт админ.
+  WOO_WEBHOOK_SECRET: z.string().optional(),
+  /** Адрес магазина: строит ссылки «Купить» на витрине и базу REST для сверки. */
+  WOO_STORE_URL: z.string().url().default("https://activesales.by"),
+  // Ключи Woo REST API (права «Чтение») для ночной сверки заказов: webhook может
+  // потеряться, сверка добирает оплаченные заказы. Пусто → сверка не запускается.
+  WOO_CONSUMER_KEY: z.string().optional(),
+  WOO_CONSUMER_SECRET: z.string().optional(),
+
   // Telegram-бот владельца: основной канал уведомлений о новых заявках.
   // Пусто → уведомления просто не отправляются (заявка всё равно в админке).
   TELEGRAM_BOT_TOKEN: z.string().optional(),
