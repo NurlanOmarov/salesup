@@ -28,6 +28,7 @@
     "factory:handout": "tsx scripts/factory/handout-pdf.ts",
     "factory:check-svg": "tsx scripts/factory/svg-check.ts",
     "factory:transcript-export": "tsx --env-file=.env scripts/factory/transcript-export.ts",
+    "factory:transcript-import": "tsx --env-file=.env scripts/factory/transcript-import.ts",
     "factory:slides-import": "tsx --env-file=.env --env-file-if-exists=.env.deploy scripts/factory/slides-import.ts",
     "factory:transcript": "tsx --env-file=.env scripts/factory/transcript.ts",
     "factory:subs": "tsx --env-file=.env scripts/factory/subs.ts",
