@@ -4,6 +4,7 @@ import { ThemeScript } from "@/components/theme-script";
 import { getSeoSettings, socialLinks } from "@/lib/seo/settings";
 import { currentSite, siteOrigin } from "@/lib/seo/site";
 import { getLocale } from "@/i18n/server";
+import { messagesFor } from "@/i18n/messages";
 import { LocaleProvider } from "@/i18n/client";
 
 /**
@@ -16,7 +17,7 @@ import { LocaleProvider } from "@/i18n/client";
  * .kz ранжируется в РК, .ru в РФ, .by в РБ.
  */
 export async function generateMetadata(): Promise<Metadata> {
-  const [s, origin] = await Promise.all([getSeoSettings(), siteOrigin()]);
+  const [s, origin, locale] = await Promise.all([getSeoSettings(), siteOrigin(), getLocale()]);
   return {
     metadataBase: new URL(origin),
     title: { default: s.defaultTitle, template: s.titleTemplate },
@@ -28,7 +29,11 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     // metadata.icons отключает автоподхват файловой конвенции целиком — icon.png нужно указывать явно
     icons: { icon: "/icon.png", apple: "/api/icon?size=180" },
-    openGraph: { type: "website", siteName: "Бизнес-платформа ACTIVE SALES", locale: "ru_RU" },
+    openGraph: {
+      type: "website",
+      siteName: s.orgName,
+      locale: messagesFor(locale).seo.ogLocale,
+    },
     twitter: {
       card: "summary_large_image",
       title: s.defaultTitle,

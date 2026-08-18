@@ -13,6 +13,7 @@ import { CoursesCatalog } from "@/components/catalog/courses-catalog";
 import { coursesPageContent } from "@/content/courses-page-content";
 import { currentSite, pageAlternates, siteOrigin } from "@/lib/seo/site";
 import { getLocale } from "@/i18n/server";
+import { messagesFor } from "@/i18n/messages";
 
 export const revalidate = 60;
 
@@ -65,7 +66,9 @@ export default async function CoursesPage() {
   // Цены показываем в валюте страны домена (мультидомен), остальные — справочно.
   const site = await currentSite();
   // Тексты каталога — на языке страницы (казахская версия на /kk/courses).
-  const { audience, howItWorks, difference, faq } = coursesPageContent(await getLocale());
+  const locale = await getLocale();
+  const { audience, howItWorks, difference, faq } = coursesPageContent(locale);
+  const t = messagesFor(locale);
   const courses = await getCourses(site?.currency ?? "byn");
 
   const siteUrl = await siteOrigin();
@@ -123,10 +126,9 @@ export default async function CoursesPage() {
       />
 
       <Reveal>
-        <h1 className="text-3xl font-bold sm:text-4xl">Каталог курсов</h1>
+        <h1 className="text-3xl font-bold sm:text-4xl">{t.catalogPage.title}</h1>
         <p className="mt-2 max-w-2xl text-foreground/60">
-          Практические программы Виталия Дубовика — бизнес-тренера с 20-летним опытом.
-          В каждом курсе: видеоуроки, тесты и AI-наставник 24/7.
+          {t.catalogPage.subtitle}
         </p>
       </Reveal>
 
@@ -134,9 +136,9 @@ export default async function CoursesPage() {
         <Reveal>
           <div className="mt-20 text-center text-foreground/40">
             <BookOpen className="mx-auto mb-4 size-12 opacity-30" />
-            <p className="font-medium">Курсы скоро появятся</p>
+            <p className="font-medium">{t.catalogPage.empty}</p>
             <p className="mt-1 text-sm">
-              Оставьте заявку на главной странице — уведомим вас о старте.
+              {t.catalogPage.emptyText}
             </p>
           </div>
         </Reveal>
@@ -211,7 +213,7 @@ export default async function CoursesPage() {
           свёрнутый аккордеон на клиенте отдал бы поиску и AI пустую страницу. */}
       <section className="mt-16">
         <Reveal>
-          <h2 className="text-2xl font-bold sm:text-3xl">Частые вопросы о курсах</h2>
+          <h2 className="text-2xl font-bold sm:text-3xl">{t.catalogPage.faqTitle}</h2>
         </Reveal>
         <div className="mt-8 divide-y divide-foreground/10 rounded-2xl border border-foreground/10">
           {faq.map((item) => (
@@ -227,17 +229,15 @@ export default async function CoursesPage() {
 
       <Reveal>
         <div className="mt-16 rounded-2xl border border-foreground/10 p-6 text-center sm:p-8">
-          <p className="text-lg font-semibold">Не знаете, с какого курса начать?</p>
+          <p className="text-lg font-semibold">{t.catalogPage.helpTitle}</p>
           <p className="mx-auto mt-2 max-w-2xl text-foreground/70">
-            Опишите, что продаёте и где буксует разговор с клиентом, — подскажем
-            подходящую программу. Первый урок в любом курсе бесплатный, а
-            онлайн-оплата не требуется.
+            {t.catalogPage.helpText}
           </p>
           <Link
             href="/#zayavka"
             className={cn(buttonVariants({ size: "lg", variant: "brand" }), "mt-6")}
           >
-            Оставить заявку
+            {t.catalogPage.helpCta}
           </Link>
         </div>
       </Reveal>

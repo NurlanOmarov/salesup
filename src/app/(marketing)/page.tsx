@@ -37,6 +37,8 @@ import { VoiceVisualizer } from "@/components/voice-visualizer";
 import { landingContent } from "@/content/landing-content";
 import { pageAlternates, currentSite } from "@/lib/seo/site";
 import { getLocale } from "@/i18n/server";
+import { messagesFor } from "@/i18n/messages";
+import { currency, formatCurrency, type CurrencyCode } from "@/lib/currency";
 import { DEFAULT_SITE } from "@/lib/seo/site-hosts";
 
 // ISR: страница статична, отзывы обновляются раз в 10 минут.
@@ -99,6 +101,10 @@ export default async function LandingPage() {
   const locale = await getLocale();
   const { hero, steps, voiceShowcase, formats, industries, clients, trainer, methodology, stats, aiDemo, faq } =
     landingContent(locale);
+  const t = messagesFor(locale);
+  // Цена корпоративного места — в валюте страны домена, как и на витрине курсов.
+  const { rates } = await currency.getRates();
+  const b2bCode = site.currency.toUpperCase() as CurrencyCode;
 
   const faqJsonLd = {
     "@context": "https://schema.org",
@@ -130,7 +136,7 @@ export default async function LandingPage() {
           <div className="max-w-xl text-center lg:text-left">
             <Reveal>
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-brand-light">
-                Бизнес-платформа ACTIVE SALES
+                {t.landing.brandLine}
               </p>
             </Reveal>
             <Reveal delay={0.05}>
@@ -187,7 +193,7 @@ export default async function LandingPage() {
       {/* Как проходит обучение */}
       <section className="mx-auto max-w-6xl px-4 py-16 sm:py-20">
         <Reveal>
-          <h2 className="text-center text-3xl font-bold">Как проходит обучение</h2>
+          <h2 className="text-center text-3xl font-bold">{t.landing.howItWorks}</h2>
         </Reveal>
         <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {steps.map((s, i) => {
@@ -249,12 +255,12 @@ export default async function LandingPage() {
             <div className="mt-8 flex flex-col items-center justify-center gap-4 rounded-2xl border border-foreground/10 bg-background p-6 text-center sm:flex-row sm:gap-8 sm:text-left">
               <p className="flex items-center gap-2 text-sm font-medium text-foreground/80">
                 <Flame className="size-5 text-orange-500" />
-                Серии дней и уровни за активность
+                {t.landing.streak}
               </p>
               <span className="hidden h-5 w-px bg-foreground/10 sm:block" />
               <p className="flex items-center gap-2 text-sm font-medium text-foreground/80">
                 <Trophy className="size-5 text-amber-600" />
-                Достижения и прогресс — чтобы дойти до конца курса
+                {t.landing.achievements}
               </p>
             </div>
           </Reveal>
@@ -271,7 +277,7 @@ export default async function LandingPage() {
               </div>
               <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-brand/90 px-2.5 py-1 text-xs font-medium text-white">
                 <Mic className="size-3.5" />
-                Голосовой диалог
+                {t.landing.voiceDialog}
               </span>
             </div>
           </Reveal>
@@ -300,10 +306,10 @@ export default async function LandingPage() {
         <div className="mx-auto max-w-6xl px-4 py-16">
           <Reveal>
             <h2 className="text-center text-3xl font-bold">
-              Продажи в вашей отрасли
+              {t.landing.industryTitle}
             </h2>
             <p className="mx-auto mt-3 max-w-2xl text-center text-foreground/70">
-              AI-задачи и кейсы подстраиваются под сферу, в которой вы работаете.
+              {t.landing.industryText}
             </p>
           </Reveal>
           <Reveal delay={0.05}>
@@ -368,7 +374,7 @@ export default async function LandingPage() {
         <Reveal delay={0.1}>
           <div className="mt-14 border-t border-foreground/10 pt-8">
             <p className="text-center text-sm font-medium uppercase tracking-wider text-foreground/40">
-              Тренер обучал команды компаний
+              {t.landing.clientsTitle}
             </p>
             <div className="mt-5 flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
               {clients.map((c) => (
@@ -408,7 +414,7 @@ export default async function LandingPage() {
           <Reveal delay={0.1}>
             <div>
               <p className="mb-3 text-center text-sm font-medium text-foreground/60 lg:text-left">
-                Попробуйте прямо сейчас — задайте вопрос наставнику:
+                {t.landing.tryNow}
               </p>
               <div className="relative">
                 <AiDemo aiDemo={aiDemo} />
@@ -416,12 +422,12 @@ export default async function LandingPage() {
                 <div className="float-y absolute -left-3 -top-4 hidden rounded-xl border border-white/10 bg-slate-900/90 px-3 py-2 shadow-xl backdrop-blur sm:block lg:-left-7">
                   <p className="flex items-center gap-1.5 text-xs font-semibold text-white">
                     <CheckCircle2 className="size-3.5 text-emerald-400" />
-                    Возражение отработано
+                    {t.landing.objectionHandled}
                   </p>
                 </div>
                 <div className="float-y-delayed absolute bottom-16 -right-3 hidden rounded-xl border border-white/10 bg-slate-900/90 px-3 py-2 shadow-xl backdrop-blur sm:block lg:-right-6">
                   <p className="text-xs font-semibold text-amber-300">
-                    +1 закрытая сделка 🎉
+                    {t.landing.dealClosed}
                   </p>
                 </div>
               </div>
@@ -434,7 +440,7 @@ export default async function LandingPage() {
       {reviews.length > 0 ? (
         <section className="mx-auto max-w-6xl px-4 py-16">
           <Reveal>
-            <h2 className="text-3xl font-bold">Отзывы учеников</h2>
+            <h2 className="text-3xl font-bold">{t.landing.reviewsTitle}</h2>
           </Reveal>
           <Reveal delay={0.05}>
             <div className="mt-8">
@@ -452,23 +458,22 @@ export default async function LandingPage() {
           <div className="grid gap-6 rounded-3xl border border-foreground/10 bg-foreground/[0.02] p-6 sm:p-8 lg:grid-cols-[1.2fr_1fr] lg:items-center">
             <div>
               <p className="text-sm font-semibold uppercase tracking-wide text-brand">
-                Для компаний
+                {t.b2b.badge}
               </p>
               <h2 className="mt-2 text-2xl font-bold sm:text-3xl">
-                Обучить весь отдел продаж
+                {t.b2b.title}
               </h2>
               <p className="mt-3 max-w-xl text-foreground/70">
-                Годовой доступ ко всем курсам для команды, кабинет компании с
-                прогрессом каждого сотрудника и AI-тренажёры.
+                {t.b2b.text}
               </p>
               {/* Порядок суммы прямо в тизере: иначе часть читателей не кликнет,
                   не понимая, их ли это ценовой сегмент. Считает lib/pricing. */}
               <p className="mt-3 text-foreground/80">
                 <span className="text-xl font-bold">
-                  от {b2bBestPerSeat.toLocaleString("ru-RU")} BYN
+                  {t.b2b.priceFrom} {formatCurrency(b2bBestPerSeat * 100, b2bCode, rates)}
                 </span>{" "}
-                за сотрудника в год — {b2bBestPerMonth.toLocaleString("ru-RU")} BYN
-                в месяц
+                {t.b2b.perSeatYear} {formatCurrency(b2bBestPerMonth * 100, b2bCode, rates)}{" "}
+                {t.b2b.perMonth}
               </p>
               <Link
                 href="/business"
@@ -477,15 +482,11 @@ export default async function LandingPage() {
                   "mt-5 inline-flex",
                 )}
               >
-                Рассчитать для команды
+                {t.b2b.calculate}
               </Link>
             </div>
             <ul className="grid gap-2.5 text-sm text-foreground/75">
-              {[
-                "Прогресс и результаты тестов по каждому",
-                "Место переносится на нового сотрудника",
-                "Счёт на юрлицо, акт, оферта для организаций",
-              ].map((item) => (
+              {[t.b2b.bullet1, t.b2b.bullet2, t.b2b.bullet3].map((item) => (
                 <li key={item} className="flex items-start gap-2.5">
                   <CheckCircle2 className="mt-0.5 size-4.5 shrink-0 text-emerald-600" />
                   <span>{item}</span>
@@ -499,7 +500,7 @@ export default async function LandingPage() {
       {/* FAQ */}
       <section className="mx-auto max-w-3xl px-4 py-16">
         <Reveal>
-          <h2 className="text-center text-3xl font-bold">Частые вопросы</h2>
+          <h2 className="text-center text-3xl font-bold">{t.landing.faqTitle}</h2>
         </Reveal>
         <Reveal delay={0.05}>
           <div className="mt-8">
@@ -526,11 +527,9 @@ export default async function LandingPage() {
           <div className="relative grid items-center gap-10 md:grid-cols-2">
             <Reveal>
               <div>
-                <h2 className="text-3xl font-bold">Начните обучение</h2>
+                <h2 className="text-3xl font-bold">{t.landing.startTitle}</h2>
                 <p className="mt-3 text-white/70">
-                  Оставьте заявку — расскажем о курсах, подберём программу под вашу
-                  отрасль и подскажем удобный способ оплаты. Онлайн-оплата не
-                  требуется.
+                  {t.landing.startText}
                 </p>
                 <div className="mt-6 flex flex-wrap gap-3">
                   {wa ? (
@@ -540,7 +539,7 @@ export default async function LandingPage() {
                       rel="noopener noreferrer"
                       className={buttonVariants({ variant: "outline-light" })}
                     >
-                      Написать в WhatsApp
+                      {t.landing.writeWhatsapp}
                     </a>
                   ) : null}
                   {tg ? (
@@ -550,7 +549,7 @@ export default async function LandingPage() {
                       rel="noopener noreferrer"
                       className={buttonVariants({ variant: "outline-light" })}
                     >
-                      Написать в Telegram
+                      {t.landing.writeTelegram}
                     </a>
                   ) : null}
                 </div>

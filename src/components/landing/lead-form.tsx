@@ -91,7 +91,7 @@ export function LeadForm({
         <input type="hidden" name="planCourseIds" value={planCourseIds.join(",")} />
       ) : null}
       <div className="space-y-1.5">
-        <Label htmlFor="lead-name">Имя</Label>
+        <Label htmlFor="lead-name">{t.lead.name}</Label>
         <Input id="lead-name" name="name" placeholder={t.lead.namePlaceholder} />
       </div>
       {isB2b ? (

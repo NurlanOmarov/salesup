@@ -127,8 +127,7 @@ export function CourseCtaSection({
           <div>
             <h2 className="text-3xl font-bold">{t.cta.enroll}</h2>
             <p className="mt-3 text-white/70">
-              Оставьте заявку — расскажем об условиях, подберём удобный способ
-              оплаты. Доступ выдаётся вручную после подтверждения оплаты.
+              {t.cta.leaveRequest}
             </p>
             <p className="mt-2 font-semibold text-brand-light">{courseTitle}</p>
             <p className="text-2xl font-bold">{priceByn}</p>

@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useLocale } from "@/i18n/client";
+import { messagesFor } from "@/i18n/messages";
 
 /**
  * Правая (чистая) половина hero: полупрозрачные термины продаж, которые
@@ -9,26 +11,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
  * от заголовка слева. Уважает prefers-reduced-motion (тогда не рендерится).
  */
 
-const WORDS = [
-  "выявление потребностей",
-  "работа с возражениями",
-  "закрытие сделки",
-  "воронка продаж",
-  "холодный звонок",
-  "тёплый лид",
-  "средний чек",
-  "квалификация клиента",
-  "презентация ценности",
-  "боль клиента",
-  "дожим до оплаты",
-  "конверсия в оплату",
-  "скрипт продаж",
-  "апселл и кросс-селл",
-  "закрытие на встречу",
-  "точки роста",
-  "касание клиента",
-  "работа с базой",
-];
 
 type ActiveWord = {
   id: number;
@@ -37,7 +19,7 @@ type ActiveWord = {
   left: number; // %
 };
 
-function pick<T>(arr: T[]): T {
+function pick<T>(arr: readonly T[]): T {
   return arr[Math.floor(Math.random() * arr.length)]!;
 }
 
@@ -46,6 +28,8 @@ function rand(min: number, max: number) {
 }
 
 export function HeroWordStream() {
+  // Термины продаж — из словаря: на казахской версии поток тоже казахский.
+  const vocabulary = messagesFor(useLocale()).words;
   const [words, setWords] = useState<ActiveWord[]>([]);
   const [enabled, setEnabled] = useState(false);
   const idRef = useRef(0);
@@ -58,9 +42,9 @@ export function HeroWordStream() {
 
   const spawn = useCallback(() => {
     // не повторяем два последних слова подряд — поток кажется живее
-    let text = pick(WORDS);
+    let text = pick(vocabulary);
     let guard = 0;
-    while (recentRef.current.includes(text) && guard++ < 8) text = pick(WORDS);
+    while (recentRef.current.includes(text) && guard++ < 8) text = pick(vocabulary);
     recentRef.current = [text, ...recentRef.current].slice(0, 2);
 
     const id = idRef.current++;
@@ -68,7 +52,7 @@ export function HeroWordStream() {
       ...prev,
       { id, text, top: rand(14, 68), left: rand(4, 46) },
     ]);
-  }, []);
+  }, [vocabulary]);
 
   // первое слово — с небольшой задержкой после монтирования
   useEffect(() => {

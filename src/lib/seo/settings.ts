@@ -6,6 +6,8 @@ import { buildSafe } from "@/lib/utils";
 import { applyOverride, scopeChain } from "@/lib/seo/scope";
 import { currentSite } from "@/lib/seo/site";
 import { getLocale } from "@/i18n/server";
+import { messagesFor } from "@/i18n/messages";
+import { DEFAULT_LOCALE } from "@/i18n/routing";
 
 /**
  * SEO-настройки текущего домена и языка. База — singleton SeoSettings, поверх неё
@@ -73,9 +75,20 @@ export async function getSeoSettings(): Promise<SeoSettings> {
     currentSite(),
     getLocale(),
   ]);
-  if (!overrides.length) return base;
+  const hasLocaleDefaults = locale !== DEFAULT_LOCALE;
+  if (!overrides.length && !hasLocaleDefaults) return base;
 
   let result = base;
+  // Казахская версия получает свои заголовок и описание из словаря — иначе до
+  // первой правки в /admin/seo её страницы уходили бы в индекс с русским title.
+  if (locale !== DEFAULT_LOCALE) {
+    const seo = messagesFor(locale).seo;
+    result = applyOverride(result, {
+      titleTemplate: seo.titleTemplate,
+      defaultTitle: seo.defaultTitle,
+      defaultDescription: seo.defaultDescription,
+    });
+  }
   // reverse: сначала общее, затем всё более частное — последнее слово за точным.
   for (const scope of [...scopeChain(site?.code ?? "BY", locale)].reverse()) {
     result = applyOverride(result, overrides.find((o) => o.scope === scope));

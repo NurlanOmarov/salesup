@@ -6,6 +6,8 @@ import { buildSafe } from "@/lib/utils";
 import { GLOBAL_SCOPE, scopeChain } from "@/lib/seo/scope";
 import { currentSite } from "@/lib/seo/site";
 import { getLocale } from "@/i18n/server";
+import { messagesFor } from "@/i18n/messages";
+import { DEFAULT_LOCALE } from "@/i18n/routing";
 import { REQUISITES_FILLED } from "@/content/legal";
 
 /**
@@ -114,9 +116,21 @@ export async function getStaticPageSeo(path: StaticPagePath): Promise<ResolvedSt
     candidates.find((r) => r[key] !== null && r[key] !== "")?.[key];
 
   const noindexRow = candidates[0];
+  // Пока владелец не заполнил вкладку языка в /admin/seo, казахская страница
+  // берёт заголовок и описание из словаря, а не русский фолбэк страницы.
+  const localized =
+    locale !== DEFAULT_LOCALE && path === "/courses"
+      ? {
+          title: messagesFor(locale).catalogPage.title,
+          description: messagesFor(locale).catalogPage.seoDescription,
+        }
+      : null;
   return {
-    title: (pick("title") as string | undefined) || def.fallbackTitle,
-    description: (pick("description") as string | undefined) || def.fallbackDescription,
+    title: (pick("title") as string | undefined) || localized?.title || def.fallbackTitle,
+    description:
+      (pick("description") as string | undefined) ||
+      localized?.description ||
+      def.fallbackDescription,
     noindex: noindexRow ? noindexRow.noindex : def.defaultNoindex,
     body: (pick("body") as string | undefined) || null,
   };

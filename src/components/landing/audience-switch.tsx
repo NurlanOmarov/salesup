@@ -47,7 +47,7 @@ export function AudienceSwitch({
   return (
     <div
       role="group"
-      aria-label="Для кого"
+      aria-label={t.audience.label}
       className={cn(
         "inline-flex items-center rounded-full border p-1 backdrop-blur",
         onDark
