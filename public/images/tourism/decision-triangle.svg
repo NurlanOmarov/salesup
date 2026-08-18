@@ -45,7 +45,7 @@
   <path class="link" d="M522 174 C522 220 400 224 340 248" marker-end="url(#th)" />
 
   <!-- Турист -->
-  <rect class="tourist" x="196" y="254" width="248" height="86" rx="12" />
+  <rect class="tourist" x="130" y="254" width="380" height="86" rx="12" />
   <text class="cap" x="320" y="292">Турист принимает решение</text>
   <text class="hint" x="320" y="316">последний аргумент почти всегда говорит продавец</text>
 

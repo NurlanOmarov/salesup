@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Plus, X } from "lucide-react";
+import { CheckCircle2, Plus, X } from "lucide-react";
 import type { HotspotData } from "@/lib/interactive";
 
 /**
@@ -19,6 +19,10 @@ export function HotspotImage({ data }: { data: HotspotData }) {
   const [active, setActive] = useState<number | null>(null);
   const [seen, setSeen] = useState<Set<number>>(new Set());
 
+  const total = data.points.length;
+  const done = seen.size === total;
+  const left = total - seen.size;
+
   const open = (i: number) => {
     setActive((cur) => (cur === i ? null : i));
     setSeen((s) => new Set(s).add(i));
@@ -26,13 +30,17 @@ export function HotspotImage({ data }: { data: HotspotData }) {
 
   return (
     <div className="rounded-2xl border border-foreground/10 bg-background p-4 sm:p-5">
-      <div className="flex items-center justify-between gap-3">
-        <p className="font-semibold">Нажимайте на точки схемы</p>
-        <span className="text-sm text-foreground/55">
-          {seen.size}/{data.points.length}
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="font-semibold">Задание: разобрать схему по точкам</p>
+          <p className="mt-0.5 text-sm text-foreground/65">
+            {data.caption ?? "Откройте каждую точку — под ней разбор из урока."}
+          </p>
+        </div>
+        <span className="shrink-0 rounded-full border border-foreground/15 px-2.5 py-1 text-xs font-medium text-foreground/60">
+          {seen.size} из {total}
         </span>
       </div>
-      {data.caption ? <p className="mt-0.5 text-sm text-foreground/55">{data.caption}</p> : null}
 
       <div className="relative mt-4 overflow-hidden rounded-xl border border-foreground/10 bg-foreground/[0.03]">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -76,6 +84,17 @@ export function HotspotImage({ data }: { data: HotspotData }) {
           );
         })}
       </div>
+
+      {done ? (
+        <p className="mt-3 flex items-center gap-1.5 text-sm font-medium text-emerald-600">
+          <CheckCircle2 className="size-4" />
+          Задание выполнено: вы разобрали все точки схемы.
+        </p>
+      ) : (
+        <p className="mt-3 text-sm text-foreground/55">
+          Нажимайте на точки — под каждой пояснение из урока. Осталось разобрать: {left}.
+        </p>
+      )}
     </div>
   );
 }

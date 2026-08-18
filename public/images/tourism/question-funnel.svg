@@ -6,7 +6,7 @@
       .band-close { fill: #d97706; fill-opacity: .2; stroke: #b45309; stroke-width: 2.5; stroke-linejoin: round; }
       .cap { font: 800 20px/1.2 system-ui, -apple-system, "Segoe UI", sans-serif; fill: #0f172a; text-anchor: middle; }
       .hint { font: 500 13px/1.3 system-ui, -apple-system, "Segoe UI", sans-serif; fill: #475569; text-anchor: middle; }
-      .ratio { font: 700 13px/1.2 system-ui, -apple-system, "Segoe UI", sans-serif; fill: #94a3b8; text-anchor: start; }
+      .ratio { font: 700 12px/1.2 system-ui, -apple-system, "Segoe UI", sans-serif; fill: #94a3b8; text-anchor: start; }
       .title { font: 700 15px/1.2 system-ui, -apple-system, "Segoe UI", sans-serif; fill: #94a3b8; text-anchor: middle; letter-spacing: 1.5px; }
       .goal { fill: #10b981; fill-opacity: .18; stroke: #059669; stroke-width: 2.5; }
       .axis { font: 600 12px/1.2 system-ui, -apple-system, "Segoe UI", sans-serif; fill: #94a3b8; }
@@ -23,19 +23,19 @@
   <path class="band-open" d="M60 54 H500 L468 134 H92 Z" />
   <text class="cap" x="280" y="88">Открытые</text>
   <text class="hint" x="280" y="112">«Где отдыхали? Какие критерии? С кем планируете?»</text>
-  <text class="ratio" x="514" y="100">80 % — турист</text>
+  <text class="ratio" x="506" y="100">80 % — турист</text>
 
   <!-- Альтернативные -->
   <path class="band-alt" d="M96 142 H464 L436 222 H124 Z" />
   <text class="cap" x="280" y="176">Альтернативные</text>
-  <text class="hint" x="280" y="200">«Именно 14 дней и именно Дубай — или всё-таки другое?»</text>
-  <text class="ratio" x="514" y="188">50 / 50</text>
+  <text class="hint" x="280" y="200">«Именно 14 дней и Дубай — или другое?»</text>
+  <text class="ratio" x="506" y="188">50 / 50</text>
 
   <!-- Закрытые -->
   <path class="band-close" d="M128 230 H432 L404 310 H156 Z" />
   <text class="cap" x="280" y="264">Закрытые</text>
-  <text class="hint" x="280" y="288">«Я правильно поняла: питание завтрак-ужин? Да?»</text>
-  <text class="ratio" x="514" y="276">80 % — менеджер</text>
+  <text class="hint" x="280" y="288">«Питание завтрак-ужин — верно?»</text>
+  <text class="ratio" x="506" y="276">80 % — менеджер</text>
 
   <!-- Итог -->
   <rect class="goal" x="176" y="322" width="208" height="56" rx="12" />

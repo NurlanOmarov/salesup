@@ -23,20 +23,20 @@
   <!-- Левая колонка: «сэкономил» -->
   <text class="title" x="190" y="52">«Сэкономлю — возьму подешевле»</text>
   <rect class="bar-bad" x="120" y="196" width="140" height="132" rx="8" />
-  <text class="lbl" x="190" y="240">Первый исполнитель</text>
-  <text class="hint" x="190" y="260">$50 — работу не приняли</text>
+  <text class="lbl" x="190" y="240">Исполнитель</text>
+  <text class="hint" x="190" y="260">$50 — не приняли</text>
   <text class="hint" x="190" y="282">гарантии нет</text>
   <rect class="bar-bad-2" x="120" y="80" width="140" height="112" rx="8" />
-  <text class="lbl" x="190" y="120">Эксперт после переделки</text>
-  <text class="hint" x="190" y="140">$75 — то, с чего стоило</text>
+  <text class="lbl" x="190" y="120">После переделки</text>
+  <text class="hint" x="190" y="140">$75 — с чего стоило</text>
   <text class="hint" x="190" y="158">начинать</text>
   <text class="sum sum-bad" x="190" y="360">= $125</text>
 
   <!-- Правая колонка: «сразу к эксперту» -->
   <text class="title" x="450" y="52">«Сразу к эксперту»</text>
   <rect class="bar-good" x="380" y="196" width="140" height="132" rx="8" />
-  <text class="lbl" x="450" y="240">Эксперт с гарантией</text>
-  <text class="hint" x="450" y="260">$75 — работа принята</text>
+  <text class="lbl" x="450" y="240">Эксперт, гарантия</text>
+  <text class="hint" x="450" y="260">$75 — принята сразу</text>
   <text class="hint" x="450" y="282">с первого раза</text>
   <text class="sum sum-good" x="450" y="360">= $75</text>
 

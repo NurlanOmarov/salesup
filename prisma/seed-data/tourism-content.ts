@@ -2206,7 +2206,7 @@ export const TOURISM_HOTSPOTS: { titleMatch: string; data: HotspotData }[] = [
     titleMatch: "Три вещи",
     data: {
       image: "/images/tourism/decision-triangle.svg",
-      caption: "Нажимайте на блоки: из чего складывается решение туриста и где здесь ваша зона влияния",
+      caption: "Цель — понять, из чего складывается решение туриста и где здесь ваша зона влияния как продавца.",
       points: [
         {
           x: 18,
@@ -2245,7 +2245,7 @@ export const TOURISM_HOTSPOTS: { titleMatch: string; data: HotspotData }[] = [
     titleMatch: "Воронка вопросов",
     data: {
       image: "/images/tourism/question-funnel.svg",
-      caption: "Нажимайте на слои воронки: какие вопросы задавать и кто на каком этапе говорит больше",
+      caption: "Цель — собрать воронку целиком: какие вопросы задавать на каждом слое и кто в этот момент говорит больше.",
       points: [
         {
           x: 44,
