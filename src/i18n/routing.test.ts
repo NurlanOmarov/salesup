@@ -5,6 +5,7 @@ import {
   localesForHost,
   hasKazakhVersion,
   isKazakhIndexed,
+  KK_PATHS,
   KK_READY,
 } from "./routing.js";
 
@@ -56,8 +57,7 @@ describe("localesForHost", () => {
 
 describe("hasKazakhVersion", () => {
   it("переведённые страницы получают казахскую версию", () => {
-    expect(hasKazakhVersion("/")).toBe(true);
-    expect(hasKazakhVersion("/courses")).toBe(true);
+    for (const path of KK_PATHS) expect(hasKazakhVersion(path)).toBe(true);
   });
 
   it("карточка курса открыта: интерфейс казахский, содержимое курса русское", () => {
@@ -65,16 +65,21 @@ describe("hasKazakhVersion", () => {
   });
 
   it("непереведённые разделы уводятся на русскую версию", () => {
-    expect(hasKazakhVersion("/business")).toBe(false);
+    // юридические документы намеренно остаются в русской редакции
     expect(hasKazakhVersion("/offer")).toBe(false);
+    expect(hasKazakhVersion("/privacy")).toBe(false);
+    expect(hasKazakhVersion("/verify/abc")).toBe(false);
   });
 });
 
 describe("isKazakhIndexed", () => {
-  it("в hreflang попадают только полностью переведённые страницы", () => {
-    expect(isKazakhIndexed("/")).toBe(true);
-    expect(isKazakhIndexed("/courses")).toBe(true);
-    // содержимое карточки приходит из БД на русском — в индекс её не отдаём
+  it("в hreflang попадают все полностью переведённые страницы", () => {
+    for (const path of KK_PATHS) expect(isKazakhIndexed(path)).toBe(true);
+  });
+
+  it("страницы со смешанным содержимым в hreflang не идут", () => {
+    // название и программа курса приходят из БД на русском
     expect(isKazakhIndexed("/courses/spin")).toBe(false);
+    expect(isKazakhIndexed("/offer")).toBe(false);
   });
 });
