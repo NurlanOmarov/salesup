@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import {
   DEFAULT_LOCALE,
   KK_HOST,
-  hasKazakhVersion,
+  isKazakhIndexed,
   localizePath,
   type Locale,
 } from "@/i18n/routing";
@@ -72,9 +72,13 @@ export function alternatesFor(
   for (const s of SITE_HOSTS) languages[s.hreflang] = `https://${s.host}${suffix(path)}`;
   // Казахская версия — только на казахстанском домене и только у переведённых
   // страниц, иначе hreflang вёл бы на русский текст.
-  if (hasKazakhVersion(path)) {
+  if (isKazakhIndexed(path)) {
     languages["kk-KZ"] = `https://${KK_HOST}${suffix(localizePath(path, "kk"))}`;
   }
   languages["x-default"] = `https://${DEFAULT_SITE.host}${suffix(path)}`;
-  return { canonical: localizePath(path, locale), languages };
+  // Казахская страница со смешанным содержимым канонизируется на русскую —
+  // иначе в индекс попал бы дубль с русским текстом под казахским адресом.
+  const canonical =
+    locale === DEFAULT_LOCALE || isKazakhIndexed(path) ? localizePath(path, locale) : path;
+  return { canonical, languages };
 }

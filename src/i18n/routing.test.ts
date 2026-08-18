@@ -4,6 +4,7 @@ import {
   localizePath,
   localesForHost,
   hasKazakhVersion,
+  isKazakhIndexed,
   KK_READY,
 } from "./routing.js";
 
@@ -59,10 +60,21 @@ describe("hasKazakhVersion", () => {
     expect(hasKazakhVersion("/courses")).toBe(true);
   });
 
-  it("непереведённые — нет: их /kk-адрес уводится на русскую версию", () => {
-    // карточка курса, B2B и юридические страницы ещё не переведены
-    expect(hasKazakhVersion("/courses/spin")).toBe(false);
+  it("карточка курса открыта: интерфейс казахский, содержимое курса русское", () => {
+    expect(hasKazakhVersion("/courses/spin")).toBe(true);
+  });
+
+  it("непереведённые разделы уводятся на русскую версию", () => {
     expect(hasKazakhVersion("/business")).toBe(false);
     expect(hasKazakhVersion("/offer")).toBe(false);
+  });
+});
+
+describe("isKazakhIndexed", () => {
+  it("в hreflang попадают только полностью переведённые страницы", () => {
+    expect(isKazakhIndexed("/")).toBe(true);
+    expect(isKazakhIndexed("/courses")).toBe(true);
+    // содержимое карточки приходит из БД на русском — в индекс её не отдаём
+    expect(isKazakhIndexed("/courses/spin")).toBe(false);
   });
 });

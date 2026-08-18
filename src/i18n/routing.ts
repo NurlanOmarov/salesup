@@ -29,8 +29,25 @@ export const KK_HOST = "study.activesales.kz";
  */
 export const KK_PATHS: readonly string[] = ["/", "/courses"];
 
-/** Есть ли казахская версия у этого пути (путь — уже без языкового префикса). */
+/**
+ * Разделы, где казахский интерфейс работает, но содержимое приходит из БД на
+ * русском (карточки курсов: названия, программа, описания). Такие страницы
+ * открываем — казахоязычному посетителю удобнее видеть свой интерфейс, — но в
+ * hreflang не отдаём: для поисковика это была бы русская страница под казахским
+ * адресом. Перевод содержимого курсов — отдельная задача фабрики.
+ */
+export const KK_MIXED_PREFIXES: readonly string[] = ["/courses/"];
+
+/** Открыта ли казахская версия этого пути (путь — уже без языкового префикса). */
 export function hasKazakhVersion(pathname: string): boolean {
+  return (
+    KK_PATHS.includes(pathname) ||
+    KK_MIXED_PREFIXES.some((prefix) => pathname.startsWith(prefix))
+  );
+}
+
+/** Отдаём ли казахскую версию поисковику (hreflang + self-canonical). */
+export function isKazakhIndexed(pathname: string): boolean {
   return KK_PATHS.includes(pathname);
 }
 

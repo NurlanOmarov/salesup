@@ -2,6 +2,8 @@
 
 import { useActionState, useEffect } from "react";
 import { Link } from "@/components/i18n/link";
+import { useLocale } from "@/i18n/client";
+import { messagesFor } from "@/i18n/messages";
 import { motion } from "framer-motion";
 import { createLeadAction, type LeadFormState } from "@/app/(marketing)/actions";
 import { trackEvent } from "@/lib/analytics/track";
@@ -43,6 +45,8 @@ export function LeadForm({
 }) {
   const isB2b = kind === "B2B";
   const isOffline = format === "OFFLINE";
+  // Форма показывается и на казахской версии витрины (i18n/messages.ts).
+  const t = messagesFor(useLocale());
   const [state, formAction, isPending] = useActionState(
     createLeadAction,
     initialState,
@@ -64,13 +68,13 @@ export function LeadForm({
         className={className}
       >
         <div className="rounded-2xl border border-green-600/30 bg-green-600/5 p-6 text-center">
-          <p className="text-lg font-semibold">Заявка отправлена!</p>
+          <p className="text-lg font-semibold">{t.lead.sent}</p>
           <p className="mt-1 text-sm text-foreground/70">
             {isOffline
-              ? "Свяжемся, обсудим программу, даты и стоимость тренинга."
+              ? t.lead.sentOffline
               : isB2b
-                ? "Свяжемся в ближайшее время, посчитаем стоимость и выставим счёт."
-                : "Мы свяжемся с вами в ближайшее время и расскажем, как начать обучение."}
+                ? t.lead.sentB2b
+                : t.lead.sentB2c}
           </p>
         </div>
       </motion.div>
@@ -88,21 +92,21 @@ export function LeadForm({
       ) : null}
       <div className="space-y-1.5">
         <Label htmlFor="lead-name">Имя</Label>
-        <Input id="lead-name" name="name" placeholder="Как к вам обращаться" />
+        <Input id="lead-name" name="name" placeholder={t.lead.namePlaceholder} />
       </div>
       {isB2b ? (
         <>
           <div className="mt-3 space-y-1.5">
-            <Label htmlFor="lead-company">Организация</Label>
+            <Label htmlFor="lead-company">{t.lead.company}</Label>
             <Input
               id="lead-company"
               name="company"
-              placeholder="Название компании"
+              placeholder={t.lead.companyPlaceholder}
             />
           </div>
           <div className="mt-3 space-y-1.5">
             <Label htmlFor="lead-seats">
-              {isOffline ? "Сколько участников" : "Сколько сотрудников обучаем"}
+              {isOffline ? t.lead.participants : t.lead.employees}
             </Label>
             <Input
               id="lead-seats"
@@ -117,7 +121,7 @@ export function LeadForm({
         </>
       ) : null}
       <div className="mt-3 space-y-1.5">
-        <Label htmlFor="lead-contact">Телефон, WhatsApp или e-mail *</Label>
+        <Label htmlFor="lead-contact">{t.lead.contact}</Label>
         <Input
           id="lead-contact"
           name="contact"
@@ -126,7 +130,7 @@ export function LeadForm({
         />
       </div>
       <div className="mt-3 space-y-1.5">
-        <Label htmlFor="lead-message">Комментарий</Label>
+        <Label htmlFor="lead-message">{t.lead.comment}</Label>
         <Input
           id="lead-message"
           name="message"
@@ -134,10 +138,10 @@ export function LeadForm({
           defaultValue={defaultMessage}
           placeholder={
             isOffline
-              ? "Город, желаемые даты, задачи тренинга"
+              ? t.lead.commentOffline
               : isB2b
-                ? "Отрасль, задачи обучения"
-                : "Какой курс интересует"
+                ? t.lead.commentB2b
+                : t.lead.commentB2c
           }
         />
       </div>
@@ -156,13 +160,13 @@ export function LeadForm({
           className="mt-0.5 size-4 shrink-0 accent-brand"
         />
         <span>
-          Я согласен(-на) на обработку моих персональных данных на условиях{" "}
+          {t.lead.consentBefore}{" "}
           <Link href="/privacy" className="underline hover:text-brand">
-            Политики обработки персональных данных
+            {t.lead.consentPrivacy}
           </Link>{" "}
-          (включая трансграничную передачу) и принимаю условия{" "}
+          {t.lead.consentMiddle}{" "}
           <Link href={isB2b ? "/offer-b2b" : "/offer"} className="underline hover:text-brand">
-            {isB2b ? "публичной оферты для организаций" : "публичной оферты"}
+            {isB2b ? t.lead.consentOfferB2b : t.lead.consentOffer}
           </Link>
           .
         </span>
@@ -182,12 +186,12 @@ export function LeadForm({
         disabled={isPending}
       >
         {isPending
-          ? "Отправляем…"
+          ? t.lead.submitting
           : isOffline
-            ? "Отправить запрос"
+            ? t.lead.submitOffline
             : isB2b
-              ? "Получить расчёт"
-              : "Оставить заявку"}
+              ? t.lead.submitB2b
+              : t.lead.submitB2c}
       </Button>
     </form>
   );

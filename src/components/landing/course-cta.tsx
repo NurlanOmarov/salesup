@@ -8,6 +8,8 @@ import { trackEvent } from "@/lib/analytics/track";
 import { buttonVariants } from "@/components/ui/button";
 import { Reveal } from "@/components/landing/reveal";
 import { LeadForm } from "@/components/landing/lead-form";
+import { useLocale } from "@/i18n/client";
+import { messagesFor } from "@/i18n/messages";
 
 /**
  * CTA витринной страницы курса: по умолчанию — запись через форму заявки;
@@ -53,6 +55,7 @@ function useContinueUrl(slug: string): string | null {
 /** Кнопка в карточке с ценой (hero). */
 export function CourseCta({ slug }: { slug: string }) {
   const continueUrl = useContinueUrl(slug);
+  const t = messagesFor(useLocale());
 
   if (continueUrl) {
     return (
@@ -61,9 +64,7 @@ export function CourseCta({ slug }: { slug: string }) {
         onClick={() => trackEvent("continue_course", { slug })}
         className={cn(buttonVariants({ variant: "brand", size: "lg" }), "mt-4 w-full")}
       >
-        <PlayCircle className="size-5" />
-        Продолжить обучение
-      </Link>
+        <PlayCircle className="size-5" />{t.cta.continue}</Link>
     );
   }
 
@@ -72,9 +73,7 @@ export function CourseCta({ slug }: { slug: string }) {
       href="#zayavka"
       onClick={() => trackEvent("lead_start", { slug })}
       className={cn(buttonVariants({ variant: "brand", size: "lg" }), "mt-4 w-full")}
-    >
-      Записаться на курс
-    </a>
+    >{t.cta.enroll}</a>
   );
 }
 
@@ -93,6 +92,7 @@ export function CourseCtaSection({
   priceOther: string | null;
 }) {
   const continueUrl = useContinueUrl(slug);
+  const t = messagesFor(useLocale());
 
   if (continueUrl) {
     return (
@@ -100,25 +100,19 @@ export function CourseCtaSection({
         <div className="pointer-events-none absolute -top-24 right-0 h-72 w-72 rounded-full bg-brand/15 blur-3xl" />
         <div className="relative mx-auto max-w-2xl text-center">
           <CheckCircle2 className="mx-auto size-10 text-amber-400" />
-          <h2 className="mt-4 text-3xl font-bold">Вы уже записаны на этот курс</h2>
-          <p className="mt-3 text-white/70">
-            Доступ активен — продолжайте обучение в личном кабинете.
-          </p>
+          <h2 className="mt-4 text-3xl font-bold">{t.cta.enrolled}</h2>
+          <p className="mt-3 text-white/70">{t.cta.accessActive}</p>
           <p className="mt-2 font-semibold text-brand-light">{courseTitle}</p>
           <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Link
               href={continueUrl}
               className={cn(buttonVariants({ variant: "brand", size: "lg" }))}
             >
-              <PlayCircle className="size-5" />
-              Продолжить обучение
-            </Link>
+              <PlayCircle className="size-5" />{t.cta.continue}</Link>
             <Link
               href="/app"
               className={cn(buttonVariants({ variant: "outline-light", size: "lg" }))}
-            >
-              Моё обучение
-            </Link>
+            >{t.cta.myLearning}</Link>
           </div>
         </div>
       </div>
@@ -131,7 +125,7 @@ export function CourseCtaSection({
       <div className="relative grid items-center gap-10 md:grid-cols-2">
         <Reveal>
           <div>
-            <h2 className="text-3xl font-bold">Записаться на курс</h2>
+            <h2 className="text-3xl font-bold">{t.cta.enroll}</h2>
             <p className="mt-3 text-white/70">
               Оставьте заявку — расскажем об условиях, подберём удобный способ
               оплаты. Доступ выдаётся вручную после подтверждения оплаты.

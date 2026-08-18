@@ -25,6 +25,8 @@ import { resolveRedirect } from "@/lib/seo/redirects";
 import { getRelatedCards } from "@/lib/seo/related";
 import { getSupportContacts } from "@/lib/seo/settings";
 import { currentSite, pageAlternates, siteOrigin } from "@/lib/seo/site";
+import { getLocale } from "@/i18n/server";
+import { messagesFor } from "@/i18n/messages";
 
 export const revalidate = 60;
 
@@ -122,6 +124,8 @@ export default async function CoursePage({
   const ratesPayload = await currency.getRates();
   // Валюта страны домена крупно, остальные — справочной строкой.
   const site = await currentSite();
+  // Интерфейс карточки — на языке страницы; содержимое курса приходит из БД.
+  const t = messagesFor(await getLocale());
   const prices = buildMultiPrice(course.priceTiyn, ratesPayload.rates, site?.currency ?? "byn");
   const hasRates = ratesAvailable(ratesPayload.rates);
 
@@ -298,7 +302,7 @@ export default async function CoursePage({
                 <Reveal delay={0.12}>
                   <div className="mt-8">
                     <h2 className="text-sm font-semibold uppercase tracking-wider text-brand-light">
-                      Что вы получите
+                      {t.course.whatYouGet}
                     </h2>
                     <ul className="mt-3 space-y-2">
                       {learnPoints.map((p) => (
@@ -344,7 +348,7 @@ export default async function CoursePage({
                   </p>
                 ) : null}
                 <p className="mt-1 text-sm text-white/50">
-                  Онлайн-оплата не требуется
+                  {t.course.noOnlinePayment}
                 </p>
 
                 <CourseCta slug={slug} />
@@ -360,7 +364,7 @@ export default async function CoursePage({
                         "w-full",
                       )}
                     >
-                      Написать в WhatsApp
+                      {t.course.writeWhatsapp}
                     </a>
                   ) : null}
                   {tg ? (
@@ -373,7 +377,7 @@ export default async function CoursePage({
                         "w-full",
                       )}
                     >
-                      Написать в Telegram
+                      {t.course.writeTelegram}
                     </a>
                   ) : null}
                 </div>
@@ -381,7 +385,7 @@ export default async function CoursePage({
                 <ul className="mt-5 space-y-1.5 border-t border-white/10 pt-4 text-sm text-white/60">
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="size-3.5 text-amber-400" />
-                    Пожизненный доступ
+                    {t.course.lifetime}
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="size-3.5 text-amber-400" />
@@ -389,11 +393,11 @@ export default async function CoursePage({
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="size-3.5 text-amber-400" />
-                    Сертификат по окончании
+                    {t.course.certificate}
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="size-3.5 text-amber-400" />
-                    Субтитры на 4 языках
+                    {t.course.subtitles}
                   </li>
                 </ul>
               </div>
@@ -405,7 +409,7 @@ export default async function CoursePage({
       {/* Программа курса */}
       <section className="mx-auto max-w-6xl px-4 py-14">
         <Reveal>
-          <h2 className="text-2xl font-bold">Программа курса</h2>
+          <h2 className="text-2xl font-bold">{t.course.program}</h2>
           <p className="mt-1 text-foreground/60">
             {course.modules.length} модулей · {totalLessons} уроков
           </p>
@@ -442,7 +446,7 @@ export default async function CoursePage({
                       <span className="flex-1 text-foreground/80">{lesson.title}</span>
                       {lesson.isFreePreview ? (
                         <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-700">
-                          Бесплатно
+                          {t.course.free}
                         </span>
                       ) : null}
                     </li>
@@ -459,7 +463,7 @@ export default async function CoursePage({
         <section className="border-y border-foreground/5 bg-foreground/[0.025]">
           <div className="mx-auto max-w-6xl px-4 py-14">
             <Reveal>
-              <h2 className="text-2xl font-bold">Для кого этот курс</h2>
+              <h2 className="text-2xl font-bold">{t.course.forWhom}</h2>
             </Reveal>
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
               {targetAudience.map((a, i) => (
@@ -479,7 +483,7 @@ export default async function CoursePage({
       <section className="mx-auto max-w-6xl px-4 py-14">
         <div className="grid gap-10 lg:grid-cols-2">
           <Reveal>
-            <h2 className="text-2xl font-bold">О курсе</h2>
+            <h2 className="text-2xl font-bold">{t.course.about}</h2>
             <p className="mt-4 leading-relaxed text-foreground/70">{course.description}</p>
           </Reveal>
 
@@ -487,7 +491,7 @@ export default async function CoursePage({
           <Reveal delay={0.05}>
             <div className="rounded-2xl border border-foreground/10 bg-background p-6">
               <p className="text-xs font-semibold uppercase tracking-wider text-brand-strong">
-                Ваш тренер
+                {t.course.trainer}
               </p>
               <p className="mt-2 text-lg font-bold">{trainer.name}</p>
               <p className="text-sm text-foreground/60">{trainer.role}</p>
@@ -496,7 +500,7 @@ export default async function CoursePage({
                 href="/#trainer"
                 className="mt-4 inline-block text-sm font-medium text-brand-strong hover:text-brand"
               >
-                Подробнее о тренере →
+                {t.course.trainerMore}
               </Link>
             </div>
           </Reveal>
@@ -508,7 +512,7 @@ export default async function CoursePage({
         <section className="border-y border-foreground/5 bg-foreground/[0.025]">
           <div className="mx-auto max-w-6xl px-4 py-14">
             <Reveal>
-              <h2 className="text-2xl font-bold">Отзывы</h2>
+              <h2 className="text-2xl font-bold">{t.course.reviews}</h2>
             </Reveal>
             <Reveal delay={0.05}>
               <div className="mt-8">
@@ -523,7 +527,7 @@ export default async function CoursePage({
       {faqItems.length > 0 ? (
         <section className="mx-auto max-w-3xl px-4 py-14">
           <Reveal>
-            <h2 className="text-center text-2xl font-bold">Частые вопросы</h2>
+            <h2 className="text-center text-2xl font-bold">{t.course.faq}</h2>
           </Reveal>
           <div className="mt-6 space-y-3">
             {faqItems.map((f, i) => (
@@ -557,9 +561,9 @@ export default async function CoursePage({
       {/* Связанные курсы — семантическая перелинковка (embeddings, кэш сутки) */}
       {related.length > 0 ? (
         <section className="mx-auto max-w-6xl px-4 py-16">
-          <h2 className="text-2xl font-bold">Связанные курсы</h2>
+          <h2 className="text-2xl font-bold">{t.course.related}</h2>
           <p className="mt-1 text-foreground/60">
-            Программы по смежным темам — усильте навыки продаж.
+            {t.course.relatedNote}
           </p>
           <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {related.map((r) => {
