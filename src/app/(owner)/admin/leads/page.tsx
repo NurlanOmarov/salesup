@@ -26,6 +26,7 @@ export default async function LeadsPage() {
       consentAt: true,
       consentVersion: true,
       kind: true,
+      format: true,
       company: true,
       seatsWanted: true,
       plan: true,
@@ -47,6 +48,7 @@ export default async function LeadsPage() {
   const views: LeadView[] = leads.map((l) => ({
     id: l.id,
     kind: l.kind,
+    format: l.format,
     company: l.company,
     seatsWanted: l.seatsWanted,
     name: l.name,
@@ -70,12 +72,24 @@ export default async function LeadsPage() {
       : null,
   }));
 
+  // Офлайн обрабатывается иначе: по нему в платформе ничего не создаётся,
+  // поэтому счётчик выносим в шапку — чтобы такие заявки не терялись в списке.
+  const offlineCount = views.filter((v) => v.format === "OFFLINE").length;
+
   return (
     <main>
       <h1 className="text-2xl font-bold">Заявки с лендинга</h1>
       <p className="mt-1 text-foreground/60">
         После устного подтверждения оплаты создайте ученика и выдайте доступ.
         Корпоративные заявки помечены — по ним заводится организация, а не ученик.
+        {offlineCount > 0 ? (
+          <>
+            {" "}
+            Заявок на офлайн-тренинг:{" "}
+            <span className="font-medium text-violet-700">{offlineCount}</span> — они
+            обрабатываются вне платформы.
+          </>
+        ) : null}
       </p>
 
       <div className="mt-6 space-y-3">

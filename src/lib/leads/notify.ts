@@ -23,6 +23,8 @@ export function contactEmail(contact: string): string | null {
 
 export interface LeadNotification {
   kind: "B2C" | "B2B";
+  /** Офлайн — заявка на живой тренинг: без тарифа и расчёта. */
+  format?: "ONLINE" | "OFFLINE";
   name?: string | null;
   contact: string;
   message?: string | null;
@@ -70,17 +72,20 @@ export function quoteLine(quote: LeadQuote | null | undefined): string | null {
  * «<директор>» в имени сломает разметку и Telegram отклонит сообщение.
  */
 export function leadTelegramText(lead: LeadNotification, siteUrl?: string): string {
+  const company = lead.company ? ` — ${escapeHtml(lead.company)}` : "";
   const title =
-    lead.kind === "B2B"
-      ? `🏢 <b>Новая B2B-заявка</b>${lead.company ? ` — ${escapeHtml(lead.company)}` : ""}`
-      : `🎓 <b>Новая заявка на курс</b>${lead.courseTitle ? ` — ${escapeHtml(lead.courseTitle)}` : ""}`;
+    lead.format === "OFFLINE"
+      ? `🤝 <b>Заявка на офлайн-тренинг</b>${company}`
+      : lead.kind === "B2B"
+        ? `🏢 <b>Новая B2B-заявка</b>${company}`
+        : `🎓 <b>Новая заявка на курс</b>${lead.courseTitle ? ` — ${escapeHtml(lead.courseTitle)}` : ""}`;
 
   const rows = [
     line("👤 Имя", lead.name ? escapeHtml(lead.name) : null),
     // Контакт в <code> — удобно скопировать одним тапом.
     line("📞 Контакт", `<code>${escapeHtml(lead.contact)}</code>`),
     line("🏢 Организация", lead.company ? escapeHtml(lead.company) : null),
-    line("💺 Мест", lead.seatsWanted),
+    line(lead.format === "OFFLINE" ? "👥 Участников" : "💺 Мест", lead.seatsWanted),
     line("📚 Курс", lead.courseTitle ? escapeHtml(lead.courseTitle) : null),
     quoteLine(lead.quote),
     line("💬 Сообщение", lead.message ? escapeHtml(lead.message) : null),
@@ -93,14 +98,23 @@ export function leadTelegramText(lead: LeadNotification, siteUrl?: string): stri
 /** Письмо владельцу: всё, что нужно для звонка, прямо в теле — без похода в админку. */
 export function ownerLeadEmail(to: string, lead: LeadNotification): EmailMessage {
   const subject =
-    lead.kind === "B2B"
-      ? `Новая B2B-заявка${lead.company ? `: ${lead.company}` : ""}`
-      : `Новая заявка на курс${lead.courseTitle ? `: ${lead.courseTitle}` : ""}`;
+    lead.format === "OFFLINE"
+      ? `Заявка на офлайн-тренинг${lead.company ? `: ${lead.company}` : ""}`
+      : lead.kind === "B2B"
+        ? `Новая B2B-заявка${lead.company ? `: ${lead.company}` : ""}`
+        : `Новая заявка на курс${lead.courseTitle ? `: ${lead.courseTitle}` : ""}`;
 
   const text = [
     "Поступила новая заявка с сайта.",
     "",
-    line("Тип", lead.kind === "B2B" ? "Корпоративная (B2B)" : "Розница (B2C)"),
+    line(
+      "Тип",
+      lead.format === "OFFLINE"
+        ? "Офлайн-тренинг (корпоративный)"
+        : lead.kind === "B2B"
+          ? "Корпоративная (B2B)"
+          : "Розница (B2C)",
+    ),
     line("Имя", lead.name),
     line("Контакт", lead.contact),
     line("Организация", lead.company),

@@ -17,6 +17,8 @@ export interface LeadView {
   id: string;
   /** B2C — розничный ученик, B2B — заявка со страницы /business. */
   kind: "B2C" | "B2B";
+  /** OFFLINE — запрос на живой тренинг: в платформе по нему действий нет. */
+  format: "ONLINE" | "OFFLINE";
   company: string | null;
   /** Сколько сотрудников хотят обучать: сразу виден уровень корпоративной сетки. */
   seatsWanted: number | null;
@@ -51,6 +53,7 @@ export function LeadRow({ lead }: { lead: LeadView }) {
     });
 
   const isB2b = lead.kind === "B2B";
+  const isOffline = lead.format === "OFFLINE";
   const contactIsEmail = looksLikeEmail(lead.contact);
 
   // Куда ведёт кнопка, зависит от типа заявки: по корпоративной заводится
@@ -86,7 +89,13 @@ export function LeadRow({ lead }: { lead: LeadView }) {
         <div>
           <p className="flex flex-wrap items-center gap-2 font-medium">
             {lead.name ?? "Без имени"}
-            {lead.kind === "B2B" ? (
+            {isOffline ? (
+              // Офлайн выделяем отдельно: по такой заявке ничего не создаётся в
+              // платформе, это разговор про выездной тренинг с преподавателем.
+              <span className="rounded-full bg-violet-500/15 px-2 py-0.5 text-xs font-semibold text-violet-700">
+                Офлайн-тренинг
+              </span>
+            ) : lead.kind === "B2B" ? (
               <span className="rounded-full bg-brand/10 px-2 py-0.5 text-xs font-semibold text-brand">
                 Компания
               </span>
@@ -96,7 +105,9 @@ export function LeadRow({ lead }: { lead: LeadView }) {
           {lead.kind === "B2B" ? (
             <p className="mt-0.5 text-xs text-foreground/60">
               {lead.company ?? "организация не указана"}
-              {lead.seatsWanted ? ` · ${lead.seatsWanted} сотрудников` : ""}
+              {lead.seatsWanted
+                ? ` · ${lead.seatsWanted} ${isOffline ? "участников" : "сотрудников"}`
+                : ""}
             </p>
           ) : null}
           {lead.courseTitle ? (
@@ -143,12 +154,18 @@ export function LeadRow({ lead }: { lead: LeadView }) {
           className="flex-1 rounded-md border border-foreground/15 bg-background px-2.5 py-1.5 text-sm"
         />
 
-        <Link
-          href={createHref}
-          className="rounded-md bg-amber-500 px-3 py-1.5 text-sm font-semibold text-slate-950 transition-colors hover:bg-amber-400"
-        >
-          {isB2b ? "Создать организацию" : "Создать ученика"}
-        </Link>
+        {isOffline ? (
+          <span className="text-xs text-foreground/50">
+            Тренинг ведётся вне платформы — договоритесь и отметьте статус
+          </span>
+        ) : (
+          <Link
+            href={createHref}
+            className="rounded-md bg-amber-500 px-3 py-1.5 text-sm font-semibold text-slate-950 transition-colors hover:bg-amber-400"
+          >
+            {isB2b ? "Создать организацию" : "Создать ученика"}
+          </Link>
+        )}
 
         {saved ? <span className="text-xs text-emerald-600">Сохранено</span> : null}
       </div>

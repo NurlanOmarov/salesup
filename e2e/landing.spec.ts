@@ -51,6 +51,35 @@ test("заявка без согласия на обработку ПДн не �
   expect(await db.lead.count({ where: { contact } })).toBe(0);
 });
 
+test("заявка на офлайн-тренинг: без тарифа и расчёта", async ({ page }) => {
+  // Офлайн платформа не продаёт: переключатель прячет калькулятор, а в заявке
+  // не должно остаться ни выбранного тарифа, ни посчитанной суммы — иначе в
+  // уведомлении владельцу появится цена, которой он клиенту не называл.
+  const contact = `hr-offline-${Date.now()}@test.local`;
+
+  await page.goto("/business");
+  await page.getByRole("button", { name: "Офлайн-тренинг" }).first().click();
+  await expect(
+    page.getByText("Живой тренинг у вас в компании").first(),
+  ).toBeVisible();
+
+  await page.getByLabel("Организация").first().fill("E2E Офлайн Компания");
+  await page.getByLabel("Сколько участников").first().fill("14");
+  await page.getByLabel(/Телефон, WhatsApp или e-mail/).first().fill(contact);
+  await page.getByRole("checkbox").first().check();
+  await page.getByRole("button", { name: "Отправить запрос" }).first().click();
+  await expect(page.getByText(/Заявка отправлена/).first()).toBeVisible();
+
+  const lead = await db.lead.findFirstOrThrow({ where: { contact } });
+  expect(lead.format).toBe("OFFLINE");
+  expect(lead.kind).toBe("B2B");
+  expect(lead.seatsWanted).toBe(14);
+  expect(lead.plan).toBeNull();
+  expect(lead.quotedTotalTiyn).toBeNull();
+
+  await db.lead.deleteMany({ where: { contact } });
+});
+
 test("публичные страницы оферты и политики доступны без входа", async ({
   page,
 }) => {

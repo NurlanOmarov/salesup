@@ -21,6 +21,9 @@ const schema = z.object({
   // B2B-заявка со страницы /business: сколько сотрудников и какая организация.
   // По числу мест сразу виден уровень корпоративной сетки (lib/pricing).
   kind: z.enum(["B2C", "B2B"]).default("B2C"),
+  // Офлайн — живой корпоративный тренинг: платформа его не продаёт, поэтому
+  // тариф и расчёт к такой заявке не применяются (см. ниже).
+  format: z.enum(["ONLINE", "OFFLINE"]).default("ONLINE"),
   company: z.string().trim().max(160).optional().or(z.literal("")),
   seatsWanted: z.coerce.number().int().min(1).max(100000).optional(),
   // Выбранный в калькуляторе тариф. Присылается только выбор — цену считает
@@ -54,6 +57,7 @@ export async function createLeadAction(
     message: formData.get("message") ?? "",
     courseId: formData.get("courseId") ?? "",
     kind: formData.get("kind") ?? "B2C",
+    format: formData.get("format") ?? "ONLINE",
     company: formData.get("company") ?? "",
     seatsWanted: formData.get("seatsWanted") || undefined,
     plan: formData.get("plan") ?? "",
@@ -64,8 +68,11 @@ export async function createLeadAction(
     return { error: parsed.error.issues[0]?.message ?? "Проверьте поля" };
   }
 
-  const { name, contact, message, courseId, kind, company, seatsWanted, plan, planCourseIds } =
+  const { name, contact, message, courseId, kind, company, seatsWanted, plan, planCourseIds, format } =
     parsed.data;
+  // Офлайн-тренинг платформа не продаёт: тариф и расчёт к нему неприменимы,
+  // поэтому обнуляем их даже если что-то пришло из формы.
+  const isOffline = format === "OFFLINE";
 
   // courseId привязываем только если такой курс существует (форма на странице курса)
   let validCourseId: string | undefined;
@@ -99,13 +106,15 @@ export async function createLeadAction(
         ).map((c) => c.priceTiyn)
       : [];
 
-  const quote = leadQuote({
-    kind,
-    plan: plan || null,
-    seats: seatsWanted ?? null,
-    courseTiyn: courseTiyn ?? null,
-    selectedCoursesTiyn,
-  });
+  const quote = isOffline
+    ? null
+    : leadQuote({
+        kind,
+        plan: plan || null,
+        seats: seatsWanted ?? null,
+        courseTiyn: courseTiyn ?? null,
+        selectedCoursesTiyn,
+      });
 
   const lead = await db.lead.create({
     data: {
@@ -114,6 +123,7 @@ export async function createLeadAction(
       message: message || null,
       courseId: validCourseId ?? null,
       kind,
+      format,
       company: kind === "B2B" ? company || null : null,
       seatsWanted: kind === "B2B" ? (seatsWanted ?? null) : null,
       plan: quote?.plan ?? null,
@@ -131,6 +141,7 @@ export async function createLeadAction(
   // падает, если почта недоступна (сама заявка уже сохранена — это главное).
   const notification = {
     kind,
+    format,
     name: name || null,
     contact,
     message: message || null,
@@ -160,6 +171,6 @@ export async function createLeadAction(
     log.error({ err: e, leadId: lead.id }, "lead.notify: не удалось поставить уведомление в очередь");
   }
 
-  log.info({ courseId: validCourseId ?? null, kind }, "lead.created");
+  log.info({ courseId: validCourseId ?? null, kind, format }, "lead.created");
   return { ok: true };
 }
