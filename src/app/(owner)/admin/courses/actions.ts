@@ -49,6 +49,9 @@ export const updateCourseAction = safeAction(
       coverAlt: z.string().trim().max(200).optional().or(z.literal("")),
       seoNoindex: z.boolean(),
       certificateEnabled: z.boolean(),
+      // ID товара в магазине activesales.by: связывает курс с оплатой
+      // (docs/WOO-INTEGRATION.md). Пусто → курс продаётся только вручную.
+      wooProductId: z.coerce.number().int().positive().max(99_999_999).optional().or(z.literal("")),
     }),
     auth: "owner",
   },
@@ -87,6 +90,7 @@ export const updateCourseAction = safeAction(
       coverAlt: input.coverAlt || null,
       seoNoindex: input.seoNoindex,
       certificateEnabled: input.certificateEnabled,
+      wooProductId: typeof input.wooProductId === "number" ? input.wooProductId : null,
       publishedAt: !wasPublished && nowPublished ? new Date() : undefined,
     };
 

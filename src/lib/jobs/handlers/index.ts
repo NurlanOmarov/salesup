@@ -38,6 +38,14 @@ export const handlers: Record<string, JobHandler> = {
     await sendEmail({ to, subject, text: text ?? "", html, replyTo });
   },
 
+  // Сверка с магазином activesales.by: добираем оплаченные заказы, по которым
+  // webhook не дошёл (docs/WOO-INTEGRATION.md). Идемпотентна — уже обработанные
+  // заказы пропускает по WebhookEvent.
+  "woo.reconcile": async () => {
+    const { reconcileWooOrders } = await import("@/lib/payments/woo/reconcile.js");
+    await reconcileWooOrders();
+  },
+
   // Уведомление владельцу в Telegram (новая заявка с сайта). Без настроенного
   // бота просто логируем — заявка в любом случае уже сохранена в БД и админке.
   "telegram.send": async (payload) => {

@@ -25,6 +25,7 @@ export type AnalyticsEvent =
   | "lead_start" // клик по CTA «Записаться на курс» / открытие формы заявки
   | "lead_submit" // заявка успешно отправлена
   | "continue_course" // клик «Продолжить обучение» (уже есть доступ)
+  | "checkout_start" // клик «Купить» — уход в магазин activesales.by на оплату
   | "ai_demo_try"; // попробовал AI-демо на лендинге
 
 type EventParams = Record<string, string | number | boolean>;

@@ -4,6 +4,12 @@ import { useState } from "react";
 import { Minus, Plus } from "lucide-react";
 import { MIN_B2B_SEATS, quoteSeats, SEAT_TIERS } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/i18n/client";
+import { businessContent } from "@/content/business-content";
+// Импорт из конкретных модулей, а не из индекса: индекс тянет CurrencyService
+// с доступом к файлам, и клиентская сборка на нём падает.
+import { formatCurrency, type CurrencyCode } from "@/lib/currency/format";
+import type { RatesMap } from "@/lib/currency/rates";
 
 export interface CalculatorCourse {
   id: string;
@@ -24,10 +30,15 @@ export interface CalculatorCourse {
 export function SeatsCalculator({
   subscriptionYearTiyn,
   courses = [],
+  currencyCode = "BYN",
+  rates = {},
   onQuote,
 }: {
   subscriptionYearTiyn: number;
   courses?: CalculatorCourse[];
+  /** Валюта страны домена: расчёт показывается в ней (мультидомен, D-013). */
+  currencyCode?: CurrencyCode;
+  rates?: RatesMap;
   /** Прокидываем выбор в форму заявки, чтобы менеджер не переспрашивал. */
   onQuote?: (value: {
     seats: number;
@@ -86,17 +97,20 @@ export function SeatsCalculator({
     });
   }
 
-  const byn = (tiyn: number) => (tiyn / 100).toLocaleString("ru-RU");
+  // Цена задана в BYN, показываем её в валюте страны домена: казахстанской
+  // компании расчёт в белорусских рублях ничего не говорит.
+  const money = (tiyn: number) => formatCurrency(tiyn, currencyCode, rates);
+  const c = businessContent(useLocale()).calculator;
 
   return (
     <div className="rounded-2xl border border-foreground/10 bg-background p-5 sm:p-6">
-      <p className="text-sm font-semibold">Сколько сотрудников обучаем</p>
+      <p className="text-sm font-semibold">{c.seats}</p>
 
       <div className="mt-3 flex items-center gap-3">
         <button
           type="button"
           onClick={() => change(seats - 1)}
-          aria-label="Меньше сотрудников"
+          aria-label={c.seatsLess}
           className="flex size-9 items-center justify-center rounded-lg border border-foreground/15 transition-colors hover:bg-foreground/5"
         >
           <Minus className="size-4" />
@@ -107,13 +121,13 @@ export function SeatsCalculator({
           max={500}
           value={seats}
           onChange={(e) => change(Number(e.target.value) || 1)}
-          aria-label="Число сотрудников"
+          aria-label={c.seatsInput}
           className="h-11 w-24 rounded-lg border border-foreground/15 bg-background text-center text-lg font-semibold tabular-nums"
         />
         <button
           type="button"
           onClick={() => change(seats + 1)}
-          aria-label="Больше сотрудников"
+          aria-label={c.seatsMore}
           className="flex size-9 items-center justify-center rounded-lg border border-foreground/15 transition-colors hover:bg-foreground/5"
         >
           <Plus className="size-4" />
@@ -140,7 +154,7 @@ export function SeatsCalculator({
 
       {courses.length > 0 ? (
         <div className="mt-5">
-          <p className="text-sm font-semibold">Что открываем сотрудникам</p>
+          <p className="text-sm font-semibold">{c.whatOpens}</p>
           <div className="mt-2 flex gap-2">
             <button
               type="button"
@@ -152,7 +166,7 @@ export function SeatsCalculator({
                   : "border-foreground/15 text-foreground/70 hover:bg-foreground/5",
               )}
             >
-              Всю библиотеку
+              {c.wholeLibrary}
             </button>
             <button
               type="button"
@@ -164,7 +178,7 @@ export function SeatsCalculator({
                   : "border-foreground/15 text-foreground/70 hover:bg-foreground/5",
               )}
             >
-              Отдельные курсы
+              {c.separateCourses}
             </button>
           </div>
 
@@ -184,7 +198,7 @@ export function SeatsCalculator({
                 >
                   {c.title}
                   <span className="ml-1.5 text-xs text-foreground/50">
-                    {byn(c.priceTiyn)} Br
+                    {money(c.priceTiyn)}
                   </span>
                 </button>
               ))}
@@ -193,14 +207,13 @@ export function SeatsCalculator({
 
           {mode === "courses" && chosen.length === 0 ? (
             <p className="mt-2 text-xs text-foreground/55">
-              Выберите курсы — посчитаем по ним. Пока считаем по всей библиотеке.
+              {c.pickCourses}
             </p>
           ) : null}
 
           {libraryIsBetter ? (
             <p className="mt-2 text-xs text-amber-700">
-              Выбранные курсы в сумме дороже годового доступа ко всей библиотеке —
-              считаем по библиотеке, она выгоднее.
+              {c.libraryCheaper}
             </p>
           ) : null}
         </div>
@@ -209,39 +222,38 @@ export function SeatsCalculator({
       <dl className="mt-5 grid gap-3 sm:grid-cols-3">
         <div>
           <dt className="text-xs uppercase tracking-wide text-foreground/50">
-            За сотрудника в год
+            {c.perSeatYear}
           </dt>
           <dd className="mt-0.5 text-2xl font-bold tabular-nums">
-            {byn(quote.pricePerSeatTiyn)} Br
+            {money(quote.pricePerSeatTiyn)}
           </dd>
         </div>
         <div>
           <dt className="text-xs uppercase tracking-wide text-foreground/50">
-            Всего за год
+            {c.totalYear}
           </dt>
           <dd className="mt-0.5 text-2xl font-bold tabular-nums">
-            {byn(quote.totalTiyn)} Br
+            {money(quote.totalTiyn)}
           </dd>
         </div>
         <div>
           <dt className="text-xs uppercase tracking-wide text-foreground/50">
-            В месяц на человека
+            {c.perMonth}
           </dt>
           <dd className="mt-0.5 text-2xl font-bold tabular-nums">
-            {byn(Math.round(quote.pricePerSeatTiyn / 12))} Br
+            {money(Math.round(quote.pricePerSeatTiyn / 12))}
           </dd>
         </div>
       </dl>
 
       {quote.tier ? (
         <p className="mt-4 rounded-lg bg-emerald-500/[0.07] px-3 py-2 text-sm text-emerald-800">
-          Тариф «{quote.tier.label}» — скидка {Math.round(quote.discount * 100)} %.
-          Экономия {byn(quote.savingTiyn)} Br за год.
+          {c.tierNote(quote.tier.label, Math.round(quote.discount * 100))}{" "}
+          {c.saving(money(quote.savingTiyn))}
         </p>
       ) : (
         <p className="mt-4 rounded-lg bg-foreground/[0.04] px-3 py-2 text-sm text-foreground/65">
-          Корпоративный тариф начинается с {MIN_B2B_SEATS} сотрудников. Для меньшей
-          команды выгоднее обычные доступы — напишите, подберём.
+          {c.minSeatsNote(MIN_B2B_SEATS)}
         </p>
       )}
 
@@ -250,15 +262,15 @@ export function SeatsCalculator({
           .reverse()
           .map((t) => (
             <li key={t.minSeats}>
-              от {t.minSeats} мест — минус {Math.round(t.discount * 100)} %
+              {c.tierRow(t.minSeats, Math.round(t.discount * 100))}
             </li>
           ))}
       </ul>
 
       <p className="mt-3 text-xs text-foreground/50">
         {mode === "courses" && chosen.length > 0 && !libraryIsBetter
-          ? `В цену входит доступ к выбранным курсам (${chosen.length}) на год, кабинет компании с отчётами и AI-тренажёры для каждого сотрудника.`
-          : "В цену входит доступ ко всем курсам библиотеки на год, кабинет компании с отчётами и AI-тренажёры для каждого сотрудника."}
+          ? c.includesCourses(chosen.length)
+          : c.includesLibrary}
       </p>
     </div>
   );

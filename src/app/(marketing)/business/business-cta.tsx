@@ -8,6 +8,10 @@ import {
 } from "@/components/landing/seats-calculator";
 import { LeadForm } from "@/components/landing/lead-form";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/i18n/client";
+import { businessContent } from "@/content/business-content";
+import type { CurrencyCode } from "@/lib/currency/format";
+import type { RatesMap } from "@/lib/currency/rates";
 
 /**
  * Заявка для компании в двух форматах.
@@ -23,10 +27,16 @@ import { cn } from "@/lib/utils";
 export function BusinessCta({
   subscriptionYearTiyn,
   courses,
+  currencyCode,
+  rates,
 }: {
   subscriptionYearTiyn: number;
   courses: CalculatorCourse[];
+  /** Валюта страны домена: расчёт показывается в ней (мультидомен, D-013). */
+  currencyCode: CurrencyCode;
+  rates: RatesMap;
 }) {
+  const c = businessContent(useLocale()).cta;
   const [format, setFormat] = useState<"ONLINE" | "OFFLINE">("ONLINE");
   const [seats, setSeats] = useState(10);
   const [courseTitles, setCourseTitles] = useState<string[]>([]);
@@ -43,20 +53,20 @@ export function BusinessCta({
     <div className="space-y-4 text-foreground">
       <div
         role="group"
-        aria-label="Формат обучения"
+        aria-label={c.format}
         className="inline-flex rounded-xl border border-foreground/12 bg-background p-1 shadow-sm"
       >
         <FormatButton
           active={!isOffline}
           onClick={() => setFormat("ONLINE")}
           icon={<Laptop className="size-4" />}
-          label="Онлайн-доступ"
+          label={c.online}
         />
         <FormatButton
           active={isOffline}
           onClick={() => setFormat("OFFLINE")}
           icon={<Users className="size-4" />}
-          label="Офлайн-тренинг"
+          label={c.offline}
         />
       </div>
 
@@ -68,33 +78,26 @@ export function BusinessCta({
       >
         {isOffline ? (
           <div className="rounded-2xl border border-foreground/10 bg-background p-5 sm:p-6">
-            <p className="text-sm font-semibold">Живой тренинг у вас в компании</p>
+            <p className="text-sm font-semibold">{c.offlineTitle}</p>
             <p className="mt-2 text-sm text-foreground/65">
-              Тренер приезжает к вам или ведёт занятие онлайн в прямом эфире:
-              программа собирается под ваш продукт и цикл сделки, участники
-              отрабатывают реальные ситуации из своей практики.
+              {c.offlineText}
             </p>
             <ul className="mt-4 space-y-2 text-sm text-foreground/75">
-              {[
-                "Программа и длительность — под ваши задачи",
-                "Разбор звонков и встреч ваших менеджеров",
-                "Можно совместить с доступом к платформе: тренинг задаёт рамку, платформа закрепляет",
-              ].map((item) => (
+              {c.offlinePoints.map((item) => (
                 <li key={item} className="flex items-start gap-2">
                   <span className="mt-2 size-1.5 shrink-0 rounded-full bg-brand" />
                   <span>{item}</span>
                 </li>
               ))}
             </ul>
-            <p className="mt-4 text-sm text-foreground/55">
-              Стоимость считается индивидуально: она зависит от программы, числа
-              участников и формата. Оставьте запрос — обсудим и посчитаем.
-            </p>
+            <p className="mt-4 text-sm text-foreground/55">{c.offlinePrice}</p>
           </div>
         ) : (
           <SeatsCalculator
             subscriptionYearTiyn={subscriptionYearTiyn}
             courses={courses}
+            currencyCode={currencyCode}
+            rates={rates}
             onQuote={(v) => {
               setSeats(v.seats);
               setCourseTitles(v.courseTitles);
@@ -106,12 +109,10 @@ export function BusinessCta({
 
         <div className="rounded-2xl border border-foreground/10 bg-background p-5 sm:p-6">
           <p className="text-sm font-semibold">
-            {isOffline ? "Запрос на тренинг" : "Получить расчёт и счёт"}
+            {isOffline ? c.offlineRequest : c.onlineRequest}
           </p>
           <p className="mt-1 text-sm text-foreground/60">
-            {isOffline
-              ? "Расскажите о задаче — вернёмся с программой, датами и стоимостью."
-              : "Ответим в рабочее время, посчитаем точную стоимость и пришлём счёт."}
+            {isOffline ? c.offlineNote : c.onlineNote}
           </p>
           {isOffline ? (
             <LeadForm kind="B2B" format="OFFLINE" className="mt-4" />

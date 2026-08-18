@@ -39,6 +39,7 @@ interface CourseFields {
   coverUrl: string | null;
   priceTiyn: number;
   oldPriceTiyn: number | null;
+  wooProductId: number | null;
   status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
   inDevelopment: boolean;
   accessDuration: (typeof ACCESS_DURATIONS)[number];
@@ -96,6 +97,8 @@ export function CourseEditForm({
   const [audience, setAudience] = useState(course.audience);
   const [description, setDescription] = useState(course.description);
   const [priceByn, setPriceByn] = useState(course.priceTiyn / 100);
+  // ID товара в магазине activesales.by — связка курса с оплатой (docs/WOO-INTEGRATION.md).
+  const [wooProductId, setWooProductId] = useState(course.wooProductId ?? 0);
   // Ступень и коридор пересчитываются при смене класса прямо в форме.
   const band = priceBand(audience, totalSec);
   const [oldPriceByn, setOldPriceByn] = useState(
@@ -294,6 +297,7 @@ export function CourseEditForm({
         coverAlt,
         seoNoindex,
         certificateEnabled,
+        wooProductId: wooProductId > 0 ? wooProductId : "",
       });
       setResult(
         res.ok
@@ -464,6 +468,24 @@ export function CourseEditForm({
               {preview(priceByn, "RUB", rates)}
             </span>
           </div>
+        </div>
+
+        <div>
+          <label className={labelCls} htmlFor="wooProductId">
+            Товар в магазине activesales.by (ID)
+          </label>
+          <input
+            id="wooProductId"
+            type="number"
+            min={0}
+            className={inputCls}
+            value={wooProductId}
+            onChange={(e) => setWooProductId(Number(e.target.value) || 0)}
+          />
+          <p className="mt-1 text-xs text-foreground/50">
+            Задан → на витрине кнопка «Купить» ведёт в магазин, а оплаченный заказ открывает
+            доступ автоматически. Пусто → доступ выдаёт админ вручную.
+          </p>
         </div>
 
         <div className="grid gap-5 sm:grid-cols-3">

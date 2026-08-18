@@ -125,15 +125,14 @@ export async function getStaticPageSeo(path: StaticPagePath): Promise<ResolvedSt
   // Запрет индексации, наоборот, наследуется по полной цепочке: если владелец
   // закрыл страницу для всех доменов, языковая версия тоже закрыта.
   const noindexRow = inScope(chain)[0];
-  // Пока владелец не заполнил вкладку языка в /admin/seo, казахская страница
-  // берёт заголовок и описание из словаря, а не русский фолбэк страницы.
+  // Пока владелец не заполнил вкладку языка в /admin/seo, страница на другом
+  // языке берёт заголовок и описание из словаря, а не русский фолбэк страницы.
   const localized =
-    locale !== DEFAULT_LOCALE && path === "/courses"
-      ? {
-          title: messagesFor(locale).catalogPage.title,
-          description: messagesFor(locale).catalogPage.seoDescription,
-        }
-      : null;
+    locale === DEFAULT_LOCALE
+      ? null
+      : (messagesFor(locale).staticSeo as Record<string, { title: string; description: string }>)[
+          path
+        ];
   return {
     title: (pick("title") as string | undefined) || localized?.title || def.fallbackTitle,
     description:

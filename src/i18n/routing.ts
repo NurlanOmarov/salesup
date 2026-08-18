@@ -27,7 +27,7 @@ export const KK_HOST = "study.activesales.kz";
  * уводится на русскую версию и не попадает в hreflang, поэтому поисковик никогда
  * не видит казахский адрес с русским текстом.
  */
-export const KK_PATHS: readonly string[] = ["/", "/courses"];
+export const KK_PATHS: readonly string[] = ["/", "/courses", "/business"];
 
 /**
  * Разделы, где казахский интерфейс работает, но содержимое приходит из БД на

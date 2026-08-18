@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import { BarChart3, CheckCircle2, RefreshCw, Sparkles } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { db } from "@/lib/db";
 import { buildSafe } from "@/lib/utils";
 import { getStaticPageSeo } from "@/lib/seo/static-pages";
@@ -9,7 +9,10 @@ import { AudienceSwitch } from "@/components/landing/audience-switch";
 import { Reveal } from "@/components/landing/reveal";
 import { Faq } from "@/components/landing/faq";
 import { BusinessCta } from "./business-cta";
-import { pageAlternates } from "@/lib/seo/site";
+import { currentSite, pageAlternates } from "@/lib/seo/site";
+import { getLocale } from "@/i18n/server";
+import { businessContent } from "@/content/business-content";
+import { currency, formatCurrency, type CurrencyCode } from "@/lib/currency";
 
 export const revalidate = 300;
 
@@ -21,7 +24,10 @@ export const revalidate = 300;
  * Переключатель «Себе | Команде» связывает её с главной в обе стороны.
  */
 export async function generateMetadata(): Promise<Metadata> {
-  const s = await getStaticPageSeo("/business");
+  const [s, c] = await Promise.all([
+    getStaticPageSeo("/business"),
+    getLocale().then(businessContent),
+  ]);
   return {
     title: s.title,
     description: s.description,
@@ -39,72 +45,12 @@ export async function generateMetadata(): Promise<Metadata> {
           url: "/images/landing/og-business.webp",
           width: 1200,
           height: 675,
-          alt: "Руководитель смотрит отчёт по обучению команды",
+          alt: c.hero.heroAlt,
         },
       ],
     },
   };
 }
-
-const STEPS = [
-  {
-    title: "Говорите, сколько сотрудников",
-    body: "Считаем стоимость по числу мест и выставляем счёт. Оплата — за год.",
-  },
-  {
-    title: "Мы заводим кабинет компании",
-    body: "Ответственный за обучение получает доступ в течение одного рабочего дня.",
-  },
-  {
-    title: "HR раздаёт коды сотрудникам",
-    body: "Каждый вводит свой код, придумывает пароль — и сразу начинает учиться.",
-  },
-  {
-    title: "Вы видите прогресс каждого",
-    body: "Кто прошёл, кто не начинал, какие баллы за тесты. Отчёт выгружается файлом.",
-  },
-];
-
-const BENEFITS = [
-  {
-    icon: BarChart3,
-    title: "Прогресс каждого сотрудника",
-    body: "Видно, кто учится, а кто нет: доля пройденных уроков, результаты тестов, активность за период, разрез по подразделениям.",
-  },
-  {
-    icon: Sparkles,
-    title: "AI-наставник и тренажёры 24/7",
-    body: "Не разовый тренинг, а ежедневная практика: симулятор клиента, отработка возражений, голосовой ролплей с разбором речи. Новичок начинает в первый же день.",
-  },
-  {
-    icon: RefreshCw,
-    title: "Место переносится",
-    body: "Сотрудник уволился — освободившееся место отдаёте другому. Платить второй раз не нужно.",
-  },
-];
-
-const FAQ_ITEMS = [
-  {
-    q: "Что такое «место»?",
-    a: "Место — это доступ одного сотрудника к обучению на год. Купили 10 мест — одновременно учатся 10 человек. Если сотрудник уволился, место освобождается и передаётся другому.",
-  },
-  {
-    q: "Можно ли обучить сотрудников из разных городов?",
-    a: "Да, обучение полностью онлайн: видеоуроки, тесты и тренажёры доступны с компьютера и телефона в любое время.",
-  },
-  {
-    q: "Что после окончания срока?",
-    a: "Доступ к урокам прекращается, выданные сертификаты остаются в силе. Лицензию можно продлить на следующий год.",
-  },
-  {
-    q: "Выдаёте ли вы документ об образовании?",
-    a: "Нет. Услуги информационные: мы не реализуем образовательные программы и не выдаём документы об образовании. Сотрудник получает именной сертификат собственного образца с уникальным номером и страницей проверки подлинности.",
-  },
-  {
-    q: "Как оплатить?",
-    a: "По счёту на юридическое лицо или ИП. После оплаты подписываем акт. Все условия — в публичной оферте для организаций.",
-  },
-];
 
 export default async function BusinessPage() {
   // На сборке БД недоступна — buildSafe отдаёт запасное значение вместо падения
@@ -122,6 +68,15 @@ export default async function BusinessPage() {
     [] as { id: string; title: string; priceTiyn: number }[],
   );
   const coursesCount = courses.length;
+
+  // Язык страницы и валюта страны домена: казахская версия — в тенге,
+  // российская — в рублях, белорусская — в BYN (мультидомен, D-013).
+  const locale = await getLocale();
+  const c = businessContent(locale);
+  const site = await currentSite();
+  const code = (site?.currency ?? "byn").toUpperCase() as CurrencyCode;
+  const { rates } = await currency.getRates();
+  const money = (byn: number) => formatCurrency(byn * 100, code, rates);
 
   // Крайние точки сетки: лучшая цена места (максимальный объём) и цена на входе.
   const bestPerSeat = quoteSeats(20, SUBSCRIPTION_YEAR_TIYN).pricePerSeatTiyn / 100;
@@ -155,12 +110,10 @@ export default async function BusinessPage() {
         <div className="mt-6 grid gap-10 lg:grid-cols-[1.05fr_1fr] lg:items-start">
           <div>
             <h1 className="text-balance text-3xl font-bold leading-tight drop-shadow-lg sm:text-4xl lg:text-5xl">
-              Обучение отдела продаж, которое не заканчивается в пятницу
+              {c.hero.title}
             </h1>
             <p className="mt-5 max-w-xl text-lg text-white/75">
-              Тренинг забывается за месяц. Годовой доступ к платформе учит каждого
-              сотрудника — включая тех, кто придёт к вам через полгода, — и показывает,
-              кто действительно занимается.
+              {c.hero.subtitle}
             </p>
 
             {/* Цена в первом экране: человек, который сканирует страницу за пять
@@ -169,25 +122,23 @@ export default async function BusinessPage() {
                 калькулятором и счётом невозможно. */}
             <div className="mt-6 flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <p className="text-2xl font-bold sm:text-3xl">
-                от {bestPerSeat.toLocaleString("ru-RU")} BYN
+                {c.hero.priceFrom} {money(bestPerSeat)}
               </p>
               <p className="text-white/75">
-                за сотрудника в год — это{" "}
-                {bestPerMonth.toLocaleString("ru-RU")} BYN в месяц
+                {c.hero.perSeatYear} {money(bestPerMonth)} {c.hero.perMonth}
               </p>
             </div>
             <p className="mt-1 text-sm text-white/60">
-              При команде от 20 человек. Для {MIN_B2B_SEATS} сотрудников —{" "}
-              {entryPerSeat.toLocaleString("ru-RU")} BYN за каждого.
+              {c.hero.entryNote(MIN_B2B_SEATS, money(entryPerSeat))}
             </p>
 
             <ul className="mt-6 space-y-2.5">
               {[
                 coursesCount > 0
-                  ? `${coursesCount} курсов по продажам в отраслях и общим навыкам`
-                  : "Курсы по продажам в отраслях и общим навыкам",
-                "Кабинет компании с прогрессом по каждому сотруднику",
-                "AI-тренажёры: симулятор клиента и отработка возражений",
+                  ? c.hero.coursesWithCount(coursesCount)
+                  : c.hero.coursesFallback,
+                c.hero.bulletCabinet,
+                c.hero.bulletTrainers,
               ].map((item) => (
                 <li key={item} className="flex items-start gap-2.5 text-white/85">
                   <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-emerald-400" />
@@ -201,6 +152,8 @@ export default async function BusinessPage() {
             <BusinessCta
               subscriptionYearTiyn={SUBSCRIPTION_YEAR_TIYN}
               courses={courses}
+              currencyCode={code}
+              rates={rates}
             />
           </Reveal>
         </div>
@@ -209,9 +162,9 @@ export default async function BusinessPage() {
 
       {/* ── Выгоды ─────────────────────────────────────────────────── */}
       <section className="mx-auto max-w-6xl px-4 py-14">
-        <h2 className="text-2xl font-bold sm:text-3xl">Что получает компания</h2>
+        <h2 className="text-2xl font-bold sm:text-3xl">{c.benefitsTitle}</h2>
         <div className="mt-8 grid gap-4 sm:grid-cols-2">
-          {BENEFITS.map((b, i) => (
+          {c.benefits.map((b, i) => (
             <Reveal key={b.title} delay={i * 0.05}>
               <div className="h-full rounded-2xl border border-foreground/10 bg-background p-5">
                 <div className="flex size-10 items-center justify-center rounded-xl bg-brand/10 text-brand">
@@ -228,13 +181,13 @@ export default async function BusinessPage() {
       {/* ── Как это работает ───────────────────────────────────────── */}
       <section className="border-y border-foreground/8 bg-foreground/[0.015]">
         <div className="mx-auto max-w-6xl px-4 py-14">
-          <h2 className="text-2xl font-bold sm:text-3xl">Как это работает</h2>
+          <h2 className="text-2xl font-bold sm:text-3xl">{c.howTitle}</h2>
 
           <Reveal>
             <div className="relative mt-6 aspect-[16/7] overflow-hidden rounded-2xl border border-foreground/10">
               <Image
                 src="/images/landing/business-how.webp"
-                alt="Сотрудники отдела продаж учатся каждый на своём ноутбуке в переговорной"
+                alt={c.hero.howAlt}
                 fill
                 sizes="(max-width: 1024px) 100vw, 1152px"
                 className="object-cover"
@@ -243,7 +196,7 @@ export default async function BusinessPage() {
           </Reveal>
 
           <ol className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {STEPS.map((s, i) => (
+            {c.steps.map((s, i) => (
               <Reveal key={s.title} delay={i * 0.05}>
                 <li className="relative rounded-2xl border border-foreground/10 bg-background p-5">
                   <span className="text-sm font-bold text-brand">0{i + 1}</span>
@@ -258,24 +211,25 @@ export default async function BusinessPage() {
 
       {/* ── FAQ ────────────────────────────────────────────────────── */}
       <section className="mx-auto max-w-3xl px-4 py-14">
-        <h2 className="text-2xl font-bold sm:text-3xl">Вопросы закупщика</h2>
+        <h2 className="text-2xl font-bold sm:text-3xl">{c.faqTitle}</h2>
         <div className="mt-6">
-          <Faq items={FAQ_ITEMS} />
+          <Faq items={c.faq} />
         </div>
       </section>
 
       {/* ── Повтор заявки ──────────────────────────────────────────── */}
       <section className="mx-auto max-w-6xl px-4 pb-20">
         <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.015] p-6 sm:p-8">
-          <h2 className="text-2xl font-bold">Посчитаем под вашу команду</h2>
+          <h2 className="text-2xl font-bold">{c.quoteTitle}</h2>
           <p className="mt-2 max-w-2xl text-foreground/65">
-            Скажите, сколько сотрудников и какие темы нужны, — пришлём расчёт и счёт.
-            Если команда меньше пяти человек, подберём обычные доступы.
+            {c.quoteText}
           </p>
           <div className="mt-6">
             <BusinessCta
               subscriptionYearTiyn={SUBSCRIPTION_YEAR_TIYN}
               courses={courses}
+              currencyCode={code}
+              rates={rates}
             />
           </div>
         </div>

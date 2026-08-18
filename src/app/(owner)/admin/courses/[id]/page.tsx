@@ -33,6 +33,7 @@ export default async function CourseEditPage({
         description: true,
         coverUrl: true,
         priceTiyn: true,
+        wooProductId: true,
         oldPriceTiyn: true,
         status: true,
         inDevelopment: true,

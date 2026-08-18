@@ -52,6 +52,14 @@ function setupCron() {
     );
   });
 
+  // Сверка оплаченных заказов магазина — 05:00. Страхует потерянный webhook:
+  // человек заплатил, уведомление не дошло, доступ всё равно откроется к утру.
+  cron.schedule("0 5 * * *", () => {
+    void enqueue("woo.reconcile", { triggeredAt: new Date().toISOString() }).catch((e) =>
+      log.error({ err: e }, "Не удалось поставить woo.reconcile"),
+    );
+  });
+
   // Ежедневное обновление курсов валют Нацбанка РК — 04:00 (для витрины в 3 валютах).
   cron.schedule("0 4 * * *", () => {
     void currency.refresh().catch((e) =>
@@ -59,7 +67,7 @@ function setupCron() {
     );
   });
 
-  log.info("Cron-расписания установлены (weekly digest, daily maintenance, daily reminders, currency rates)");
+  log.info("Cron-расписания установлены (weekly digest, daily maintenance, daily reminders, woo reconcile, currency rates)");
 }
 
 async function main() {

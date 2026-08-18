@@ -19,12 +19,14 @@ import { currency, buildMultiPrice, ratesAvailable } from "@/lib/currency";
 import { buttonVariants } from "@/components/ui/button";
 import { Reveal } from "@/components/landing/reveal";
 import { CourseCta, CourseCtaSection } from "@/components/landing/course-cta";
+import { shopCheckoutUrl } from "@/lib/payments/woo/links";
 import { Reviews, type ReviewItem } from "@/components/landing/reviews";
 import { trainer } from "@/content/landing";
 import { resolveRedirect } from "@/lib/seo/redirects";
 import { getRelatedCards } from "@/lib/seo/related";
 import { getSupportContacts } from "@/lib/seo/settings";
 import { currentSite, pageAlternates, siteOrigin } from "@/lib/seo/site";
+import { env } from "@/env";
 import { getLocale } from "@/i18n/server";
 import { messagesFor } from "@/i18n/messages";
 
@@ -128,6 +130,14 @@ export default async function CoursePage({
   const t = messagesFor(await getLocale());
   const prices = buildMultiPrice(course.priceTiyn, ratesPayload.rates, site?.currency ?? "byn");
   const hasRates = ratesAvailable(ratesPayload.rates);
+  // Оплата картой идёт в магазине на activesales.by (эквайринг Альфа-Банка) и
+  // работает только для белорусской витрины: цена там в BYN, а договор эквайринга
+  // заключён на белорусскую площадку (docs/WOO-INTEGRATION.md). На .kz/.ru курс
+  // по-прежнему продаётся через заявку.
+  const checkoutUrl =
+    site?.code === "BY" && course.wooProductId
+      ? shopCheckoutUrl(env.WOO_STORE_URL, course.wooProductId)
+      : null;
 
   // Контакты — из SeoSettings (правятся в /admin/seo без деплоя).
   const { whatsapp: wa, telegram: tg } = await getSupportContacts();
@@ -347,11 +357,13 @@ export default async function CoursePage({
                     {prices.alt}
                   </p>
                 ) : null}
-                <p className="mt-1 text-sm text-white/50">
-                  {t.course.noOnlinePayment}
-                </p>
+                {checkoutUrl ? null : (
+                  <p className="mt-1 text-sm text-white/50">
+                    {t.course.noOnlinePayment}
+                  </p>
+                )}
 
-                <CourseCta slug={slug} />
+                <CourseCta slug={slug} checkoutUrl={checkoutUrl} />
 
                 <div className="mt-4 flex flex-col gap-2">
                   {wa ? (

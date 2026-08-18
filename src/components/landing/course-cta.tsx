@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Link } from "@/components/i18n/link";
-import { PlayCircle, CheckCircle2 } from "lucide-react";
+import { PlayCircle, CheckCircle2, CreditCard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { trackEvent } from "@/lib/analytics/track";
 import { buttonVariants } from "@/components/ui/button";
@@ -12,10 +12,15 @@ import { useLocale } from "@/i18n/client";
 import { messagesFor } from "@/i18n/messages";
 
 /**
- * CTA витринной страницы курса: по умолчанию — запись через форму заявки;
- * если у текущего пользователя активный enrollment, кнопка и нижняя секция
- * подменяются на «Продолжить обучение». Проверка на клиенте, чтобы страница
- * осталась статической (ISR); запрос дедуплицируется между компонентами.
+ * CTA витринной страницы курса. Три состояния:
+ *   • есть активный доступ → «Продолжить обучение»;
+ *   • курс связан с товаром магазина и посетитель на белорусском домене →
+ *     «Купить» ведёт в магазин activesales.by, где работает эквайринг
+ *     Альфа-Банка (docs/WOO-INTEGRATION.md); доступ откроется автоматически;
+ *   • иначе → форма заявки, доступ выдаёт админ вручную.
+ *
+ * Проверка доступа — на клиенте, чтобы страница осталась статической (ISR);
+ * запрос дедуплицируется между компонентами.
  */
 
 type AccessPayload = { active: boolean; continueUrl?: string } | null;
@@ -53,7 +58,14 @@ function useContinueUrl(slug: string): string | null {
 }
 
 /** Кнопка в карточке с ценой (hero). */
-export function CourseCta({ slug }: { slug: string }) {
+export function CourseCta({
+  slug,
+  checkoutUrl,
+}: {
+  slug: string;
+  /** Ссылка на оплату в магазине; null — курс продаётся через заявку. */
+  checkoutUrl?: string | null;
+}) {
   const continueUrl = useContinueUrl(slug);
   const t = messagesFor(useLocale());
 
@@ -65,6 +77,28 @@ export function CourseCta({ slug }: { slug: string }) {
         className={cn(buttonVariants({ variant: "brand", size: "lg" }), "mt-4 w-full")}
       >
         <PlayCircle className="size-5" />{t.cta.continue}</Link>
+    );
+  }
+
+  if (checkoutUrl) {
+    return (
+      <div className="mt-4 space-y-2">
+        <a
+          href={checkoutUrl}
+          onClick={() => trackEvent("checkout_start", { slug })}
+          className={cn(buttonVariants({ variant: "brand", size: "lg" }), "w-full")}
+        >
+          <CreditCard className="size-5" />
+          Купить и начать
+        </a>
+        <a
+          href="#zayavka"
+          onClick={() => trackEvent("lead_start", { slug })}
+          className="block text-center text-sm text-foreground/60 underline-offset-4 hover:underline"
+        >
+          Оплатить по счёту или задать вопрос
+        </a>
+      </div>
     );
   }
 
