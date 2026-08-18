@@ -97,6 +97,7 @@ services:
       # На временном VPS по IP заменить nginx.conf → nginx.http.conf (без TLS).
       - ${NGINX_CONF:-./nginx.conf}:/etc/nginx/nginx.conf:ro
       - ./proxy_params.conf:/etc/nginx/proxy_params.conf:ro
+      - ./proxy_cache_public.conf:/etc/nginx/proxy_cache_public.conf:ro
       - media:/media:ro # X-Accel-Redirect раздаёт из /media (location internal)
       - certbot-www:/var/www/certbot:ro
       - certbot-certs:/etc/letsencrypt:ro

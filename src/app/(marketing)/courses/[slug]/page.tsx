@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import { db } from "@/lib/db";
 import { accessDurationLabel } from "@/lib/pricing";
-import { env } from "@/env";
 import { formatPrice, buildSafe, coverPublicUrl } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { currency, buildMultiPrice, ratesAvailable } from "@/lib/currency";
@@ -25,6 +24,8 @@ import { trainer } from "@/content/landing";
 import { resolveRedirect } from "@/lib/seo/redirects";
 import { getRelatedCards } from "@/lib/seo/related";
 import { getSupportContacts } from "@/lib/seo/settings";
+import { alternatesFor } from "@/lib/seo/site-hosts";
+import { siteOrigin } from "@/lib/seo/site";
 
 export const revalidate = 60;
 
@@ -70,7 +71,11 @@ export async function generateMetadata({
   return {
     title: course.seoTitle ?? course.title,
     description: course.seoDescription ?? course.subtitle ?? undefined,
-    alternates: { canonical: course.canonicalPath || `/courses/${slug}` },
+    // Кастомный canonicalPath — склейка на другую страницу: hreflang там не нужен;
+    // обычная карточка курса получает self-canonical + альтернаты по доменам.
+    alternates: course.canonicalPath
+      ? { canonical: course.canonicalPath }
+      : alternatesFor(`/courses/${slug}`),
     robots: course.seoNoindex ? { index: false, follow: true } : undefined,
     openGraph: {
       title: course.ogTitle ?? course.seoTitle ?? course.title,
@@ -136,7 +141,7 @@ export default async function CoursePage({
   const totalLessons = course.modules.reduce((n, m) => n + m.lessons.length, 0);
 
   // JSON-LD
-  const siteUrl = env.NEXT_PUBLIC_SITE_URL ?? "";
+  const siteUrl = await siteOrigin();
   const courseJsonLd = {
     "@context": "https://schema.org",
     "@type": "Course",

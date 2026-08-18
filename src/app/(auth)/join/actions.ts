@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { z } from "zod";
 import { signIn } from "@/auth";
 import { db } from "@/lib/db";
-import { LEGAL_VERSION } from "@/content/legal";
+import { acceptedLegalVersion } from "@/lib/legal/version";
 import { activateInvite, JoinError } from "@/lib/org/service";
 import { clientIpFromHeaders, isLoginBlocked, recordLoginAttempt } from "@/lib/auth/login-attempts";
 import { normalizeInviteCode } from "@/lib/org/seats";
@@ -70,7 +70,7 @@ export async function joinAction(
   // Акцепт политики фиксируем моментом и версией (Закон № 99-З); ПДн не пишем.
   await db.user.update({
     where: { id: result.userId },
-    data: { termsAcceptedAt: new Date(), termsVersion: LEGAL_VERSION },
+    data: { termsAcceptedAt: new Date(), termsVersion: await acceptedLegalVersion() },
   });
 
   // Сразу входим под новой учёткой — работник не должен вводить логин, который

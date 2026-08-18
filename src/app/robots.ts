@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
-import { env } from "@/env";
+import { siteOrigin } from "@/lib/seo/site";
 
-export default function robots(): MetadataRoute.Robots {
+export default async function robots(): Promise<MetadataRoute.Robots> {
   return {
     rules: {
       userAgent: "*",
@@ -9,6 +9,6 @@ export default function robots(): MetadataRoute.Robots {
       // приватные зоны и API не индексируем
       disallow: ["/app", "/admin", "/api/", "/login", "/change-password"],
     },
-    sitemap: `${env.NEXT_PUBLIC_SITE_URL}/sitemap.xml`,
+    sitemap: `${await siteOrigin()}/sitemap.xml`,
   };
 }

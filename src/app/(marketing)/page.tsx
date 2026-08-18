@@ -46,6 +46,7 @@ import {
   trainer,
   voiceShowcase,
 } from "@/content/landing";
+import { alternatesFor } from "@/lib/seo/site-hosts";
 
 // ISR: страница статична, отзывы обновляются раз в 10 минут.
 export const revalidate = 600;
@@ -56,7 +57,7 @@ export const revalidate = 600;
 // репост уходил без изображения. og:title и og:description Next соберёт из
 // title и description страницы.
 export const metadata: Metadata = {
-  alternates: { canonical: "/" },
+  alternates: alternatesFor("/"),
 };
 
 const stepIcons = {

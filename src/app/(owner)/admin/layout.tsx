@@ -2,6 +2,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { requireOwner } from "@/lib/auth/guards";
 import { LogoutButton } from "@/components/logout-button";
+import type { Metadata } from "next";
+
+// Приватная зона: в robots.txt путь уже закрыт, мета-тег — второй барьер
+// (одинаково на всех доменах).
+export const metadata: Metadata = { robots: { index: false, follow: false } };
 
 /** Каркас консоли владельца: единая проверка роли OWNER + навигация (S5.1+). */
 export default async function AdminLayout({

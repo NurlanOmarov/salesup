@@ -40,9 +40,11 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL}
       AUTH_SECRET: ${AUTH_SECRET}
-      # Канонический базовый URL Auth.js за reverse-proxy (иначе в части путей
-      # генерится внутренний http://0.0.0.0:3000 → ломается post-login redirect).
-      AUTH_URL: ${AUTH_URL:-}
+      # AUTH_URL намеренно НЕ задаём: он пиннил Auth.js на один домен и ломал
+      # самостоятельность .kz/.ru (мультидомен, docs/MULTI-DOMAIN-PLAN.md).
+      # Базовый URL берётся из заголовков запроса (trustHost в src/auth.config.ts),
+      # а внутренний http://0.0.0.0:3000 больше не появляется — /api/auth выведен
+      # из-под middleware (src/middleware.ts).
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       EMBEDDINGS_API_KEY: ${EMBEDDINGS_API_KEY}
       VOICE_ENABLED: ${VOICE_ENABLED:-false}     # голосовой симулятор (STT/TTS)
@@ -114,6 +116,7 @@ services:
     volumes:
       - ./nginx.http.conf:/etc/nginx/nginx.conf:ro
       - ./proxy_params.conf:/etc/nginx/proxy_params.conf:ro
+      - ./proxy_cache_public.conf:/etc/nginx/proxy_cache_public.conf:ro
       - media:/media:ro                          # X-Accel-Redirect раздаёт из /media (internal)
 
 volumes:

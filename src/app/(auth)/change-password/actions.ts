@@ -5,7 +5,7 @@ import { z } from "zod";
 import { auth, updateSession } from "@/auth";
 import { db } from "@/lib/db";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
-import { LEGAL_VERSION } from "@/content/legal";
+import { acceptedLegalVersion } from "@/lib/legal/version";
 
 const schema = z
   .object({
@@ -64,7 +64,7 @@ export async function changePasswordAction(
       passwordHash: await hashPassword(parsed.data.newPassword),
       mustChangePassword: false,
       ...(needsTerms
-        ? { termsAcceptedAt: new Date(), termsVersion: LEGAL_VERSION }
+        ? { termsAcceptedAt: new Date(), termsVersion: await acceptedLegalVersion() }
         : {}),
     },
   });

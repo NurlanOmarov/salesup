@@ -7,7 +7,7 @@ import { log } from "@/lib/log";
 import { enqueue } from "@/lib/jobs/enqueue";
 import { leadTelegramText, ownerLeadEmail } from "@/lib/leads/notify";
 import { leadQuote } from "@/lib/leads/quote";
-import { LEGAL_VERSION } from "@/content/legal";
+import { acceptedLegalVersion } from "@/lib/legal/version";
 
 const schema = z.object({
   name: z.string().trim().max(120).optional().or(z.literal("")),
@@ -132,7 +132,7 @@ export async function createLeadAction(
       status: "NEW",
       // Доказательство согласия: момент + принятая редакция документов.
       consentAt: new Date(),
-      consentVersion: LEGAL_VERSION,
+      consentVersion: await acceptedLegalVersion(),
     },
     select: { id: true, createdAt: true },
   });

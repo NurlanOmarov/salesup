@@ -11,6 +11,8 @@ import { Reveal } from "@/components/landing/reveal";
 import type { CourseCardData } from "@/components/catalog/course-card";
 import { CoursesCatalog } from "@/components/catalog/courses-catalog";
 import { audience, difference, faq, howItWorks } from "@/content/courses-page";
+import { alternatesFor } from "@/lib/seo/site-hosts";
+import { siteOrigin } from "@/lib/seo/site";
 
 export const revalidate = 60;
 
@@ -20,7 +22,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: s.title,
     description: s.description,
-    alternates: { canonical: "/courses" },
+    alternates: alternatesFor("/courses"),
     robots: { index: !s.noindex },
     // openGraph не объявляется: собственный объект заменяет родительский
     // целиком и без images стирает картинку из opengraph-image.tsx вместе с
@@ -62,7 +64,7 @@ async function getCourses(): Promise<CourseCardData[]> {
 export default async function CoursesPage() {
   const courses = await getCourses();
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "";
+  const siteUrl = await siteOrigin();
   const listJsonLd = {
     "@context": "https://schema.org",
     "@type": "ItemList",

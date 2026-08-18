@@ -9,6 +9,7 @@ import { AudienceSwitch } from "@/components/landing/audience-switch";
 import { Reveal } from "@/components/landing/reveal";
 import { Faq } from "@/components/landing/faq";
 import { BusinessCta } from "./business-cta";
+import { alternatesFor } from "@/lib/seo/site-hosts";
 
 export const revalidate = 300;
 
@@ -24,7 +25,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: s.title,
     description: s.description,
-    alternates: { canonical: "/business" },
+    alternates: alternatesFor("/business"),
     robots: { index: !s.noindex, follow: true },
     // Ссылку на эту страницу отправляют в мессенджере и почтой, поэтому картинка
     // репоста своя: дефолтная — про розничные курсы, а тут разговор с компанией.
@@ -131,17 +132,32 @@ export default async function BusinessPage() {
   return (
     <main>
       {/* ── Первый экран ───────────────────────────────────────────── */}
-      <section className="mx-auto max-w-6xl px-4 pb-10 pt-12 sm:pt-16">
-        <AudienceSwitch current="b2b" size="hero" />
+      {/* Тёмный кадр, как hero на главной: корпоративная страница должна читаться
+          продолжением бренда, а не отдельным документом. Текст живёт в левой,
+          пустой части кадра; калькулятор ложится светлой карточкой справа. */}
+      <section className="relative overflow-hidden bg-slate-950 text-white">
+        <Image
+          src="/images/landing/business-hero.webp"
+          alt=""
+          aria-hidden
+          fill
+          priority
+          sizes="100vw"
+          className="pointer-events-none select-none object-cover object-right"
+        />
+        {/* Слева заливка плотнее: под заголовком кадр почти чёрный, справа —
+            видно команду. Без градиента белый текст спорил бы с окнами. */}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/75 to-slate-950/25" />
+
+        <div className="relative mx-auto max-w-6xl px-4 pb-12 pt-12 sm:pt-16 lg:pb-16">
+        <AudienceSwitch current="b2b" size="hero" onDark />
 
         <div className="mt-6 grid gap-10 lg:grid-cols-[1.05fr_1fr] lg:items-start">
           <div>
-            <h1 className="text-3xl font-bold leading-tight sm:text-4xl lg:text-5xl">
-              Обучение отдела продаж,
-              <br />
-              которое не заканчивается в пятницу
+            <h1 className="text-balance text-3xl font-bold leading-tight drop-shadow-lg sm:text-4xl lg:text-5xl">
+              Обучение отдела продаж, которое не заканчивается в пятницу
             </h1>
-            <p className="mt-5 max-w-xl text-lg text-foreground/70">
+            <p className="mt-5 max-w-xl text-lg text-white/75">
               Тренинг забывается за месяц. Годовой доступ к платформе учит каждого
               сотрудника — включая тех, кто придёт к вам через полгода, — и показывает,
               кто действительно занимается.
@@ -155,12 +171,12 @@ export default async function BusinessPage() {
               <p className="text-2xl font-bold sm:text-3xl">
                 от {bestPerSeat.toLocaleString("ru-RU")} BYN
               </p>
-              <p className="text-foreground/70">
+              <p className="text-white/75">
                 за сотрудника в год — это{" "}
                 {bestPerMonth.toLocaleString("ru-RU")} BYN в месяц
               </p>
             </div>
-            <p className="mt-1 text-sm text-foreground/55">
+            <p className="mt-1 text-sm text-white/60">
               При команде от 20 человек. Для {MIN_B2B_SEATS} сотрудников —{" "}
               {entryPerSeat.toLocaleString("ru-RU")} BYN за каждого.
             </p>
@@ -173,8 +189,8 @@ export default async function BusinessPage() {
                 "Кабинет компании с прогрессом по каждому сотруднику",
                 "AI-тренажёры: симулятор клиента и отработка возражений",
               ].map((item) => (
-                <li key={item} className="flex items-start gap-2.5 text-foreground/80">
-                  <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-emerald-600" />
+                <li key={item} className="flex items-start gap-2.5 text-white/85">
+                  <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-emerald-400" />
                   <span>{item}</span>
                 </li>
               ))}
@@ -187,6 +203,7 @@ export default async function BusinessPage() {
               courses={courses}
             />
           </Reveal>
+        </div>
         </div>
       </section>
 
