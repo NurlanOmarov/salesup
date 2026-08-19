@@ -69,7 +69,19 @@ export function psqlRows(sql: string): string[][] {
  * сносил каталог параллельно работающего publish-video, и docker cp падал с
  * «lstat /tmp/salesup-publish: no such file or directory».
  */
-const REMOTE_TMP = `/tmp/salesup-publish-${process.pid}`;
+/**
+ * Временный каталог на VPS, куда rsync кладёт файлы перед `docker cp` в том.
+ *
+ * По умолчанию — свой на каждый запуск (по PID): так параллельные выкладки не
+ * мешают друг другу, а мусор гарантированно убирается в конце.
+ *
+ * DEPLOY_REMOTE_TMP задаёт СТАБИЛЬНЫЙ путь и тем самым делает выкладку
+ * возобновляемой: rsync видит уже переданные файлы и пропускает их. Это важно на
+ * медленном канале — выкладка курса на ~1.6 ГБ при 100 КБ/с идёт часами, и без
+ * стабильного пути любой обрыв (деплой, разрыв связи) начинал передачу с нуля.
+ * Каталог удаляется после успешного завершения, как и обычный.
+ */
+const REMOTE_TMP = process.env.DEPLOY_REMOTE_TMP || `/tmp/salesup-publish-${process.pid}`;
 
 /**
  * Rsync одного файла на VPS в <REMOTE_TMP>/<key>.
