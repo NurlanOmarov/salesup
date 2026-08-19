@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { db } from "@/lib/db";
 import { accessDurationLabel } from "@/lib/pricing";
-import { formatPrice, buildSafe, coverPublicUrl } from "@/lib/utils";
+import { formatPrice, coverPublicUrl } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { currency, buildMultiPrice, ratesAvailable } from "@/lib/currency";
 import { buttonVariants } from "@/components/ui/button";
@@ -30,6 +30,16 @@ import { env } from "@/env";
 import { getLocale } from "@/i18n/server";
 import { messagesFor } from "@/i18n/messages";
 
+/**
+ * Страница рендерится динамически: в теле вызываются currentSite()/siteOrigin(),
+ * которые читают заголовок Host (мультидомен, три ccTLD). Нагрузку снимает
+ * микрокэш nginx с ключом по хосту — deploy/proxy_cache_public.conf.
+ *
+ * generateStaticParams здесь БЫЛО и ломало прод: оно заставляет Next пререндерить
+ * маршрут статически, а headers() в статическом рендере даёт DYNAMIC_SERVER_USAGE —
+ * все страницы курсов отдавали 500. Соседние страницы витрины (/, /courses,
+ * /business, /offer, /privacy) живут ровно на этой же схеме без пререндера.
+ */
 export const revalidate = 60;
 
 type Params = { slug: string };
@@ -87,16 +97,6 @@ export async function generateMetadata({
       type: "website",
     },
   };
-}
-
-export async function generateStaticParams() {
-  return buildSafe(async () => {
-    const courses = await db.course.findMany({
-      where: { status: "PUBLISHED" },
-      select: { slug: true },
-    });
-    return courses.map((c) => ({ slug: c.slug }));
-  }, [] as { slug: string }[]);
 }
 
 export default async function CoursePage({
