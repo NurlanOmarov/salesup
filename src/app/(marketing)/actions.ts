@@ -26,9 +26,8 @@ const schema = z.object({
   format: z.enum(["ONLINE", "OFFLINE"]).default("ONLINE"),
   company: z.string().trim().max(160).optional().or(z.literal("")),
   seatsWanted: z.coerce.number().int().min(1).max(100000).optional(),
-  // Выбранный в калькуляторе тариф. Присылается только выбор — цену считает
+  // Выбранные в калькуляторе курсы. Присылается только выбор — цену считает
   // сервер (lib/leads/quote), клиентской сумме верить нельзя.
-  plan: z.enum(["LIBRARY", "COURSES"]).optional().or(z.literal("")),
   planCourseIds: z.string().trim().max(500).optional().or(z.literal("")),
   // Согласие на обработку ПДн — обязательное условие приёма заявки (Закон № 99-З):
   // без отметки заявка не сохраняется вовсе, а не сохраняется «без согласия».
@@ -60,7 +59,6 @@ export async function createLeadAction(
     format: formData.get("format") ?? "ONLINE",
     company: formData.get("company") ?? "",
     seatsWanted: formData.get("seatsWanted") || undefined,
-    plan: formData.get("plan") ?? "",
     planCourseIds: formData.get("planCourseIds") ?? "",
     consent: formData.get("consent") ?? "",
   });
@@ -68,7 +66,7 @@ export async function createLeadAction(
     return { error: parsed.error.issues[0]?.message ?? "Проверьте поля" };
   }
 
-  const { name, contact, message, courseId, kind, company, seatsWanted, plan, planCourseIds, format } =
+  const { name, contact, message, courseId, kind, company, seatsWanted, planCourseIds, format } =
     parsed.data;
   // Офлайн-тренинг платформа не продаёт: тариф и расчёт к нему неприменимы,
   // поэтому обнуляем их даже если что-то пришло из формы.
@@ -97,7 +95,7 @@ export async function createLeadAction(
     .filter(Boolean)
     .slice(0, 20);
   const selectedCoursesTiyn =
-    kind === "B2B" && plan === "COURSES" && selectedIds.length > 0
+    kind === "B2B" && selectedIds.length > 0
       ? (
           await db.course.findMany({
             where: { id: { in: selectedIds } },
@@ -110,7 +108,6 @@ export async function createLeadAction(
     ? null
     : leadQuote({
         kind,
-        plan: plan || null,
         seats: seatsWanted ?? null,
         courseTiyn: courseTiyn ?? null,
         selectedCoursesTiyn,

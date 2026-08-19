@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Minus, Plus } from "lucide-react";
-import { MIN_B2B_SEATS, quoteSeats, SEAT_TIERS } from "@/lib/pricing";
+import { MIN_B2B_SEATS, packRetailTiyn, quoteSeats, SEAT_TIERS } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
 import { useLocale } from "@/i18n/client";
 import { businessContent } from "@/content/business-content";
@@ -15,27 +15,36 @@ export interface CalculatorCourse {
   id: string;
   title: string;
   priceTiyn: number;
+  /** Ось витрины `Course.audience`: отраслевой курс или общий навык. */
+  audience: "EVERYONE" | "SPECIALIZED";
 }
 
+export type CalculatorMode = "industry" | "courses";
+
 /**
- * Калькулятор корпоративного доступа: сколько сотрудников и что им открываем —
- * всю библиотеку или отдельные курсы. Считает по той же сетке, что и админка
- * (lib/pricing), поэтому цифра на лендинге и цифра в счёте не расходятся.
+ * Калькулятор корпоративного доступа: сколько сотрудников и какие курсы им
+ * открываем. Считает по той же сетке, что и админка (lib/pricing), поэтому
+ * цифра на лендинге и цифра в счёте не расходятся.
  *
- * Выбор курсов здесь принципиален: компании, которой нужен один отраслевой курс,
- * цена библиотеки показывала бы сумму втрое больше реальной — и разговор бы не
- * состоялся. Если выбранные курсы в сумме дороже подписки, предлагаем подписку:
- * платить больше за меньшее покупатель не должен.
+ * Тарифа «вся библиотека» здесь нет намеренно. Курсы разнотематические (кухни,
+ * туризм, медпреды, обувь), и отделу продаж одной компании релевантен ровно
+ * один отраслевой курс плюс общие навыки; остальное в счёте выглядит навязанным
+ * и удорожает предложение на курсы, которыми никто не воспользуется.
+ *
+ * Отсюда два режима: «курс вашей отрасли» (отраслевой на выбор + все общие
+ * курсы, они применимы любому отделу) и ручная сборка набора для компаний с
+ * несколькими направлениями.
  */
 export function SeatsCalculator({
-  subscriptionYearTiyn,
   courses = [],
+  fallbackRetailTiyn,
   currencyCode = "BYN",
   rates = {},
   onQuote,
 }: {
-  subscriptionYearTiyn: number;
   courses?: CalculatorCourse[];
+  /** База расчёта, когда каталог недоступен (пререндер без БД). */
+  fallbackRetailTiyn: number;
   /** Валюта страны домена: расчёт показывается в ней (мультидомен, D-013). */
   currencyCode?: CurrencyCode;
   rates?: RatesMap;
@@ -44,30 +53,48 @@ export function SeatsCalculator({
     seats: number;
     courseTitles: string[];
     courseIds: string[];
-    /** Выбранный тариф — уходит в заявку, чтобы в уведомлении была та же цена. */
-    mode: "library" | "courses";
+    mode: CalculatorMode;
   }) => void;
 }) {
+  const industries = courses.filter((c) => c.audience === "SPECIALIZED");
+  const general = courses.filter((c) => c.audience === "EVERYONE");
+
   const [seats, setSeats] = useState(10);
-  const [mode, setMode] = useState<"library" | "courses">("library");
+  // Без отраслевых курсов режим «отрасль» бессмыслен — начинаем со сборки.
+  const [mode, setMode] = useState<CalculatorMode>(
+    industries.length > 0 ? "industry" : "courses",
+  );
+  const [industryId, setIndustryId] = useState<string>(industries[0]?.id ?? "");
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
-  const chosen = courses.filter((c) => selected.has(c.id));
-  const chosenSum = chosen.reduce((sum, c) => sum + c.priceTiyn, 0);
-  // Отдельные курсы никогда не стоят дороже подписки на всю библиотеку.
-  const libraryIsBetter = mode === "courses" && chosenSum >= subscriptionYearTiyn;
-  const retailTiyn =
-    mode === "library" || chosen.length === 0 || libraryIsBetter
-      ? subscriptionYearTiyn
-      : chosenSum;
+  const industry = industries.find((c) => c.id === industryId) ?? industries[0];
+  // В отраслевом наборе общие курсы идут всегда: продажи есть продажи, они
+  // применимы любому отделу — и именно они делают доступ на год осмысленным.
+  const chosen =
+    mode === "industry"
+      ? [...(industry ? [industry] : []), ...general]
+      : courses.filter((c) => selected.has(c.id));
 
+  const retailTiyn =
+    chosen.length > 0 ? packRetailTiyn(chosen.map((c) => c.priceTiyn)) : fallbackRetailTiyn;
   const quote = quoteSeats(seats, retailTiyn);
 
   /** Один выход наружу: любое изменение отдаёт форме полный выбор целиком. */
-  function emit(next: { seats?: number; mode?: "library" | "courses"; selected?: Set<string> }) {
+  function emit(next: {
+    seats?: number;
+    mode?: CalculatorMode;
+    selected?: Set<string>;
+    industryId?: string;
+  }) {
     const nextMode = next.mode ?? mode;
+    const nextIndustryId = next.industryId ?? industryId;
     const nextSelected = next.selected ?? selected;
-    const picked = nextMode === "courses" ? courses.filter((c) => nextSelected.has(c.id)) : [];
+    const nextIndustry =
+      industries.find((c) => c.id === nextIndustryId) ?? industries[0];
+    const picked =
+      nextMode === "industry"
+        ? [...(nextIndustry ? [nextIndustry] : []), ...general]
+        : courses.filter((c) => nextSelected.has(c.id));
     onQuote?.({
       seats: next.seats ?? seats,
       courseTitles: picked.map((c) => c.title),
@@ -76,15 +103,25 @@ export function SeatsCalculator({
     });
   }
 
+  // Начальный набор тоже уходит в форму: человек может ничего не трогать и сразу
+  // отправить заявку — без этого сервер не узнал бы, что именно он видел на экране.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => emit({}), []);
+
   function change(next: number) {
     const clamped = Math.max(1, Math.min(500, next));
     setSeats(clamped);
     emit({ seats: clamped });
   }
 
-  function changeMode(next: "library" | "courses") {
+  function changeMode(next: CalculatorMode) {
     setMode(next);
     emit({ mode: next });
+  }
+
+  function changeIndustry(id: string) {
+    setIndustryId(id);
+    emit({ industryId: id });
   }
 
   function toggleCourse(id: string) {
@@ -159,67 +196,93 @@ export function SeatsCalculator({
       {courses.length > 0 ? (
         <div className="mt-5">
           <p className="text-sm font-semibold">{c.whatOpens}</p>
-          <div className="mt-2 flex gap-2">
-            <button
-              type="button"
-              onClick={() => changeMode("library")}
-              className={cn(
-                "rounded-lg border px-3 py-1.5 text-sm transition-colors",
-                mode === "library"
-                  ? "border-brand bg-brand/10 font-medium"
-                  : "border-foreground/15 text-foreground/70 hover:bg-foreground/5",
-              )}
-            >
-              {c.wholeLibrary}
-            </button>
-            <button
-              type="button"
-              onClick={() => changeMode("courses")}
-              className={cn(
-                "rounded-lg border px-3 py-1.5 text-sm transition-colors",
-                mode === "courses"
-                  ? "border-brand bg-brand/10 font-medium"
-                  : "border-foreground/15 text-foreground/70 hover:bg-foreground/5",
-              )}
-            >
-              {c.separateCourses}
-            </button>
-          </div>
 
-          {mode === "courses" ? (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {courses.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => toggleCourse(c.id)}
-                  className={cn(
-                    "rounded-lg border px-2.5 py-1.5 text-left text-sm transition-colors",
-                    selected.has(c.id)
-                      ? "border-brand bg-brand/10"
-                      : "border-foreground/15 text-foreground/70 hover:bg-foreground/5",
-                  )}
-                >
-                  {c.title}
-                  <span className="ml-1.5 whitespace-nowrap text-xs text-foreground/50">
-                    {money(c.priceTiyn)}
-                  </span>
-                </button>
-              ))}
+          {industries.length > 0 ? (
+            <div className="mt-2 flex gap-2">
+              <button
+                type="button"
+                onClick={() => changeMode("industry")}
+                className={cn(
+                  "rounded-lg border px-3 py-1.5 text-sm transition-colors",
+                  mode === "industry"
+                    ? "border-brand bg-brand/10 font-medium"
+                    : "border-foreground/15 text-foreground/70 hover:bg-foreground/5",
+                )}
+              >
+                {c.byIndustry}
+              </button>
+              <button
+                type="button"
+                onClick={() => changeMode("courses")}
+                className={cn(
+                  "rounded-lg border px-3 py-1.5 text-sm transition-colors",
+                  mode === "courses"
+                    ? "border-brand bg-brand/10 font-medium"
+                    : "border-foreground/15 text-foreground/70 hover:bg-foreground/5",
+                )}
+              >
+                {c.ownSet}
+              </button>
             </div>
           ) : null}
 
-          {mode === "courses" && chosen.length === 0 ? (
-            <p className="mt-2 text-xs text-foreground/55">
-              {c.pickCourses}
-            </p>
-          ) : null}
-
-          {libraryIsBetter ? (
-            <p className="mt-2 text-xs text-amber-700">
-              {c.libraryCheaper}
-            </p>
-          ) : null}
+          {mode === "industry" ? (
+            <div className="mt-3">
+              {/* radiogroup, а не набор чекбоксов: отрасль у отдела одна, и
+                  выбор «или-или» сразу задаёт правильную рамку разговора. */}
+              <div role="radiogroup" aria-label={c.industryHint} className="flex flex-wrap gap-2">
+                {industries.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={industry?.id === item.id}
+                    onClick={() => changeIndustry(item.id)}
+                    className={cn(
+                      "rounded-lg border px-2.5 py-1.5 text-left text-sm transition-colors",
+                      industry?.id === item.id
+                        ? "border-brand bg-brand/10"
+                        : "border-foreground/15 text-foreground/70 hover:bg-foreground/5",
+                    )}
+                  >
+                    {item.title}
+                  </button>
+                ))}
+              </div>
+              {general.length > 0 ? (
+                <p className="mt-2 text-xs text-foreground/55">
+                  {c.alwaysIncluded(general.map((g) => g.title).join(", "))}
+                </p>
+              ) : null}
+            </div>
+          ) : (
+            <div className="mt-3">
+              <div className="flex flex-wrap gap-2">
+                {courses.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    aria-pressed={selected.has(item.id)}
+                    onClick={() => toggleCourse(item.id)}
+                    className={cn(
+                      "rounded-lg border px-2.5 py-1.5 text-left text-sm transition-colors",
+                      selected.has(item.id)
+                        ? "border-brand bg-brand/10"
+                        : "border-foreground/15 text-foreground/70 hover:bg-foreground/5",
+                    )}
+                  >
+                    {item.title}
+                    <span className="ml-1.5 whitespace-nowrap text-xs text-foreground/50">
+                      {money(item.priceTiyn)}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              {chosen.length === 0 ? (
+                <p className="mt-2 text-xs text-foreground/55">{c.pickCourses}</p>
+              ) : null}
+            </div>
+          )}
         </div>
       ) : null}
 
@@ -285,9 +348,7 @@ export function SeatsCalculator({
       </ul>
 
       <p className="mt-3 text-xs text-foreground/50">
-        {mode === "courses" && chosen.length > 0 && !libraryIsBetter
-          ? c.includesCourses(chosen.length)
-          : c.includesLibrary}
+        {chosen.length > 0 ? c.includesCourses(chosen.length) : c.includesAny}
       </p>
     </div>
   );

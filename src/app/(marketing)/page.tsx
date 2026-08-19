@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { CourseAudience } from "@prisma/client";
 import { Link } from "@/components/i18n/link";
 import Image from "next/image";
 import {
@@ -21,7 +22,7 @@ import {
 import { db } from "@/lib/db";
 import { externalRatings, getSeoSettings, getSupportContacts } from "@/lib/seo/settings";
 import { buttonVariants } from "@/components/ui/button";
-import { quoteSeats, SUBSCRIPTION_YEAR_TIYN } from "@/lib/pricing";
+import { entryPackTiyn, quoteSeats } from "@/lib/pricing";
 import { cn, buildSafe } from "@/lib/utils";
 import { Reveal } from "@/components/landing/reveal";
 import { Faq } from "@/components/landing/faq";
@@ -95,8 +96,18 @@ async function getReviews(): Promise<ReviewItem[]> {
 
 export default async function LandingPage() {
   const reviews = await getReviews();
-  // Лучшая цена корпоративного места — для тизера «Для компаний».
-  const b2bBestPerSeat = quoteSeats(20, SUBSCRIPTION_YEAR_TIYN).pricePerSeatTiyn / 100;
+  // Лучшая цена корпоративного места — для тизера «Для компаний». База та же,
+  // что на /business: набор «отраслевой курс + общие», а не библиотека целиком —
+  // иначе тизер обещал бы одну цену, а корпоративная страница показывала другую.
+  const b2bCourses = await buildSafe(
+    () =>
+      db.course.findMany({
+        where: { status: "PUBLISHED", inDevelopment: false },
+        select: { priceTiyn: true, audience: true },
+      }),
+    [] as { priceTiyn: number; audience: CourseAudience }[],
+  );
+  const b2bBestPerSeat = quoteSeats(20, entryPackTiyn(b2bCourses)).pricePerSeatTiyn / 100;
   const b2bBestPerMonth = Math.round(b2bBestPerSeat / 12);
   // Контакты — из SeoSettings (правятся в /admin/seo без деплоя).
   const { whatsapp: wa, telegram: tg } = await getSupportContacts();

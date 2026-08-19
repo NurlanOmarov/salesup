@@ -214,6 +214,43 @@ export const SEAT_TIERS: readonly SeatTier[] = [
   { minSeats: 5, discount: 0.15, label: "Команда" },
 ] as const;
 
+/**
+ * Розничная база корпоративного набора — сумма цен выбранных курсов.
+ *
+ * Пакетная скидка `BUNDLE_DISCOUNT` здесь намеренно НЕ применяется: она живёт в
+ * рознице, а корпоративная цена и так режется сеткой мест (до −35 %). Складывать
+ * обе скидки — значит отдавать отдел за половину каталога.
+ *
+ * Библиотеки в B2B нет вовсе: курсы разнотематические (кухни, туризм, медпреды),
+ * и отделу продаж одной компании релевантен ровно один отраслевой курс плюс
+ * общие навыки — остальное в счёте выглядит навязанным.
+ */
+export function packRetailTiyn(pricesTiyn: number[]): number {
+  return pricesTiyn.filter((p) => p > 0).reduce((sum, p) => sum + p, 0);
+}
+
+/**
+ * Самый дешёвый корпоративный набор — база для «от N за сотрудника» на витрине:
+ * недорогой отраслевой курс плюс все общие. Считается из каталога, поэтому
+ * обещание в первом экране совпадает с тем, что человек увидит в калькуляторе.
+ *
+ * Пустой каталог (пререндер без БД) даёт нейтральную оценку по базовым ценам.
+ */
+export function entryPackTiyn(
+  courses: readonly { priceTiyn: number; audience: CourseAudience }[],
+): number {
+  const generalSum = packRetailTiyn(
+    courses.filter((c) => c.audience === "EVERYONE").map((c) => c.priceTiyn),
+  );
+  const industryPrices = courses
+    .filter((c) => c.audience === "SPECIALIZED")
+    .map((c) => c.priceTiyn)
+    .filter((p) => p > 0);
+
+  if (industryPrices.length > 0) return Math.min(...industryPrices) + generalSum;
+  return generalSum || BASE_PRICE_TIYN.SPECIALIZED + BASE_PRICE_TIYN.EVERYONE;
+}
+
 /** Минимальный корпоративный пакет: ниже сделка не окупает переговоры. */
 export const MIN_B2B_SEATS = 5;
 

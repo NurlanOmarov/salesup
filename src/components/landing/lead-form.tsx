@@ -27,7 +27,6 @@ export function LeadForm({
   format = "ONLINE",
   defaultSeats,
   defaultMessage,
-  plan,
   planCourseIds,
 }: {
   courseId?: string;
@@ -38,9 +37,8 @@ export function LeadForm({
   defaultSeats?: number;
   /** Предзаполненный комментарий: например, курсы, выбранные в калькуляторе. */
   defaultMessage?: string;
-  /** Тариф из калькулятора; цену по нему пересчитывает сервер. */
-  plan?: "LIBRARY" | "COURSES";
-  /** id выбранных курсов — по ним сервер считает ту же сумму, что на экране. */
+  /** id выбранных в калькуляторе курсов — по ним сервер считает ту же сумму,
+   *  что человек видел на экране (тариф выводится из самого набора). */
   planCourseIds?: string[];
 }) {
   const isB2b = kind === "B2B";
@@ -86,7 +84,6 @@ export function LeadForm({
       {courseId ? <input type="hidden" name="courseId" value={courseId} /> : null}
       <input type="hidden" name="kind" value={kind} />
       <input type="hidden" name="format" value={format} />
-      {plan ? <input type="hidden" name="plan" value={plan} /> : null}
       {planCourseIds && planCourseIds.length > 0 ? (
         <input type="hidden" name="planCourseIds" value={planCourseIds.join(",")} />
       ) : null}

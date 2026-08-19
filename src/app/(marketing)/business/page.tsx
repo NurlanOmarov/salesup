@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
+import type { CourseAudience } from "@prisma/client";
 import Image from "next/image";
 import { CheckCircle2 } from "lucide-react";
 import { db } from "@/lib/db";
 import { buildSafe } from "@/lib/utils";
 import { getStaticPageSeo } from "@/lib/seo/static-pages";
-import { MIN_B2B_SEATS, quoteSeats, SUBSCRIPTION_YEAR_TIYN } from "@/lib/pricing";
+import { entryPackTiyn, MIN_B2B_SEATS, quoteSeats } from "@/lib/pricing";
 import { AudienceSwitch } from "@/components/landing/audience-switch";
 import { Reveal } from "@/components/landing/reveal";
 import { Faq } from "@/components/landing/faq";
@@ -55,17 +56,18 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function BusinessPage() {
   // На сборке БД недоступна — buildSafe отдаёт запасное значение вместо падения
   // пререндера (тот же приём, что в sitemap).
-  // Курсы для калькулятора: цена места считается либо по всей библиотеке, либо
-  // по выбранным курсам — компании часто нужен один отраслевой, и цена подписки
-  // отпугнула бы её втрое большей суммой.
+  // Курсы для калькулятора: корпоративная цена считается по набору «отраслевой
+  // курс + общие навыки», поэтому нужен и класс курса (audience). Библиотеки
+  // целиком в B2B нет: отделу по продаже кухонь курс для медпредов не нужен, а в
+  // счёте он выглядел бы навязанным.
   const courses = await buildSafe(
     () =>
       db.course.findMany({
         where: { status: "PUBLISHED", inDevelopment: false },
         orderBy: { sortOrder: "asc" },
-        select: { id: true, title: true, priceTiyn: true },
+        select: { id: true, title: true, priceTiyn: true, audience: true },
       }),
-    [] as { id: string; title: string; priceTiyn: number }[],
+    [] as { id: string; title: string; priceTiyn: number; audience: CourseAudience }[],
   );
   const coursesCount = courses.length;
 
@@ -78,10 +80,14 @@ export default async function BusinessPage() {
   const { rates } = await currency.getRates();
   const money = (byn: number) => formatCurrency(byn * 100, code, rates);
 
+  // База «от»: самый дешёвый набор, который вообще можно купить, — недорогой
+  // отраслевой курс плюс общие. Так цифра в первом экране совпадает с тем, что
+  // человек увидит в калькуляторе, а не обещает недостижимо низкую цену.
+  const entryPack = entryPackTiyn(courses);
+
   // Крайние точки сетки: лучшая цена места (максимальный объём) и цена на входе.
-  const bestPerSeat = quoteSeats(20, SUBSCRIPTION_YEAR_TIYN).pricePerSeatTiyn / 100;
-  const entryPerSeat =
-    quoteSeats(MIN_B2B_SEATS, SUBSCRIPTION_YEAR_TIYN).pricePerSeatTiyn / 100;
+  const bestPerSeat = quoteSeats(20, entryPack).pricePerSeatTiyn / 100;
+  const entryPerSeat = quoteSeats(MIN_B2B_SEATS, entryPack).pricePerSeatTiyn / 100;
   const bestPerMonth = Math.round(bestPerSeat / 12);
 
   return (
@@ -152,7 +158,7 @@ export default async function BusinessPage() {
 
           <Reveal>
             <BusinessCta
-              subscriptionYearTiyn={SUBSCRIPTION_YEAR_TIYN}
+              fallbackRetailTiyn={entryPack}
               courses={courses}
               currencyCode={code}
               rates={rates}
@@ -228,7 +234,7 @@ export default async function BusinessPage() {
           </p>
           <div className="mt-6">
             <BusinessCta
-              subscriptionYearTiyn={SUBSCRIPTION_YEAR_TIYN}
+              fallbackRetailTiyn={entryPack}
               courses={courses}
               currencyCode={code}
               rates={rates}

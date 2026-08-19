@@ -16,7 +16,7 @@ import type { RatesMap } from "@/lib/currency/rates";
 /**
  * Заявка для компании в двух форматах.
  *
- * Онлайн-доступ считается калькулятором: число сотрудников и выбранные курсы
+ * Онлайн-доступ считается калькулятором: число сотрудников и набор курсов
  * уходят в заявку, иначе человек посчитает цену, а потом заново напишет «нас
  * двенадцать, нужны кухни» — и мы потеряем оба параметра сделки.
  *
@@ -25,12 +25,13 @@ import type { RatesMap } from "@/lib/currency/rates";
  * значит обещать то, чего в счёте не будет.
  */
 export function BusinessCta({
-  subscriptionYearTiyn,
+  fallbackRetailTiyn,
   courses,
   currencyCode,
   rates,
 }: {
-  subscriptionYearTiyn: number;
+  /** База расчёта, когда каталог недоступен (пререндер без БД). */
+  fallbackRetailTiyn: number;
   courses: CalculatorCourse[];
   /** Валюта страны домена: расчёт показывается в ней (мультидомен, D-013). */
   currencyCode: CurrencyCode;
@@ -40,9 +41,8 @@ export function BusinessCta({
   const [format, setFormat] = useState<"ONLINE" | "OFFLINE">("ONLINE");
   const [seats, setSeats] = useState(10);
   const [courseTitles, setCourseTitles] = useState<string[]>([]);
-  // Выбранный тариф уходит в заявку: иначе в уведомлении не видно, считал ли
-  // человек библиотеку или пару курсов — и какую сумму он уже держит в голове.
-  const [plan, setPlan] = useState<"library" | "courses">("library");
+  // Состав набора уходит в заявку: иначе в уведомлении не видно, что именно
+  // человек считал, — и какую сумму он уже держит в голове.
   const [courseIds, setCourseIds] = useState<string[]>([]);
 
   const isOffline = format === "OFFLINE";
@@ -94,14 +94,13 @@ export function BusinessCta({
           </div>
         ) : (
           <SeatsCalculator
-            subscriptionYearTiyn={subscriptionYearTiyn}
+            fallbackRetailTiyn={fallbackRetailTiyn}
             courses={courses}
             currencyCode={currencyCode}
             rates={rates}
             onQuote={(v) => {
               setSeats(v.seats);
               setCourseTitles(v.courseTitles);
-              setPlan(v.mode);
               setCourseIds(v.courseIds);
             }}
           />
@@ -120,7 +119,6 @@ export function BusinessCta({
             <LeadForm
               kind="B2B"
               defaultSeats={seats}
-              plan={plan === "courses" ? "COURSES" : "LIBRARY"}
               planCourseIds={courseIds}
               defaultMessage={
                 courseTitles.length > 0

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { byn, quoteSeats, SUBSCRIPTION_YEAR_TIYN } from "@/lib/pricing";
+import { byn, quoteSeats } from "@/lib/pricing";
 import { describeStoredPlan, leadQuote } from "./quote.js";
 
 describe("leadQuote — розница", () => {
@@ -21,12 +21,17 @@ describe("leadQuote — розница", () => {
 });
 
 describe("leadQuote — корпоратив", () => {
-  it("библиотека: считает по годовой подписке и сетке мест", () => {
-    const q = leadQuote({ kind: "B2B", plan: "LIBRARY", seats: 20 });
-    const expected = quoteSeats(20, SUBSCRIPTION_YEAR_TIYN);
-    expect(q).toMatchObject({
-      plan: "LIBRARY",
+  it("считает по сумме выбранных курсов и сетке мест", () => {
+    const q = leadQuote({
+      kind: "B2B",
       seats: 20,
+      selectedCoursesTiyn: [byn(350), byn(250)],
+    });
+    const expected = quoteSeats(20, byn(600));
+    expect(q).toMatchObject({
+      plan: "COURSES",
+      seats: 20,
+      retailTiyn: byn(600),
       perSeatTiyn: expected.pricePerSeatTiyn,
       totalTiyn: expected.totalTiyn,
       discount: 0.35,
@@ -35,10 +40,9 @@ describe("leadQuote — корпоратив", () => {
     });
   });
 
-  it("выбранные курсы: база — их сумма", () => {
+  it("набор «отрасль + общие»: база — сумма всех его курсов", () => {
     const q = leadQuote({
       kind: "B2B",
-      plan: "COURSES",
       seats: 10,
       selectedCoursesTiyn: [byn(490), byn(320)],
     });
@@ -47,37 +51,35 @@ describe("leadQuote — корпоратив", () => {
     expect(q?.discount).toBe(0.25);
   });
 
-  it("если выбранные курсы дороже подписки — считаем по библиотеке", () => {
+  it("дорогой набор не подменяется библиотекой — её больше не продаём", () => {
     const q = leadQuote({
       kind: "B2B",
-      plan: "COURSES",
       seats: 10,
       selectedCoursesTiyn: [byn(590), byn(590), byn(590)],
     });
-    // Платить больше за меньшее покупатель не должен — то же правило, что в калькуляторе.
-    expect(q?.plan).toBe("LIBRARY");
-    expect(q?.retailTiyn).toBe(SUBSCRIPTION_YEAR_TIYN);
+    expect(q?.plan).toBe("COURSES");
+    expect(q?.retailTiyn).toBe(byn(1770));
   });
 
-  it("режим «курсы» без выбранных курсов = библиотека", () => {
-    const q = leadQuote({ kind: "B2B", plan: "COURSES", seats: 7, selectedCoursesTiyn: [] });
-    expect(q?.plan).toBe("LIBRARY");
+  it("без выбранных курсов считать не по чему", () => {
+    expect(leadQuote({ kind: "B2B", seats: 7, selectedCoursesTiyn: [] })).toBeNull();
+    expect(leadQuote({ kind: "B2B", seats: 7 })).toBeNull();
   });
 
   it("мест меньше минимального пакета — без скидки и с пометкой", () => {
-    const q = leadQuote({ kind: "B2B", plan: "LIBRARY", seats: 3 });
+    const q = leadQuote({ kind: "B2B", seats: 3, selectedCoursesTiyn: [byn(600)] });
     expect(q?.discount).toBe(0);
     expect(q?.tierLabel).toBeNull();
     expect(q?.belowMinSeats).toBe(true);
   });
 
   it("без числа мест расчёта нет", () => {
-    expect(leadQuote({ kind: "B2B", plan: "LIBRARY" })).toBeNull();
+    expect(leadQuote({ kind: "B2B", selectedCoursesTiyn: [byn(600)] })).toBeNull();
   });
 });
 
 describe("describeStoredPlan", () => {
-  it("собирает строку корпоративного расчёта", () => {
+  it("читает старые заявки с тарифом «вся библиотека»", () => {
     expect(
       describeStoredPlan({
         plan: "LIBRARY",

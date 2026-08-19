@@ -1,15 +1,24 @@
-import { MIN_B2B_SEATS, quoteSeats, SUBSCRIPTION_YEAR_TIYN } from "@/lib/pricing";
+import { MIN_B2B_SEATS, packRetailTiyn, quoteSeats } from "@/lib/pricing";
 
 /**
  * Что человек выбрал перед отправкой заявки и сколько это стоит.
  *
  * Считаем на сервере по тем же правилам, что и калькулятор на витрине
- * (components/landing/seats-calculator): клиент присылает только выбор — режим,
- * курсы, число мест, — а цену выводим сами. Иначе в заявке оказалась бы сумма,
+ * (components/landing/seats-calculator): клиент присылает только выбор — курсы
+ * и число мест, — а цену выводим сами. Иначе в заявке оказалась бы сумма,
  * которую можно подделать в браузере, и она разошлась бы со счётом.
  */
 
+/**
+ * `LIBRARY` больше не выдаётся: корпоративный доступ ко всей библиотеке снят с
+ * витрины (курсы разнотематические, отделу нужен свой набор). Ключ остаётся в
+ * типе и в enum БД ради заявок, поданных до этого решения, — админка обязана их
+ * читать.
+ */
 export type LeadPlanKey = "COURSE" | "LIBRARY" | "COURSES";
+
+/** Тариф, который может назначить сегодняшняя витрина. */
+export type ActiveLeadPlanKey = Exclude<LeadPlanKey, "LIBRARY">;
 
 /** Подписи тарифов — одни и те же в уведомлении и в админке. */
 export const PLAN_LABELS: Record<LeadPlanKey, string> = {
@@ -40,10 +49,10 @@ export function describeStoredPlan(input: {
 }
 
 export interface LeadQuote {
-  plan: LeadPlanKey;
+  plan: ActiveLeadPlanKey;
   /** Число мест (B2B); null для розницы. */
   seats: number | null;
-  /** Розничная база: цена курса, суммы курсов или годовой подписки. */
+  /** Розничная база: цена курса (B2C) или сумма выбранных курсов (B2B). */
   retailTiyn: number;
   /** Только B2B: цена места со скидкой. */
   perSeatTiyn: number | null;
@@ -58,20 +67,15 @@ export interface LeadQuote {
 
 export interface LeadQuoteInput {
   kind: "B2C" | "B2B";
-  /** Режим корпоративного калькулятора; для розницы игнорируется. */
-  plan?: LeadPlanKey | null;
   seats?: number | null;
   /** Цена курса со страницы курса (B2C). */
   courseTiyn?: number | null;
-  /** Цены выбранных в калькуляторе курсов (B2B, режим COURSES). */
+  /** Цены выбранных в калькуляторе курсов (B2B). */
   selectedCoursesTiyn?: number[];
-  subscriptionYearTiyn?: number;
 }
 
 /** null — выбора не было (заявка с лендинга без курса и без калькулятора). */
 export function leadQuote(input: LeadQuoteInput): LeadQuote | null {
-  const subscription = input.subscriptionYearTiyn ?? SUBSCRIPTION_YEAR_TIYN;
-
   if (input.kind === "B2C") {
     if (!input.courseTiyn || input.courseTiyn <= 0) return null;
     return {
@@ -89,17 +93,16 @@ export function leadQuote(input: LeadQuoteInput): LeadQuote | null {
   const seats = input.seats && input.seats > 0 ? input.seats : null;
   if (!seats) return null;
 
-  const chosen = (input.selectedCoursesTiyn ?? []).filter((p) => p > 0);
-  const chosenSum = chosen.reduce((sum, p) => sum + p, 0);
-  // Правило витрины: отдельные курсы никогда не стоят дороже подписки на всё —
-  // иначе покупатель платит больше за меньшее.
-  const asCourses = input.plan === "COURSES" && chosen.length > 0 && chosenSum < subscription;
+  // База корпоративного расчёта — только набор курсов: доступа «ко всему сразу»
+  // у компаний больше нет. Пустой набор считать не по чему — заявка уйдёт без
+  // тарифа, и менеджер спросит состав сам.
+  const retailTiyn = packRetailTiyn(input.selectedCoursesTiyn ?? []);
+  if (retailTiyn <= 0) return null;
 
-  const retailTiyn = asCourses ? chosenSum : subscription;
   const quote = quoteSeats(seats, retailTiyn);
 
   return {
-    plan: asCourses ? "COURSES" : "LIBRARY",
+    plan: "COURSES",
     seats,
     retailTiyn,
     perSeatTiyn: quote.pricePerSeatTiyn,

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { applicantLeadEmail, contactEmail, leadTelegramText, ownerLeadEmail } from "./notify.js";
+import { byn } from "@/lib/pricing";
 import { leadQuote } from "./quote.js";
 
 const base = {
@@ -58,9 +59,13 @@ describe("leadTelegramText", () => {
       ...base,
       kind: "B2B",
       seatsWanted: 20,
-      quote: leadQuote({ kind: "B2B", plan: "LIBRARY", seats: 20 }),
+      quote: leadQuote({
+        kind: "B2B",
+        seats: 20,
+        selectedCoursesTiyn: [byn(350), byn(250)],
+      }),
     });
-    expect(text).toContain("Тариф: вся библиотека на год");
+    expect(text).toContain("Тариф: выбранные курсы");
     expect(text).toContain("× 20 =");
     expect(text).toContain("«Компания», −35%");
   });
@@ -70,7 +75,7 @@ describe("leadTelegramText", () => {
       ...base,
       kind: "B2B",
       seatsWanted: 3,
-      quote: leadQuote({ kind: "B2B", plan: "LIBRARY", seats: 3 }),
+      quote: leadQuote({ kind: "B2B", seats: 3, selectedCoursesTiyn: [byn(600)] }),
     });
     expect(text).toContain("Мест меньше минимального пакета");
   });

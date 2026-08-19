@@ -5,7 +5,9 @@ import {
   byn,
   defaultCoursePriceTiyn,
   isPriceWithinRange,
+  entryPackTiyn,
   MIN_B2B_SEATS,
+  packRetailTiyn,
   quoteSeats,
   seatTier,
   SUBSCRIPTION_YEAR_TIYN,
@@ -72,6 +74,42 @@ describe("seatTier", () => {
     expect(seatTier(MIN_B2B_SEATS - 1)).toBeNull();
     expect(seatTier(1)).toBeNull();
     expect(seatTier(0)).toBeNull();
+  });
+});
+
+describe("packRetailTiyn", () => {
+  it("складывает цены набора и игнорирует пустые позиции", () => {
+    expect(packRetailTiyn([byn(590), byn(250), 0])).toBe(byn(840));
+    expect(packRetailTiyn([])).toBe(0);
+  });
+
+  it("не применяет пакетную скидку: в B2B её место занимает сетка мест", () => {
+    // Иначе скидки складываются и отдел уходит за половину каталога.
+    expect(packRetailTiyn([byn(590), byn(250)])).toBeGreaterThan(
+      bundlePriceTiyn([byn(590), byn(250)]),
+    );
+  });
+});
+
+describe("entryPackTiyn", () => {
+  const catalog = [
+    { priceTiyn: byn(590), audience: "SPECIALIZED" as const },
+    { priceTiyn: byn(350), audience: "SPECIALIZED" as const },
+    { priceTiyn: byn(250), audience: "EVERYONE" as const },
+  ];
+
+  it("самый дешёвый отраслевой курс плюс все общие", () => {
+    expect(entryPackTiyn(catalog)).toBe(byn(600));
+  });
+
+  it("без отраслевых курсов считает по общим", () => {
+    expect(entryPackTiyn([{ priceTiyn: byn(250), audience: "EVERYONE" }])).toBe(byn(250));
+  });
+
+  it("пустой каталог (пререндер без БД) даёт оценку по базовым ценам", () => {
+    expect(entryPackTiyn([])).toBe(
+      BASE_PRICE_TIYN.SPECIALIZED + BASE_PRICE_TIYN.EVERYONE,
+    );
   });
 });
 
