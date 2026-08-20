@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Check, Copy, KeyRound, Pause, Play, Trash2 } from "lucide-react";
 import {
   createOrgAdminAction,
+  resetOrgAdminPasswordAction,
   deleteOrgAction,
   grantLibraryAction,
   grantLicenseAction,
@@ -551,5 +552,80 @@ export function OrgDetailsForm({
         {saved ? <span className="text-sm text-emerald-700">Сохранено</span> : null}
       </div>
     </form>
+  );
+}
+
+/**
+ * Сброс пароля ответственного представителя. Новый пароль владелец передаёт
+ * клиенту лично — так же, как первый: писем в MVP нет, и это единственный путь
+ * вернуть доступ к кабинету, если пароль потерян.
+ */
+export function ResetOrgAdminPassword({
+  orgId,
+  userId,
+}: {
+  orgId: string;
+  userId: string;
+}) {
+  const router = useRouter();
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [password, setPassword] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  if (password) {
+    return (
+      <span className="inline-flex items-center gap-2 rounded-lg border border-emerald-600/30 bg-emerald-500/5 px-2.5 py-1">
+        <span className="font-mono text-sm">{password}</span>
+        <button
+          type="button"
+          aria-label="Скопировать пароль"
+          onClick={() => {
+            void navigator.clipboard.writeText(password).then(() => setCopied(true));
+          }}
+          className="text-foreground/50 hover:text-foreground"
+        >
+          {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+        </button>
+        <button
+          type="button"
+          onClick={() => setPassword(null)}
+          className="text-xs text-foreground/50 hover:underline"
+        >
+          скрыть
+        </button>
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <button
+        type="button"
+        disabled={pending}
+        onClick={async () => {
+          if (!window.confirm("Выдать новый временный пароль? Старый перестанет работать.")) return;
+          setPending(true);
+          setError(null);
+          try {
+            const res = await resetOrgAdminPasswordAction({ orgId, userId });
+            if (res.ok) {
+              setPassword(res.data.tempPassword);
+              router.refresh();
+            } else {
+              setError(res.error);
+            }
+          } catch {
+            setError("Не удалось отправить — попробуйте ещё раз.");
+          } finally {
+            setPending(false);
+          }
+        }}
+        className="text-xs text-foreground/50 hover:text-foreground hover:underline disabled:opacity-50"
+      >
+        {pending ? "сбрасываем…" : "сбросить пароль"}
+      </button>
+      {error ? <span className="text-xs text-red-600">{error}</span> : null}
+    </span>
   );
 }

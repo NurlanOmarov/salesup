@@ -7,6 +7,8 @@ import { db } from "@/lib/db";
 import { writeAdminLog } from "@/lib/admin/log";
 import { ACCESS_DURATIONS, computeExpiry } from "@/lib/admin/enrollment";
 import { createOrgAdmin } from "@/lib/org/service";
+import { generateTempPassword } from "@/lib/auth/temp-password";
+import { hashPassword } from "@/lib/auth/password";
 import { slugifyOrgName } from "@/lib/org/seats";
 import { enqueue } from "@/lib/jobs/enqueue";
 
@@ -374,5 +376,47 @@ export const createOrgAdminAction = safeAction(
 
     revalidatePath(`/admin/orgs/${input.orgId}`);
     return { userId, email: input.email.trim().toLowerCase(), tempPassword };
+  },
+);
+
+/**
+ * Выдать ответственному новый временный пароль. Первый пароль показывается один
+ * раз при назначении, и если он потерян, восстановить его неоткуда — учётка
+ * ORG_ADMIN заводится владельцем, а не самозаписью, и почтовой рассылки в MVP
+ * нет. Проверка членства обязательна: без неё сюда можно подставить чужой
+ * userId и сбросить пароль любому пользователю платформы.
+ */
+export const resetOrgAdminPasswordAction = safeAction(
+  {
+    schema: z.object({ orgId: z.string().min(1), userId: z.string().min(1) }),
+    auth: "owner",
+  },
+  async (input, { session }) => {
+    const membership = await db.orgMembership.findUnique({
+      where: { orgId_userId: { orgId: input.orgId, userId: input.userId } },
+      select: { role: true, user: { select: { email: true } } },
+    });
+    if (!membership || membership.role !== "ORG_ADMIN") {
+      throw new Error("Этот пользователь не назначен ответственным в организации");
+    }
+
+    const tempPassword = generateTempPassword();
+    await db.user.update({
+      where: { id: input.userId },
+      data: {
+        passwordHash: await hashPassword(tempPassword),
+        mustChangePassword: true,
+      },
+    });
+
+    await writeAdminLog({
+      actorId: session!.user.id,
+      action: "password.reset",
+      targetUserId: input.userId,
+      meta: { orgId: input.orgId, role: "ORG_ADMIN" },
+    });
+
+    revalidatePath(`/admin/orgs/${input.orgId}`);
+    return { tempPassword, email: membership.user.email ?? "" };
   },
 );

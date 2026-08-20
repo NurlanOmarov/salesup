@@ -12,6 +12,7 @@ import {
   OrgAdminForm,
   OrgDetailsForm,
   OrgStatusActions,
+  ResetOrgAdminPassword,
 } from "./org-manage";
 
 export const metadata: Metadata = {
@@ -245,6 +246,7 @@ export default async function OrgPage({
                         отключён
                       </span>
                     ) : null}
+                    <ResetOrgAdminPassword orgId={org.id} userId={a.user.id} />
                   </div>
                 </li>
               ))}
