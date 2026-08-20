@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { requireOrgAdmin } from "@/lib/org/guards";
 import { getOrgLicenses } from "@/lib/org/reports";
 import { isInviteUsable } from "@/lib/org/seats";
-import { InvitesManager, RevokeInviteButton } from "./invites-manager";
+import { InviteCodeCell, InvitesManager, RevokeInviteButton } from "./invites-manager";
 
 export const metadata: Metadata = {
   title: "Коды доступа",
@@ -50,7 +50,8 @@ export default async function InvitesPage({
   ]);
 
   const now = new Date();
-  const joinUrl = `${env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "")}/join`;
+  const siteUrl = env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "");
+  const joinUrl = `${siteUrl}/join`;
 
   return (
     <main>
@@ -90,6 +91,11 @@ export default async function InvitesPage({
         </li>
       </ol>
 
+      <p className="mt-2 max-w-2xl text-xs text-foreground/50">
+        Сотрудник потерял код? Найдите его в списке ниже, нажмите «показать» и
+        отправьте сообщение повторно — выдавать новый код не нужно.
+      </p>
+
       <div className="mt-6">
         <InvitesManager
           orgId={ctx.orgId}
@@ -99,7 +105,7 @@ export default async function InvitesPage({
             free: l.seats.free,
           }))}
           groups={groups}
-          siteUrl={env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "")}
+          siteUrl={siteUrl}
         />
       </div>
 
@@ -126,9 +132,8 @@ export default async function InvitesPage({
                   const usable = isInviteUsable(i, now);
                   return (
                     <tr key={i.id} className="border-b border-foreground/5 last:border-0">
-                      <td className="px-4 py-3 font-mono">
-                        {/* Код целиком показан только в момент создания. */}
-                        {i.code.slice(0, 3)}•••{i.code.slice(-2)}
+                      <td className="px-4 py-3">
+                        <InviteCodeCell code={i.code} siteUrl={siteUrl} usable={usable} />
                       </td>
                       <td className="px-4 py-3 text-foreground/70">
                         {i.createdAt.toLocaleDateString("ru-RU")}

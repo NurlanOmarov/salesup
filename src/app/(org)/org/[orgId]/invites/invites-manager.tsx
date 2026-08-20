@@ -7,6 +7,7 @@ import { createInvitesAction, revokeInviteAction } from "../../actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { inviteMessage, maskInviteCode } from "@/lib/org/invite-message";
 
 interface LicenseOption {
   id: string;
@@ -82,19 +83,8 @@ export function InvitesManager({
   }
 
   const joinUrl = `${siteUrl}/join`;
-  const loginUrl = `${siteUrl}/login`;
 
-  /**
-   * Готовое сообщение сотруднику. Раздача кодов — ручная операция клиента, и
-   * без такого текста ответственный каждый раз сочиняет инструкцию заново
-   * (и забывает про адрес входа, который понадобится со второго раза).
-   */
-  function messageFor(code: string): string {
-    return (
-      `Доступ к обучению: откройте ${joinUrl}, введите код ${code}, придумайте пароль. ` +
-      `На экране появится ваш логин — сохраните его, по нему вы будете входить дальше на ${loginUrl}`
-    );
-  }
+  const messageFor = (code: string) => inviteMessage({ code, siteUrl });
 
   function copy(text: string, key: string) {
     void navigator.clipboard.writeText(text).then(
@@ -305,6 +295,62 @@ export function RevokeInviteButton({
         отозвать
       </button>
       {error ? <span className="text-xs text-red-600">{error}</span> : null}
+    </span>
+  );
+}
+
+/**
+ * Код в списке выданных: по умолчанию под маской, целиком — по клику.
+ * Работник теряет код регулярно (переслали в чате и потеряли), а отзывать и
+ * выдавать новый ради этого незачем — код лежит в базе как есть. Маска нужна
+ * лишь от случайного взгляда через плечо и от скриншота всего списка.
+ */
+export function InviteCodeCell({
+  code,
+  siteUrl,
+  usable,
+}: {
+  code: string;
+  siteUrl: string;
+  usable: boolean;
+}) {
+  const [shown, setShown] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  if (!usable) return <span className="font-mono">{maskInviteCode(code)}</span>;
+
+  if (!shown) {
+    return (
+      <span className="inline-flex items-center gap-2">
+        <span className="font-mono">{maskInviteCode(code)}</span>
+        <button
+          type="button"
+          onClick={() => setShown(true)}
+          className="text-xs text-foreground/50 hover:text-foreground hover:underline"
+        >
+          показать
+        </button>
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center gap-2">
+      <span className="font-mono">{code}</span>
+      <button
+        type="button"
+        title="Скопировать сообщение для сотрудника"
+        onClick={() => {
+          void navigator.clipboard.writeText(inviteMessage({ code, siteUrl })).then(() => {
+            setCopied(true);
+            window.setTimeout(() => setCopied(false), 2500);
+          });
+        }}
+        className="text-foreground/45 hover:text-foreground"
+      >
+        {copied ? <Check className="size-4 text-emerald-600" /> : <Copy className="size-4" />}
+        <span className="sr-only">Скопировать сообщение</span>
+      </button>
     </span>
   );
 }
