@@ -1,13 +1,18 @@
 import "server-only";
 import ExcelJS from "exceljs";
-import type { Dashboard } from "@/lib/analytics/dashboard";
+import type { Dashboard, SiteBreakdownRow } from "@/lib/analytics/dashboard";
 import { countryName } from "@/lib/analytics/format";
 
 /**
  * Экспорт дашборда в XLSX. Кириллица — из коробки (UTF-8). Несколько листов:
- * сводка KPI, по дням, курсы, страны, страницы, источники.
+ * сводка KPI, по дням, курсы, страны, страницы, источники (+ «По доменам»,
+ * когда выгрузка сделана без фильтра по домену).
  */
-export async function buildXlsx(d: Dashboard): Promise<Buffer> {
+export async function buildXlsx(
+  d: Dashboard,
+  siteLabel: string,
+  breakdown: SiteBreakdownRow[] | null,
+): Promise<Buffer> {
   const wb = new ExcelJS.Workbook();
   wb.creator = "ACTIVE SALES";
   wb.created = new Date();
@@ -22,9 +27,9 @@ export async function buildXlsx(d: Dashboard): Promise<Buffer> {
     { header: "Прошлый период", key: "p", width: 18 },
     { header: "Прирост, %", key: "d", width: 14 },
   ];
-  summary.spliceRows(1, 0, [`Аналитика ACTIVE SALES`], [`Период: ${periodLabel}`], []);
+  summary.spliceRows(1, 0, [`Аналитика ACTIVE SALES`], [`Домен: ${siteLabel}`], [`Период: ${periodLabel}`], []);
   summary.getRow(1).font = { bold: true, size: 14 };
-  styleHeader(summary.getRow(4));
+  styleHeader(summary.getRow(5));
   const kpiRows: [string, number, typeof d.kpis.visitors][] = [
     ["Посетители", d.kpis.visitors.value, d.kpis.visitors],
     ["Просмотры", d.kpis.views.value, d.kpis.views],
@@ -90,6 +95,20 @@ export async function buildXlsx(d: Dashboard): Promise<Buffer> {
   ];
   styleHeader(sources.getRow(1));
   for (const s of d.sources) sources.addRow({ ref: s.label, views: s.value });
+
+  // ——— По доменам (только когда выгрузка без фильтра — «Все домены») ———
+  if (breakdown) {
+    const bySite = wb.addWorksheet("По доменам");
+    bySite.columns = [
+      { header: "Домен", key: "label", width: 24 },
+      { header: "Посетители", key: "visitors", width: 14 },
+      { header: "Заявки", key: "leads", width: 12 },
+      { header: "Записи", key: "enrollments", width: 12 },
+      { header: "Конверсия, %", key: "conversion", width: 14 },
+    ];
+    styleHeader(bySite.getRow(1));
+    for (const r of breakdown) bySite.addRow(r);
+  }
 
   const arrayBuffer = await wb.xlsx.writeBuffer();
   return Buffer.from(arrayBuffer);

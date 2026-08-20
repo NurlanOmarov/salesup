@@ -22,6 +22,8 @@ export type PageViewInput = {
   ref: string | null;
   /** slug курса, если это страница /courses/<slug> — иначе null. */
   slug: string | null;
+  /** Домен запроса (SiteHost.code: "BY"|"KZ"|"RU") или null для неизвестного хоста. */
+  site: string | null;
 };
 
 export async function recordPageView(input: PageViewInput): Promise<void> {
@@ -34,6 +36,7 @@ export async function recordPageView(input: PageViewInput): Promise<void> {
         ...(input.country ? { country: input.country } : {}),
         ...(input.ref ? { ref: input.ref } : {}),
         ...(input.slug ? { slug: input.slug } : {}),
+        ...(input.site ? { site: input.site } : {}),
       },
     },
   });

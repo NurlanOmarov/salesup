@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Check, Copy } from "lucide-react";
 import { createStudentAction } from "../actions";
 import { ACCESS_DURATIONS, ACCESS_DURATION_LABELS } from "@/lib/admin/enrollment";
+import { SITE_HOSTS } from "@/lib/seo/site-hosts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,10 +28,12 @@ export function CreateStudentForm({
   courses,
   defaultName,
   defaultEmail,
+  defaultSite,
 }: {
   courses: CourseOption[];
   defaultName?: string;
   defaultEmail?: string;
+  defaultSite?: string;
 }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,6 +42,7 @@ export function CreateStudentForm({
   const [copied, setCopied] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [accessDuration, setAccessDuration] = useState("");
+  const [site, setSite] = useState(defaultSite ?? SITE_HOSTS[0].code);
 
   // Какие сроки принесут выбранные курсы, если не переопределять вручную.
   const chosenDurations = [
@@ -67,6 +71,7 @@ export function CreateStudentForm({
       industry: formData.get("industry"),
       courseIds: Array.from(selected),
       accessDuration: accessDuration || undefined,
+      site: selected.size > 0 ? site : undefined,
     });
     setPending(false);
     if (res.ok) {
@@ -186,6 +191,25 @@ export function CreateStudentForm({
                 </span>
               </label>
             ))}
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="site">Домен / рынок</Label>
+            <select
+              id="site"
+              value={site}
+              onChange={(e) => setSite(e.target.value)}
+              className="w-full rounded-md border border-foreground/15 bg-background px-3 py-2 text-sm"
+            >
+              {SITE_HOSTS.map((s) => (
+                <option key={s.code} value={s.code}>
+                  {s.country} ({s.code})
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-foreground/50">
+              К какому рынку относится ученик — используется только в аналитике
+              (докупить сможет любой курс независимо от домена).
+            </p>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="accessDuration">Срок доступа</Label>

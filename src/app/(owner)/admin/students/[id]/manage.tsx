@@ -10,6 +10,7 @@ import {
   setDeviceLimitAction,
 } from "../actions";
 import { ACCESS_DURATIONS, ACCESS_DURATION_LABELS } from "@/lib/admin/enrollment";
+import { SITE_HOSTS } from "@/lib/seo/site-hosts";
 import { Button } from "@/components/ui/button";
 
 /** Селект периода доступа. Пустое значение = по тарифу курса. */
@@ -40,6 +41,33 @@ function DurationSelect({
   );
 }
 
+/** Селект домена/рынка, к которому относится выдаваемый доступ (только для аналитики). */
+function DomainSelect({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      disabled={disabled}
+      className="rounded-md border border-foreground/15 bg-background px-2 py-2 text-sm"
+      aria-label="Домен / рынок"
+    >
+      {SITE_HOSTS.map((s) => (
+        <option key={s.code} value={s.code}>
+          {s.code}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 interface EnrollmentView {
   courseId: string;
   title: string;
@@ -56,14 +84,17 @@ export function EnrollmentManager({
   userId,
   enrollments,
   grantable,
+  defaultSite,
 }: {
   userId: string;
   enrollments: EnrollmentView[];
   grantable: CourseOption[];
+  defaultSite: string;
 }) {
   const [pending, start] = useTransition();
   const [selected, setSelected] = useState("");
   const [duration, setDuration] = useState("");
+  const [site, setSite] = useState(defaultSite);
 
   return (
     <section className="rounded-2xl border border-foreground/10 bg-background p-5">
@@ -74,7 +105,14 @@ export function EnrollmentManager({
       ) : (
         <ul className="mt-3 divide-y divide-foreground/5">
           {enrollments.map((e) => (
-            <EnrollmentRow key={e.courseId} userId={userId} enrollment={e} pending={pending} start={start} />
+            <EnrollmentRow
+              key={e.courseId}
+              userId={userId}
+              enrollment={e}
+              pending={pending}
+              start={start}
+              defaultSite={defaultSite}
+            />
           ))}
         </ul>
       )}
@@ -94,6 +132,7 @@ export function EnrollmentManager({
             ))}
           </select>
           <DurationSelect value={duration} onChange={setDuration} disabled={pending} />
+          <DomainSelect value={site} onChange={setSite} disabled={pending} />
           <Button
             variant="accent"
             size="sm"
@@ -104,6 +143,7 @@ export function EnrollmentManager({
                   userId,
                   courseId: selected,
                   accessDuration: duration || undefined,
+                  site,
                 });
                 setSelected("");
                 setDuration("");
@@ -124,13 +164,16 @@ function EnrollmentRow({
   enrollment: e,
   pending,
   start,
+  defaultSite,
 }: {
   userId: string;
   enrollment: EnrollmentView;
   pending: boolean;
   start: (cb: () => Promise<void>) => void;
+  defaultSite: string;
 }) {
   const [duration, setDuration] = useState("");
+  const [site, setSite] = useState(defaultSite);
 
   return (
     <li className="flex flex-wrap items-center justify-between gap-3 py-2.5">
@@ -158,6 +201,7 @@ function EnrollmentRow({
       ) : (
         <div className="flex items-center gap-2">
           <DurationSelect value={duration} onChange={setDuration} disabled={pending} />
+          <DomainSelect value={site} onChange={setSite} disabled={pending} />
           <Button
             variant="outline"
             size="sm"
@@ -168,6 +212,7 @@ function EnrollmentRow({
                   userId,
                   courseId: e.courseId,
                   accessDuration: duration || undefined,
+                  site,
                 });
               })
             }

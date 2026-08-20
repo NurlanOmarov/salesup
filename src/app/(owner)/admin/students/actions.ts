@@ -8,6 +8,7 @@ import { hashPassword } from "@/lib/auth/password";
 import { generateTempPassword } from "@/lib/auth/temp-password";
 import { writeAdminLog } from "@/lib/admin/log";
 import { computeExpiry, ACCESS_DURATIONS } from "@/lib/admin/enrollment";
+import { SITE_HOSTS } from "@/lib/seo/site-hosts";
 
 /**
  * Управление учениками и доступами (S5.1). Все действия — только OWNER (safeAction),
@@ -19,6 +20,9 @@ const emailSchema = z.string().email("Введите корректный e-mail
 /** Период доступа, выбранный админом. Опционален — без него берётся тариф курса (accessDuration). */
 const accessDurationSchema = z.enum(ACCESS_DURATIONS).optional();
 
+/** Домен/рынок (SiteHost.code), к которому относится выдаваемый доступ — для аналитики по доменам. */
+const siteSchema = z.enum(SITE_HOSTS.map((s) => s.code) as [string, ...string[]]).optional();
+
 /** Создать ученика и сразу выдать доступы к выбранным курсам. Возвращает временный пароль (показать один раз). */
 export const createStudentAction = safeAction(
   {
@@ -29,10 +33,11 @@ export const createStudentAction = safeAction(
       industry: z.string().trim().optional(),
       courseIds: z.array(z.string()).default([]),
       accessDuration: accessDurationSchema,
+      site: siteSchema,
     }),
     auth: "owner",
   },
-  async ({ email, name, phone, industry, courseIds, accessDuration }, { session }) => {
+  async ({ email, name, phone, industry, courseIds, accessDuration, site }, { session }) => {
     const actorId = session!.user.id;
 
     const existing = await db.user.findUnique({ where: { email }, select: { id: true } });
@@ -70,6 +75,7 @@ export const createStudentAction = safeAction(
             source: "MANUAL",
             startsAt: now,
             expiresAt: computeExpiry(accessDuration ?? c.accessDuration, now),
+            site: site ?? null,
           },
         });
       }
@@ -97,10 +103,11 @@ export const grantEnrollmentAction = safeAction(
       userId: z.string().min(1),
       courseId: z.string().min(1),
       accessDuration: accessDurationSchema,
+      site: siteSchema,
     }),
     auth: "owner",
   },
-  async ({ userId, courseId, accessDuration }, { session }) => {
+  async ({ userId, courseId, accessDuration, site }, { session }) => {
     const course = await db.course.findUnique({
       where: { id: courseId },
       select: { accessDuration: true },
@@ -118,12 +125,14 @@ export const grantEnrollmentAction = safeAction(
         source: "MANUAL",
         startsAt: now,
         expiresAt,
+        site: site ?? null,
       },
       // повторная выдача снимает прежний отзыв и продлевает от текущего момента
       update: {
         revokedAt: null,
         startsAt: now,
         expiresAt,
+        site: site ?? null,
       },
     });
 

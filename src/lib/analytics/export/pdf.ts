@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { PDFDocument, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
-import type { Dashboard } from "@/lib/analytics/dashboard";
+import type { Dashboard, SiteBreakdownRow } from "@/lib/analytics/dashboard";
 import { countryName, fmtInt, fmtPct, fmtDelta } from "@/lib/analytics/format";
 
 /**
@@ -23,7 +23,11 @@ const MARGIN = 40;
 const PAGE_W = 595;
 const PAGE_H = 842;
 
-export async function buildPdf(d: Dashboard): Promise<Uint8Array> {
+export async function buildPdf(
+  d: Dashboard,
+  siteLabel: string,
+  breakdown: SiteBreakdownRow[] | null,
+): Promise<Uint8Array> {
   const [regular, bold] = await Promise.all([
     readFile(join(FONT_DIR, "Roboto-Regular.ttf")),
     readFile(join(FONT_DIR, "Roboto-Bold.ttf")),
@@ -41,7 +45,7 @@ export async function buildPdf(d: Dashboard): Promise<Uint8Array> {
   ctx.y -= 22;
   ctx.text("Отчёт по аналитике", MARGIN, ctx.y, 22, fontBold, DARK);
   ctx.y -= 18;
-  ctx.text(`Период: ${d.range.from} — ${d.range.to}`, MARGIN, ctx.y, 10, font, GRAY);
+  ctx.text(`Домен: ${siteLabel} · Период: ${d.range.from} — ${d.range.to}`, MARGIN, ctx.y, 10, font, GRAY);
   ctx.y -= 24;
 
   // KPI-таблица
@@ -80,6 +84,16 @@ export async function buildPdf(d: Dashboard): Promise<Uint8Array> {
       [255, 130, 130],
     );
   } else ctx.muted("Нет данных за период.");
+
+  // По доменам (только когда выгрузка без фильтра — «Все домены»)
+  if (breakdown) {
+    ctx.heading("По доменам");
+    ctx.table(
+      ["Домен", "Посетители", "Заявки", "Записи", "Конв."],
+      breakdown.map((r) => [r.label, fmtInt(r.visitors), fmtInt(r.leads), fmtInt(r.enrollments), fmtPct(r.conversion)]),
+      [215, 90, 90, 90, 90],
+    );
+  }
 
   // Источники
   ctx.heading("Источники трафика");

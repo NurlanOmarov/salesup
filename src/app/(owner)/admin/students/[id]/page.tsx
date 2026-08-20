@@ -4,6 +4,8 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { db } from "@/lib/db";
 import { isEnrollmentActive } from "@/lib/access";
+import { currentSite } from "@/lib/seo/site";
+import { DEFAULT_SITE } from "@/lib/seo/site-hosts";
 import { EnrollmentManager, DangerZone, DeviceLimitForm } from "./manage";
 
 export const metadata: Metadata = {
@@ -51,7 +53,7 @@ export default async function StudentPage({
   });
   if (!student) notFound();
 
-  const [allCourses, logs] = await Promise.all([
+  const [allCourses, logs, site] = await Promise.all([
     db.course.findMany({
       where: { status: "PUBLISHED" },
       orderBy: { sortOrder: "asc" },
@@ -63,6 +65,7 @@ export default async function StudentPage({
       take: 20,
       select: { id: true, action: true, createdAt: true },
     }),
+    currentSite(),
   ]);
 
   const enrolledIds = new Set(student.enrollments.map((e) => e.courseId));
@@ -133,7 +136,12 @@ export default async function StudentPage({
       </dl>
 
       <div className="mt-6 grid gap-5 lg:grid-cols-2">
-        <EnrollmentManager userId={student.id} enrollments={enrollments} grantable={grantable} />
+        <EnrollmentManager
+          userId={student.id}
+          enrollments={enrollments}
+          grantable={grantable}
+          defaultSite={site?.code ?? DEFAULT_SITE.code}
+        />
         <DangerZone userId={student.id} blocked={!!student.deletedAt} />
         <DeviceLimitForm userId={student.id} deviceLimit={student.deviceLimit} />
       </div>

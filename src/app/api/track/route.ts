@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { clientIp, countryFromIp } from "@/lib/analytics/geo";
 import { recordPageView } from "@/lib/analytics/collect";
-import { isOwnHost } from "@/lib/seo/site";
+import { currentSite, isOwnHost } from "@/lib/seo/site";
 
 // geoip-lite — нативная работа с файлами баз, только Node-рантайм (не edge).
 export const runtime = "nodejs";
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
     if (!parsed.success) return new NextResponse(null, { status: 204 });
 
     const { path, v, ref } = parsed.data;
-    const country = await countryFromIp(clientIp(request.headers));
+    const [country, site] = await Promise.all([countryFromIp(clientIp(request.headers)), currentSite()]);
 
     await recordPageView({
       path,
@@ -54,6 +54,7 @@ export async function POST(request: Request) {
       country,
       ref: externalRefHost(ref),
       slug: courseSlug(path),
+      site: site?.code ?? null,
     });
   } catch {
     // проглатываем — аналитика не критична

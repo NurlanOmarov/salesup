@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { db } from "@/lib/db";
+import { currentSite } from "@/lib/seo/site";
+import { DEFAULT_SITE } from "@/lib/seo/site-hosts";
 import { CreateStudentForm } from "./create-student-form";
 
 export const metadata: Metadata = {
@@ -17,6 +19,7 @@ export default async function NewStudentPage({
   searchParams: Promise<{ name?: string; email?: string }>;
 }) {
   const { name, email } = await searchParams;
+  const site = await currentSite();
   const courses = await db.course.findMany({
     where: { status: "PUBLISHED" },
     orderBy: { sortOrder: "asc" },
@@ -45,7 +48,12 @@ export default async function NewStudentPage({
       </p>
 
       <div className="mt-6">
-        <CreateStudentForm courses={courses} defaultName={name} defaultEmail={email} />
+        <CreateStudentForm
+          courses={courses}
+          defaultName={name}
+          defaultEmail={email}
+          defaultSite={site?.code ?? DEFAULT_SITE.code}
+        />
       </div>
     </main>
   );

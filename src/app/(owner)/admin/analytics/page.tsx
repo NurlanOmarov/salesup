@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { BarChart3, ExternalLink } from "lucide-react";
-import { getDashboard } from "@/lib/analytics/dashboard";
+import { getDashboard, getSiteBreakdown } from "@/lib/analytics/dashboard";
 import { resolveRange } from "@/lib/analytics/range";
+import { resolveSite } from "@/lib/analytics/site-filter";
 import { fmtInt, fmtPct } from "@/lib/analytics/format";
 import { Panel } from "@/components/admin/analytics/panel";
 import { StatCard } from "@/components/admin/analytics/stat-card";
@@ -11,6 +12,8 @@ import { CountryList } from "@/components/admin/analytics/country-list";
 import { BarList, SourceLabel } from "@/components/admin/analytics/bar-list";
 import { Funnel } from "@/components/admin/analytics/funnel";
 import { PeriodControls } from "@/components/admin/analytics/period-controls";
+import { SiteSwitch } from "@/components/admin/analytics/site-switch";
+import { SiteBreakdown } from "@/components/admin/analytics/site-breakdown";
 import { ExportMenu } from "@/components/admin/analytics/export-menu";
 
 export const metadata: Metadata = {
@@ -40,16 +43,20 @@ type SP = Record<string, string | string[] | undefined>;
 
 export default async function AnalyticsPage({ searchParams }: { searchParams: Promise<SP> }) {
   const sp = await searchParams;
-  const { from, to, range, compare } = await resolveRange((k) => {
+  const getParam = (k: string) => {
     const v = sp[k];
     return typeof v === "string" ? v : null;
-  });
-  const d = await getDashboard(from, to, compare);
+  };
+  const { from, to, range, compare } = await resolveRange(getParam);
+  const { site } = resolveSite(getParam);
+  const d = await getDashboard(from, to, compare, site);
+  const breakdown = site === null ? await getSiteBreakdown(from, to) : null;
 
   const exportParams = new URLSearchParams({
     range,
     compare: compare ? "1" : "0",
     ...(range === "custom" ? { from: d.range.from, to: d.range.to } : {}),
+    ...(site !== null ? { site } : {}),
   }).toString();
 
   return (
@@ -68,9 +75,12 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
         <ExportMenu params={exportParams} />
       </div>
 
-      {/* Управление периодом */}
+      {/* Управление доменом и периодом */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <PeriodControls activeRange={range} from={d.range.from} to={d.range.to} compare={compare} />
+        <div className="flex flex-wrap items-center gap-2">
+          <SiteSwitch active={site} />
+          <PeriodControls activeRange={range} from={d.range.from} to={d.range.to} compare={compare} />
+        </div>
         <div className="flex items-center gap-2">
           <span className="hidden text-xs text-foreground/40 sm:inline">Источники и кампании:</span>
           {EXTERNAL_ANALYTICS.map((s) => (
@@ -87,6 +97,13 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
           ))}
         </div>
       </div>
+
+      {/* Сводка по доменам — только в режиме «Все домены» */}
+      {breakdown ? (
+        <Panel title="По доменам" subtitle="Клик по строке переключает дашборд на этот домен">
+          <SiteBreakdown rows={breakdown} />
+        </Panel>
+      ) : null}
 
       {/* KPI */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
@@ -111,7 +128,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
         >
           <CoursePopularityTable courses={d.courses} />
         </Panel>
-        <Panel title="География" subtitle="Страны посетителей (по IP, без хранения IP)">
+        <Panel title="География" subtitle="Страны посетителей по IP — не то же самое, что выбранный домен">
           <CountryList items={d.countries} />
         </Panel>
       </div>

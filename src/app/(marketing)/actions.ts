@@ -8,6 +8,7 @@ import { enqueue } from "@/lib/jobs/enqueue";
 import { leadTelegramText, ownerLeadEmail } from "@/lib/leads/notify";
 import { leadQuote } from "@/lib/leads/quote";
 import { acceptedLegalVersion } from "@/lib/legal/version";
+import { currentSite } from "@/lib/seo/site";
 
 const schema = z.object({
   name: z.string().trim().max(120).optional().or(z.literal("")),
@@ -113,6 +114,8 @@ export async function createLeadAction(
         selectedCoursesTiyn,
       });
 
+  const site = await currentSite();
+
   const lead = await db.lead.create({
     data: {
       name: name || null,
@@ -130,6 +133,7 @@ export async function createLeadAction(
       // Доказательство согласия: момент + принятая редакция документов.
       consentAt: new Date(),
       consentVersion: await acceptedLegalVersion(),
+      site: site?.code ?? null,
     },
     select: { id: true, createdAt: true },
   });

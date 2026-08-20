@@ -525,6 +525,11 @@ model Enrollment {
   /// автоматически снятые доступы и не воскресило отозванные вручную.
   /// lib/access.ts это поле НЕ читает — доступ по-прежнему решает revokedAt.
   revokedReason String?
+  /// Домен/рынок (SiteHost.code: "BY"|"KZ"|"RU"), к которому относится доступ —
+  /// выбирает админ явно при выдаче (см. lib/seo/site-hosts.ts). Взять из сессии
+  /// нельзя: сессия админа не привязана к рынку студента. null — доступ выдан
+  /// до внедрения разметки по доменам (docs/MULTI-DOMAIN-PLAN.md).
+  site          String?
   user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   course        Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
   license       OrgLicense?      @relation(fields: [licenseId], references: [id], onDelete: SetNull)
@@ -532,6 +537,7 @@ model Enrollment {
   @@unique([userId, courseId])
   @@index([courseId])
   @@index([licenseId])
+  @@index([site, startsAt])
 }
 
 enum OrderStatus {
@@ -1162,10 +1168,15 @@ model Lead {
   // момент и версия редакции политики. IP/user-agent не храним (правило 9).
   consentAt         DateTime?
   consentVersion    String?
+  /// Домен/рынок (SiteHost.code: "BY"|"KZ"|"RU"), с которого отправлена заявка —
+  /// определяется автоматически по Host запроса (lib/seo/site.ts currentSite()).
+  /// null — заявка до внедрения разметки по доменам.
+  site              String?
   createdAt         DateTime   @default(now())
   updatedAt         DateTime   @updatedAt
 
   @@index([status, createdAt])
+  @@index([site, createdAt])
 }
 
 // Журнал действий владельца: каждая выдача/отзыв доступа, сброс пароля, возврат
