@@ -397,10 +397,6 @@ export default async function CoursePage({
                 <ul className="mt-5 space-y-1.5 border-t border-white/10 pt-4 text-sm text-white/60">
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="size-3.5 text-amber-400" />
-                    {t.course.lifetime}
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="size-3.5 text-amber-400" />
                     AI-наставник 24/7
                   </li>
                   <li className="flex items-center gap-2">
