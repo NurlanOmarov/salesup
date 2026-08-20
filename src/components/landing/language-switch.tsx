@@ -24,10 +24,10 @@ export function LanguageSwitch({ locales }: { locales: readonly Locale[] }) {
 
   return (
     <div
-      className="flex items-center gap-1 rounded-full border border-white/15 p-0.5 text-xs"
+      className="flex shrink-0 items-center gap-1 rounded-full border border-white/15 p-0.5 text-xs"
       aria-label={t.language.label}
     >
-      <Languages className="ml-1.5 size-3.5 text-white/50" aria-hidden />
+      <Languages className="ml-1.5 hidden size-3.5 text-white/50 sm:block" aria-hidden />
       {LOCALES.filter((l) => locales.includes(l)).map((l) => (
         <a
           key={l}
@@ -36,8 +36,8 @@ export function LanguageSwitch({ locales }: { locales: readonly Locale[] }) {
           aria-current={l === current ? "true" : undefined}
           className={
             l === current
-              ? "rounded-full bg-white/15 px-2 py-1 font-semibold text-white"
-              : "rounded-full px-2 py-1 text-white/60 transition-colors hover:text-white"
+              ? "rounded-full bg-white/15 px-1.5 py-1 font-semibold text-white sm:px-2"
+              : "rounded-full px-1.5 py-1 text-white/60 transition-colors hover:text-white sm:px-2"
           }
         >
           {l === "kk" ? "ҚАЗ" : "РУС"}

@@ -16,23 +16,23 @@ export async function SiteHeader() {
   const locales = localesForHost(h.get("x-forwarded-host") ?? h.get("host"));
   return (
     <header className="sticky top-0 z-40 border-b border-white/10 bg-slate-950/85 text-white backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
-        <Link href="/" className="flex items-center gap-2.5">
-          <Image src="/logo.png" alt="" width={36} height={36} className="size-9" priority />
-          <span className="flex flex-col leading-tight">
+      <div className="mx-auto flex min-h-16 max-w-6xl items-center justify-between gap-2 px-4 py-2">
+        <Link href="/" className="flex min-w-0 items-center gap-2.5">
+          <Image src="/logo.png" alt="" width={36} height={36} className="size-9 shrink-0" priority />
+          <span className="flex min-w-0 flex-col leading-tight">
             <span className="text-lg font-bold tracking-tight text-brand">ACTIVE SALES</span>
-            <span className="text-[11px] font-medium text-white/60">
+            <span className="hidden truncate text-[11px] font-medium text-white/60 sm:block">
               {t.header.tagline}
             </span>
           </span>
         </Link>
-        <nav className="flex items-center gap-2 sm:gap-4">
+        <nav className="flex shrink-0 items-center gap-2 sm:gap-4">
           {/* Регистр «Себе | Команде» — ссылки на / и /business (обе версии
               индексируются). Доступен с любой страницы, поэтому живёт в шапке. */}
           <AudienceSwitch onDark className="hidden sm:inline-flex" />
           <Link
             href="/courses"
-            className="px-2 text-sm font-medium text-white/70 transition-colors hover:text-white"
+            className="px-1.5 text-sm font-medium whitespace-nowrap text-white/70 transition-colors hover:text-white sm:px-2"
           >
             {t.header.courses}
           </Link>
