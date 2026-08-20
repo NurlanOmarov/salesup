@@ -34,7 +34,9 @@ export function InvitesManager({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [codes, setCodes] = useState<string[]>([]);
-  const [copied, setCopied] = useState(false);
+  // Что именно скопировано последним кликом: список кодов, все сообщения или
+  // сообщение конкретного кода — чтобы галочка загоралась ровно на своей кнопке.
+  const [copied, setCopied] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(
     new Set(licenses.map((l) => l.id)),
   );
@@ -80,6 +82,29 @@ export function InvitesManager({
   }
 
   const joinUrl = `${siteUrl}/join`;
+  const loginUrl = `${siteUrl}/login`;
+
+  /**
+   * Готовое сообщение сотруднику. Раздача кодов — ручная операция клиента, и
+   * без такого текста ответственный каждый раз сочиняет инструкцию заново
+   * (и забывает про адрес входа, который понадобится со второго раза).
+   */
+  function messageFor(code: string): string {
+    return (
+      `Доступ к обучению: откройте ${joinUrl}, введите код ${code}, придумайте пароль. ` +
+      `На экране появится ваш логин — сохраните его, по нему вы будете входить дальше на ${loginUrl}`
+    );
+  }
+
+  function copy(text: string, key: string) {
+    void navigator.clipboard.writeText(text).then(
+      () => {
+        setCopied(key);
+        window.setTimeout(() => setCopied((c) => (c === key ? null : c)), 2500);
+      },
+      () => setError("Браузер не дал скопировать — выделите текст вручную."),
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -174,19 +199,32 @@ export function InvitesManager({
             <p className="font-semibold text-emerald-800">
               Готово: {codes.length} {codes.length === 1 ? "код" : "кодов"}
             </p>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => {
-                  void navigator.clipboard.writeText(
-                    codes.map((c) => `${c} — ${joinUrl}`).join("\n"),
-                  );
-                  setCopied(true);
-                }}
+                onClick={() =>
+                  copy(codes.map((c) => messageFor(c)).join("\n\n"), "messages")
+                }
               >
-                {copied ? <Check className="mr-1.5 size-4" /> : <Copy className="mr-1.5 size-4" />}
-                Скопировать
+                {copied === "messages" ? (
+                  <Check className="mr-1.5 size-4" />
+                ) : (
+                  <Copy className="mr-1.5 size-4" />
+                )}
+                Текст для рассылки
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => copy(codes.map((c) => `${c} — ${joinUrl}`).join("\n"), "codes")}
+              >
+                {copied === "codes" ? (
+                  <Check className="mr-1.5 size-4" />
+                ) : (
+                  <Copy className="mr-1.5 size-4" />
+                )}
+                Только коды
               </Button>
               <Button variant="outline" size="sm" onClick={() => window.print()}>
                 <Printer className="mr-1.5 size-4" />
@@ -196,16 +234,32 @@ export function InvitesManager({
           </div>
 
           <p className="mt-2 text-sm text-foreground/70">
-            Раздайте сотрудникам код и адрес{" "}
-            <span className="font-mono text-foreground/90">{joinUrl}</span>. Коды
-            показываются полностью только сейчас — позже в списке будет видна лишь
-            их часть.
+            «Текст для рассылки» копирует готовые сообщения — по одному на код,
+            каждое с адресом и инструкцией. Отправьте каждому сотруднику своё:
+            код одноразовый. Коды показываются полностью только сейчас — позже в
+            списке будет видна лишь их часть.
           </p>
 
-          <ul className="mt-3 grid gap-1.5 font-mono text-sm sm:grid-cols-3">
+          <ul className="mt-3 grid gap-1.5 text-sm sm:grid-cols-3">
             {codes.map((c) => (
-              <li key={c} className="rounded-lg border border-foreground/10 bg-background px-3 py-2">
-                {c}
+              <li
+                key={c}
+                className="flex items-center justify-between gap-2 rounded-lg border border-foreground/10 bg-background px-3 py-2"
+              >
+                <span className="font-mono">{c}</span>
+                <button
+                  type="button"
+                  onClick={() => copy(messageFor(c), c)}
+                  title="Скопировать сообщение для сотрудника"
+                  className="shrink-0 text-foreground/45 hover:text-foreground"
+                >
+                  {copied === c ? (
+                    <Check className="size-4 text-emerald-600" />
+                  ) : (
+                    <Copy className="size-4" />
+                  )}
+                  <span className="sr-only">Скопировать сообщение</span>
+                </button>
               </li>
             ))}
           </ul>
