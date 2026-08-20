@@ -7,6 +7,7 @@ import { getOrgMembers, getOrgOverview } from "@/lib/org/reports";
 import { ACCESS_DURATION_LABELS } from "@/lib/admin/enrollment";
 import { OrgStatusBadge, ProgressBar, relativeDays, SeatsBar } from "../org-ui";
 import {
+  DeleteOrgAction,
   LicenseForm,
   OrgAdminForm,
   OrgDetailsForm,
@@ -109,6 +110,10 @@ export default async function OrgPage({
             Открыть кабинет клиента
           </Link>
           <OrgStatusActions orgId={org.id} status={org.status} />
+          <DeleteOrgAction
+            orgId={org.id}
+            canDelete={overview.licenses.length === 0 && overview.activeMembers === 0 && admins.length === 0}
+          />
         </div>
       </div>
 

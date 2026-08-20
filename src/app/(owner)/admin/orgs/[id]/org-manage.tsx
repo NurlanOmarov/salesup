@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Copy, KeyRound, Pause, Play } from "lucide-react";
+import { Check, Copy, KeyRound, Pause, Play, Trash2 } from "lucide-react";
 import {
   createOrgAdminAction,
+  deleteOrgAction,
   grantLibraryAction,
   grantLicenseAction,
   setOrgStatusAction,
@@ -93,6 +94,53 @@ export function OrgStatusActions({
           В архив
         </Button>
       ) : null}
+      {error ? <span className="text-xs text-red-600">{error}</span> : null}
+    </div>
+  );
+}
+
+/** Безвозвратное удаление — только для пустой карточки (см. deleteOrgAction). */
+export function DeleteOrgAction({
+  orgId,
+  canDelete,
+}: {
+  orgId: string;
+  canDelete: boolean;
+}) {
+  const router = useRouter();
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function remove() {
+    if (!window.confirm("Удалить организацию без возможности восстановления?")) return;
+    setPending(true);
+    setError(null);
+    try {
+      const res = await deleteOrgAction({ orgId });
+      if (res.ok) {
+        router.push("/admin/orgs");
+      } else {
+        setError(res.error);
+      }
+    } catch {
+      setError("Не удалось удалить — обновите страницу и попробуйте ещё раз.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col items-end gap-1">
+      <button
+        type="button"
+        onClick={remove}
+        disabled={pending || !canDelete}
+        title={canDelete ? "Удалить организацию" : "Нельзя удалить: есть лицензии или работники"}
+        className="inline-flex items-center gap-1.5 rounded-lg border border-foreground/15 px-3 py-1.5 text-sm text-foreground/50 transition-colors hover:border-red-400/60 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        <Trash2 className="size-4" />
+        Удалить
+      </button>
       {error ? <span className="text-xs text-red-600">{error}</span> : null}
     </div>
   );

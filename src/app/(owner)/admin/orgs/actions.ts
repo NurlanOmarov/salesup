@@ -148,6 +148,48 @@ export const setOrgStatusAction = safeAction(
 );
 
 /**
+ * Удалить организацию безвозвратно. Разрешено только для «пустой» карточки —
+ * без лицензий, работников и назначенных представителей: удаление организации с
+ * реальной историей не отзывает доступ автоматически (Enrollment переживает
+ * каскад через licenseId SetNull), так что это отдельная, более осторожная
+ * операция, которую здесь намеренно не делаем. На практике это чистит дубли/
+ * тестовые записи вроде тех, что оставляет повторный клик по «Создать» при сбое.
+ */
+export const deleteOrgAction = safeAction(
+  {
+    schema: z.object({ orgId: z.string().min(1) }),
+    auth: "owner",
+  },
+  async ({ orgId }, { session }) => {
+    const org = await db.organization.findUnique({
+      where: { id: orgId },
+      select: {
+        name: true,
+        slug: true,
+        _count: { select: { licenses: true, memberships: { where: { isActive: true } } } },
+      },
+    });
+    if (!org) throw new Error("Организация не найдена");
+    if (org._count.licenses > 0 || org._count.memberships > 0) {
+      throw new Error(
+        "Нельзя удалить: у организации есть лицензии или работники. Сначала отзовите их или заархивируйте организацию.",
+      );
+    }
+
+    await db.organization.delete({ where: { id: orgId } });
+
+    await writeAdminLog({
+      actorId: session!.user.id,
+      action: "org.delete",
+      meta: { orgId, name: org.name, slug: org.slug },
+    });
+
+    revalidatePath("/admin/orgs");
+    return { ok: true };
+  },
+);
+
+/**
  * Выдать лицензии сразу на все опубликованные курсы — модель «место в библиотеке»
  * (docs/PRICING-PLAN.md §8). Клиент покупает годовой доступ ко всей библиотеке, а
  * технически это набор лицензий: заводить их по одной руками бессмысленно.
