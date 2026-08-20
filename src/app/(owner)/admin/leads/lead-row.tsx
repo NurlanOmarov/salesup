@@ -2,7 +2,10 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { updateLeadAction } from "./actions";
+import { Trash2 } from "lucide-react";
+import { updateLeadAction, deleteLeadAction } from "./actions";
+import { countryFlag } from "@/lib/analytics/format";
+import { SITE_HOSTS } from "@/lib/seo/site-hosts";
 
 const STATUS_OPTIONS = [
   { value: "NEW", label: "Новая" },
@@ -33,6 +36,8 @@ export interface LeadView {
   plan: string | null;
   /** Дата и редакция принятого согласия на обработку ПДн; null — заявка до ввода отметки. */
   consent: string | null;
+  /** Домен, с которого пришла заявка (SiteHost.code); null — заявка до внедрения разметки по доменам. */
+  site: string | null;
 }
 
 function looksLikeEmail(s: string): boolean {
@@ -44,13 +49,38 @@ export function LeadRow({ lead }: { lead: LeadView }) {
   const [status, setStatus] = useState<Status>(lead.status);
   const [comment, setComment] = useState(lead.comment ?? "");
   const [saved, setSaved] = useState(false);
+  const [deleted, setDeleted] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const save = (nextStatus: Status, nextComment: string) =>
     start(async () => {
-      await updateLeadAction({ leadId: lead.id, status: nextStatus, comment: nextComment });
-      setSaved(true);
-      setTimeout(() => setSaved(false), 1500);
+      setActionError(null);
+      try {
+        await updateLeadAction({ leadId: lead.id, status: nextStatus, comment: nextComment });
+        setSaved(true);
+        setTimeout(() => setSaved(false), 1500);
+      } catch {
+        setActionError("Не удалось сохранить — попробуйте ещё раз.");
+      }
     });
+
+  const remove = () => {
+    if (!window.confirm("Удалить заявку без возможности восстановления?")) return;
+    start(async () => {
+      setActionError(null);
+      try {
+        const res = await deleteLeadAction({ leadId: lead.id });
+        if (res.ok) setDeleted(true);
+        else setActionError(res.error);
+      } catch {
+        setActionError("Не удалось удалить — попробуйте ещё раз.");
+      }
+    });
+  };
+
+  const site = lead.site ? SITE_HOSTS.find((s) => s.code === lead.site) : null;
+
+  if (deleted) return null;
 
   const isB2b = lead.kind === "B2B";
   const isOffline = lead.format === "OFFLINE";
@@ -125,7 +155,18 @@ export function LeadRow({ lead }: { lead: LeadView }) {
               : "Согласие на обработку ПДн не зафиксировано"}
           </p>
         </div>
-        <span className="text-xs text-foreground/40">{lead.createdAt}</span>
+        <div className="flex flex-col items-end gap-1.5">
+          <span className="text-xs text-foreground/40">{lead.createdAt}</span>
+          {site ? (
+            <span className="rounded-full bg-foreground/[0.06] px-2 py-0.5 text-xs font-medium text-foreground/60">
+              {countryFlag(site.code)} {site.code}
+            </span>
+          ) : (
+            <span className="text-xs text-foreground/30" title="Заявка до внедрения разметки по доменам">
+              без домена
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -168,6 +209,17 @@ export function LeadRow({ lead }: { lead: LeadView }) {
         )}
 
         {saved ? <span className="text-xs text-emerald-600">Сохранено</span> : null}
+        {actionError ? <span className="text-xs text-red-600">{actionError}</span> : null}
+
+        <button
+          type="button"
+          onClick={remove}
+          disabled={pending}
+          title="Удалить заявку"
+          className="ml-auto inline-flex items-center gap-1.5 rounded-md border border-foreground/15 px-2.5 py-1.5 text-sm text-foreground/50 transition-colors hover:border-red-400/60 hover:text-red-600 disabled:opacity-50"
+        >
+          <Trash2 className="size-4" />
+        </button>
       </div>
     </div>
   );

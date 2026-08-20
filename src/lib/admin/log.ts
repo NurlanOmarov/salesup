@@ -16,6 +16,7 @@ export type AdminAction =
   | "student.unblock"
   | "student.device_limit"
   | "lead.update"
+  | "lead.delete"
   | "course.update"
   | "course.cover"
   | "seo.settings.update"

@@ -32,3 +32,23 @@ export const updateLeadAction = safeAction(
     return { ok: true };
   },
 );
+
+/** Удаление заявки (спам, дубль, ошибка клиента). Только OWNER. */
+export const deleteLeadAction = safeAction(
+  {
+    schema: z.object({ leadId: z.string().min(1) }),
+    auth: "owner",
+  },
+  async ({ leadId }, { session }) => {
+    await db.lead.delete({ where: { id: leadId } });
+
+    await writeAdminLog({
+      actorId: session!.user.id,
+      action: "lead.delete",
+      meta: { leadId },
+    });
+
+    revalidatePath("/admin/leads");
+    return { ok: true };
+  },
+);

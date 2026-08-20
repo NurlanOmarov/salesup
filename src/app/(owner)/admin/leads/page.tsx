@@ -32,6 +32,7 @@ export default async function LeadsPage() {
       plan: true,
       quotedPerSeatTiyn: true,
       quotedTotalTiyn: true,
+      site: true,
     },
   });
 
@@ -65,6 +66,7 @@ export default async function LeadsPage() {
     message: l.message,
     status: l.status,
     comment: l.comment,
+    site: l.site,
     createdAt: l.createdAt.toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" }),
     // Отметка о согласии на обработку ПДн — доказательство по Закону № 99-З.
     consent: l.consentAt
