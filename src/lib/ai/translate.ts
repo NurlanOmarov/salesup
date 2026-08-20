@@ -38,8 +38,20 @@ export async function translateSegments(
       prompt: JSON.stringify({ segments: batch }),
     });
     const translated = result.translations ?? [];
-    // Защита от рассинхрона длины: дополняем/обрезаем до длины батча.
-    for (let j = 0; j < batch.length; j++) out.push(translated[j] ?? batch[j]!);
+    if (translated.length !== batch.length) {
+      // РАНЬШЕ здесь был молчаливый фолбэк на исходный русский текст под чужим
+      // языковым лейблом (translated[j] ?? batch[j]!) — если Haiku в батче на 40
+      // фраз обрезался по maxTokens и вернул меньше переводов, недостающие
+      // реплики публиковались как VALIDATED, хотя оставались русскими. На проде
+      // это дало 19 из 30 связок урок×язык в медпред-курсе с примесью русского,
+      // два урока — почти полностью нетронутыми (см. аудит 2026-08-19).
+      // Батч должен либо перевестись целиком, либо провалиться явно — вызывающий
+      // код (subs.ts) должен решать, ретраить или отметить дорожку FAILED.
+      throw new Error(
+        `translateSegments(${targetLang}): Haiku вернул ${translated.length} переводов вместо ${batch.length} — батч отклонён, а не дополнен исходником`,
+      );
+    }
+    out.push(...translated);
   }
 
   return out;
