@@ -50,6 +50,7 @@ export default async function InvitesPage({
   ]);
 
   const now = new Date();
+  const joinUrl = `${env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "")}/join`;
 
   return (
     <main>
@@ -59,6 +60,35 @@ export default async function InvitesPage({
         получает доступ к курсам. Ни фамилия, ни почта, ни телефон при этом не
         передаются — платформа знает его только под условным обозначением.
       </p>
+
+      <ol className="mt-5 max-w-2xl space-y-2 rounded-xl border border-foreground/10 bg-background p-4 text-sm text-foreground/75">
+        <li className="flex gap-2.5">
+          <span className="font-semibold text-foreground/50">1.</span>
+          <span>
+            Создайте коды ниже и раздайте их сотрудникам — в чате, письмом или на
+            бумаге.
+          </span>
+        </li>
+        <li className="flex gap-2.5">
+          <span className="font-semibold text-foreground/50">2.</span>
+          <span>
+            Сотрудник открывает{" "}
+            <span className="rounded bg-foreground/[0.06] px-1.5 py-0.5 font-mono text-foreground/90">
+              {joinUrl}
+            </span>
+            , вводит свой код и придумывает пароль.
+          </span>
+        </li>
+        <li className="flex gap-2.5">
+          <span className="font-semibold text-foreground/50">3.</span>
+          <span>
+            Платформа сразу выдаёт ему логин вида{" "}
+            <span className="font-mono text-foreground/90">{ctx.orgSlug}-0001</span> —
+            дальше он входит по нему на странице входа. Логины идут по порядку,
+            запоминать их вам не нужно: они видны на вкладке «Работники».
+          </span>
+        </li>
+      </ol>
 
       <div className="mt-6">
         <InvitesManager
