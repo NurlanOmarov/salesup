@@ -54,10 +54,15 @@ export function OrgStatusActions({
 
     setPending(true);
     setError(null);
-    const res = await setOrgStatusAction({ orgId, status: next });
-    setPending(false);
-    if (res.ok) router.refresh();
-    else setError(res.error);
+    try {
+      const res = await setOrgStatusAction({ orgId, status: next });
+      if (res.ok) router.refresh();
+      else setError(res.error);
+    } catch {
+      setError("Не удалось отправить форму — обновите страницу и попробуйте ещё раз.");
+    } finally {
+      setPending(false);
+    }
   }
 
   return (
@@ -128,28 +133,33 @@ export function LicenseForm({
     const priceByn = formData.get("priceByn");
     const priceTiyn = priceByn ? Math.round(Number(priceByn) * 100) : undefined;
 
-    const res =
-      mode === "library"
-        ? await grantLibraryAction({
-            orgId,
-            seatsTotal: formData.get("seatsTotal"),
-            accessDuration,
-            pricePerSeatTiyn: priceTiyn,
-            note: formData.get("note") || undefined,
-          })
-        : await grantLicenseAction({
-            orgId,
-            courseId,
-            seatsTotal: formData.get("seatsTotal"),
-            accessDuration,
-            priceTiyn,
-            note: formData.get("note") || undefined,
-          });
-    setPending(false);
-    if (res.ok) {
-      router.refresh();
-    } else {
-      setError(res.error);
+    try {
+      const res =
+        mode === "library"
+          ? await grantLibraryAction({
+              orgId,
+              seatsTotal: formData.get("seatsTotal"),
+              accessDuration,
+              pricePerSeatTiyn: priceTiyn,
+              note: formData.get("note") || undefined,
+            })
+          : await grantLicenseAction({
+              orgId,
+              courseId,
+              seatsTotal: formData.get("seatsTotal"),
+              accessDuration,
+              priceTiyn,
+              note: formData.get("note") || undefined,
+            });
+      if (res.ok) {
+        router.refresh();
+      } else {
+        setError(res.error);
+      }
+    } catch {
+      setError("Не удалось отправить форму — обновите страницу и попробуйте ещё раз.");
+    } finally {
+      setPending(false);
     }
   }
 
@@ -325,17 +335,22 @@ export function OrgAdminForm({ orgId }: { orgId: string }) {
   async function onSubmit(formData: FormData) {
     setPending(true);
     setError(null);
-    const res = await createOrgAdminAction({
-      orgId,
-      email: formData.get("email"),
-      name: formData.get("name") || undefined,
-    });
-    setPending(false);
-    if (res.ok) {
-      setCreated({ email: res.data.email, tempPassword: res.data.tempPassword });
-      router.refresh();
-    } else {
-      setError(res.error);
+    try {
+      const res = await createOrgAdminAction({
+        orgId,
+        email: formData.get("email"),
+        name: formData.get("name") || undefined,
+      });
+      if (res.ok) {
+        setCreated({ email: res.data.email, tempPassword: res.data.tempPassword });
+        router.refresh();
+      } else {
+        setError(res.error);
+      }
+    } catch {
+      setError("Не удалось отправить форму — обновите страницу и попробуйте ещё раз.");
+    } finally {
+      setPending(false);
     }
   }
 
@@ -431,20 +446,25 @@ export function OrgDetailsForm({
     setPending(true);
     setError(null);
     setSaved(false);
-    const res = await updateOrgAction({
-      orgId: org.id,
-      name: formData.get("name"),
-      unp: formData.get("unp") || undefined,
-      contactEmail: formData.get("contactEmail") || undefined,
-      contactNote: formData.get("contactNote") || undefined,
-      note: formData.get("note") || undefined,
-    });
-    setPending(false);
-    if (res.ok) {
-      setSaved(true);
-      router.refresh();
-    } else {
-      setError(res.error);
+    try {
+      const res = await updateOrgAction({
+        orgId: org.id,
+        name: formData.get("name"),
+        unp: formData.get("unp") || undefined,
+        contactEmail: formData.get("contactEmail") || undefined,
+        contactNote: formData.get("contactNote") || undefined,
+        note: formData.get("note") || undefined,
+      });
+      if (res.ok) {
+        setSaved(true);
+        router.refresh();
+      } else {
+        setError(res.error);
+      }
+    } catch {
+      setError("Не удалось отправить форму — обновите страницу и попробуйте ещё раз.");
+    } finally {
+      setPending(false);
     }
   }
 

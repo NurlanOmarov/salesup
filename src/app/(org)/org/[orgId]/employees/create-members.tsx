@@ -60,18 +60,23 @@ export function CreateMembers({
   async function onSubmit(formData: FormData) {
     setPending(true);
     setError(null);
-    const res = await createMembersAction({
-      orgId,
-      count: formData.get("count"),
-      licenseIds: [...selected],
-      groupId: groupId || undefined,
-    });
-    setPending(false);
-    if (res.ok) {
-      setCreated(res.data.members);
-      router.refresh();
-    } else {
-      setError(res.error);
+    try {
+      const res = await createMembersAction({
+        orgId,
+        count: formData.get("count"),
+        licenseIds: [...selected],
+        groupId: groupId || undefined,
+      });
+      if (res.ok) {
+        setCreated(res.data.members);
+        router.refresh();
+      } else {
+        setError(res.error);
+      }
+    } catch {
+      setError("Не удалось отправить форму — обновите страницу и попробуйте ещё раз.");
+    } finally {
+      setPending(false);
     }
   }
 

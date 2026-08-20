@@ -39,21 +39,29 @@ export function CreateOrgForm({
     setPending(true);
     setError(null);
     setFieldErrors({});
-    const res = await createOrgAction({
-      name: formData.get("name"),
-      slug: slug || undefined,
-      unp: formData.get("unp") || undefined,
-      contactEmail: formData.get("contactEmail") || undefined,
-      contactNote: formData.get("contactNote") || undefined,
-      note: formData.get("note") || undefined,
-    });
-    setPending(false);
-    if (res.ok) {
-      router.push(`/admin/orgs/${res.data.orgId}`);
-      router.refresh();
-    } else {
+    try {
+      const res = await createOrgAction({
+        name: formData.get("name"),
+        slug: slug || undefined,
+        unp: formData.get("unp") || undefined,
+        contactEmail: formData.get("contactEmail") || undefined,
+        contactNote: formData.get("contactNote") || undefined,
+        note: formData.get("note") || undefined,
+      });
+      if (res.ok) {
+        router.push(`/admin/orgs/${res.data.orgId}`);
+        router.refresh();
+        return;
+      }
       setError(res.error);
       if (res.fieldErrors) setFieldErrors(res.fieldErrors);
+    } catch {
+      // Сбой самого вызова экшена (не бизнес-ошибка внутри него) — например,
+      // сессия истекла и запрос перехватил редирект на /login. Без этого catch
+      // форма тихо зависала: без ошибки, без редиректа (баг из практики).
+      setError("Не удалось отправить форму — обновите страницу и попробуйте ещё раз.");
+    } finally {
+      setPending(false);
     }
   }
 

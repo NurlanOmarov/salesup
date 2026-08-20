@@ -64,21 +64,29 @@ export function CreateStudentForm({
     setPending(true);
     setError(null);
     setFieldErrors({});
-    const res = await createStudentAction({
-      email: formData.get("email"),
-      name: formData.get("name"),
-      phone: formData.get("phone"),
-      industry: formData.get("industry"),
-      courseIds: Array.from(selected),
-      accessDuration: accessDuration || undefined,
-      site: selected.size > 0 ? site : undefined,
-    });
-    setPending(false);
-    if (res.ok) {
-      setCreated(res.data);
-    } else {
-      setError(res.error);
-      if (res.fieldErrors) setFieldErrors(res.fieldErrors);
+    try {
+      const res = await createStudentAction({
+        email: formData.get("email"),
+        name: formData.get("name"),
+        phone: formData.get("phone"),
+        industry: formData.get("industry"),
+        courseIds: Array.from(selected),
+        accessDuration: accessDuration || undefined,
+        site: selected.size > 0 ? site : undefined,
+      });
+      if (res.ok) {
+        setCreated(res.data);
+      } else {
+        setError(res.error);
+        if (res.fieldErrors) setFieldErrors(res.fieldErrors);
+      }
+    } catch {
+      // Сбой самого вызова экшена (не бизнес-ошибка внутри него), например
+      // истёкшая сессия перехватила запрос редиректом — без catch форма тихо
+      // зависала без ошибки и без результата.
+      setError("Не удалось отправить форму — обновите страницу и попробуйте ещё раз.");
+    } finally {
+      setPending(false);
     }
   }
 

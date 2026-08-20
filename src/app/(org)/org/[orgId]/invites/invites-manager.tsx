@@ -57,20 +57,25 @@ export function InvitesManager({
     setPending(true);
     setError(null);
     setCodes([]);
-    const res = await createInvitesAction({
-      orgId,
-      licenseIds: [...selected],
-      groupId: groupId || undefined,
-      count: formData.get("count"),
-      maxUses: 1,
-      expiresInDays: formData.get("expiresInDays") || undefined,
-    });
-    setPending(false);
-    if (res.ok) {
-      setCodes(res.data.codes);
-      router.refresh();
-    } else {
-      setError(res.error);
+    try {
+      const res = await createInvitesAction({
+        orgId,
+        licenseIds: [...selected],
+        groupId: groupId || undefined,
+        count: formData.get("count"),
+        maxUses: 1,
+        expiresInDays: formData.get("expiresInDays") || undefined,
+      });
+      if (res.ok) {
+        setCodes(res.data.codes);
+        router.refresh();
+      } else {
+        setError(res.error);
+      }
+    } catch {
+      setError("Не удалось отправить форму — обновите страницу и попробуйте ещё раз.");
+    } finally {
+      setPending(false);
     }
   }
 
@@ -220,21 +225,32 @@ export function RevokeInviteButton({
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   return (
-    <button
-      type="button"
-      disabled={pending}
-      onClick={async () => {
-        if (!window.confirm("Отозвать код? По нему больше нельзя будет зарегистрироваться.")) return;
-        setPending(true);
-        const res = await revokeInviteAction({ orgId, inviteId });
-        setPending(false);
-        if (res.ok) router.refresh();
-      }}
-      className="text-xs text-red-600 hover:underline disabled:opacity-50"
-    >
-      отозвать
-    </button>
+    <span className="inline-flex items-center gap-1.5">
+      <button
+        type="button"
+        disabled={pending}
+        onClick={async () => {
+          if (!window.confirm("Отозвать код? По нему больше нельзя будет зарегистрироваться.")) return;
+          setPending(true);
+          setError(null);
+          try {
+            const res = await revokeInviteAction({ orgId, inviteId });
+            if (res.ok) router.refresh();
+            else setError(res.error);
+          } catch {
+            setError("Не удалось отправить — попробуйте ещё раз.");
+          } finally {
+            setPending(false);
+          }
+        }}
+        className="text-xs text-red-600 hover:underline disabled:opacity-50"
+      >
+        отозвать
+      </button>
+      {error ? <span className="text-xs text-red-600">{error}</span> : null}
+    </span>
   );
 }

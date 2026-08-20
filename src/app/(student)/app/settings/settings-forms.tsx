@@ -34,20 +34,25 @@ export function ProfileForm({ initial }: { initial: ProfileInitial }) {
     setError(null);
     setSaved(false);
     setFieldErrors({});
-    const res = await updateProfileAction({
-      name: formData.get("name"),
-      industry: formData.get("industry"),
-      position: formData.get("position"),
-      subtitleLang: formData.get("subtitleLang"),
-      weeklyGoal: formData.get("weeklyGoal"),
-    });
-    setPending(false);
-    if (res.ok) {
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2500);
-    } else {
-      setError(res.error);
-      if (res.fieldErrors) setFieldErrors(res.fieldErrors);
+    try {
+      const res = await updateProfileAction({
+        name: formData.get("name"),
+        industry: formData.get("industry"),
+        position: formData.get("position"),
+        subtitleLang: formData.get("subtitleLang"),
+        weeklyGoal: formData.get("weeklyGoal"),
+      });
+      if (res.ok) {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2500);
+      } else {
+        setError(res.error);
+        if (res.fieldErrors) setFieldErrors(res.fieldErrors);
+      }
+    } catch {
+      setError("Не удалось отправить форму — обновите страницу и попробуйте ещё раз.");
+    } finally {
+      setPending(false);
     }
   }
 
@@ -132,18 +137,23 @@ export function PasswordForm() {
     setPending(true);
     setError(null);
     setDone(false);
-    const res = await changeOwnPasswordAction({
-      currentPassword: formData.get("currentPassword"),
-      newPassword: formData.get("newPassword"),
-      confirmPassword: formData.get("confirmPassword"),
-    });
-    setPending(false);
-    if (res.ok) {
-      setDone(true);
-      (document.getElementById("password-form") as HTMLFormElement | null)?.reset();
-      setTimeout(() => setDone(false), 2500);
-    } else {
-      setError(res.error);
+    try {
+      const res = await changeOwnPasswordAction({
+        currentPassword: formData.get("currentPassword"),
+        newPassword: formData.get("newPassword"),
+        confirmPassword: formData.get("confirmPassword"),
+      });
+      if (res.ok) {
+        setDone(true);
+        (document.getElementById("password-form") as HTMLFormElement | null)?.reset();
+        setTimeout(() => setDone(false), 2500);
+      } else {
+        setError(res.error);
+      }
+    } catch {
+      setError("Не удалось отправить форму — обновите страницу и попробуйте ещё раз.");
+    } finally {
+      setPending(false);
     }
   }
 
