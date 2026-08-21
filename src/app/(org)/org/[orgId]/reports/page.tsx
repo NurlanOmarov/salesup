@@ -19,7 +19,7 @@ export const dynamic = "force-dynamic";
 /**
  * Отчётность по обучению (оферта /offer-b2b, п. 8): доля пройденных уроков,
  * результаты тестов, сертификаты и активность — в разрезе условных обозначений,
- * подразделений и курсов. Выгрузка в XLSX собирается в браузере, чтобы подписи
+ * подразделений и курсов. Выгрузка в XLSX собирается в браузере, чтобы имена
  * сотрудников не проходили через сервер (L2).
  */
 export default async function ReportsPage({
@@ -198,7 +198,7 @@ export default async function ReportsPage({
       <section className="mt-8">
         <h2 className="text-lg font-semibold">Сотрудники</h2>
         <p className="mt-1 text-sm text-foreground/55">
-          Подписи видны на вкладке «Работники» после ввода парольной фразы; здесь —
+          Подписи видны на вкладке «Работники» после ввода ПИН-кода; здесь —
           сводка по кодам.
         </p>
         <div className="mt-3 overflow-x-auto rounded-xl border border-foreground/10 bg-background">

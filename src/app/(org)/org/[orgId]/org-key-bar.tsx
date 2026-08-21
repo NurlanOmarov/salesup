@@ -3,19 +3,20 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Copy, Eye, EyeOff, Lock, LockOpen, ShieldCheck } from "lucide-react";
-import { MIN_PASSPHRASE_LENGTH, validatePassphrase } from "@/lib/org/crypto";
+import { MIN_PIN_LENGTH, validatePin } from "@/lib/org/crypto";
 import { useOrgKey } from "./org-key-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 /**
- * Полоска управления шифрованием меток. Три состояния:
- *  • не настроено — предложение включить (генерация ключа + recovery-код);
- *  • закрыто — поле ввода фразы;
- *  • открыто — метки видны, есть кнопка «скрыть».
+ * Полоска управления именами работников. Четыре состояния:
+ *  • режим владельца — имена недоступны по замыслу;
+ *  • не настроено — предложение включить (генерация ключа + код восстановления);
+ *  • закрыто — поле ввода ПИН-кода;
+ *  • открыто — имена видны, есть кнопка «скрыть».
  *
- * Тон нарочно спокойный: кабинет полностью работает и без ключа, метки — удобство,
+ * Тон нарочно спокойный: кабинет полностью работает и без кода, имена — удобство,
  * а не условие работы.
  */
 export function OrgKeyBar() {
@@ -28,7 +29,7 @@ export function OrgKeyBar() {
 }
 
 /**
- * Что видит владелец платформы в кабинете клиента. Подписи ему не показываем и
+ * Что видит владелец платформы в кабинете клиента. Имена ему не показываем и
  * завести ключ не даём: как только платформа способна прочитать, кто стоит за
  * кодом, она становится оператором персональных данных работников — а весь
  * B2B-контур построен на обратном (CLAUDE.md, правило 9).
@@ -40,10 +41,10 @@ function OwnerNotice() {
       <div>
         <p className="text-sm font-medium">Работники показаны кодами — и вам, и нам</p>
         <p className="text-sm text-foreground/60">
-          Подписи вида «Иванова, отдел Минск» ведёт ответственный представитель
-          клиента: они шифруются в его браузере фразой, которой у нас нет.
-          Владельцу платформы они не видны — на этом держится обещание оферты,
-          что персональные данные работников мы не обрабатываем.
+          Имена работников ведёт ответственный представитель клиента: они
+          шифруются в его браузере ПИН-кодом, которого у нас нет. Владельцу
+          платформы они не видны — на этом держится обещание оферты, что
+          персональные данные работников мы не обрабатываем.
         </p>
       </div>
     </div>
@@ -68,12 +69,12 @@ function SetupCard() {
       <div className="rounded-xl border border-emerald-600/30 bg-emerald-500/5 p-4">
         <p className="flex items-center gap-2 font-semibold text-emerald-800">
           <ShieldCheck className="size-5" />
-          Шифрование включено
+          Имена включены
         </p>
         <p className="mt-2 text-sm text-foreground/75">
           Сохраните код восстановления. Он показывается{" "}
-          <strong>один раз</strong> и остаётся единственным способом вернуть метки,
-          если парольная фраза будет забыта. Мы его не храним и восстановить не сможем.
+          <strong>один раз</strong> и остаётся единственным способом вернуть имена,
+          если ПИН-код будет забыт. Мы его не храним и восстановить не сможем.
         </p>
         <p className="mt-3 rounded-lg border border-foreground/10 bg-background px-4 py-3 text-center font-mono text-lg tracking-wider">
           {recoveryCode}
@@ -122,13 +123,13 @@ function SetupCard() {
           <div>
             <p className="text-sm font-medium">Сотрудники видны по кодам</p>
             <p className="text-sm text-foreground/60">
-              Можно добавить подписи вида «Иванова, отдел Минск» — они будут
-              зашифрованы в вашем браузере, и мы не сможем их прочитать.
+              Каждой учётке можно присвоить имя — например, «Александр». Имена
+              шифруются в вашем браузере и хранятся у нас нечитаемыми.
             </p>
           </div>
         </div>
         <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
-          Включить подписи
+          Присвоить имена
         </Button>
       </div>
     );
@@ -137,24 +138,22 @@ function SetupCard() {
   return (
     <div className="rounded-xl border border-foreground/10 bg-background p-4">
       <p className="text-sm font-semibold">
-        Придумайте парольную фразу для подписей — одну на всю организацию
+        Придумайте ПИН-код — один на всю организацию
       </p>
       <p className="mt-1 max-w-2xl text-sm text-foreground/60">
-        Это не пароль сотрудника и не пароль от вашей учётной записи: придумайте
-        любую фразу сами. Она включает возможность подписать каждого работника
-        в списке ниже («Иванова, отдел Минск») — подписи шифруются ею прямо в
-        браузере, и на сервер уходят нечитаемыми. Кому какую подпись поставить,
-        вы решаете потом, в строке работника; фраза лишь открывает и закрывает
-        их все разом.
+        Вы можете присвоить каждой учётке имя — например, «Александр». Чтобы имена
+        были скрыты от посторонних, придумайте и запомните ПИН-код: им они
+        шифруются прямо в браузере. Показать имена можно, введя этот код.
       </p>
       <p className="mt-1 max-w-2xl text-sm text-foreground/60">
-        Фразу мы не храним и восстановить не сможем — сохраните её в менеджере
-        паролей, а сразу после включения ещё и код восстановления.
+        Только не забывайте его — иначе восстановить имена будет нельзя. Сразу
+        после включения сохраните ещё и код восстановления: это единственная
+        запасная возможность.
       </p>
 
       <div className="mt-3 grid max-w-lg gap-3 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label htmlFor="passphrase">Фраза</Label>
+          <Label htmlFor="passphrase">ПИН-код</Label>
           <div className="relative">
             <Input
               id="passphrase"
@@ -162,11 +161,12 @@ function SetupCard() {
               autoComplete="new-password"
               value={passphrase}
               onChange={(e) => setPassphrase(e.target.value)}
-              placeholder={`не короче ${MIN_PASSPHRASE_LENGTH} символов`}
+              inputMode="numeric"
+              placeholder={`не короче ${MIN_PIN_LENGTH} знаков`}
               className="pr-10"
             />
             {/* Менеджеры паролей норовят подставить сюда сохранённый пароль —
-                без возможности посмотреть текст расхождение полей выглядит
+                без возможности посмотреть введённое расхождение полей выглядит
                 необъяснимым. */}
             <button
               type="button"
@@ -179,8 +179,8 @@ function SetupCard() {
           </div>
           <p className="text-xs text-foreground/45">
             Введено знаков: {passphrase.length}
-            {passphrase.length > 0 && passphrase.length < MIN_PASSPHRASE_LENGTH
-              ? ` — нужно минимум ${MIN_PASSPHRASE_LENGTH}`
+            {passphrase.length > 0 && passphrase.length < MIN_PIN_LENGTH
+              ? ` — нужно минимум ${MIN_PIN_LENGTH}`
               : ""}
           </p>
         </div>
@@ -189,6 +189,7 @@ function SetupCard() {
           <Input
             id="passphrase2"
             type={reveal ? "text" : "password"}
+            inputMode="numeric"
             autoComplete="new-password"
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
@@ -200,7 +201,7 @@ function SetupCard() {
       </div>
 
       <p className="mt-2 text-xs text-foreground/50">
-        Подписи — дело добровольное: нажмите «Отмена», и кабинет продолжит работать,
+        Имена — дело добровольное: нажмите «Отмена», и кабинет продолжит работать,
         показывая сотрудников по кодам.
       </p>
 
@@ -211,9 +212,9 @@ function SetupCard() {
           size="sm"
           disabled={pending}
           onClick={async () => {
-            const invalid = validatePassphrase(passphrase);
+            const invalid = validatePin(passphrase);
             if (invalid) return setError(invalid);
-            if (passphrase !== confirm) return setError("Фразы не совпадают");
+            if (passphrase !== confirm) return setError("Коды не совпадают");
 
             setPending(true);
             setError(null);
@@ -255,7 +256,7 @@ function UnlockCard() {
     >
       <div className="min-w-56 flex-1 space-y-1.5">
         <Label htmlFor="org-key-secret">
-          Парольная фраза, чтобы видеть подписи сотрудников
+          ПИН-код, чтобы увидеть имена сотрудников
         </Label>
         <div className="relative">
           <Input
@@ -264,7 +265,8 @@ function UnlockCard() {
             autoComplete="off"
             value={secret}
             onChange={(e) => setSecret(e.target.value)}
-            placeholder="фраза или код восстановления"
+            inputMode="numeric"
+            placeholder="ПИН-код или код восстановления"
             className="pr-10"
           />
           <button
@@ -279,11 +281,11 @@ function UnlockCard() {
       </div>
       <Button type="submit" size="sm" disabled={pending}>
         <LockOpen className="mr-1.5 size-4" />
-        {pending ? "Проверяем…" : "Показать подписи"}
+        {pending ? "Проверяем…" : "Показать имена"}
       </Button>
       {error ? <p className="w-full text-sm text-red-600">{error}</p> : null}
       <p className="w-full text-xs text-foreground/50">
-        Без фразы кабинет работает как обычно — сотрудники показываются по кодам.
+        Без кода кабинет работает как обычно — сотрудники показываются по кодам.
       </p>
     </form>
   );
@@ -296,9 +298,9 @@ function UnlockedBar() {
       <p className="flex items-start gap-2 text-sm text-emerald-900">
         <ShieldCheck className="mt-0.5 size-4 shrink-0" />
         <span>
-          Подписи расшифрованы в этой вкладке — в строке каждого работника
-          появилась кнопка «Добавить подпись». Закроете вкладку — снова
-          понадобится фраза.
+          Имена расшифрованы в этой вкладке — в строке каждого работника
+          появилась кнопка «Добавить имя». Закроете вкладку — снова понадобится
+          ПИН-код.
         </span>
       </p>
       <Button variant="ghost" size="sm" onClick={lock}>

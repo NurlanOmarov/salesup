@@ -22,11 +22,11 @@ import { setupOrgKeyAction, saveOrgKeyWrapAction } from "../actions";
  *
  * Ключ живёт только в состоянии React: ни localStorage, ни sessionStorage,
  * ни cookie — закрыли вкладку, ключ исчез. Это осознанная цена: расшифровать
- * метки можно лишь после ввода фразы, зато украденный дамп браузера или базы
+ * имена можно лишь после ввода кода, зато украденный дамп браузера или базы
  * ничего не даёт.
  *
  * Кабинет полностью работоспособен и без ключа — тогда сотрудники видны по
- * кодам (acme-0042). Разблокировка нужна только чтобы видеть метки.
+ * кодам (acme-0042). Разблокировка нужна только чтобы видеть имена.
  */
 
 export interface StoredWrap {
@@ -38,7 +38,7 @@ export interface StoredWrap {
 
 /**
  * «owner-view» — кабинет открыт владельцем платформы. Подписи ему недоступны
- * по замыслу, а не потому, что он не ввёл фразу: ключа у него нет и завести
+ * по замыслу, а не потому, что он не ввёл код: ключа у него нет и завести
  * его он не может (см. layout и setupOrgKeyAction).
  */
 type Status = "owner-view" | "not-configured" | "locked" | "unlocked";
@@ -46,11 +46,11 @@ type Status = "owner-view" | "not-configured" | "locked" | "unlocked";
 interface OrgKeyContextValue {
   status: Status;
   orgKey: CryptoKey | null;
-  /** Ввести парольную фразу или recovery-код и получить доступ к меткам. */
+  /** Ввести ПИН-код или recovery-код и получить доступ к меткам. */
   unlock: (secret: string) => Promise<string | null>;
   /** Первичная настройка: генерирует ключ, возвращает recovery-код для показа. */
   setup: (passphrase: string) => Promise<{ recoveryCode: string } | { error: string }>;
-  /** Сменить парольную фразу (ключ и метки остаются прежними). */
+  /** Сменить ПИН-код (ключ и имена остаются прежними). */
   changePassphrase: (next: string) => Promise<string | null>;
   lock: () => void;
 }
@@ -93,9 +93,9 @@ export function OrgKeyProvider({
   const unlock = useCallback(
     async (secret: string): Promise<string | null> => {
       const input = secret.trim();
-      if (!input) return "Введите фразу или код восстановления";
+      if (!input) return "Введите код или код восстановления";
 
-      // Пробуем все обёртки: пользователь мог ввести и фразу, и recovery-код —
+      // Пробуем все обёртки: пользователь мог ввести и ПИН-код, и код восстановления —
       // отдельного переключателя для этого не нужно.
       const candidates = [
         ...wraps.filter((w) => w.kind === "admin"),
@@ -113,7 +113,7 @@ export function OrgKeyProvider({
           // не эта обёртка — пробуем следующую
         }
       }
-      return "Не подошла ни фраза, ни код восстановления";
+      return "Не подошла ни код, ни код восстановления";
     },
     [wraps],
   );
@@ -140,7 +140,7 @@ export function OrgKeyProvider({
 
   const changePassphrase = useCallback(
     async (next: string): Promise<string | null> => {
-      if (!orgKey) return "Сначала введите текущую фразу";
+      if (!orgKey) return "Сначала введите текущий код";
       const wrap = await wrapOrgKey(orgKey, next);
       const res = await saveOrgKeyWrapAction({ orgId, kind: "admin", wrap });
       return res.ok ? null : res.error;

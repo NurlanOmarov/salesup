@@ -9,7 +9,7 @@ import {
   normalizeRecoveryCode,
   toBase64,
   unwrapOrgKey,
-  validatePassphrase,
+  validatePin,
   wrapOrgKey,
 } from "./crypto";
 
@@ -132,18 +132,18 @@ describe("recovery-код", () => {
   });
 });
 
-describe("validatePassphrase", () => {
-  it("отклоняет слишком короткую и чисто цифровую", () => {
-    expect(validatePassphrase("аб")).not.toBeNull();
-    expect(validatePassphrase("1234567890123")).not.toBeNull();
+describe("validatePin", () => {
+  it("отклоняет слишком короткий код", () => {
+    expect(validatePin("123")).not.toBeNull();
+    expect(validatePin("аб")).not.toBeNull();
   });
 
-  it("принимает короткую фразу от трёх символов", () => {
-    // Порог снижен сознательно (см. MIN_PASSPHRASE_LENGTH): фразу вводят руками.
-    expect(validatePassphrase("абв")).toBeNull();
+  it("принимает четырёхзначный код", () => {
+    // Порог сознательно низкий (см. MIN_PIN_LENGTH): код держат в голове.
+    expect(validatePin("2468")).toBeNull();
   });
 
-  it("принимает нормальную фразу", () => {
-    expect(validatePassphrase("обучение отдела продаж 2026")).toBeNull();
+  it("принимает и длинную фразу — код не обязан быть цифровым", () => {
+    expect(validatePin("обучение отдела продаж 2026")).toBeNull();
   });
 });

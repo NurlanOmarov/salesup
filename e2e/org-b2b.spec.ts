@@ -315,36 +315,36 @@ test("ответственный создаёт работников сам: л�
   expect(enrollment.source).toBe("B2B");
 });
 
-test("подписи ведёт клиент: владелец платформы их не видит и ключ не заводит", async ({
+test("имена ведёт клиент: владелец платформы их не видит и ключ не заводит", async ({
   page,
 }) => {
-  // Ключевая гарантия B2B-контура (оферта /offer-b2b п. 10): платформа не может
-  // сопоставить код с человеком. Если владелец сумеет завести ключ или прочитать
-  // подпись, обещание перестаёт быть правдой — поэтому проверяем обе стороны.
+  // Ключевая гарантия B2B-контура (оферта /offer-b2b п. 10): платформа не
+  // сопоставляет код с человеком. Если владелец сумеет завести ключ или
+  // прочитать имя, обещание перестаёт быть правдой — проверяем обе стороны.
   await login(page, ADMIN_EMAIL, ADMIN_PASS);
   await page.goto(`/org/${orgId}/employees`);
-  await page.getByRole("button", { name: "Включить подписи" }).click();
-  await page.getByLabel("Фраза").fill("подписи отдела");
-  await page.getByLabel("Повторите").fill("подписи отдела");
+  await page.getByRole("button", { name: "Присвоить имена" }).click();
+  await page.getByLabel("ПИН-код").fill("2468");
+  await page.getByLabel("Повторите").fill("2468");
   await page.getByRole("button", { name: "Включить", exact: true }).click();
-  await page.getByRole("button", { name: "Добавить подпись" }).first().click();
-  await page.getByPlaceholder("Фамилия, отдел, табельный номер").fill("Петрова, Минск");
-  await page.getByRole("button", { name: "Сохранить подпись" }).click();
-  await expect(page.getByText("Петрова, Минск")).toBeVisible();
+  await page.getByRole("button", { name: "Добавить имя" }).first().click();
+  await page.getByPlaceholder("Например, Александр").fill("Александр");
+  await page.getByRole("button", { name: "Сохранить имя" }).click();
+  await expect(page.getByText("Александр", { exact: true })).toBeVisible();
 
   // Сервер хранит только шифротекст.
   const stored = await db.orgMembership.findFirstOrThrow({
     where: { orgId, labelEnc: { not: null } },
     select: { labelEnc: true },
   });
-  expect(stored.labelEnc).not.toContain("Петрова");
+  expect(stored.labelEnc).not.toContain("Александр");
 
   await login(page, OWNER_EMAIL, OWNER_PASS);
   await page.goto(`/org/${orgId}/employees`);
   await expect(page.getByText("Работники показаны кодами")).toBeVisible();
-  await expect(page.getByText("Петрова, Минск")).toBeHidden();
-  await expect(page.getByRole("button", { name: "Включить подписи" })).toBeHidden();
-  await expect(page.getByRole("button", { name: "Добавить подпись" })).toBeHidden();
+  await expect(page.getByText("Александр", { exact: true })).toBeHidden();
+  await expect(page.getByRole("button", { name: "Присвоить имена" })).toBeHidden();
+  await expect(page.getByRole("button", { name: "Добавить имя" })).toBeHidden();
 });
 
 test("код одноразовый: повторная регистрация отклоняется", async ({ page }) => {

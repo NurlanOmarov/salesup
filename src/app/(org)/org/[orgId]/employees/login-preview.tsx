@@ -67,7 +67,7 @@ export function LoginPreview({ orgSlug }: { orgSlug: string }) {
         </ul>
         <p className="mt-1 text-xs text-foreground/50">
           Номер присваивается по порядку, ФИО платформа не спрашивает. Кто есть
-          кто — видно только вам, через подписи.
+          кто — видно только вам: каждой учётке можно присвоить имя.
         </p>
       </div>
     </div>

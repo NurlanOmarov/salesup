@@ -7,11 +7,11 @@ import { useOrgKey } from "../org-key-provider";
 import { setMemberLabelAction } from "../../actions";
 
 /**
- * Подпись сотрудника: расшифровывается в браузере и там же шифруется при
- * сохранении. На сервер уходит только blob — платформа никогда не видит, кто
- * стоит за кодом (docs/B2B-PLAN.md §5.2, оферта /offer-b2b п. 10.1–10.2).
+ * Имя сотрудника: расшифровывается в браузере и там же шифруется при
+ * сохранении. На сервер уходит только blob — платформа не видит, кто стоит за
+ * кодом (docs/B2B-PLAN.md §5.2, оферта /offer-b2b п. 10.1–10.2).
  *
- * Когда ключ не введён, компонент молчит: в таблице остаётся код сотрудника.
+ * Когда ПИН-код не введён, компонент молчит: в таблице остаётся код сотрудника.
  */
 export function MemberLabel({
   orgId,
@@ -28,7 +28,7 @@ export function MemberLabel({
   const [draft, setDraft] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Пустая подпись мигает несколько секунд после разблокировки — ровно чтобы
+  // Пустое имя мигает несколько секунд после разблокировки — ровно чтобы
   // заметить новый элемент строки. Постоянная пульсация раздражала бы.
   const [highlight, setHighlight] = useState(false);
 
@@ -63,7 +63,7 @@ export function MemberLabel({
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           maxLength={120}
-          placeholder="Фамилия, отдел, табельный номер"
+          placeholder="Например, Александр"
           className="h-8 w-52 rounded-md border border-foreground/15 bg-background px-2 text-sm"
           onKeyDown={(e) => {
             if (e.key === "Escape") setEditing(false);
@@ -74,7 +74,7 @@ export function MemberLabel({
           type="button"
           disabled={pending}
           onClick={() => void save()}
-          aria-label="Сохранить подпись"
+          aria-label="Сохранить имя"
           className="rounded p-1 text-emerald-700 hover:bg-emerald-500/10"
         >
           <Check className="size-4" />
@@ -92,9 +92,9 @@ export function MemberLabel({
     );
   }
 
-  // Подписанного сотрудника показываем спокойно, а пустое место — заметной
-  // пунктирной кнопкой: разблокировав ключ, ответственный не догадывался, что
-  // в строке появилось редактируемое поле, и уходил со страницы ни с чем.
+  // Названного сотрудника показываем спокойно, а пустое место — заметной
+  // пунктирной кнопкой: введя код, ответственный не догадывался, что в строке
+  // появилось редактируемое поле, и уходил со страницы ни с чем.
   if (text) {
     return (
       <button
@@ -103,7 +103,7 @@ export function MemberLabel({
           setDraft(text);
           setEditing(true);
         }}
-        title="Изменить подпись"
+        title="Изменить имя"
         className="mt-0.5 flex items-center gap-1.5 text-xs text-foreground/70 hover:text-foreground"
       >
         <span className="font-sans">{text}</span>
@@ -124,7 +124,7 @@ export function MemberLabel({
       }`}
     >
       <Pencil className="size-3" />
-      Добавить подпись
+      Добавить имя
     </button>
   );
 
