@@ -15,6 +15,9 @@ import { messagesFor } from "@/i18n/messages";
  *
  * Ссылка ведёт на текущую страницу в другом языке: /courses ↔ /kk/courses.
  */
+/** Короткие подписи: в переключателе нужен код языка, а не его название. */
+const LABEL: Record<Locale, string> = { ru: "РУС", kk: "ҚАЗ", uz: "O'Z" };
+
 export function LanguageSwitch({ locales }: { locales: readonly Locale[] }) {
   const current = useLocale();
   const pathname = usePathname();
@@ -40,7 +43,7 @@ export function LanguageSwitch({ locales }: { locales: readonly Locale[] }) {
               : "rounded-full px-1.5 py-1 text-white/60 transition-colors hover:text-white sm:px-2"
           }
         >
-          {l === "kk" ? "ҚАЗ" : "РУС"}
+          {LABEL[l]}
         </a>
       ))}
     </div>

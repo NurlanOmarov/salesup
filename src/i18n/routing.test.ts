@@ -3,17 +3,18 @@ import {
   stripLocale,
   localizePath,
   localesForHost,
-  hasKazakhVersion,
-  isKazakhIndexed,
-  KK_PATHS,
-  KK_READY,
+  hasLocaleVersion,
+  isLocaleIndexed,
+  hostForLocale,
+  TRANSLATED_PATHS,
 } from "./routing.js";
 
 describe("stripLocale", () => {
-  it("снимает префикс казахского", () => {
+  it("снимает префикс языка", () => {
     expect(stripLocale("/kk")).toEqual({ locale: "kk", pathname: "/" });
     expect(stripLocale("/kk/courses")).toEqual({ locale: "kk", pathname: "/courses" });
     expect(stripLocale("/kk/courses/spin")).toEqual({ locale: "kk", pathname: "/courses/spin" });
+    expect(stripLocale("/uz/business")).toEqual({ locale: "uz", pathname: "/business" });
   });
 
   it("русские пути остаются без изменений", () => {
@@ -42,44 +43,57 @@ describe("localizePath", () => {
 });
 
 describe("localesForHost", () => {
-  it("казахский предлагается только на казахстанском домене и только когда готов", () => {
-    expect(localesForHost("study.activesales.kz")).toEqual(
-      KK_READY ? ["ru", "kk"] : ["ru"],
-    );
+  it("язык предлагается только на своём домене", () => {
+    expect(localesForHost("study.activesales.kz")).toEqual(["ru", "kk"]);
+    expect(localesForHost("study.activesales.uz")).toEqual(["ru", "uz"]);
   });
 
-  it("на остальных доменах и без хоста — только русский", () => {
+  it("на доменах без второго языка и без хоста — только русский", () => {
     expect(localesForHost("study.activesales.by")).toEqual(["ru"]);
     expect(localesForHost("study.sales-active.ru")).toEqual(["ru"]);
     expect(localesForHost(null)).toEqual(["ru"]);
   });
+
+  it("каждый язык знает свой домен", () => {
+    expect(hostForLocale("kk")).toBe("study.activesales.kz");
+    expect(hostForLocale("uz")).toBe("study.activesales.uz");
+  });
 });
 
-describe("hasKazakhVersion", () => {
-  it("переведённые страницы получают казахскую версию", () => {
-    for (const path of KK_PATHS) expect(hasKazakhVersion(path)).toBe(true);
+describe("hasLocaleVersion", () => {
+  it("переведённые страницы получают локальную версию", () => {
+    for (const locale of ["kk", "uz"] as const) {
+      for (const path of TRANSLATED_PATHS[locale]) {
+        expect(hasLocaleVersion(path, locale)).toBe(true);
+      }
+    }
   });
 
-  it("карточка курса открыта: интерфейс казахский, содержимое курса русское", () => {
-    expect(hasKazakhVersion("/courses/spin")).toBe(true);
+  it("карточка курса открыта: интерфейс локальный, содержимое курса русское", () => {
+    expect(hasLocaleVersion("/courses/spin", "kk")).toBe(true);
+    expect(hasLocaleVersion("/courses/spin", "uz")).toBe(true);
   });
 
   it("непереведённые разделы уводятся на русскую версию", () => {
     // юридические документы намеренно остаются в русской редакции
-    expect(hasKazakhVersion("/offer")).toBe(false);
-    expect(hasKazakhVersion("/privacy")).toBe(false);
-    expect(hasKazakhVersion("/verify/abc")).toBe(false);
+    expect(hasLocaleVersion("/offer", "kk")).toBe(false);
+    expect(hasLocaleVersion("/privacy", "uz")).toBe(false);
+    expect(hasLocaleVersion("/verify/abc", "kk")).toBe(false);
   });
 });
 
-describe("isKazakhIndexed", () => {
+describe("isLocaleIndexed", () => {
   it("в hreflang попадают все полностью переведённые страницы", () => {
-    for (const path of KK_PATHS) expect(isKazakhIndexed(path)).toBe(true);
+    for (const locale of ["kk", "uz"] as const) {
+      for (const path of TRANSLATED_PATHS[locale]) {
+        expect(isLocaleIndexed(path, locale)).toBe(true);
+      }
+    }
   });
 
   it("страницы со смешанным содержимым в hreflang не идут", () => {
     // название и программа курса приходят из БД на русском
-    expect(isKazakhIndexed("/courses/spin")).toBe(false);
-    expect(isKazakhIndexed("/offer")).toBe(false);
+    expect(isLocaleIndexed("/courses/spin", "kk")).toBe(false);
+    expect(isLocaleIndexed("/offer", "uz")).toBe(false);
   });
 });

@@ -4,8 +4,9 @@ import { authConfig } from "@/auth.config";
 import {
   stripLocale,
   localesForHost,
-  hasKazakhVersion,
+  hasLocaleVersion,
   LOCALE_HEADER,
+  type ExtraLocale,
 } from "@/i18n/routing";
 
 // Middleware использует ТОЛЬКО edge-safe authConfig (без Prisma/argon2).
@@ -23,11 +24,14 @@ function withLocale(req: NextRequest) {
   const url = req.nextUrl.clone();
   url.pathname = pathname;
 
-  // Казахский есть только на казахстанском домене и только у переведённых
-  // страниц: остальное уводим на русскую версию того же пути, чтобы не плодить
-  // адреса с чужим языком внутри.
+  // Язык доступен только на своём домене и только у переведённых страниц:
+  // остальное уводим на русскую версию того же пути, чтобы не плодить адреса
+  // с чужим языком внутри.
   const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
-  if (!localesForHost(host).includes(locale) || !hasKazakhVersion(pathname)) {
+  if (
+    !localesForHost(host).includes(locale) ||
+    !hasLocaleVersion(pathname, locale as ExtraLocale)
+  ) {
     return NextResponse.redirect(url);
   }
 

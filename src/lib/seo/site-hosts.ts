@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import {
   DEFAULT_LOCALE,
-  KK_HOST,
-  isKazakhIndexed,
+  HOST_LOCALE,
+  isLocaleIndexed,
   localizePath,
+  type ExtraLocale,
   type Locale,
 } from "@/i18n/routing";
 
@@ -19,7 +20,11 @@ export const SITE_HOSTS = [
     country: "Беларусь",
     code: "BY",
     /** Гео-строка витрины на языках сайта: «курсы … · <geo>» в первом экране. */
-    geo: { ru: "Минск · вся Беларусь", kk: "Минск · бүкіл Беларусь" },
+    geo: {
+      ru: "Минск · вся Беларусь",
+      kk: "Минск · бүкіл Беларусь",
+      uz: "Minsk · butun Belarus",
+    },
     /** Валюта, которую посетитель видит крупно (остальные — справочно). */
     currency: "byn",
   },
@@ -28,7 +33,11 @@ export const SITE_HOSTS = [
     hreflang: "ru-KZ",
     country: "Казахстан",
     code: "KZ",
-    geo: { ru: "Астана · Алматы · весь Казахстан", kk: "Астана · Алматы · бүкіл Қазақстан" },
+    geo: {
+      ru: "Астана · Алматы · весь Казахстан",
+      kk: "Астана · Алматы · бүкіл Қазақстан",
+      uz: "Astana · Almaty · butun Qozogʻiston",
+    },
     currency: "kzt",
   },
   {
@@ -36,7 +45,11 @@ export const SITE_HOSTS = [
     hreflang: "ru-RU",
     country: "Россия",
     code: "RU",
-    geo: { ru: "Москва · вся Россия", kk: "Мәскеу · бүкіл Ресей" },
+    geo: {
+      ru: "Москва · вся Россия",
+      kk: "Мәскеу · бүкіл Ресей",
+      uz: "Moskva · butun Rossiya",
+    },
     currency: "rub",
   },
   {
@@ -44,7 +57,11 @@ export const SITE_HOSTS = [
     hreflang: "ru-UZ",
     country: "Узбекистан",
     code: "UZ",
-    geo: { ru: "Ташкент · весь Узбекистан", kk: "Ташкент · бүкіл Өзбекстан" },
+    geo: {
+      ru: "Ташкент · весь Узбекистан",
+      kk: "Ташкент · бүкіл Өзбекстан",
+      uz: "Toshkent · butun Oʻzbekiston",
+    },
     currency: "uzs",
   },
 ] as const;
@@ -78,15 +95,21 @@ export function alternatesFor(
   const suffix = (p: string) => (p === "/" ? "" : p);
   const languages: Record<string, string> = {};
   for (const s of SITE_HOSTS) languages[s.hreflang] = `https://${s.host}${suffix(path)}`;
-  // Казахская версия — только на казахстанском домене и только у переведённых
-  // страниц, иначе hreflang вёл бы на русский текст.
-  if (isKazakhIndexed(path)) {
-    languages["kk-KZ"] = `https://${KK_HOST}${suffix(localizePath(path, "kk"))}`;
+  // Языковые версии доменов: казахская на .kz, узбекская на .uz. Только для
+  // переведённых страниц — иначе hreflang вёл бы на русский текст.
+  for (const [host, extra] of Object.entries(HOST_LOCALE)) {
+    if (!isLocaleIndexed(path, extra)) continue;
+    const site = SITE_HOSTS.find((s) => s.host === host);
+    if (!site) continue;
+    languages[`${extra}-${site.code}`] =
+      `https://${host}${suffix(localizePath(path, extra))}`;
   }
   languages["x-default"] = `https://${DEFAULT_SITE.host}${suffix(path)}`;
-  // Казахская страница со смешанным содержимым канонизируется на русскую —
-  // иначе в индекс попал бы дубль с русским текстом под казахским адресом.
+  // Страница со смешанным содержимым канонизируется на русскую — иначе в индекс
+  // попал бы дубль с русским текстом под локальным адресом.
   const canonical =
-    locale === DEFAULT_LOCALE || isKazakhIndexed(path) ? localizePath(path, locale) : path;
+    locale === DEFAULT_LOCALE || isLocaleIndexed(path, locale as ExtraLocale)
+      ? localizePath(path, locale)
+      : path;
   return { canonical, languages };
 }

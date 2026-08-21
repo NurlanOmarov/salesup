@@ -1,64 +1,79 @@
 /**
- * Маршрутизация языков (казахская версия, docs/MULTI-DOMAIN-PLAN.md).
+ * Маршрутизация языков (docs/MULTI-DOMAIN-PLAN.md).
  *
- * Русский — язык по умолчанию и живёт без префикса: существующие URL всех трёх
- * доменов не меняются, SEO не ломается. Казахский получает префикс `/kk` —
- * отдельный URL обязателен, иначе поисковик не проиндексирует казахскую версию.
+ * Русский — язык по умолчанию и живёт без префикса: существующие URL всех
+ * доменов не меняются, SEO не ломается. Второй язык домена получает префикс
+ * (`/kk`, `/uz`) — отдельный URL обязателен, иначе поисковик не проиндексирует
+ * локальную версию.
  *
- * Казахский доступен ТОЛЬКО на казахстанском домене: на .by и .ru `/kk` — это
- * дубль без аудитории, поэтому middleware уводит такой запрос на русскую версию.
+ * Язык привязан к домену: казахский есть только на казахстанском, узбекский —
+ * только на узбекском. На чужом домене такой префикс — дубль без аудитории,
+ * поэтому middleware уводит запрос на русскую версию.
  *
  * Модуль edge-safe (чистые функции): его импортируют и middleware, и auth.config.
  */
-export const LOCALES = ["ru", "kk"] as const;
+export const LOCALES = ["ru", "kk", "uz"] as const;
 export type Locale = (typeof LOCALES)[number];
 
 export const DEFAULT_LOCALE: Locale = "ru";
 
+/** Языки помимо русского — те, что живут под префиксом. */
+export type ExtraLocale = Exclude<Locale, "ru">;
+
 /** Заголовок, которым middleware передаёт распознанный язык в приложение. */
 export const LOCALE_HEADER = "x-locale";
 
-/** Единственный хост с казахской версией. */
-export const KK_HOST = "study.activesales.kz";
+/** Второй язык домена. Один хост — один дополнительный язык. */
+export const HOST_LOCALE: Readonly<Record<string, ExtraLocale>> = {
+  "study.activesales.kz": "kk",
+  "study.activesales.uz": "uz",
+};
+
+/** Домен, на котором живёт язык (для hreflang и переключателя). */
+export function hostForLocale(locale: ExtraLocale): string | null {
+  return Object.entries(HOST_LOCALE).find(([, l]) => l === locale)?.[0] ?? null;
+}
 
 /**
- * Страницы, у которых казахская версия уже переведена. Список пополняется по мере
- * перевода — это честнее общего флага «готово/не готово»: непереведённый /kk-путь
- * уводится на русскую версию и не попадает в hreflang, поэтому поисковик никогда
- * не видит казахский адрес с русским текстом.
+ * Страницы, переведённые на язык. Список пополняется по мере перевода — это
+ * честнее общего флага «готово/не готово»: непереведённый путь под префиксом
+ * уводится на русскую версию и не попадает в hreflang, поэтому поисковик
+ * никогда не видит локальный адрес с русским текстом.
  */
-export const KK_PATHS: readonly string[] = ["/", "/courses", "/business"];
+export const TRANSLATED_PATHS: Readonly<Record<ExtraLocale, readonly string[]>> = {
+  kk: ["/", "/courses", "/business"],
+  uz: ["/", "/courses", "/business"],
+};
 
 /**
- * Разделы, где казахский интерфейс работает, но содержимое приходит из БД на
- * русском (карточки курсов: названия, программа, описания). Такие страницы
- * открываем — казахоязычному посетителю удобнее видеть свой интерфейс, — но в
- * hreflang не отдаём: для поисковика это была бы русская страница под казахским
- * адресом. Перевод содержимого курсов — отдельная задача фабрики.
+ * Разделы, где интерфейс переведён, а содержимое приходит из БД на русском
+ * (карточки курсов: названия, программа, описания). Такие страницы открываем —
+ * посетителю удобнее видеть свой интерфейс, — но в hreflang не отдаём: для
+ * поисковика это была бы русская страница под локальным адресом. Перевод
+ * содержимого курсов — отдельная задача фабрики.
  */
-export const KK_MIXED_PREFIXES: readonly string[] = ["/courses/"];
+export const MIXED_PREFIXES: readonly string[] = ["/courses/"];
 
-/** Открыта ли казахская версия этого пути (путь — уже без языкового префикса). */
-export function hasKazakhVersion(pathname: string): boolean {
+/** Открыта ли версия пути на этом языке (путь — уже без языкового префикса). */
+export function hasLocaleVersion(pathname: string, locale: ExtraLocale): boolean {
   return (
-    KK_PATHS.includes(pathname) ||
-    KK_MIXED_PREFIXES.some((prefix) => pathname.startsWith(prefix))
+    TRANSLATED_PATHS[locale].includes(pathname) ||
+    MIXED_PREFIXES.some((prefix) => pathname.startsWith(prefix))
   );
 }
 
-/** Отдаём ли казахскую версию поисковику (hreflang + self-canonical). */
-export function isKazakhIndexed(pathname: string): boolean {
-  return KK_PATHS.includes(pathname);
+/** Отдаём ли версию поисковику (hreflang + self-canonical). */
+export function isLocaleIndexed(pathname: string, locale: ExtraLocale): boolean {
+  return TRANSLATED_PATHS[locale].includes(pathname);
 }
 
-/** Казахская версия существует хотя бы для одной страницы. */
-export const KK_READY = KK_PATHS.length > 0;
-
-/** Языки, доступные на хосте: везде русский, на .kz — плюс казахский. */
+/** Языки, доступные на хосте: везде русский, плюс язык домена, если он есть. */
 export function localesForHost(host: string | null | undefined): readonly Locale[] {
-  if (!KK_READY) return [DEFAULT_LOCALE];
-  const h = host?.split(",")[0]?.trim().toLowerCase().split(":")[0];
-  return h === KK_HOST ? LOCALES : [DEFAULT_LOCALE];
+  const h = host?.split(",")[0]?.trim().toLowerCase().split(":")[0] ?? "";
+  const extra = HOST_LOCALE[h];
+  return extra && TRANSLATED_PATHS[extra].length > 0
+    ? [DEFAULT_LOCALE, extra]
+    : [DEFAULT_LOCALE];
 }
 
 /**
