@@ -35,6 +35,21 @@ async function writableCtx(orgId?: string) {
   return ctx;
 }
 
+/**
+ * Действия вокруг подписей закрыты для владельца платформы. Он ведёт клиента
+ * (лицензии, коды, отчёты), но кто стоит за кодом — знать не должен: способность
+ * платформы прочитать подпись сделала бы её оператором персональных данных
+ * работников, чего оферта /offer-b2b (п. 10) прямо не предполагает. Проверка
+ * стоит на сервере, а не только в UI: auth «orgAdmin» пропускает и OWNER.
+ */
+function assertNotOwnerView(ctx: { isOwner: boolean }): void {
+  if (ctx.isOwner) {
+    throw new Error(
+      "Подписи работников ведёт ответственный представитель клиента — владельцу платформы они недоступны.",
+    );
+  }
+}
+
 // ─────────────────────────── Коды самозаписи ───────────────────────────
 
 export const createInvitesAction = safeAction(
@@ -269,6 +284,7 @@ export const setMemberLabelAction = safeAction(
   },
   async (input) => {
     const ctx = await writableCtx(input.orgId);
+    assertNotOwnerView(ctx);
     const membership = await db.orgMembership.findUnique({
       where: { id: input.membershipId },
       select: { orgId: true },
@@ -394,6 +410,7 @@ export const setupOrgKeyAction = safeAction(
   },
   async (input) => {
     const ctx = await writableCtx(input.orgId);
+    assertNotOwnerView(ctx);
 
     const existing = await db.orgKeyWrap.count({ where: { orgId: ctx.orgId } });
     if (existing > 0) {
@@ -454,6 +471,7 @@ export const saveOrgKeyWrapAction = safeAction(
   },
   async (input) => {
     const ctx = await writableCtx(input.orgId);
+    assertNotOwnerView(ctx);
 
     const userId = input.kind === "recovery" ? null : (input.targetUserId ?? ctx.userId);
 
@@ -553,6 +571,7 @@ export const setMemberGroupAction = safeAction(
   },
   async (input) => {
     const ctx = await writableCtx(input.orgId);
+    assertNotOwnerView(ctx);
     const membership = await db.orgMembership.findUnique({
       where: { id: input.membershipId },
       select: { orgId: true },

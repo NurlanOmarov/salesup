@@ -21,9 +21,33 @@ import { Label } from "@/components/ui/label";
 export function OrgKeyBar() {
   const { status } = useOrgKey();
 
+  if (status === "owner-view") return <OwnerNotice />;
   if (status === "not-configured") return <SetupCard />;
   if (status === "locked") return <UnlockCard />;
   return <UnlockedBar />;
+}
+
+/**
+ * Что видит владелец платформы в кабинете клиента. Подписи ему не показываем и
+ * завести ключ не даём: как только платформа способна прочитать, кто стоит за
+ * кодом, она становится оператором персональных данных работников — а весь
+ * B2B-контур построен на обратном (CLAUDE.md, правило 9).
+ */
+function OwnerNotice() {
+  return (
+    <div className="flex items-start gap-2.5 rounded-xl border border-foreground/10 bg-background p-4">
+      <Lock className="mt-0.5 size-4 shrink-0 text-foreground/40" />
+      <div>
+        <p className="text-sm font-medium">Работники показаны кодами — и вам, и нам</p>
+        <p className="text-sm text-foreground/60">
+          Подписи вида «Иванова, отдел Минск» ведёт ответственный представитель
+          клиента: они шифруются в его браузере фразой, которой у нас нет.
+          Владельцу платформы они не видны — на этом держится обещание оферты,
+          что персональные данные работников мы не обрабатываем.
+        </p>
+      </div>
+    </div>
+  );
 }
 
 function SetupCard() {

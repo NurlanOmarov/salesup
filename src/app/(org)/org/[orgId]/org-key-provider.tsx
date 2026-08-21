@@ -36,7 +36,12 @@ export interface StoredWrap {
   kdfParams: KdfParams;
 }
 
-type Status = "not-configured" | "locked" | "unlocked";
+/**
+ * «owner-view» — кабинет открыт владельцем платформы. Подписи ему недоступны
+ * по замыслу, а не потому, что он не ввёл фразу: ключа у него нет и завести
+ * его он не может (см. layout и setupOrgKeyAction).
+ */
+type Status = "owner-view" | "not-configured" | "locked" | "unlocked";
 
 interface OrgKeyContextValue {
   status: Status;
@@ -66,20 +71,24 @@ export function useOrgKey(): OrgKeyContextValue {
 export function OrgKeyProvider({
   orgId,
   wraps,
+  viewerIsOwner = false,
   children,
 }: {
   orgId: string;
   wraps: StoredWrap[];
+  viewerIsOwner?: boolean;
   children: React.ReactNode;
 }) {
   const [orgKey, setOrgKey] = useState<CryptoKey | null>(null);
   const [configured, setConfigured] = useState(wraps.length > 0);
 
-  const status: Status = orgKey
-    ? "unlocked"
-    : configured
-      ? "locked"
-      : "not-configured";
+  const status: Status = viewerIsOwner
+    ? "owner-view"
+    : orgKey
+      ? "unlocked"
+      : configured
+        ? "locked"
+        : "not-configured";
 
   const unlock = useCallback(
     async (secret: string): Promise<string | null> => {

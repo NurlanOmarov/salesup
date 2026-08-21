@@ -315,6 +315,38 @@ test("ответственный создаёт работников сам: л�
   expect(enrollment.source).toBe("B2B");
 });
 
+test("подписи ведёт клиент: владелец платформы их не видит и ключ не заводит", async ({
+  page,
+}) => {
+  // Ключевая гарантия B2B-контура (оферта /offer-b2b п. 10): платформа не может
+  // сопоставить код с человеком. Если владелец сумеет завести ключ или прочитать
+  // подпись, обещание перестаёт быть правдой — поэтому проверяем обе стороны.
+  await login(page, ADMIN_EMAIL, ADMIN_PASS);
+  await page.goto(`/org/${orgId}/employees`);
+  await page.getByRole("button", { name: "Включить подписи" }).click();
+  await page.getByLabel("Фраза").fill("подписи отдела");
+  await page.getByLabel("Повторите").fill("подписи отдела");
+  await page.getByRole("button", { name: "Включить", exact: true }).click();
+  await page.getByRole("button", { name: "Добавить подпись" }).first().click();
+  await page.getByPlaceholder("Фамилия, отдел, табельный номер").fill("Петрова, Минск");
+  await page.getByRole("button", { name: "Сохранить подпись" }).click();
+  await expect(page.getByText("Петрова, Минск")).toBeVisible();
+
+  // Сервер хранит только шифротекст.
+  const stored = await db.orgMembership.findFirstOrThrow({
+    where: { orgId, labelEnc: { not: null } },
+    select: { labelEnc: true },
+  });
+  expect(stored.labelEnc).not.toContain("Петрова");
+
+  await login(page, OWNER_EMAIL, OWNER_PASS);
+  await page.goto(`/org/${orgId}/employees`);
+  await expect(page.getByText("Работники показаны кодами")).toBeVisible();
+  await expect(page.getByText("Петрова, Минск")).toBeHidden();
+  await expect(page.getByRole("button", { name: "Включить подписи" })).toBeHidden();
+  await expect(page.getByRole("button", { name: "Добавить подпись" })).toBeHidden();
+});
+
 test("код одноразовый: повторная регистрация отклоняется", async ({ page }) => {
   const invite = await db.orgInvite.findFirstOrThrow({
     where: { orgId },
