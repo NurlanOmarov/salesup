@@ -399,6 +399,30 @@ test("заморозка организации закрывает доступ,
   expect(restored).toBe(200);
 });
 
+test("владелец сбрасывает ПИН-код имён: имена стираются, доступы целы", async ({
+  page,
+}) => {
+  // Клиент забыл и ПИН, и код восстановления. Единственный выход — сброс, и это
+  // именно стирание: прочитать имена владелец не может ни до, ни после.
+  const before = await db.orgMembership.count({
+    where: { orgId, labelEnc: { not: null } },
+  });
+  expect(before).toBeGreaterThan(0);
+
+  await login(page, OWNER_EMAIL, OWNER_PASS);
+  await page.goto(`/admin/orgs/${orgId}`);
+  page.once("dialog", (d) => void d.accept());
+  await page.getByRole("button", { name: "Сбросить ПИН-код имён" }).click();
+  await expect(page.getByText(/ПИН-код сброшен/)).toBeVisible();
+
+  expect(await db.orgKeyWrap.count({ where: { orgId } })).toBe(0);
+  expect(await db.orgMembership.count({ where: { orgId, labelEnc: { not: null } } })).toBe(0);
+  // Доступы к курсам сброс не трогает.
+  expect(
+    await db.enrollment.count({ where: { licenseId, revokedAt: null } }),
+  ).toBeGreaterThan(0);
+});
+
 test("отзыв места освобождает его в пуле лицензии", async ({ page }) => {
   const worker = await db.user.findUniqueOrThrow({
     where: { login: `${ORG_SLUG}-0001` },

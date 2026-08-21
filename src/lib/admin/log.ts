@@ -49,7 +49,8 @@ export type AdminAction =
   | "org.invite.revoke"
   | "org.group.create"
   | "org.group.delete"
-  | "org.key.setup";
+  | "org.key.setup"
+  | "org.key.reset";
 
 export function writeAdminLog(params: {
   actorId: string;

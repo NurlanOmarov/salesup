@@ -6,6 +6,7 @@ import { Check, Copy, KeyRound, Pause, Play, Trash2 } from "lucide-react";
 import {
   createOrgAdminAction,
   resetOrgAdminPasswordAction,
+  resetOrgKeyAction,
   deleteOrgAction,
   grantLibraryAction,
   grantLicenseAction,
@@ -103,26 +104,32 @@ export function OrgStatusActions({
 /** Безвозвратное удаление — только для пустой карточки (см. deleteOrgAction). */
 export function DeleteOrgAction({
   orgId,
-  canDelete,
+  orgName,
+  isEmpty,
+  learners,
 }: {
   orgId: string;
-  canDelete: boolean;
+  orgName: string;
+  /** Ни лицензий, ни работников, ни представителей — удаляем без вопросов. */
+  isEmpty: boolean;
+  learners: number;
 }) {
   const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [confirmName, setConfirmName] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function remove() {
-    if (!window.confirm("Удалить организацию без возможности восстановления?")) return;
     setPending(true);
     setError(null);
     try {
-      const res = await deleteOrgAction({ orgId });
-      if (res.ok) {
-        router.push("/admin/orgs");
-      } else {
-        setError(res.error);
-      }
+      const res = await deleteOrgAction({
+        orgId,
+        confirmName: isEmpty ? undefined : confirmName,
+      });
+      if (res.ok) router.push("/admin/orgs");
+      else setError(res.error);
     } catch {
       setError("Не удалось удалить — обновите страницу и попробуйте ещё раз.");
     } finally {
@@ -130,18 +137,139 @@ export function DeleteOrgAction({
     }
   }
 
+  if (!open) {
+    return (
+      <div className="flex flex-col items-end gap-1">
+        <button
+          type="button"
+          onClick={() => {
+            if (isEmpty) void remove();
+            else setOpen(true);
+          }}
+          disabled={pending}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-foreground/15 px-3 py-1.5 text-sm text-foreground/50 transition-colors hover:border-red-400/60 hover:text-red-600 disabled:opacity-40"
+        >
+          <Trash2 className="size-4" />
+          {pending ? "Удаляем…" : "Удалить"}
+        </button>
+        {error ? <span className="text-xs text-red-600">{error}</span> : null}
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col items-end gap-1">
-      <button
-        type="button"
-        onClick={remove}
-        disabled={pending || !canDelete}
-        title={canDelete ? "Удалить организацию" : "Нельзя удалить: есть лицензии или работники"}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-foreground/15 px-3 py-1.5 text-sm text-foreground/50 transition-colors hover:border-red-400/60 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
+    <div className="max-w-sm rounded-xl border border-red-500/40 bg-red-500/[0.04] p-3 text-left">
+      <p className="text-sm font-medium text-red-700">Удалить организацию целиком?</p>
+      <p className="mt-1 text-xs text-foreground/70">
+        Уйдут лицензии, коды, ПИН-код имён и доступы. Учётки работников
+        {learners > 0 ? ` (${learners})` : ""} удаляются вместе с прогрессом — кроме
+        тех, кому уже выдан сертификат: такие сохраняются заблокированными, чтобы
+        публичная проверка сертификата продолжала работать. Отменить нельзя.
+      </p>
+      <p className="mt-2 text-xs text-foreground/60">
+        Введите наименование — <span className="font-medium">{orgName}</span>
+      </p>
+      <Input
+        className="mt-1.5"
+        value={confirmName}
+        onChange={(e) => setConfirmName(e.target.value)}
+        placeholder={orgName}
+        autoFocus
+      />
+      {error ? <p className="mt-2 text-xs text-red-600">{error}</p> : null}
+      <div className="mt-3 flex gap-2">
+        <Button
+          size="sm"
+          variant="destructive"
+          disabled={pending || confirmName.trim() !== orgName}
+          onClick={() => void remove()}
+        >
+          {pending ? "Удаляем…" : "Удалить навсегда"}
+        </Button>
+        <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>
+          Отмена
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Сброс ПИН-кода имён. Именно сброс, а не «посмотреть»: владелец имён не видит
+ * и после этой операции — они стираются, потому что без ключа расшифровать их
+ * всё равно невозможно. Нужно, когда клиент потерял и ПИН, и код восстановления
+ * и не может ни увидеть старые имена, ни завести новые.
+ */
+export function ResetOrgKeyAction({
+  orgId,
+  configured,
+  named,
+}: {
+  orgId: string;
+  configured: boolean;
+  named: number;
+}) {
+  const router = useRouter();
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState<number | null>(null);
+
+  // Результат показываем раньше состояния: router.refresh() уже принёс
+  // configured=false, и без этого порядка ответ подменялся бы сухим «не задан».
+  if (done !== null) {
+    return (
+      <p className="text-sm text-emerald-700">
+        ПИН-код сброшен{done > 0 ? `, стёрто имён: ${done}` : ""}. Ответственный
+        задаст новый код при следующем входе в кабинет.
+      </p>
+    );
+  }
+
+  if (!configured) {
+    return (
+      <p className="text-sm text-foreground/55">
+        ПИН-код имён не задан — работники видны по кодам у всех.
+      </p>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-start gap-1.5">
+      <p className="text-sm text-foreground/70">
+        Имена заданы у {named} из работников организации. Прочитать их мы не можем —
+        только сбросить код целиком, и тогда имена будут стёрты безвозвратно.
+      </p>
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={pending}
+        onClick={async () => {
+          if (
+            !window.confirm(
+              "Сбросить ПИН-код? Имена работников будут стёрты без возможности восстановления. Прогресс, доступы и коды не пострадают.",
+            )
+          )
+            return;
+          setPending(true);
+          setError(null);
+          try {
+            const res = await resetOrgKeyAction({ orgId });
+            if (res.ok) {
+              setDone(res.data.namesErased);
+              router.refresh();
+            } else {
+              setError(res.error);
+            }
+          } catch {
+            setError("Не удалось сбросить — попробуйте ещё раз.");
+          } finally {
+            setPending(false);
+          }
+        }}
       >
-        <Trash2 className="size-4" />
-        Удалить
-      </button>
+        <KeyRound className="mr-1.5 size-4" />
+        {pending ? "Сбрасываем…" : "Сбросить ПИН-код имён"}
+      </Button>
       {error ? <span className="text-xs text-red-600">{error}</span> : null}
     </div>
   );

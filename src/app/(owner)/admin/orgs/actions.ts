@@ -150,44 +150,155 @@ export const setOrgStatusAction = safeAction(
 );
 
 /**
- * Удалить организацию безвозвратно. Разрешено только для «пустой» карточки —
- * без лицензий, работников и назначенных представителей: удаление организации с
- * реальной историей не отзывает доступ автоматически (Enrollment переживает
- * каскад через licenseId SetNull), так что это отдельная, более осторожная
- * операция, которую здесь намеренно не делаем. На практике это чистит дубли/
- * тестовые записи вроде тех, что оставляет повторный клик по «Создать» при сбое.
+ * Удалить организацию со всем её содержимым: лицензии, коды, обёртки ключа,
+ * членства, доступы и обезличенные учётки работников.
+ *
+ * Каскад в схеме сам по себе недостаточен: `Enrollment.licenseId` обнуляется
+ * (SetNull), то есть доступ к курсам у работников пережил бы удаление
+ * организации. Поэтому доступы снимаем явно, а сами учётки удаляем — иначе в
+ * базе остаются вечные `acme-0042`, которые уже некому объяснить.
+ *
+ * Исключение — работники с сертификатами или заказами: `Certificate.userId` и
+ * `Order.userId` держат пользователя без каскада, а публичная проверка
+ * сертификата на /verify обязана продолжать работать. Такие учётки остаются,
+ * но блокируются и лишаются доступа; сколько их — возвращаем вызывающему.
  */
 export const deleteOrgAction = safeAction(
   {
-    schema: z.object({ orgId: z.string().min(1) }),
+    schema: z.object({
+      orgId: z.string().min(1),
+      /** Осознанное удаление непустой организации: набранное наименование. */
+      confirmName: z.string().trim().optional(),
+    }),
     auth: "owner",
   },
-  async ({ orgId }, { session }) => {
+  async ({ orgId, confirmName }, { session }) => {
     const org = await db.organization.findUnique({
       where: { id: orgId },
       select: {
         name: true,
         slug: true,
-        _count: { select: { licenses: true, memberships: { where: { isActive: true } } } },
+        licenses: { select: { id: true } },
+        memberships: { select: { userId: true, role: true } },
       },
     });
     if (!org) throw new Error("Организация не найдена");
-    if (org._count.licenses > 0 || org._count.memberships > 0) {
+
+    const licenseIds = org.licenses.map((l) => l.id);
+    const learnerIds = org.memberships
+      .filter((m) => m.role === "ORG_LEARNER")
+      .map((m) => m.userId);
+    const isEmpty = licenseIds.length === 0 && org.memberships.length === 0;
+
+    // У непустой организации спрашиваем наименование: удаление уносит прогресс
+    // работников, и «случайно нажал» здесь стоит слишком дорого.
+    if (!isEmpty && confirmName !== org.name) {
       throw new Error(
-        "Нельзя удалить: у организации есть лицензии или работники. Сначала отзовите их или заархивируйте организацию.",
+        `Введите наименование организации точно так, как оно записано: «${org.name}»`,
       );
     }
 
-    await db.organization.delete({ where: { id: orgId } });
+    // Учётки, которые нельзя удалить: за ними стоят выданные сертификаты или
+    // оплаченные заказы.
+    const keepIds = learnerIds.length
+      ? [
+          ...new Set([
+            ...(
+              await db.certificate.findMany({
+                where: { userId: { in: learnerIds } },
+                select: { userId: true },
+              })
+            ).map((c) => c.userId),
+            ...(
+              await db.order.findMany({
+                where: { userId: { in: learnerIds } },
+                select: { userId: true },
+              })
+            ).map((o) => o.userId),
+          ]),
+        ]
+      : [];
+    const dropIds = learnerIds.filter((id) => !keepIds.includes(id));
+
+    await db.$transaction(async (tx) => {
+      // Доступы снимаем у всех работников организации — и у тех, чьи учётки
+      // остаются.
+      if (learnerIds.length) {
+        await tx.enrollment.deleteMany({ where: { userId: { in: learnerIds } } });
+      }
+      if (licenseIds.length) {
+        await tx.enrollment.updateMany({
+          where: { licenseId: { in: licenseIds }, revokedAt: null },
+          data: { revokedAt: new Date(), revokedReason: "Организация удалена" },
+        });
+      }
+      if (keepIds.length) {
+        await tx.user.updateMany({
+          where: { id: { in: keepIds } },
+          data: { deletedAt: new Date() },
+        });
+      }
+      if (dropIds.length) {
+        await tx.user.deleteMany({ where: { id: { in: dropIds } } });
+      }
+      await tx.organization.delete({ where: { id: orgId } });
+    });
 
     await writeAdminLog({
       actorId: session!.user.id,
       action: "org.delete",
-      meta: { orgId, name: org.name, slug: org.slug },
+      meta: {
+        orgId,
+        name: org.name,
+        slug: org.slug,
+        licenses: licenseIds.length,
+        learnersDeleted: dropIds.length,
+        learnersKept: keepIds.length,
+      },
     });
 
     revalidatePath("/admin/orgs");
-    return { ok: true };
+    return { learnersDeleted: dropIds.length, learnersKept: keepIds.length };
+  },
+);
+
+/**
+ * Сбросить ПИН-код имён работников. Владелец не получает доступа к именам —
+ * он их уничтожает: обёртки ключа удаляются, а сами имена (labelEnc) стираются,
+ * потому что без ключа это нечитаемый мусор, который уже никто не расшифрует.
+ *
+ * Нужно на случай «клиент забыл и ПИН, и код восстановления»: без сброса он не
+ * может ни увидеть прежние имена, ни завести новые — setupOrgKeyAction
+ * отказывает, пока обёртки существуют.
+ */
+export const resetOrgKeyAction = safeAction(
+  {
+    schema: z.object({ orgId: z.string().min(1) }),
+    auth: "owner",
+  },
+  async ({ orgId }, { session }) => {
+    const [wraps, labelled] = await Promise.all([
+      db.orgKeyWrap.count({ where: { orgId } }),
+      db.orgMembership.count({ where: { orgId, labelEnc: { not: null } } }),
+    ]);
+    if (wraps === 0) throw new Error("У организации не задан ПИН-код имён");
+
+    await db.$transaction([
+      db.orgKeyWrap.deleteMany({ where: { orgId } }),
+      db.orgMembership.updateMany({
+        where: { orgId, labelEnc: { not: null } },
+        data: { labelEnc: null },
+      }),
+    ]);
+
+    await writeAdminLog({
+      actorId: session!.user.id,
+      action: "org.key.reset",
+      meta: { orgId, namesErased: labelled },
+    });
+
+    revalidatePath(`/admin/orgs/${orgId}`);
+    return { namesErased: labelled };
   },
 );
 

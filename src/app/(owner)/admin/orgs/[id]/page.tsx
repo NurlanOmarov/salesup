@@ -13,6 +13,7 @@ import {
   OrgDetailsForm,
   OrgStatusActions,
   ResetOrgAdminPassword,
+  ResetOrgKeyAction,
 } from "./org-manage";
 
 export const metadata: Metadata = {
@@ -54,29 +55,32 @@ export default async function OrgPage({
   });
   if (!org) notFound();
 
-  const [overview, members, courses, admins, logs] = await Promise.all([
-    getOrgOverview(org.id),
-    getOrgMembers(org.id),
-    db.course.findMany({
-      where: { status: "PUBLISHED" },
-      orderBy: { sortOrder: "asc" },
-      select: { id: true, title: true, priceTiyn: true },
-    }),
-    db.orgMembership.findMany({
-      where: { orgId: org.id, role: "ORG_ADMIN" },
-      select: {
-        id: true,
-        isActive: true,
-        user: { select: { id: true, email: true, name: true, mustChangePassword: true } },
-      },
-    }),
-    db.adminLog.findMany({
-      where: { meta: { path: ["orgId"], equals: org.id } },
-      orderBy: { createdAt: "desc" },
-      take: 20,
-      select: { id: true, action: true, createdAt: true, meta: true },
-    }),
-  ]);
+  const [overview, members, courses, admins, keyWraps, namedMembers, logs] =
+    await Promise.all([
+      getOrgOverview(org.id),
+      getOrgMembers(org.id),
+      db.course.findMany({
+        where: { status: "PUBLISHED" },
+        orderBy: { sortOrder: "asc" },
+        select: { id: true, title: true, priceTiyn: true },
+      }),
+      db.orgMembership.findMany({
+        where: { orgId: org.id, role: "ORG_ADMIN" },
+        select: {
+          id: true,
+          isActive: true,
+          user: { select: { id: true, email: true, name: true, mustChangePassword: true } },
+        },
+      }),
+      db.orgKeyWrap.count({ where: { orgId: org.id } }),
+      db.orgMembership.count({ where: { orgId: org.id, labelEnc: { not: null } } }),
+      db.adminLog.findMany({
+        where: { meta: { path: ["orgId"], equals: org.id } },
+        orderBy: { createdAt: "desc" },
+        take: 20,
+        select: { id: true, action: true, createdAt: true, meta: true },
+      }),
+    ]);
 
   const learners = members.filter((m) => m.role === "ORG_LEARNER");
 
@@ -113,7 +117,13 @@ export default async function OrgPage({
           <OrgStatusActions orgId={org.id} status={org.status} />
           <DeleteOrgAction
             orgId={org.id}
-            canDelete={overview.licenses.length === 0 && overview.activeMembers === 0 && admins.length === 0}
+            orgName={org.name}
+            isEmpty={
+              overview.licenses.length === 0 &&
+              overview.activeMembers === 0 &&
+              admins.length === 0
+            }
+            learners={overview.activeMembers}
           />
         </div>
       </div>
@@ -258,6 +268,19 @@ export default async function OrgPage({
           <h3 className="text-sm font-semibold">Назначить ответственного</h3>
           <div className="mt-3">
             <OrgAdminForm orgId={org.id} />
+          </div>
+        </div>
+
+        {/* Забытый ПИН — тупик для клиента: имена не показать и новые не завести.
+            Сбросить может только владелец, и это именно стирание, не просмотр. */}
+        <div className="mt-4 rounded-xl border border-foreground/10 bg-background p-4">
+          <h3 className="text-sm font-semibold">ПИН-код имён работников</h3>
+          <div className="mt-2">
+            <ResetOrgKeyAction
+              orgId={org.id}
+              configured={keyWraps > 0}
+              named={namedMembers}
+            />
           </div>
         </div>
       </section>
