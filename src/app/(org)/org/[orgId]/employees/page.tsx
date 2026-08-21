@@ -93,6 +93,7 @@ export default async function EmployeesPage({
         <div className="flex flex-wrap items-center gap-2">
           <CreateMembers
             orgId={ctx.orgId}
+            orgSlug={ctx.orgSlug}
             licenses={licenseOptions}
             groups={groups}
           />

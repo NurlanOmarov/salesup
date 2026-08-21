@@ -240,10 +240,22 @@ export function normalizeRecoveryCode(raw: string): string {
   return raw.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
 }
 
-/** Минимальные требования к парольной фразе: её вводят руками и нечасто. */
+/** Ниже этой длины фраза не принимается. */
+export const MIN_PASSPHRASE_LENGTH = 3;
+
+/**
+ * Минимальные требования к парольной фразе: её вводят руками и нечасто.
+ *
+ * Порог низкий по решению владельца — короткую фразу проще держать в голове.
+ * Стойкость при этом опирается на PBKDF2 с 600 000 итераций и на то, что
+ * подобрать её можно только имея на руках выгрузку OrgKeyWrap, а не через
+ * публичный эндпоинт; длинная фраза всё равно надёжнее, о чём говорит форма.
+ */
 export function validatePassphrase(value: string): string | null {
   const v = value.trim();
-  if (v.length < 10) return "Фраза должна быть не короче 10 символов";
+  if (v.length < MIN_PASSPHRASE_LENGTH) {
+    return `Фраза должна быть не короче ${MIN_PASSPHRASE_LENGTH} символов`;
+  }
   if (!/[^\d]/.test(v)) return "Добавьте буквы, а не только цифры";
   return null;
 }

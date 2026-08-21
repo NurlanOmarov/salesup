@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Copy, Eye, EyeOff, Lock, LockOpen, ShieldCheck } from "lucide-react";
-import { validatePassphrase } from "@/lib/org/crypto";
+import { MIN_PASSPHRASE_LENGTH, validatePassphrase } from "@/lib/org/crypto";
 import { useOrgKey } from "./org-key-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +34,7 @@ function SetupCard() {
   const [error, setError] = useState<string | null>(null);
   const [passphrase, setPassphrase] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [reveal, setReveal] = useState(false);
   const [recoveryCode, setRecoveryCode] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [ack, setAck] = useState(false);
@@ -111,35 +112,73 @@ function SetupCard() {
 
   return (
     <div className="rounded-xl border border-foreground/10 bg-background p-4">
-      <p className="text-sm font-semibold">Придумайте парольную фразу</p>
-      <p className="mt-1 text-sm text-foreground/60">
-        Ею шифруются подписи сотрудников. Фраза не передаётся нам — восстановить её
-        мы не сможем, поэтому сразу после включения сохраните код восстановления.
+      <p className="text-sm font-semibold">
+        Придумайте парольную фразу для подписей — одну на всю организацию
+      </p>
+      <p className="mt-1 max-w-2xl text-sm text-foreground/60">
+        Это не пароль сотрудника и не пароль от вашей учётной записи: придумайте
+        любую фразу сами. Она включает возможность подписать каждого работника
+        в списке ниже («Иванова, отдел Минск») — подписи шифруются ею прямо в
+        браузере, и на сервер уходят нечитаемыми. Кому какую подпись поставить,
+        вы решаете потом, в строке работника; фраза лишь открывает и закрывает
+        их все разом.
+      </p>
+      <p className="mt-1 max-w-2xl text-sm text-foreground/60">
+        Фразу мы не храним и восстановить не сможем — сохраните её в менеджере
+        паролей, а сразу после включения ещё и код восстановления.
       </p>
 
       <div className="mt-3 grid max-w-lg gap-3 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label htmlFor="passphrase">Фраза</Label>
-          <Input
-            id="passphrase"
-            type="password"
-            autoComplete="new-password"
-            value={passphrase}
-            onChange={(e) => setPassphrase(e.target.value)}
-            placeholder="не короче 10 символов"
-          />
+          <div className="relative">
+            <Input
+              id="passphrase"
+              type={reveal ? "text" : "password"}
+              autoComplete="new-password"
+              value={passphrase}
+              onChange={(e) => setPassphrase(e.target.value)}
+              placeholder={`не короче ${MIN_PASSPHRASE_LENGTH} символов`}
+              className="pr-10"
+            />
+            {/* Менеджеры паролей норовят подставить сюда сохранённый пароль —
+                без возможности посмотреть текст расхождение полей выглядит
+                необъяснимым. */}
+            <button
+              type="button"
+              onClick={() => setReveal((v) => !v)}
+              aria-label={reveal ? "Скрыть" : "Показать"}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-foreground/40 hover:text-foreground"
+            >
+              {reveal ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+            </button>
+          </div>
+          <p className="text-xs text-foreground/45">
+            Введено знаков: {passphrase.length}
+            {passphrase.length > 0 && passphrase.length < MIN_PASSPHRASE_LENGTH
+              ? ` — нужно минимум ${MIN_PASSPHRASE_LENGTH}`
+              : ""}
+          </p>
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="passphrase2">Повторите</Label>
           <Input
             id="passphrase2"
-            type="password"
+            type={reveal ? "text" : "password"}
             autoComplete="new-password"
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
           />
+          <p className="text-xs text-foreground/45">
+            Введено знаков: {confirm.length}
+          </p>
         </div>
       </div>
+
+      <p className="mt-2 text-xs text-foreground/50">
+        Подписи — дело добровольное: нажмите «Отмена», и кабинет продолжит работать,
+        показывая сотрудников по кодам.
+      </p>
 
       {error ? <p className="mt-2 text-sm text-red-600">{error}</p> : null}
 

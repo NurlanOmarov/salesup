@@ -133,9 +133,14 @@ describe("recovery-код", () => {
 });
 
 describe("validatePassphrase", () => {
-  it("отклоняет короткую и чисто цифровую", () => {
-    expect(validatePassphrase("короткая")).not.toBeNull();
+  it("отклоняет слишком короткую и чисто цифровую", () => {
+    expect(validatePassphrase("аб")).not.toBeNull();
     expect(validatePassphrase("1234567890123")).not.toBeNull();
+  });
+
+  it("принимает короткую фразу от трёх символов", () => {
+    // Порог снижен сознательно (см. MIN_PASSPHRASE_LENGTH): фразу вводят руками.
+    expect(validatePassphrase("абв")).toBeNull();
   });
 
   it("принимает нормальную фразу", () => {

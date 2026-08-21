@@ -7,6 +7,7 @@ import { createMembersAction } from "../../actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { LoginPreview } from "./login-preview";
 
 interface LicenseOption {
   id: string;
@@ -24,10 +25,12 @@ interface LicenseOption {
  */
 export function CreateMembers({
   orgId,
+  orgSlug,
   licenses,
   groups,
 }: {
   orgId: string;
+  orgSlug: string;
   licenses: LicenseOption[];
   groups: { id: string; name: string }[];
 }) {
@@ -159,6 +162,8 @@ export function CreateMembers({
         Платформа выдаст логины и временные пароли — раздадите их списком. Если
         сотрудники могут зарегистрироваться сами, лучше выдать коды доступа.
       </p>
+
+      <LoginPreview orgSlug={orgSlug} />
 
       <div className="mt-3 space-y-1.5">
         <Label>Какие курсы открыть</Label>
