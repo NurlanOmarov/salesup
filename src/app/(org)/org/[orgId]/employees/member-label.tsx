@@ -28,6 +28,16 @@ export function MemberLabel({
   const [draft, setDraft] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Пустая подпись мигает несколько секунд после разблокировки — ровно чтобы
+  // заметить новый элемент строки. Постоянная пульсация раздражала бы.
+  const [highlight, setHighlight] = useState(false);
+
+  useEffect(() => {
+    if (status !== "unlocked") return;
+    setHighlight(true);
+    const t = window.setTimeout(() => setHighlight(false), 6000);
+    return () => window.clearTimeout(t);
+  }, [status]);
 
   useEffect(() => {
     let cancelled = false;
@@ -82,21 +92,39 @@ export function MemberLabel({
     );
   }
 
+  // Подписанного сотрудника показываем спокойно, а пустое место — заметной
+  // пунктирной кнопкой: разблокировав ключ, ответственный не догадывался, что
+  // в строке появилось редактируемое поле, и уходил со страницы ни с чем.
+  if (text) {
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          setDraft(text);
+          setEditing(true);
+        }}
+        title="Изменить подпись"
+        className="mt-0.5 flex items-center gap-1.5 text-xs text-foreground/70 hover:text-foreground"
+      >
+        <span className="font-sans">{text}</span>
+        <Pencil className="size-3 text-foreground/35" />
+      </button>
+    );
+  }
+
   return (
     <button
       type="button"
       onClick={() => {
-        setDraft(text ?? "");
+        setDraft("");
         setEditing(true);
       }}
-      className="mt-0.5 flex items-center gap-1.5 text-xs text-foreground/70 hover:text-foreground"
+      className={`mt-1 flex items-center gap-1.5 rounded-md border border-dashed border-amber-500/50 bg-amber-500/[0.07] px-2 py-0.5 text-xs text-amber-700 transition-colors hover:bg-amber-500/15 hover:text-amber-800 ${
+        highlight ? "animate-pulse motion-reduce:animate-none" : ""
+      }`}
     >
-      {text ? (
-        <span className="font-sans">{text}</span>
-      ) : (
-        <span className="text-foreground/40">добавить подпись</span>
-      )}
-      <Pencil className="size-3 opacity-0 transition-opacity group-hover:opacity-100" />
+      <Pencil className="size-3" />
+      Добавить подпись
     </button>
   );
 

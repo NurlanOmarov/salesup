@@ -269,9 +269,13 @@ function UnlockedBar() {
   const { lock } = useOrgKey();
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-600/25 bg-emerald-500/[0.06] p-3">
-      <p className="flex items-center gap-2 text-sm text-emerald-900">
-        <ShieldCheck className="size-4" />
-        Подписи расшифрованы в этой вкладке. Закроете её — снова понадобится фраза.
+      <p className="flex items-start gap-2 text-sm text-emerald-900">
+        <ShieldCheck className="mt-0.5 size-4 shrink-0" />
+        <span>
+          Подписи расшифрованы в этой вкладке — в строке каждого работника
+          появилась кнопка «Добавить подпись». Закроете вкладку — снова
+          понадобится фраза.
+        </span>
       </p>
       <Button variant="ghost" size="sm" onClick={lock}>
         <Lock className="mr-1.5 size-4" />
