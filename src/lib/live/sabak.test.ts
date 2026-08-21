@@ -9,10 +9,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const envMock = {
   LIVE_SESSIONS_ENABLED: true,
   SABAK_BASE_URL: "https://api.sabak.test/api/v1",
-  SABAK_CLIENT_ID: "cid",
-  SABAK_CLIENT_SECRET: "secret",
-  SABAK_SERVICE_LOGIN: undefined as string | undefined,
-  SABAK_SERVICE_PASSWORD: undefined as string | undefined,
+  SABAK_CLIENT_ID: "cid" as string | undefined,
+  SABAK_CLIENT_SECRET: "secret" as string | undefined,
 };
 
 vi.mock("@/env", () => ({ env: envMock }));
@@ -22,6 +20,11 @@ vi.mock("@/lib/log", () => ({
 
 const { createSession, guestAccess, liveEnabled, resetTokenCache, SabakError } =
   await import("./sabak");
+
+/** Все эндпоинты SABAK, кроме /oauth/token, заворачивают ответ в {success,data}. */
+function envelope(data: unknown, status = 200): Response {
+  return jsonResponse({ success: true, data }, status);
+}
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -37,8 +40,6 @@ beforeEach(() => {
   envMock.LIVE_SESSIONS_ENABLED = true;
   envMock.SABAK_CLIENT_ID = "cid";
   envMock.SABAK_CLIENT_SECRET = "secret";
-  envMock.SABAK_SERVICE_LOGIN = undefined;
-  envMock.SABAK_SERVICE_PASSWORD = undefined;
   fetchMock = vi.fn();
   vi.stubGlobal("fetch", fetchMock);
 });
@@ -65,18 +66,10 @@ describe("готовность интеграции", () => {
     expect(liveEnabled()).toBe(false);
   });
 
-  it("выключена, если нет ни ключа, ни учётки тренера", () => {
-    envMock.SABAK_CLIENT_ID = undefined as unknown as string;
-    envMock.SABAK_CLIENT_SECRET = undefined as unknown as string;
+  it("выключена без сервисного ключа", () => {
+    envMock.SABAK_CLIENT_ID = undefined;
+    envMock.SABAK_CLIENT_SECRET = undefined;
     expect(liveEnabled()).toBe(false);
-  });
-
-  it("работает на временной учётке тренера, пока нет ключей", () => {
-    envMock.SABAK_CLIENT_ID = undefined as unknown as string;
-    envMock.SABAK_CLIENT_SECRET = undefined as unknown as string;
-    envMock.SABAK_SERVICE_LOGIN = "trainer";
-    envMock.SABAK_SERVICE_PASSWORD = "pass";
-    expect(liveEnabled()).toBe(true);
   });
 });
 
@@ -85,7 +78,7 @@ describe("создание встречи", () => {
     let seen: RequestInit | null = null;
     withToken((_url, init) => {
       seen = init;
-      return jsonResponse({ id: "les-1", guestUrl: "https://s/m/les-1", status: "SCHEDULED" });
+      return envelope({ id: "les-1", guestUrl: "https://s/m/les-1", status: "SCHEDULED" });
     });
 
     const res = await createSession({
@@ -107,7 +100,7 @@ describe("создание встречи", () => {
     let body: Record<string, unknown> = {};
     withToken((_url, init) => {
       body = JSON.parse(String(init.body));
-      return jsonResponse({ id: "les-1", guestUrl: "u", status: "SCHEDULED" });
+      return envelope({ id: "les-1", guestUrl: "u", status: "SCHEDULED" });
     });
 
     await createSession({
@@ -126,7 +119,7 @@ describe("создание встречи", () => {
   });
 
   it("токен берётся из кеша: второй вызов не логинится заново", async () => {
-    withToken(() => jsonResponse({ id: "x", guestUrl: "u", status: "SCHEDULED" }));
+    withToken(() => envelope({ id: "x", guestUrl: "u", status: "SCHEDULED" }));
     const input = {
       title: "t",
       scheduledAt: new Date(),
@@ -153,8 +146,8 @@ describe("создание встречи", () => {
       attempts += 1;
       return Promise.resolve(
         attempts === 1
-          ? jsonResponse({ message: "нет" }, 401)
-          : jsonResponse({ id: "les-2", guestUrl: "u", status: "SCHEDULED" }),
+          ? jsonResponse({ success: false, error: { code: "INVALID_CLIENT" } }, 401)
+          : envelope({ id: "les-2", guestUrl: "u", status: "SCHEDULED" }),
       );
     });
 
@@ -171,8 +164,13 @@ describe("создание встречи", () => {
     expect(attempts).toBe(2);
   });
 
-  it("ошибку сервиса отдаёт наверх со статусом, а не глотает", async () => {
-    withToken(() => jsonResponse({ message: "тариф не позволяет" }, 403));
+  it("невыданный тариф объясняет по-человечески, а не кодом 402", async () => {
+    withToken(() =>
+      jsonResponse(
+        { success: false, error: { code: "ENTITLEMENT_REQUIRED", message: "no" } },
+        402,
+      ),
+    );
     await expect(
       createSession({
         title: "t",
@@ -182,7 +180,12 @@ describe("создание встречи", () => {
         groupName: "g",
         idempotencyKey: "k",
       }),
-    ).rejects.toMatchObject({ name: "SabakError", status: 403 });
+    ).rejects.toMatchObject({
+      name: "SabakError",
+      status: 402,
+      code: "ENTITLEMENT_REQUIRED",
+      message: expect.stringContaining("тариф"),
+    });
     expect(SabakError).toBeTruthy();
   });
 });
@@ -192,7 +195,12 @@ describe("гостевой доступ", () => {
     let body: Record<string, unknown> = {};
     withToken((_url, init) => {
       body = JSON.parse(String(init.body));
-      return jsonResponse({ joinUrl: "https://s/m/x?t=1", expiresAt: "2026-09-10T11:00:00Z" });
+      return envelope({
+        joinUrl: "https://s/m/x?ticket=abc",
+        joinToken: "abc",
+        expiresAt: "2026-09-10T11:00:00Z",
+        externalId: "acme-0042",
+      });
     });
 
     const res = await guestAccess("les-1", "acme-0042");

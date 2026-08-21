@@ -74,14 +74,13 @@ const serverSchema = z.object({
   // не показывает раздел встреч, а не падает на каждом запросе.
   LIVE_SESSIONS_ENABLED: bool.default("false"),
   SABAK_BASE_URL: z.string().url().optional(),
-  // Целевой способ доступа — сервисный ключ (client_credentials), его ждём от
-  // команды SABAK (docs/SABAK-INTEGRATION-REQUEST.md, задача 1).
+  // Сервисный ключ (client_credentials) со скоупами lessons:write, lessons:read,
+  // guests:issue, recordings:read. Выдаётся в /admin/api-clients на стороне SABAK.
   SABAK_CLIENT_ID: z.string().optional(),
   SABAK_CLIENT_SECRET: z.string().optional(),
-  // Временный путь до появления ключей: логин и пароль учётки тренера. Живёт
-  // только в секретах сервера и уходит, как только заработает client_credentials.
-  SABAK_SERVICE_LOGIN: z.string().optional(),
-  SABAK_SERVICE_PASSWORD: z.string().optional(),
+  // Секрет исходящих вебхуков SABAK (docs/S2S_API.md §4). Пусто → приём
+  // выключен: событиям без проверенной подписи верить нельзя.
+  SABAK_WEBHOOK_SECRET: z.string().optional(),
 
   // Telegram-бот владельца: основной канал уведомлений о новых заявках.
   // Пусто → уведомления просто не отправляются (заявка всё равно в админке).

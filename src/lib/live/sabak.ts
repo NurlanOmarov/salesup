@@ -6,11 +6,13 @@ import { log } from "@/lib/log";
  * Клиент SABAK.kz — единственное место, где мы разговариваем с видеосервисом
  * (docs/LIVE-SESSIONS-PLAN.md, docs/SABAK-INTEGRATION-REQUEST.md).
  *
- * Два режима авторизации:
- *   1. Сервисный ключ (`client_credentials`) — целевой; ждём его от команды SABAK.
- *   2. Логин и пароль учётки тренера — временный костыль на период, пока ключей
- *      нет. Живёт в секретах сервера и уходит вместе с первым режимом.
- * Код вызывающей стороны про это не знает: `token()` сам выбирает, что доступно.
+ * Авторизация — сервисный ключ (`client_credentials`, RFC 6749), скоупы
+ * `lessons:write lessons:read guests:issue recordings:read`. Пароль живого
+ * пользователя платформа не хранит вовсе.
+ *
+ * Формат ответов: `/oauth/token` отвечает без конверта (того требует стандарт),
+ * все остальные эндпоинты заворачивают полезную нагрузку в `{ success, data }`.
+ * Разворачиваем в одном месте — `call()`, чтобы это знание не расползлось.
  *
  * Правило приватности (правило 9, Закон РБ № 99-З): наружу уходит ТОЛЬКО
  * обезличенный логин работника (`acme-0042`). Ни ФИО, ни e-mail, ни телефон в
@@ -28,6 +30,8 @@ export class SabakError extends Error {
   constructor(
     message: string,
     readonly status: number,
+    /** Машинный код из ответа SABAK: ENTITLEMENT_REQUIRED, INSUFFICIENT_SCOPE… */
+    readonly code?: string,
   ) {
     super(message);
     this.name = "SabakError";
@@ -36,10 +40,12 @@ export class SabakError extends Error {
 
 /** Готова ли интеграция: без этого раздел встреч не показывается вовсе. */
 export function liveEnabled(): boolean {
-  if (!env.LIVE_SESSIONS_ENABLED || !env.SABAK_BASE_URL) return false;
-  const hasKey = !!(env.SABAK_CLIENT_ID && env.SABAK_CLIENT_SECRET);
-  const hasPassword = !!(env.SABAK_SERVICE_LOGIN && env.SABAK_SERVICE_PASSWORD);
-  return hasKey || hasPassword;
+  return !!(
+    env.LIVE_SESSIONS_ENABLED &&
+    env.SABAK_BASE_URL &&
+    env.SABAK_CLIENT_ID &&
+    env.SABAK_CLIENT_SECRET
+  );
 }
 
 // Токен живёт 15–30 минут; держим его в памяти процесса и обновляем заранее.
@@ -60,46 +66,28 @@ async function token(): Promise<string> {
     return cachedToken.value;
   }
 
-  const base = env.SABAK_BASE_URL!;
-  let value: string;
-  let ttlSec = 900;
-
-  if (env.SABAK_CLIENT_ID && env.SABAK_CLIENT_SECRET) {
-    const res = await fetch(`${base}/oauth/token`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        grant_type: "client_credentials",
-        client_id: env.SABAK_CLIENT_ID,
-        client_secret: env.SABAK_CLIENT_SECRET,
-      }),
-      cache: "no-store",
-    });
-    const data = (await safeJson(res)) as { access_token?: string; expires_in?: number };
-    if (!res.ok || !data?.access_token) {
-      throw new SabakError("SABAK не выдал сервисный токен", res.status);
-    }
-    value = data.access_token;
-    ttlSec = data.expires_in ?? ttlSec;
-  } else {
-    const res = await fetch(`${base}/auth/local/login`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        login: env.SABAK_SERVICE_LOGIN,
-        password: env.SABAK_SERVICE_PASSWORD,
-      }),
-      cache: "no-store",
-    });
-    const data = (await safeJson(res)) as { accessToken?: string };
-    if (!res.ok || !data?.accessToken) {
-      throw new SabakError("SABAK не пустил учётку тренера", res.status);
-    }
-    value = data.accessToken;
+  const res = await fetch(`${env.SABAK_BASE_URL}/oauth/token`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      grant_type: "client_credentials",
+      client_id: env.SABAK_CLIENT_ID,
+      client_secret: env.SABAK_CLIENT_SECRET,
+    }),
+    cache: "no-store",
+    signal: AbortSignal.timeout(10_000),
+  });
+  // Единственный эндпоинт без конверта {success,data} — так требует RFC 6749.
+  const data = (await safeJson(res)) as { access_token?: string; expires_in?: number };
+  if (!res.ok || !data?.access_token) {
+    throw new SabakError("SABAK не выдал сервисный токен", res.status);
   }
 
-  cachedToken = { value, expiresAt: Date.now() + ttlSec * 1000 };
-  return value;
+  cachedToken = {
+    value: data.access_token,
+    expiresAt: Date.now() + (data.expires_in ?? 1800) * 1000,
+  };
+  return cachedToken.value;
 }
 
 async function safeJson(res: Response): Promise<unknown> {
@@ -121,9 +109,8 @@ async function call<T>(
   init: RequestInit & { idempotencyKey?: string } = {},
   retry = true,
 ): Promise<T> {
-  const base = env.SABAK_BASE_URL!;
   const { idempotencyKey, ...rest } = init;
-  const res = await fetch(`${base}${path}`, {
+  const res = await fetch(`${env.SABAK_BASE_URL}${path}`, {
     ...rest,
     headers: {
       "content-type": "application/json",
@@ -136,15 +123,53 @@ async function call<T>(
     signal: AbortSignal.timeout(10_000),
   });
 
+  // 401 бывает и после отзыва ключа, и просто по истечении токена — различить
+  // их по ответу нельзя, поэтому один раз пробуем перелогиниться.
   if (res.status === 401 && retry) {
     resetTokenCache();
     return call<T>(path, init, false);
   }
+
+  const body = (await safeJson(res)) as
+    | { success?: boolean; data?: T; error?: { code?: string; message?: string } }
+    | null;
+
   if (!res.ok) {
-    const body = (await safeJson(res)) as { message?: string } | null;
-    throw new SabakError(body?.message ?? `SABAK ответил ${res.status}`, res.status);
+    const code = body?.error?.code;
+    throw new SabakError(explain(code, body?.error?.message, res.status), res.status, code);
   }
-  return (await safeJson(res)) as T;
+  // Полезная нагрузка лежит в data; вырожденный ответ без конверта тоже терпим.
+  return (body && "data" in body ? (body.data as T) : (body as unknown as T));
+}
+
+/**
+ * Коды ошибок SABAK → фразы, по которым владелец поймёт, что делать. Особенно
+ * важен 402: это не сбой интеграции, а невыданный тариф у учётки тренера, и
+ * искать его надо в админке SABAK, а не в нашем коде.
+ */
+function explain(code: string | undefined, message: string | undefined, status: number): string {
+  switch (code) {
+    case "ENTITLEMENT_REQUIRED":
+      return "Учётке тренера в SABAK не выдан тариф на встречи (create_lesson / record_lesson)";
+    case "INSUFFICIENT_SCOPE":
+    case "ENDPOINT_NOT_AVAILABLE_TO_API_CLIENT":
+      return "Сервисному ключу не хватает прав — проверьте скоупы в /admin/api-clients";
+    case "API_CLIENT_REVOKED":
+    case "INVALID_CLIENT":
+      return "Сервисный ключ отозван или неверен — выпустите новый";
+    case "IDEMPOTENCY_KEY_REUSED":
+      return "Встреча уже создавалась с этим ключом, но с другими параметрами";
+    case "LESSON_NOT_FOUND":
+      return "Встреча не найдена в SABAK (или принадлежит другому workspace)";
+    case "GUESTS_NOT_ALLOWED":
+      return "У встречи выключен гостевой вход";
+    case "LINK_EXPIRED":
+      return "Ссылка на встречу истекла: прошло больше суток с её начала";
+    case "RECORDING_NOT_READY":
+      return "Запись ещё обрабатывается";
+    default:
+      return message ?? `SABAK ответил ${status}`;
+  }
 }
 
 // ─────────────────────────────── операции ───────────────────────────────
@@ -213,8 +238,10 @@ export async function rescheduleSession(
 export async function guestAccess(
   sabakLessonId: string,
   memberLogin: string,
-): Promise<{ joinUrl: string; expiresAt: string }> {
-  return call<{ joinUrl: string; expiresAt: string }>(
+): Promise<{ joinUrl: string; joinToken: string; expiresAt: string }> {
+  // joinUrl содержит одноразовый билет на 15 минут: он гаснет при первом входе,
+  // поэтому ссылку выдаём в момент клика, а не кладём в вёрстку заранее.
+  return call<{ joinUrl: string; joinToken: string; expiresAt: string }>(
     `/lessons/${sabakLessonId}/guest-access`,
     {
       method: "POST",
@@ -224,23 +251,39 @@ export async function guestAccess(
 }
 
 export interface AttendanceSummary {
+  lessonId: string;
+  status: string;
+  finishedAt: string | null;
   participants: { externalId: string; attended: boolean }[];
 }
 
-/** Посещаемость сводкой: «был / не был», без минут (решение владельца). */
+/**
+ * Посещаемость сводкой: «был / не был». Порог присутствия задаём явно, а не
+ * полагаемся на умолчание чужого сервиса — иначе отчёт клиенту поедет, если
+ * SABAK когда-нибудь поменяет дефолт.
+ */
 export async function attendanceSummary(
   sabakLessonId: string,
+  minMinutes = 10,
 ): Promise<AttendanceSummary> {
-  return call<AttendanceSummary>(`/lessons/${sabakLessonId}/attendance/summary`);
+  return call<AttendanceSummary>(
+    `/lessons/${sabakLessonId}/attendance/summary?minMinutes=${minMinutes}`,
+  );
+}
+
+export interface SabakRecording {
+  id: string;
+  ready: boolean;
+  durationSeconds: number;
 }
 
 export async function listRecordings(
   sabakLessonId: string,
-): Promise<{ id: string; isReady: boolean; durationSeconds: number }[]> {
-  const res = await call<{
-    data?: { id: string; isReady: boolean; durationSeconds: number }[];
-  }>(`/lessons/${sabakLessonId}/recordings`);
-  return res.data ?? [];
+): Promise<SabakRecording[]> {
+  const res = await call<{ lessonId: string; recordings?: SabakRecording[] }>(
+    `/lessons/${sabakLessonId}/recordings`,
+  );
+  return res.recordings ?? [];
 }
 
 /**
@@ -252,10 +295,15 @@ export async function recordingLink(
   recordingId: string,
   ttlMinutes = 60,
 ): Promise<{ url: string; expiresAt: string }> {
-  return call<{ url: string; expiresAt: string }>(`/recordings/${recordingId}/link`, {
-    method: "POST",
-    body: JSON.stringify({ ttlMinutes }),
-  });
+  return call<{ url: string; expiresAt: string; allowDownload: boolean }>(
+    `/recordings/${recordingId}/link`,
+    {
+      method: "POST",
+      // allowDownload передаём явно: на той стороне это умолчание, а запись
+      // компании не должна утечь файлом из-за смены чужого дефолта.
+      body: JSON.stringify({ ttlMinutes, allowDownload: false }),
+    },
+  );
 }
 
 /** Диагностика для консоли владельца: доступен ли SABAK и под кем мы работаем. */

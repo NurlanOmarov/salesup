@@ -164,7 +164,7 @@ export async function syncResult(sessionId: string): Promise<void> {
 
   try {
     const recordings = await sabak.listRecordings(session.sabakLessonId);
-    const ready = recordings.find((r) => r.isReady);
+    const ready = recordings.find((r) => r.ready);
     if (ready) {
       await db.liveSession.update({
         where: { id: sessionId },
