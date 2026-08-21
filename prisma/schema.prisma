@@ -241,6 +241,7 @@ model Course {
   reviews      Review[]
   quizzes      Quiz[]
   orgLicenses  OrgLicense[]
+  liveSessions LiveSession[]
 
   @@index([status, type])
 }
@@ -1024,11 +1025,12 @@ model Organization {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  memberships OrgMembership[]
-  licenses    OrgLicense[]
-  groups      OrgGroup[]
-  invites     OrgInvite[]
-  keyWraps    OrgKeyWrap[]
+  memberships  OrgMembership[]
+  licenses     OrgLicense[]
+  groups       OrgGroup[]
+  invites      OrgInvite[]
+  keyWraps     OrgKeyWrap[]
+  liveSessions LiveSession[]
 
   @@index([status])
 }
@@ -1207,6 +1209,85 @@ model Lead {
 
   @@index([status, createdAt])
   @@index([site, createdAt])
+}
+
+// ─────────────────────────── ЖИВЫЕ СЕССИИ С ТРЕНЕРОМ ───────────────────────────
+
+/// Тип встречи в пакете с тренером (lib/pricing TRAINER_PACK): вводная на старте,
+/// итоговая в конце, EXTRA — всё, что продали сверх пакета.
+enum LiveSessionKind {
+  INTRO
+  FINAL
+  EXTRA
+}
+
+enum LiveSessionStatus {
+  PLANNED
+  LIVE
+  FINISHED
+  CANCELLED
+}
+
+/// Онлайн-встреча отдела компании с тренером. Видео живёт в SABAK
+/// (docs/LIVE-SESSIONS-PLAN.md), здесь — расписание, права доступа и результат.
+///
+/// Персональных данных в модели нет: участники учитываются обезличенным логином
+/// `<slug>-0042`, длительность участия не хранится вовсе — только факт присутствия.
+model LiveSession {
+  id             String            @id @default(cuid())
+  orgId          String
+  /// К какому курсу относится встреча (для карточки в кабинете). null — общая.
+  courseId       String?
+  kind           LiveSessionKind
+  title          String
+  /// Момент начала в UTC. Часовой пояс клиента хранится рядом: рынки разнесены
+  /// на два часа (Минск/Москва +3, Астана/Ташкент +5), и показывать встречу надо
+  /// в зоне компании, а не сервера.
+  scheduledAt    DateTime
+  timezone       String            @default("Europe/Minsk")
+  durationMin    Int               @default(60)
+  status         LiveSessionStatus @default(PLANNED)
+  /// Идентификатор урока на стороне SABAK. null — встреча заведена у нас, но в
+  /// SABAK ещё не создана (сервис был недоступен) — фоновая задача повторит.
+  sabakLessonId  String?           @unique
+  /// Ключ идемпотентности для повторных попыток создания в SABAK: без него
+  /// сетевой сбой оставил бы в календаре тренера две одинаковые встречи.
+  idempotencyKey String            @unique
+  /// Гостевая ссылка вида https://<sabak>/m/<lessonId>. Храним, чтобы кабинет
+  /// открывался даже когда API SABAK недоступен.
+  joinUrl        String?
+  /// Запись: постоянную ссылку НЕ храним намеренно — она даёт доступ любому, кто
+  /// её перешлёт. Здесь только идентификатор в SABAK, а ссылка на час выдаётся
+  /// по клику, после проверки прав (docs/LIVE-SESSIONS-PLAN.md §6).
+  recordingId    String?
+  recordingReady Boolean           @default(false)
+  /// Сколько человек было на встрече. Без имён — только число для отчёта.
+  attendedCount  Int?
+  note           String?           @db.Text
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  org        Organization            @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  course     Course?                 @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  attendance LiveSessionAttendance[]
+
+  @@index([orgId, scheduledAt])
+  @@index([status, scheduledAt])
+}
+
+/// Присутствие работника на встрече — «был / не был» (решение владельца).
+/// Ключ — платформенный логин, а не userId: он же уходит в SABAK как displayName,
+/// и по нему возвращается посещаемость.
+model LiveSessionAttendance {
+  id          String  @id @default(cuid())
+  sessionId   String
+  memberLogin String
+  attended    Boolean @default(false)
+
+  session LiveSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, memberLogin])
+  @@index([sessionId])
 }
 
 // Журнал действий владельца: каждая выдача/отзыв доступа, сброс пароля, возврат

@@ -26,6 +26,7 @@ const GROUPS: { label: string; items: NavItem[] }[] = [
     items: [
       { href: "/admin/students", label: "Ученики", hint: "Создание учёток и выдача доступа" },
       { href: "/admin/orgs", label: "Организации", hint: "B2B: лицензии и места" },
+      { href: "/admin/live", label: "Встречи", hint: "Живые сессии с тренером" },
       { href: "/admin/leads", label: "Заявки", hint: "Обращения с лендинга" },
     ],
   },

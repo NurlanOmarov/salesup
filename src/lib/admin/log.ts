@@ -50,7 +50,12 @@ export type AdminAction =
   | "org.group.create"
   | "org.group.delete"
   | "org.key.setup"
-  | "org.key.reset";
+  | "org.key.reset"
+  // Живые сессии с тренером (docs/LIVE-SESSIONS-PLAN.md). meta.sessionId и
+  // meta.orgId проставляются всегда — по ним разбираются споры «кто перенёс».
+  | "live.session.plan"
+  | "live.session.reschedule"
+  | "live.session.cancel";
 
 export function writeAdminLog(params: {
   actorId: string;

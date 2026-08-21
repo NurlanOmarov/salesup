@@ -88,4 +88,4 @@ deploy/  # docker-compose.yml, nginx.conf, Dockerfile, crontab-заметки
 
 ## Env
 
-`DATABASE_URL`, `AUTH_SECRET`, `ANTHROPIC_API_KEY`, `EMBEDDINGS_API_KEY`, `MEDIA_ROOT` (volume), `STORAGE_DRIVER=fs|s3` (+S3-ключи для будущего), `VIDEO_SIGNING_SECRET`, `VIDEO_KEY_ENC_SECRET` (шифрование AES-ключей HLS в БД), `EMAIL_ENABLED`, `SMTP_*`, `OWNER_EMAIL`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_SUPPORT_WHATSAPP|TELEGRAM|PHONE` (контакты на лендинге и «забыли пароль»). Будущие: `PAYMENT_PROVIDER`, `KASPI_*`. Образец — `.env.example` (поддерживать актуальным).
+`DATABASE_URL`, `AUTH_SECRET`, `ANTHROPIC_API_KEY`, `EMBEDDINGS_API_KEY`, `MEDIA_ROOT` (volume), `STORAGE_DRIVER=fs|s3` (+S3-ключи для будущего), `VIDEO_SIGNING_SECRET`, `VIDEO_KEY_ENC_SECRET` (шифрование AES-ключей HLS в БД), `EMAIL_ENABLED`, `SMTP_*`, `OWNER_EMAIL`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_SUPPORT_WHATSAPP|TELEGRAM|PHONE` (контакты на лендинге и «забыли пароль»), `LIVE_SESSIONS_ENABLED`+`SABAK_*` (живые сессии с тренером через SABAK.kz — docs/LIVE-SESSIONS-PLAN.md; выключено → раздел встреч скрыт). Будущие: `PAYMENT_PROVIDER`, `KASPI_*`. Образец — `.env.example` (поддерживать актуальным).

@@ -69,6 +69,20 @@ const serverSchema = z.object({
   WOO_CONSUMER_KEY: z.string().optional(),
   WOO_CONSUMER_SECRET: z.string().optional(),
 
+  // ── Живые сессии с тренером через SABAK (docs/LIVE-SESSIONS-PLAN.md) ──
+  // Выключено по умолчанию: пока у SABAK нет сервисных ключей, кабинет просто
+  // не показывает раздел встреч, а не падает на каждом запросе.
+  LIVE_SESSIONS_ENABLED: bool.default("false"),
+  SABAK_BASE_URL: z.string().url().optional(),
+  // Целевой способ доступа — сервисный ключ (client_credentials), его ждём от
+  // команды SABAK (docs/SABAK-INTEGRATION-REQUEST.md, задача 1).
+  SABAK_CLIENT_ID: z.string().optional(),
+  SABAK_CLIENT_SECRET: z.string().optional(),
+  // Временный путь до появления ключей: логин и пароль учётки тренера. Живёт
+  // только в секретах сервера и уходит, как только заработает client_credentials.
+  SABAK_SERVICE_LOGIN: z.string().optional(),
+  SABAK_SERVICE_PASSWORD: z.string().optional(),
+
   // Telegram-бот владельца: основной канал уведомлений о новых заявках.
   // Пусто → уведомления просто не отправляются (заявка всё равно в админке).
   TELEGRAM_BOT_TOKEN: z.string().optional(),

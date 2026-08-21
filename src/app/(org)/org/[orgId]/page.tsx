@@ -4,6 +4,7 @@ import { AlertTriangle, ArrowRight, ShieldCheck } from "lucide-react";
 import { requireOrgAdmin } from "@/lib/org/guards";
 import { getOrgOverview } from "@/lib/org/reports";
 import { SeatsBar } from "@/app/(owner)/admin/orgs/org-ui";
+import { LiveSessionsBlock } from "@/components/live/sessions-block";
 
 export const metadata: Metadata = {
   title: "Обзор обучения",
@@ -75,6 +76,10 @@ export default async function OrgOverviewPage({
           ) : null}
         </section>
       ) : null}
+
+      {/* Встречи с тренером идут выше лицензий: дата ближайшей — то, что
+          ответственному нужно знать сейчас, а не по итогам месяца. */}
+      <LiveSessionsBlock orgId={ctx.orgId} />
 
       <section className="mt-8">
         <h2 className="text-lg font-semibold">Лицензии</h2>

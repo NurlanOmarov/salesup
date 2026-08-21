@@ -13,6 +13,7 @@ import { WeeklyGoal } from "@/components/gamification/weekly-goal";
 import { OnboardingTour } from "@/components/student/onboarding-tour";
 import { dailyQuests } from "@/lib/gamification/quests";
 import { buttonVariants } from "@/components/ui/button";
+import { LiveSessionsBlock } from "@/components/live/sessions-block";
 
 export const metadata: Metadata = {
   title: "Моё обучение",
@@ -26,6 +27,14 @@ export default async function DashboardPage() {
   const userId = session.user.id;
   const isOwner = session.user.role === "OWNER";
   const now = new Date();
+
+  // Организация работника — для блока встреч с тренером. Членство читаем из БД,
+  // а не из токена: работника могли отключить уже после выдачи сессии.
+  const membership = await db.orgMembership.findFirst({
+    where: { userId, isActive: true, org: { status: "ACTIVE" } },
+    select: { orgId: true },
+  });
+  const orgId = membership?.orgId ?? null;
 
   // Срез курса, нужный кабинету (одинаков для ученика и владельца).
   const courseSelect = {
@@ -193,6 +202,11 @@ export default async function DashboardPage() {
           </span>
         </Link>
       ) : null}
+
+      {/* Встреча с тренером — событие с точным временем, поэтому идёт до
+          статистики: её нельзя «посмотреть позже», в отличие от прогресса.
+          Блок сам ничего не покажет, если работник не состоит в организации. */}
+      {orgId ? <LiveSessionsBlock orgId={orgId} title="Ближайшая встреча с тренером" limitPast={1} /> : null}
 
       {/* Сводка прогресса: уроки за неделю · активные курсы · ближайший сертификат */}
       {courses.length > 0 ? (

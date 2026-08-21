@@ -5,6 +5,11 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
+      // Серверные модули (lib/live, lib/seo) начинаются с import "server-only";
+      // в Node-окружении тестов пакет бросает ошибку, поэтому подменяем пустышкой.
+      "server-only": fileURLToPath(
+        new URL("./src/test/server-only-stub.ts", import.meta.url),
+      ),
     },
   },
   test: {
