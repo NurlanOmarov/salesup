@@ -394,33 +394,40 @@ export async function createMembers(input: {
 }
 
 /**
- * Создать ответственного представителя организации: обычная учётка с e-mail
- * (его ПДн платформа обрабатывает как оператор — оферта, п. 10.7) + членство
- * ORG_ADMIN. Возвращает временный пароль, который показывается владельцу один раз.
+ * Назначить ответственного представителя организации: учётка с e-mail (его ПДн
+ * платформа обрабатывает как оператор — оферта, п. 10.7) + членство ORG_ADMIN.
+ *
+ * Пароль выдаётся ТОЛЬКО новой учётке. Если пользователь с таким e-mail уже
+ * есть, мы назначаем ему роль и не трогаем пароль: иначе назначение молча
+ * обнуляет доступ живому человеку — ровно так владелец платформы, указав в
+ * форме собственный e-mail, лишился входа в свою же консоль. Утерянный пароль
+ * восстанавливается отдельной кнопкой сброса, а не побочным эффектом.
  */
 export async function createOrgAdmin(input: {
   orgId: string;
   email: string;
   name?: string | null;
-}): Promise<{ userId: string; tempPassword: string }> {
+}): Promise<{ userId: string; tempPassword: string | null; existed: boolean }> {
   const email = input.email.trim().toLowerCase();
   const existing = await db.user.findUnique({
     where: { email },
-    select: { id: true },
+    select: { id: true, role: true },
   });
 
-  const tempPassword = generateTempPassword();
-  const passwordHash = await hashPassword(tempPassword);
+  // Владелец платформы входит в кабинет любого клиента через «режим владельца»
+  // (requireOrgAdmin пропускает OWNER без членства) — понижать его до ORG_ADMIN
+  // незачем, а последствия у такого назначения были бы неочевидные.
+  if (existing?.role === "OWNER") {
+    throw new JoinError(
+      "Это учётная запись владельца платформы: она и так открывает кабинет любой организации. Укажите e-mail сотрудника клиента.",
+    );
+  }
+
+  const tempPassword = existing ? null : generateTempPassword();
 
   const userId = await db.$transaction(async (tx) => {
     let id: string;
     if (existing) {
-      // Уже есть учётка (например, розничный ученик) — не плодим вторую,
-      // назначаем её ответственным представителем и выдаём новый пароль.
-      await tx.user.update({
-        where: { id: existing.id },
-        data: { passwordHash, mustChangePassword: true },
-      });
       id = existing.id;
     } else {
       const created = await tx.user.create({
@@ -428,7 +435,7 @@ export async function createOrgAdmin(input: {
           email,
           name: input.name?.trim() || null,
           role: "STUDENT",
-          passwordHash,
+          passwordHash: await hashPassword(tempPassword!),
           mustChangePassword: true,
         },
         select: { id: true },
@@ -449,5 +456,5 @@ export async function createOrgAdmin(input: {
     return id;
   });
 
-  return { userId, tempPassword };
+  return { userId, tempPassword, existed: Boolean(existing) };
 }

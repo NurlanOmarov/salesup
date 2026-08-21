@@ -376,9 +376,11 @@ export function OrgAdminForm({ orgId }: { orgId: string }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [created, setCreated] = useState<{ email: string; tempPassword: string } | null>(
-    null,
-  );
+  const [created, setCreated] = useState<{
+    email: string;
+    tempPassword: string | null;
+    existed: boolean;
+  } | null>(null);
   const [copied, setCopied] = useState(false);
 
   async function onSubmit(formData: FormData) {
@@ -391,7 +393,11 @@ export function OrgAdminForm({ orgId }: { orgId: string }) {
         name: formData.get("name") || undefined,
       });
       if (res.ok) {
-        setCreated({ email: res.data.email, tempPassword: res.data.tempPassword });
+        setCreated({
+          email: res.data.email,
+          tempPassword: res.data.tempPassword,
+          existed: res.data.existed,
+        });
         router.refresh();
       } else {
         setError(res.error);
@@ -411,33 +417,45 @@ export function OrgAdminForm({ orgId }: { orgId: string }) {
           <p className="font-semibold">Ответственный назначен</p>
         </div>
         <p className="mt-2 text-sm text-foreground/70">
-          Передайте данные лично. Пароль показывается <strong>один раз</strong>: при
-          первом входе он будет заменён.
+          {created.tempPassword ? (
+            <>
+              Передайте данные лично. Пароль показывается <strong>один раз</strong>: при
+              первом входе он будет заменён.
+            </>
+          ) : (
+            <>
+              Учётная запись с таким e-mail уже была — мы только выдали ей права
+              в кабинете. Пароль <strong>остался прежним</strong>; если он утерян,
+              сбросьте его в списке представителей.
+            </>
+          )}
         </p>
         <dl className="mt-3 space-y-2 text-sm">
           <div>
             <dt className="text-xs uppercase tracking-wide text-foreground/50">Логин</dt>
             <dd className="font-mono">{created.email}</dd>
           </div>
-          <div>
-            <dt className="text-xs uppercase tracking-wide text-foreground/50">
-              Временный пароль
-            </dt>
-            <dd className="flex items-center gap-2 font-mono">
-              {created.tempPassword}
-              <button
-                type="button"
-                onClick={() => {
-                  void navigator.clipboard.writeText(created.tempPassword);
-                  setCopied(true);
-                }}
-                className="rounded p-1 text-foreground/50 transition-colors hover:bg-foreground/5 hover:text-foreground"
-                aria-label="Скопировать пароль"
-              >
-                {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-              </button>
-            </dd>
-          </div>
+          {created.tempPassword ? (
+            <div>
+              <dt className="text-xs uppercase tracking-wide text-foreground/50">
+                Временный пароль
+              </dt>
+              <dd className="flex items-center gap-2 font-mono">
+                {created.tempPassword}
+                <button
+                  type="button"
+                  onClick={() => {
+                    void navigator.clipboard.writeText(created.tempPassword!);
+                    setCopied(true);
+                  }}
+                  className="rounded p-1 text-foreground/50 transition-colors hover:bg-foreground/5 hover:text-foreground"
+                  aria-label="Скопировать пароль"
+                >
+                  {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+                </button>
+              </dd>
+            </div>
+          ) : null}
         </dl>
         <Button
           variant="outline"

@@ -175,6 +175,28 @@ test("владелец заводит организацию, лицензию �
     where: { orgId, userId: admin.id },
   });
   expect(membership.role).toBe("ORG_ADMIN");
+
+  // Повторное назначение существующей учётки не трогает её пароль. Пока трогало,
+  // владелец платформы, указавший в этой форме собственный e-mail, терял вход в
+  // свою же консоль: пароль молча заменялся временным и показывался один раз.
+  const hashBefore = (
+    await db.user.findUniqueOrThrow({ where: { id: admin.id }, select: { passwordHash: true } })
+  ).passwordHash;
+  await page.getByRole("button", { name: "Готово" }).click();
+  await page.getByLabel("E-mail *").fill(ADMIN_EMAIL);
+  await page.getByRole("button", { name: /Назначить ответственного/ }).click();
+  await expect(page.getByText("Учётная запись с таким e-mail уже была")).toBeVisible();
+  await expect(page.getByText("Временный пароль")).toBeHidden();
+  const hashAfter = (
+    await db.user.findUniqueOrThrow({ where: { id: admin.id }, select: { passwordHash: true } })
+  ).passwordHash;
+  expect(hashAfter).toBe(hashBefore);
+
+  // И собственную учётку владельца в представители не отдаём вовсе.
+  await page.getByRole("button", { name: "Готово" }).click();
+  await page.getByLabel("E-mail *").fill(OWNER_EMAIL);
+  await page.getByRole("button", { name: /Назначить ответственного/ }).click();
+  await expect(page.getByText("учётная запись владельца платформы", { exact: false })).toBeVisible();
 });
 
 test("корпоративная заявка ведёт на создание организации, а не ученика", async ({

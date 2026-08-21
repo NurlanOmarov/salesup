@@ -350,6 +350,8 @@ export const grantLicenseAction = safeAction(
 /**
  * Назначить ответственного представителя: учётка с e-mail + роль ORG_ADMIN.
  * Временный пароль показывается владельцу один раз — передаёт его он лично.
+ * Существующей учётке пароль не меняется (см. createOrgAdmin), поэтому
+ * tempPassword в ответе может быть null.
  */
 export const createOrgAdminAction = safeAction(
   {
@@ -361,7 +363,7 @@ export const createOrgAdminAction = safeAction(
     auth: "owner",
   },
   async (input, { session }) => {
-    const { userId, tempPassword } = await createOrgAdmin({
+    const { userId, tempPassword, existed } = await createOrgAdmin({
       orgId: input.orgId,
       email: input.email,
       name: input.name,
@@ -371,11 +373,11 @@ export const createOrgAdminAction = safeAction(
       actorId: session!.user.id,
       action: "org.admin.create",
       targetUserId: userId,
-      meta: { orgId: input.orgId },
+      meta: { orgId: input.orgId, existed },
     });
 
     revalidatePath(`/admin/orgs/${input.orgId}`);
-    return { userId, email: input.email.trim().toLowerCase(), tempPassword };
+    return { userId, email: input.email.trim().toLowerCase(), tempPassword, existed };
   },
 );
 
