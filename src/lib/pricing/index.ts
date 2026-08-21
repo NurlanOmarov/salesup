@@ -296,3 +296,8 @@ export function quoteSeats(seats: number, retailTiyn: number): SeatQuote {
     savingTiyn: retailTiyn * seats - totalTiyn,
   };
 }
+
+// Акция витрины живёт отдельным модулем, но импортируется отсюда же: у цен
+// платформы должна быть одна точка входа, иначе половина кода посчитает скидку,
+// а половина — нет.
+export * from "./promo";

@@ -309,7 +309,7 @@ export function SeatsCalculator({
         <div className="mt-3 space-y-2 border-t border-foreground/10 pt-3">
           <div className="flex items-baseline justify-between gap-3">
             <dt className="text-xs uppercase tracking-wide text-foreground/50">
-              {c.totalYear}
+              {c.totalYear(seats)}
             </dt>
             <dd className="whitespace-nowrap text-lg font-semibold tabular-nums">
               {money(quote.totalTiyn)}
@@ -325,6 +325,12 @@ export function SeatsCalculator({
           </div>
         </div>
       </dl>
+
+      {/*
+        Без этой строки цифры читались как «690 в год + 58 в месяц»: люди
+        спрашивали, платить ли ещё и помесячно. Говорим прямо — счёт один.
+      */}
+      <p className="mt-2 text-xs text-foreground/50">{c.paymentNote}</p>
 
       {quote.tier ? (
         <p className="mt-4 rounded-lg bg-emerald-500/[0.07] px-3 py-2 text-sm text-emerald-800">

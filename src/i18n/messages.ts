@@ -63,6 +63,10 @@ const ru = {
     noOnlinePayment: "Онлайн-оплата не требуется",
     certificate: "Сертификат по окончании",
     subtitles: "Субтитры на 4 языках",
+    // Язык курса называем прямо: на казахской и узбекской витрине название и
+    // описание переведены, а видео и материалы остаются русскими.
+    courseLanguage: "Курс на русском языке",
+    subtitleLanguages: "Субтитры: русский, казахский, английский, узбекский",
     writeWhatsapp: "Написать в WhatsApp",
     writeTelegram: "Написать в Telegram",
     writeViber: "Написать в Viber",
@@ -92,6 +96,23 @@ const ru = {
     helpCta: "Оставить заявку",
     seoDescription:
       "Видеокурсы по продажам для туризма, мебели, обуви, недвижимости, медпредставителей и B2B. Авторские программы бизнес-тренера Виталия Дубовика.",
+  },
+  /**
+   * Акция «−50 %» (lib/pricing/promo). Даты в текстах нет — она приходит из
+   * одного места, чтобы баннер и подпись у цены не разошлись при переносе срока.
+   */
+  promo: {
+    badge: "−50 %",
+    title: "Скидка 50 % на все курсы",
+    subtitle: (date: string) =>
+      `Цена запуска платформы действует до ${date} включительно. После — обычный прайс.`,
+    until: (date: string) => `до ${date}`,
+    oldPrice: "Цена без скидки",
+    left: "До конца акции",
+    days: "дн",
+    hours: "ч",
+    minutes: "мин",
+    seconds: "с",
   },
   seo: {
     titleTemplate: "%s · ACTIVE SALES",
@@ -259,6 +280,8 @@ const kk = {
     noOnlinePayment: "Онлайн төлеудің қажеті жоқ",
     certificate: "Аяқтағаннан кейін сертификат",
     subtitles: "4 тілде субтитрлер",
+    courseLanguage: "Курс орыс тілінде",
+    subtitleLanguages: "Субтитрлер: орысша, қазақша, ағылшынша, өзбекше",
     writeWhatsapp: "WhatsApp-қа жазу",
     writeTelegram: "Telegram-ға жазу",
     writeViber: "Viber-ге жазу",
@@ -288,6 +311,19 @@ const kk = {
     helpCta: "Өтінім қалдыру",
     seoDescription:
       "Туризм, жиһаз, аяқ киім, жылжымайтын мүлік, медициналық өкілдер және B2B үшін сату бойынша бейнекурстар. Бизнес-тренер Виталий Дубовиктің авторлық бағдарламалары.",
+  },
+  promo: {
+    badge: "−50 %",
+    title: "Барлық курстарға 50 % жеңілдік",
+    subtitle: (date: string) =>
+      `Платформаның іске қосылу бағасы ${date} қоса алғанда жарамды. Одан кейін — әдеттегі баға.`,
+    until: (date: string) => `${date} дейін`,
+    oldPrice: "Жеңілдіксіз баға",
+    left: "Акция аяқталуына",
+    days: "күн",
+    hours: "сағ",
+    minutes: "мин",
+    seconds: "с",
   },
   seo: {
     titleTemplate: "%s · ACTIVE SALES",
@@ -451,6 +487,8 @@ const uz = {
     noOnlinePayment: "Onlayn to'lash shart emas",
     certificate: "Tugatgach sertifikat",
     subtitles: "4 tilda subtitrlar",
+    courseLanguage: "Kurs rus tilida",
+    subtitleLanguages: "Subtitrlar: ruscha, qozoqcha, inglizcha, o'zbekcha",
     writeWhatsapp: "WhatsApp'ga yozish",
     writeTelegram: "Telegram'ga yozish",
     writeViber: "Viber'ga yozish",
@@ -480,6 +518,19 @@ const uz = {
     helpCta: "Ariza qoldirish",
     seoDescription:
       "Turizm, mebel, poyabzal, ko'chmas mulk, tibbiyot vakillari va B2B uchun sotuv bo'yicha videokurslar. Biznes-trener Vitaliy Dubovikning mualliflik dasturlari.",
+  },
+  promo: {
+    badge: "−50 %",
+    title: "Barcha kurslarga 50 % chegirma",
+    subtitle: (date: string) =>
+      `Platforma ishga tushirish narxi ${date} kunini qo'shgan holda amal qiladi. Keyin — odatdagi narx.`,
+    until: (date: string) => `${date} gacha`,
+    oldPrice: "Chegirmasiz narx",
+    left: "Aksiya tugashiga",
+    days: "kun",
+    hours: "soat",
+    minutes: "daq",
+    seconds: "s",
   },
   seo: {
     titleTemplate: "%s · ACTIVE SALES",

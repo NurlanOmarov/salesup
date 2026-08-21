@@ -98,9 +98,11 @@ export const businessKk = {
     alwaysIncluded: (courses: string) =>
       `Жиынтыққа сату бойынша жалпы курстар әрқашан кіреді: ${courses}.`,
     pickCourses: "Курстарды белгілеңіз — солар бойынша есептейміз.",
-    perSeatYear: "Бір қызметкерге жылына",
-    totalYear: "Жылына барлығы",
-    perMonth: "Айына бір адамға",
+    perSeatYear: "Бір қызметкерге — жылдық қолжетімділік",
+    totalYear: (seats: number) => `Бүкіл команда үшін, ${seats} адам`,
+    perMonth: "Айға шаққанда, бір адамға",
+    paymentNote:
+      "Төлем бір рет: бүкіл команда үшін жылына бір шот. Ай сайынғы төлем жоқ — ай тек салыстыру үшін көрсетілген. Жыл қолжетімділік ашылған күннен басталады.",
     saving: (amount: string) => `Жылына ${amount} үнемдейсіз.`,
     tierNote: (tier: string, discount: number) => `«${tier}» тарифі — ${discount} % жеңілдік.`,
     minSeatsNote: (seats: number) =>

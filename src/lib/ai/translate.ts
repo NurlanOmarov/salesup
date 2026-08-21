@@ -56,3 +56,47 @@ export async function translateSegments(
 
   return out;
 }
+
+/**
+ * Перевод витринных текстов курса (название, подзаголовок, описание).
+ *
+ * Отдельно от субтитров: здесь важен не порядок сегментов, а маркетинговый тон и
+ * сохранение имён, брендов и цифр. Материалы курса при этом остаются русскими —
+ * на карточке об этом сказано явно, поэтому переводим только витрину.
+ */
+export async function translateCourseCard(
+  card: { title: string; subtitle?: string | null; description: string },
+  targetLang: "KK" | "UZ",
+  userId?: string | null,
+): Promise<{ title: string; subtitle: string | null; description: string }> {
+  const langName = LANG_NAMES[targetLang] ?? targetLang;
+  const script =
+    targetLang === "UZ"
+      ? "Узбекский — латиницей (современная норма веба)."
+      : "Казахский — кириллицей.";
+
+  const result = await completeJson<{
+    title: string;
+    subtitle: string | null;
+    description: string;
+  }>({
+    model: "claude-haiku-4-5",
+    operation: "course.translate",
+    userId,
+    maxTokens: 2048,
+    temperature: 0.2,
+    system:
+      `Ты переводишь карточку онлайн-курса по продажам с русского на ${langName}. ${script} ` +
+      `Сохрани смысл, тон и структуру: перечисления остаются перечислениями, цифры и проценты — ` +
+      `без изменений. Имена, названия компаний, домены и термины-бренды (СПИН/SPIN, B2B, DIY, GAPP) ` +
+      `не переводи. Не добавляй и не выбрасывай факты. ` +
+      `Верни ТОЛЬКО JSON {"title": "...", "subtitle": "...", "description": "..."}.`,
+    prompt: JSON.stringify(card),
+  });
+
+  return {
+    title: result.title?.trim() || card.title,
+    subtitle: result.subtitle?.trim() || null,
+    description: result.description?.trim() || card.description,
+  };
+}

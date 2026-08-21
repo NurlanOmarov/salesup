@@ -91,6 +91,11 @@ export function matchSiteHost(host: string | null | undefined): SiteHost | null 
 export function alternatesFor(
   path: string,
   locale: Locale = DEFAULT_LOCALE,
+  /**
+   * Языки, на которые переведена именно эта страница. Нужен для карточек курсов:
+   * список переведённых курсов живёт в БД, а не в статическом TRANSLATED_PATHS.
+   */
+  translatedLocales: readonly ExtraLocale[] = [],
 ): Metadata["alternates"] {
   const suffix = (p: string) => (p === "/" ? "" : p);
   const languages: Record<string, string> = {};
@@ -98,7 +103,7 @@ export function alternatesFor(
   // Языковые версии доменов: казахская на .kz, узбекская на .uz. Только для
   // переведённых страниц — иначе hreflang вёл бы на русский текст.
   for (const [host, extra] of Object.entries(HOST_LOCALE)) {
-    if (!isLocaleIndexed(path, extra)) continue;
+    if (!isLocaleIndexed(path, extra) && !translatedLocales.includes(extra)) continue;
     const site = SITE_HOSTS.find((s) => s.host === host);
     if (!site) continue;
     languages[`${extra}-${site.code}`] =
@@ -108,7 +113,9 @@ export function alternatesFor(
   // Страница со смешанным содержимым канонизируется на русскую — иначе в индекс
   // попал бы дубль с русским текстом под локальным адресом.
   const canonical =
-    locale === DEFAULT_LOCALE || isLocaleIndexed(path, locale as ExtraLocale)
+    locale === DEFAULT_LOCALE ||
+    isLocaleIndexed(path, locale as ExtraLocale) ||
+    translatedLocales.includes(locale as ExtraLocale)
       ? localizePath(path, locale)
       : path;
   return { canonical, languages };

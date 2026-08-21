@@ -2,6 +2,7 @@ import "server-only";
 import { headers } from "next/headers";
 import { env } from "@/env";
 import { getLocale } from "@/i18n/server";
+import type { ExtraLocale } from "@/i18n/routing";
 import type { Metadata } from "next";
 import {
   SITE_HOSTS,
@@ -58,6 +59,10 @@ export function isOwnHost(host: string): boolean {
  * в generateMetadata. Отдельно от чистой alternatesFor(), потому что язык живёт
  * в заголовках запроса.
  */
-export async function pageAlternates(path: string): Promise<Metadata["alternates"]> {
-  return alternatesFor(path, await getLocale());
+export async function pageAlternates(
+  path: string,
+  /** Языки, на которые переведена страница (карточки курсов — из БД). */
+  translatedLocales: readonly ExtraLocale[] = [],
+): Promise<Metadata["alternates"]> {
+  return alternatesFor(path, await getLocale(), translatedLocales);
 }

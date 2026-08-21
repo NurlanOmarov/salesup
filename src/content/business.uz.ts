@@ -98,9 +98,11 @@ export const businessUz = {
     alwaysIncluded: (courses: string) =>
       `To'plamga sotuv bo'yicha umumiy kurslar doim kiradi: ${courses}.`,
     pickCourses: "Kurslarni belgilang — shular bo'yicha hisoblaymiz.",
-    perSeatYear: "Bir xodimga yiliga",
-    totalYear: "Yiliga jami",
-    perMonth: "Oyiga bir kishiga",
+    perSeatYear: "Bir xodimga — bir yillik kirish",
+    totalYear: (seats: number) => `Butun jamoa uchun, ${seats} kishi`,
+    perMonth: "Oyiga hisoblaganda, bir kishiga",
+    paymentNote:
+      "To'lov bir marta: butun jamoa uchun yiliga bitta hisob. Oylik to'lov yo'q — oy faqat taqqoslash uchun ko'rsatilgan. Yil kirish ochilgan kundan boshlanadi.",
     saving: (amount: string) => `Yiliga ${amount} tejaysiz.`,
     tierNote: (tier: string, discount: number) => `«${tier}» tarifi — ${discount} % chegirma.`,
     minSeatsNote: (seats: number) =>

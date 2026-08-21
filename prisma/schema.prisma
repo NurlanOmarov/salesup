@@ -235,6 +235,7 @@ model Course {
 
   modules      Module[]
   enrollments  Enrollment[]
+  translations CourseTranslation[]
   orderItems   OrderItem[]
   certificates Certificate[]
   reviews      Review[]
@@ -653,6 +654,31 @@ model Review {
   user           User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([courseId, autoModeration])
+}
+
+/// Перевод карточки курса на язык витрины (казахский, узбекский).
+/// Видео и материалы курса остаются русскими — переводим только то, что читает
+/// посетитель на витрине: название, подзаголовок, описание и SEO-поля. На самой
+/// карточке при этом явно написано, на каком языке курс и какие есть субтитры,
+/// чтобы перевод названия не создавал ложного ожидания.
+///
+/// Тексты переносит фабрика (scripts/factory/course-i18n.ts): по умолчанию через
+/// экспорт → перевод оператором → импорт, с флагом --api — через Haiku.
+model CourseTranslation {
+  id             String   @id @default(cuid())
+  courseId       String
+  /// Код языка витрины: "kk" | "uz" (русский живёт в самой модели Course).
+  locale         String
+  title          String
+  subtitle       String?
+  description    String?  @db.Text
+  seoTitle       String?
+  seoDescription String?
+  updatedAt      DateTime @updatedAt
+  course         Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, locale])
+  @@index([locale])
 }
 
 /// Отзыв с внешней площадки (Яндекс/Google Карты), перенесённый владельцем вручную.

@@ -4,6 +4,7 @@ import Image from "next/image";
 import { Link } from "@/components/i18n/link";
 import {
   CheckCircle2,
+  Languages,
   Clock,
   Users,
   Award,
@@ -29,6 +30,7 @@ import { currentSite, pageAlternates, siteOrigin } from "@/lib/seo/site";
 import { env } from "@/env";
 import { getLocale } from "@/i18n/server";
 import { messagesFor } from "@/i18n/messages";
+import { localizedCourse, translatedLocales } from "@/lib/courses/i18n";
 
 /**
  * Страница рендерится динамически: в теле вызываются currentSite()/siteOrigin(),
@@ -48,6 +50,18 @@ async function getCourse(slug: string) {
   return db.course.findFirst({
     where: { slug, status: "PUBLISHED" },
     include: {
+      // Переводы витринных текстов курса (kk/uz). Видео и материалы остаются
+      // русскими — об этом на карточке сказано явно (t.course.courseLanguage).
+      translations: {
+        select: {
+          locale: true,
+          title: true,
+          subtitle: true,
+          description: true,
+          seoTitle: true,
+          seoDescription: true,
+        },
+      },
       modules: {
         orderBy: { sortOrder: "asc" },
         include: {
@@ -78,8 +92,11 @@ export async function generateMetadata({
   params: Promise<Params>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const course = await getCourse(slug);
-  if (!course) return {};
+  const raw = await getCourse(slug);
+  if (!raw) return {};
+  // Название и описание — на языке страницы, если карточка переведена.
+  const locale = await getLocale();
+  const course = localizedCourse(raw, locale);
 
   return {
     title: course.seoTitle ?? course.title,
@@ -88,7 +105,7 @@ export async function generateMetadata({
     // обычная карточка курса получает self-canonical + альтернаты по доменам.
     alternates: course.canonicalPath
       ? { canonical: course.canonicalPath }
-      : await pageAlternates(`/courses/${slug}`),
+      : await pageAlternates(`/courses/${slug}`, translatedLocales(raw.translations)),
     robots: course.seoNoindex ? { index: false, follow: true } : undefined,
     openGraph: {
       title: course.ogTitle ?? course.seoTitle ?? course.title,
@@ -105,13 +122,16 @@ export default async function CoursePage({
   params: Promise<Params>;
 }) {
   const { slug } = await params;
-  const course = await getCourse(slug);
-  if (!course) {
+  const raw = await getCourse(slug);
+  if (!raw) {
     // Курс не найден — возможно, slug переименован фабрикой: пробуем 308-редирект.
     const to = await resolveRedirect(`/courses/${slug}`);
     if (to) permanentRedirect(to);
     notFound();
   }
+  // Витринные тексты — на языке страницы; материалы курса остаются русскими.
+  const locale = await getLocale();
+  const course = localizedCourse(raw, locale);
 
   // Агрегат рейтинга по всем прошедшим модерацию отзывам (для звёзд в выдаче)
   const [ratingAgg, related] = await Promise.all([
@@ -417,6 +437,22 @@ export default async function CoursePage({
                     {t.course.subtitles}
                   </li>
                 </ul>
+
+                {/*
+                  Язык курса — отдельной строкой, а не в списке преимуществ.
+                  На казахской и узбекской витрине название и описание переведены,
+                  а видео и материалы русские: посетитель должен узнать об этом до
+                  покупки, а не после первого урока.
+                */}
+                <p className="mt-4 flex items-start gap-2 rounded-lg bg-white/[0.06] px-3 py-2 text-xs leading-relaxed text-white/70">
+                  <Languages className="mt-0.5 size-3.5 shrink-0 text-amber-400" />
+                  <span>
+                    {t.course.courseLanguage}
+                    <span className="mt-0.5 block text-white/50">
+                      {t.course.subtitleLanguages}
+                    </span>
+                  </span>
+                </p>
               </div>
             </Reveal>
           </div>

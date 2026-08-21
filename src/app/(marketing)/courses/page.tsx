@@ -13,6 +13,8 @@ import { CoursesCatalog } from "@/components/catalog/courses-catalog";
 import { coursesPageContent } from "@/content/courses-page-content";
 import { currentSite, pageAlternates, siteOrigin } from "@/lib/seo/site";
 import { getLocale } from "@/i18n/server";
+import { DEFAULT_LOCALE, type Locale } from "@/i18n/routing";
+import { localizedCard } from "@/lib/courses/i18n";
 import { messagesFor } from "@/i18n/messages";
 
 export const revalidate = 60;
@@ -32,7 +34,7 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-async function getCourses(main: MainCurrency): Promise<CourseCardData[]> {
+async function getCourses(main: MainCurrency, locale: Locale): Promise<CourseCardData[]> {
   const [rows, ratesPayload] = await Promise.all([
     buildSafe(
       () =>
@@ -52,6 +54,21 @@ async function getCourses(main: MainCurrency): Promise<CourseCardData[]> {
             hoursLabel: true,
             inDevelopment: true,
             _count: { select: { modules: true } },
+            // Перевод карточки на язык витрины (kk/uz); для русского — пусто.
+            translations:
+              locale === DEFAULT_LOCALE
+                ? false
+                : {
+                    where: { locale },
+                    select: {
+                      locale: true,
+                      title: true,
+                      subtitle: true,
+                      description: true,
+                      seoTitle: true,
+                      seoDescription: true,
+                    },
+                  },
           },
         }),
       [] as Array<Omit<CourseCardData, "prices">>,
@@ -59,7 +76,10 @@ async function getCourses(main: MainCurrency): Promise<CourseCardData[]> {
     currency.getRates(),
   ]);
   const rates = ratesPayload.rates;
-  return rows.map((r) => ({ ...r, prices: buildMultiPrice(r.priceTiyn, rates, main) }));
+  return rows.map((r) => {
+    const t = localizedCard(r, locale);
+    return { ...r, ...t, prices: buildMultiPrice(r.priceTiyn, rates, main) };
+  });
 }
 
 export default async function CoursesPage() {
@@ -69,7 +89,7 @@ export default async function CoursesPage() {
   const locale = await getLocale();
   const { audience, howItWorks, difference, faq } = coursesPageContent(locale);
   const t = messagesFor(locale);
-  const courses = await getCourses(site?.currency ?? "byn");
+  const courses = await getCourses(site?.currency ?? "byn", locale);
 
   const siteUrl = await siteOrigin();
   const listJsonLd = {

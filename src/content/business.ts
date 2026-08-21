@@ -1,5 +1,14 @@
 import { BarChart3, RefreshCw, Sparkles } from "lucide-react";
 
+/** «5 человек», «2 человека»: подпись в калькуляторе меняется вместе с ползунком. */
+function seatsWord(n: number): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return "человек";
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return "человека";
+  return "человек";
+}
+
 /**
  * Тексты корпоративной страницы (/business). Вынесены из разметки, чтобы
  * казахская версия (business.kk.ts) повторяла их структуру ключ в ключ —
@@ -101,9 +110,11 @@ export const businessRu = {
     alwaysIncluded: (courses: string) =>
       `В набор всегда входят общие курсы по продажам: ${courses}.`,
     pickCourses: "Отметьте курсы — посчитаем по ним.",
-    perSeatYear: "За сотрудника в год",
-    totalYear: "Всего за год",
-    perMonth: "В месяц на человека",
+    perSeatYear: "За одного сотрудника — доступ на год",
+    totalYear: (seats: number) => `За всю команду, ${seats} ${seatsWord(seats)}`,
+    perMonth: "В пересчёте на месяц, за одного",
+    paymentNote:
+      "Оплата разовая: один счёт на год за всю команду. Помесячной оплаты нет — месяц показан для сравнения. Год считается с даты открытия доступа.",
     saving: (amount: string) => `Экономия ${amount} за год.`,
     tierNote: (tier: string, discount: number) => `Тариф «${tier}» — скидка ${discount} %.`,
     minSeatsNote: (seats: number) =>
