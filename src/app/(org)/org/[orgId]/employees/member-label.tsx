@@ -5,6 +5,7 @@ import { Check, Pencil, X } from "lucide-react";
 import { decryptLabel, encryptLabel } from "@/lib/org/crypto";
 import { useOrgKey } from "../org-key-provider";
 import { setMemberLabelAction } from "../../actions";
+import { InlinePin } from "./inline-pin";
 
 /**
  * Имя сотрудника: расшифровывается в браузере и там же шифруется при
@@ -28,9 +29,24 @@ export function MemberLabel({
   const [draft, setDraft] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Кнопку нажали, а ключа в этой вкладке нет — спрашиваем ПИН прямо здесь.
+  const [asking, setAsking] = useState(false);
+  // Расшифровка асинхронная, поэтому открывать поле сразу после ввода ПИН
+  // нельзя: draft взялся бы из ещё пустого text и сохранение затёрло бы имя.
+  const [decoded, setDecoded] = useState(false);
+  const [openAfterUnlock, setOpenAfterUnlock] = useState(false);
   // Пустое имя мигает несколько секунд после разблокировки — ровно чтобы
   // заметить новый элемент строки. Постоянная пульсация раздражала бы.
   const [highlight, setHighlight] = useState(false);
+
+  // Ввели ПИН ради конкретного работника — открываем его поле, но только когда
+  // имя уже расшифровано.
+  useEffect(() => {
+    if (!openAfterUnlock || !decoded) return;
+    setOpenAfterUnlock(false);
+    setDraft(text ?? "");
+    setEditing(true);
+  }, [openAfterUnlock, decoded, text]);
 
   useEffect(() => {
     if (status !== "unlocked") return;
@@ -43,17 +59,33 @@ export function MemberLabel({
     let cancelled = false;
     if (!orgKey) {
       setText(null);
+      setDecoded(false);
       return;
     }
     void decryptLabel(orgKey, labelEnc).then((value) => {
-      if (!cancelled) setText(value);
+      if (cancelled) return;
+      setText(value);
+      setDecoded(true);
     });
     return () => {
       cancelled = true;
     };
   }, [orgKey, labelEnc]);
 
-  if (status !== "unlocked") return null;
+  // Владельцу платформы имена недоступны по замыслу — кнопки нет вовсе.
+  if (status === "owner-view") return null;
+
+  if (asking) {
+    return (
+      <InlinePin
+        onDone={() => {
+          setAsking(false);
+          setOpenAfterUnlock(true);
+        }}
+        onCancel={() => setAsking(false)}
+      />
+    );
+  }
 
   if (editing) {
     return (
@@ -116,15 +148,20 @@ export function MemberLabel({
     <button
       type="button"
       onClick={() => {
-        setDraft("");
-        setEditing(true);
+        // Ключ есть — сразу поле имени; нет — сначала ПИН, потом поле.
+        if (status === "unlocked") {
+          setDraft("");
+          setEditing(true);
+        } else {
+          setAsking(true);
+        }
       }}
       className={`mt-1 flex items-center gap-1.5 rounded-md border border-dashed border-amber-500/50 bg-amber-500/[0.07] px-2 py-0.5 text-xs text-amber-700 transition-colors hover:bg-amber-500/15 hover:text-amber-800 ${
         highlight ? "animate-pulse motion-reduce:animate-none" : ""
       }`}
     >
       <Pencil className="size-3" />
-      Добавить имя
+      {status === "unlocked" || !labelEnc ? "Добавить имя" : "Показать имя"}
     </button>
   );
 

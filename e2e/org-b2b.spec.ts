@@ -323,11 +323,14 @@ test("имена ведёт клиент: владелец платформы и
   // прочитать имя, обещание перестаёт быть правдой — проверяем обе стороны.
   await login(page, ADMIN_EMAIL, ADMIN_PASS);
   await page.goto(`/org/${orgId}/employees`);
-  await page.getByRole("button", { name: "Присвоить имена" }).click();
-  await page.getByLabel("ПИН-код").fill("2468");
-  await page.getByLabel("Повторите").fill("2468");
-  await page.getByRole("button", { name: "Включить", exact: true }).click();
+  // Основной путь — прямо из строки работника: там же заводится ПИН, там же
+  // вводится имя. Полоска сверху остаётся, но начинать с неё не обязательно.
   await page.getByRole("button", { name: "Добавить имя" }).first().click();
+  await page.getByPlaceholder("ПИН-код", { exact: true }).fill("2468");
+  await page.getByPlaceholder("Повторите").fill("2468");
+  await page.getByRole("button", { name: "Включить", exact: true }).click();
+  await page.getByRole("checkbox").check(); // код восстановления записан
+  await page.getByRole("button", { name: "Дальше" }).click();
   await page.getByPlaceholder("Например, Александр").fill("Александр");
   await page.getByRole("button", { name: "Сохранить имя" }).click();
   await expect(page.getByText("Александр", { exact: true })).toBeVisible();
@@ -344,7 +347,7 @@ test("имена ведёт клиент: владелец платформы и
   await expect(page.getByText("Работники показаны кодами")).toBeVisible();
   await expect(page.getByText("Александр", { exact: true })).toBeHidden();
   await expect(page.getByRole("button", { name: "Присвоить имена" })).toBeHidden();
-  await expect(page.getByRole("button", { name: "Добавить имя" })).toBeHidden();
+  await expect(page.getByRole("button", { name: /имя/ })).toBeHidden();
 });
 
 test("код одноразовый: повторная регистрация отклоняется", async ({ page }) => {
