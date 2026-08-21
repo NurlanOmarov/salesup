@@ -210,7 +210,7 @@ export function CreateStudentForm({
             >
               {SITE_HOSTS.map((s) => (
                 <option key={s.code} value={s.code}>
-                  {s.country} ({s.code})
+                  {s.country.ru} ({s.code})
                 </option>
               ))}
             </select>

@@ -40,7 +40,7 @@ export function SiteSwitch({ active }: { active: string | null }) {
         <button
           key={s.code}
           onClick={() => select(s.code)}
-          title={s.country}
+          title={s.country.ru}
           className={cn(
             "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
             active === s.code ? "bg-brand text-white" : "text-foreground/60 hover:bg-foreground/5 hover:text-foreground",

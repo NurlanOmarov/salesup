@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { SITE_HOSTS } from "@/lib/seo/site-hosts";
+import type { Locale } from "@/i18n/routing";
 
 /**
  * Выбор страны в футере: те же страницы на своём ccTLD (мультидомен,
@@ -13,7 +14,14 @@ import { SITE_HOSTS } from "@/lib/seo/site-hosts";
  * Переход на другой домен = другая сессия (куки скоупятся по хосту), поэтому
  * переключатель живёт только в публичном футере, а не в кабинете.
  */
-export function CountrySwitcher({ currentHost }: { currentHost: string | null }) {
+export function CountrySwitcher({
+  currentHost,
+  locale,
+}: {
+  currentHost: string | null;
+  /** Названия стран — на языке страницы: казахская витрина пишет «Қазақстан». */
+  locale: Locale;
+}) {
   const pathname = usePathname();
   const path = pathname === "/" ? "" : pathname;
 
@@ -25,7 +33,7 @@ export function CountrySwitcher({ currentHost }: { currentHost: string | null })
           <li key={s.host}>
             {active ? (
               <span aria-current="true" className="font-semibold text-white/80">
-                {s.country}
+                {s.country[locale]}
               </span>
             ) : (
               <a
@@ -34,7 +42,7 @@ export function CountrySwitcher({ currentHost }: { currentHost: string | null })
                 rel="alternate"
                 className="transition-colors hover:text-brand-light"
               >
-                {s.country}
+                {s.country[locale]}
               </a>
             )}
           </li>

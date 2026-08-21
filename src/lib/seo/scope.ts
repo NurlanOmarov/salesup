@@ -25,7 +25,7 @@ export const SEO_SCOPES: SeoScopeOption[] = [
   { scope: GLOBAL_SCOPE, label: "Все домены", hint: "База: применяется, пока не переопределено" },
   ...SITE_HOSTS.map((s) => ({
     scope: s.code,
-    label: `${s.country} — ${s.host}`,
+    label: `${s.country.ru} — ${s.host}`,
     hint: `Русская версия домена ${s.host}`,
   })),
   {

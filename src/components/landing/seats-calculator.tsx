@@ -155,8 +155,9 @@ export function SeatsCalculator({
 
   // Цена задана в BYN, показываем её в валюте страны домена: казахстанской
   // компании расчёт в белорусских рублях ничего не говорит.
-  const money = (tiyn: number) => formatCurrency(tiyn, currencyCode, rates);
-  const c = businessContent(useLocale()).calculator;
+  const locale = useLocale();
+  const money = (tiyn: number) => formatCurrency(tiyn, currencyCode, rates, locale);
+  const c = businessContent(locale).calculator;
 
   /*
     Итог собирается в три слоя, и порядок здесь принципиален:
@@ -330,7 +331,10 @@ export function SeatsCalculator({
       */}
       {/* Пакет: платформа или платформа + живые сессии тренера. Табами, а не
           галочкой — так видно, что это два предложения, и второе не «доплата
-          мелким шрифтом», а другой формат обучения. */}
+          мелким шрифтом», а другой формат обучения.
+          Внутренности кнопок — во flex-колонке и в span-ах: у <button> контент
+          лежит в анонимном центрированном боксе, и в узкой колонке многострочная
+          подпись вылезала за рамку. */}
       <div className="mt-5">
         <p className="text-sm font-semibold">{c.packTitle}</p>
         <div className="mt-2 grid gap-2 sm:grid-cols-2">
@@ -339,27 +343,27 @@ export function SeatsCalculator({
             aria-pressed={!withTrainer}
             onClick={() => changeTrainer(false)}
             className={cn(
-              "rounded-lg border px-3 py-2 text-left text-sm transition-colors",
+              "flex h-full flex-col items-start justify-center rounded-lg border px-3 py-2 text-left text-sm transition-colors",
               !withTrainer
                 ? "border-brand bg-brand/10 font-medium"
                 : "border-foreground/15 text-foreground/70 hover:bg-foreground/5",
             )}
           >
-            {c.packPlatform}
+            <span className="break-words">{c.packPlatform}</span>
           </button>
           <button
             type="button"
             aria-pressed={withTrainer}
             onClick={() => changeTrainer(true)}
             className={cn(
-              "rounded-lg border px-3 py-2 text-left text-sm transition-colors",
+              "flex h-full flex-col items-start justify-center rounded-lg border px-3 py-2 text-left text-sm transition-colors",
               withTrainer
                 ? "border-brand bg-brand/10 font-medium"
                 : "border-foreground/15 text-foreground/70 hover:bg-foreground/5",
             )}
           >
-            {c.packTrainer}
-            <span className="mt-0.5 block text-xs font-normal text-foreground/55">
+            <span className="break-words">{c.packTrainer}</span>
+            <span className="mt-0.5 block break-words text-xs font-normal text-foreground/55">
               {c.packTrainerHint}
             </span>
           </button>

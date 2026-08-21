@@ -3,6 +3,7 @@
 // и оно не должно расходиться с сайтом. Адреса и география подставляются по
 // домену захода (мультидомен) — AI-поиск в РК/РФ видит свой домен.
 import { currentSite, siteOrigin, DEFAULT_SITE } from "@/lib/seo/site";
+import { getLocale } from "@/i18n/server";
 
 const content = (origin: string, country: string) => `# Бизнес-платформа ACTIVE SALES
 
@@ -30,8 +31,10 @@ const content = (origin: string, country: string) => `# Бизнес-платф�
 `;
 
 export async function GET() {
-    const [origin, site] = await Promise.all([siteOrigin(), currentSite()]);
-    return new Response(content(origin, (site ?? DEFAULT_SITE).country), {
+    const [origin, site, locale] = await Promise.all([siteOrigin(), currentSite(), getLocale()]);
+    // Страна — на языке страницы: на /uz описание для AI-поиска тоже узбекское.
+    const country = (site ?? DEFAULT_SITE).country;
+    return new Response(content(origin, country[locale]), {
         headers: {
             'Content-Type': 'text/plain; charset=utf-8',
             'Cache-Control': 'public, max-age=3600',

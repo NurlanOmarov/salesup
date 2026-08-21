@@ -101,7 +101,7 @@ export const businessUz = {
     packTitle: "Paketga nima kiradi",
     packPlatform: "Faqat platforma",
     packTrainer: "Platforma + jonli trener",
-    packTrainerHint: "Dubovik bilan ikkita onlayn uchrashuv va umumiy qo'llab-quvvatlash guruhi",
+    packTrainerHint: "Biznes-trener bilan ikkita onlayn uchrashuv va qo'llab-quvvatlash guruhi",
     trainerIntro: "Trener bilan kirish onlayn sessiyasi — boshida 1 soat",
     trainerFinal: "Yakuniy onlayn sessiya — 1 soat: savollarga javob va yakun",
     trainerGroup: "Messenjerdagi umumiy guruh: trener bo'limni yil davomida qo'llab-quvvatlaydi",

@@ -526,14 +526,14 @@ export default async function LandingPage() {
                   не понимая, их ли это ценовой сегмент. Считает lib/pricing. */}
               <p className="mt-3 text-foreground/80">
                 <span className="whitespace-nowrap text-xl font-bold">
-                  {t.b2b.priceFrom} {formatCurrency(b2bBestPerSeat * 100, b2bCode, rates)}
+                  {t.b2b.priceFrom} {formatCurrency(b2bBestPerSeat * 100, b2bCode, rates, locale)}
                 </span>{" "}
                 {b2bSale.oldTiyn ? (
                   <span className="whitespace-nowrap text-foreground/40 line-through">
-                    {formatCurrency(b2bSale.oldTiyn, b2bCode, rates)}
+                    {formatCurrency(b2bSale.oldTiyn, b2bCode, rates, locale)}
                   </span>
                 ) : null}{" "}
-                {t.b2b.perSeatYear} {formatCurrency(b2bBestPerMonth * 100, b2bCode, rates)}{" "}
+                {t.b2b.perSeatYear} {formatCurrency(b2bBestPerMonth * 100, b2bCode, rates, locale)}{" "}
                 {t.b2b.perMonth}
               </p>
               <Link

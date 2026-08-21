@@ -25,6 +25,21 @@ const SYMBOLS: Record<CurrencyCode, string> = {
 };
 
 /**
+ * Обозначения валют на языке витрины. Символы (₸, ₽) интернациональны, а
+ * словесные — нет: узбекский сум на латинице пишется «so'm», и на узбекской
+ * витрине «сум» выглядит чужеродно. Пусто → берём значение из SYMBOLS.
+ */
+const SYMBOLS_BY_LOCALE: Record<string, Partial<Record<CurrencyCode, string>>> = {
+  kk: { UZS: "сом", BYN: "Br" },
+  uz: { UZS: "so'm", BYN: "Br" },
+};
+
+/** Обозначение валюты для языка страницы. */
+export function currencySymbol(code: CurrencyCode, locale?: string): string {
+  return (locale && SYMBOLS_BY_LOCALE[locale]?.[code]) || SYMBOLS[code];
+}
+
+/**
  * Округление конвертируемой суммы (ceil до «красивого» шага).
  * Повторяет transfer-astana booking_service._round_currency.
  */
@@ -57,6 +72,8 @@ export function formatCurrency(
   tiyn: number,
   code: CurrencyCode,
   rates: RatesMap,
+  /** Язык витрины: от него зависит словесное обозначение валюты. */
+  locale?: string,
 ): string {
   const amount = convertTiyn(tiyn, code, rates);
   if (amount <= 0) return "—";
@@ -65,7 +82,7 @@ export function formatCurrency(
   return (
     Math.round(amount).toLocaleString("ru-RU", { maximumFractionDigits: 0 }) +
     "\u00A0" +
-    SYMBOLS[code]
+    currencySymbol(code, locale)
   );
 }
 
@@ -98,13 +115,14 @@ export function buildMultiPrice(
   tiyn: number,
   rates: RatesMap,
   main: MainCurrency = "byn",
+  locale?: string,
 ): MultiPrice {
   const ready = ratesAvailable(rates);
   const values = {
-    kzt: formatCurrency(tiyn, "KZT", rates),
-    rub: formatCurrency(tiyn, "RUB", rates),
-    byn: formatCurrency(tiyn, "BYN", rates),
-    uzs: formatCurrency(tiyn, "UZS", rates),
+    kzt: formatCurrency(tiyn, "KZT", rates, locale),
+    rub: formatCurrency(tiyn, "RUB", rates, locale),
+    byn: formatCurrency(tiyn, "BYN", rates, locale),
+    uzs: formatCurrency(tiyn, "UZS", rates, locale),
   };
   // Без курса конвертация недоступна — показываем базовую цену в BYN.
   const mainKey: MainCurrency = ready ? main : "byn";
@@ -139,10 +157,11 @@ export function buildDisplayPrice(
   fullTiyn: number,
   rates: RatesMap,
   main: MainCurrency = "byn",
+  locale?: string,
 ): DisplayPrice {
   const sale = salePrice(fullTiyn);
-  const prices = buildMultiPrice(sale.tiyn, rates, main);
-  const old = sale.oldTiyn ? buildMultiPrice(sale.oldTiyn, rates, main).main : null;
+  const prices = buildMultiPrice(sale.tiyn, rates, main, locale);
+  const old = sale.oldTiyn ? buildMultiPrice(sale.oldTiyn, rates, main, locale).main : null;
   return { ...prices, old, percent: sale.percent };
 }
 

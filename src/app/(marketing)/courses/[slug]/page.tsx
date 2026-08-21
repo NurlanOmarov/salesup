@@ -30,8 +30,11 @@ import { getSupportContacts } from "@/lib/seo/settings";
 import { currentSite, pageAlternates, siteOrigin } from "@/lib/seo/site";
 import { env } from "@/env";
 import { getLocale } from "@/i18n/server";
+import { DEFAULT_LOCALE } from "@/i18n/routing";
 import { messagesFor } from "@/i18n/messages";
 import { localizedCourse, translatedLocales } from "@/lib/courses/i18n";
+import { localizedDuration } from "@/lib/courses/duration";
+import { localizedIndustry } from "@/content/industries";
 
 /**
  * Страница рендерится динамически: в теле вызываются currentSite()/siteOrigin(),
@@ -133,6 +136,9 @@ export default async function CoursePage({
   // Витринные тексты — на языке страницы; материалы курса остаются русскими.
   const locale = await getLocale();
   const course = localizedCourse(raw, locale);
+  // Отрасль и длительность — тоже витринные подписи, переводим их.
+  const industry = localizedIndustry(course.industry, locale);
+  const hoursLabel = localizedDuration(course.hoursLabel, locale);
 
   // Агрегат рейтинга по всем прошедшим модерацию отзывам (для звёзд в выдаче)
   const [ratingAgg, related] = await Promise.all([
@@ -143,6 +149,25 @@ export default async function CoursePage({
     }),
     getRelatedCards(course.id),
   ]);
+
+  // Связанные курсы — те же витринные подписи: название и отрасль на языке
+  // страницы. Переводы тянем одним запросом, а не по курсу на карточку.
+  const relatedTranslations =
+    locale === DEFAULT_LOCALE || related.length === 0
+      ? []
+      : await db.courseTranslation.findMany({
+          where: { locale, courseId: { in: related.map((r) => r.id) } },
+          select: { courseId: true, title: true, subtitle: true },
+        });
+  const relatedCards = related.map((r) => {
+    const t = relatedTranslations.find((x) => x.courseId === r.id);
+    return {
+      ...r,
+      title: t?.title || r.title,
+      subtitle: t?.subtitle || r.subtitle,
+      industry: localizedIndustry(r.industry, locale),
+    };
+  });
 
   const ratesPayload = await currency.getRates();
   // Валюта страны домена крупно, остальные — справочной строкой.
@@ -155,6 +180,7 @@ export default async function CoursePage({
     course.priceTiyn,
     ratesPayload.rates,
     site?.currency ?? "byn",
+    locale,
   );
   const sale = salePrice(course.priceTiyn);
   // Оплата картой идёт в магазине на activesales.by (эквайринг Альфа-Банка) и
@@ -209,7 +235,7 @@ export default async function CoursePage({
       availability: "https://schema.org/InStock",
       ...(sale.oldTiyn ? { priceValidUntil: promoEndsAt().toISOString().slice(0, 10) } : {}),
     },
-    ...(course.hoursLabel ? { timeRequired: course.hoursLabel } : {}),
+    ...(hoursLabel ? { timeRequired: hoursLabel } : {}),
     ...(ratingAgg._count > 0 && ratingAgg._avg.rating
       ? {
           aggregateRating: {
@@ -293,10 +319,10 @@ export default async function CoursePage({
         <div className="mx-auto max-w-6xl px-4 py-12 sm:py-16">
           <div className="grid items-start gap-10 lg:grid-cols-[1fr_380px]">
             <div>
-              {course.industry ? (
+              {industry ? (
                 <Reveal>
                   <span className="inline-flex items-center rounded-full border border-brand-light/30 bg-brand/10 px-3 py-1 text-xs font-medium text-brand-light">
-                    {course.industry}
+                    {industry}
                   </span>
                 </Reveal>
               ) : null}
@@ -314,10 +340,10 @@ export default async function CoursePage({
               {/* Мета-строка */}
               <Reveal delay={0.1}>
                 <div className="mt-5 flex flex-wrap items-center gap-4 text-sm text-white/50">
-                  {course.hoursLabel ? (
+                  {hoursLabel ? (
                     <span className="flex items-center gap-1.5">
                       <Clock className="size-4" />
-                      {course.hoursLabel}
+                      {hoursLabel}
                     </span>
                   ) : null}
                   <span className="flex items-center gap-1.5">
@@ -646,7 +672,7 @@ export default async function CoursePage({
             {t.course.relatedNote}
           </p>
           <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {related.map((r) => {
+            {relatedCards.map((r) => {
               const cover = coverPublicUrl(r.coverUrl, r.id);
               return (
                 <Link

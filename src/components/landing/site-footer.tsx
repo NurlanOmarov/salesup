@@ -17,7 +17,8 @@ export async function SiteFooter() {
   const site = await currentSite();
   // Соцсети школы — правятся в /admin/seo, попадают и в sameAs разметки организации.
   const socials = socialProfiles(await getSeoSettings());
-  const t = messagesFor(await getLocale());
+  const locale = await getLocale();
+  const t = messagesFor(locale);
 
   return (
     <footer className="bg-slate-950 text-white">
@@ -29,7 +30,7 @@ export async function SiteFooter() {
           </div>
           <p className="mt-2 text-sm text-white/50">
             {t.footer.about}
-            {site ? ` ${site.country}.` : ""}
+            {site ? ` ${site.country[locale]}.` : ""}
           </p>
           {/*
             Реквизиты ИП (наименование, УНП, адрес) убраны из футера по решению
@@ -153,7 +154,7 @@ export async function SiteFooter() {
         </div>
       </div>
       <div className="space-y-2 border-t border-white/10 py-4 text-center text-xs text-white/60">
-        <CountrySwitcher currentHost={site?.host ?? null} />
+        <CountrySwitcher currentHost={site?.host ?? null} locale={locale} />
         <p>© {year} ACTIVE SALES. {t.footer.rights}</p>
       </div>
     </footer>

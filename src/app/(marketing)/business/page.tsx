@@ -79,7 +79,7 @@ export default async function BusinessPage() {
   const site = await currentSite();
   const code = (site?.currency ?? "byn").toUpperCase() as CurrencyCode;
   const { rates } = await currency.getRates();
-  const money = (byn: number) => formatCurrency(byn * 100, code, rates);
+  const money = (byn: number) => formatCurrency(byn * 100, code, rates, locale);
 
   // База «от»: самый дешёвый набор, который вообще можно купить, — недорогой
   // отраслевой курс плюс общие. Так цифра в первом экране совпадает с тем, что
@@ -139,7 +139,7 @@ export default async function BusinessPage() {
               </p>
               {bestSale.oldTiyn ? (
                 <p className="whitespace-nowrap text-lg text-white/45 line-through">
-                  {formatCurrency(bestSale.oldTiyn, code, rates)}
+                  {formatCurrency(bestSale.oldTiyn, code, rates, locale)}
                 </p>
               ) : null}
               <p className="text-white/75">

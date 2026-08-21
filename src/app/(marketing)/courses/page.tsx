@@ -15,6 +15,8 @@ import { currentSite, pageAlternates, siteOrigin } from "@/lib/seo/site";
 import { getLocale } from "@/i18n/server";
 import { DEFAULT_LOCALE, type Locale } from "@/i18n/routing";
 import { localizedCard } from "@/lib/courses/i18n";
+import { localizedDuration } from "@/lib/courses/duration";
+import { localizedIndustry } from "@/content/industries";
 import { messagesFor } from "@/i18n/messages";
 
 export const revalidate = 60;
@@ -79,7 +81,14 @@ async function getCourses(main: MainCurrency, locale: Locale): Promise<CourseCar
   return rows.map((r) => {
     const t = localizedCard(r, locale);
     // Акция применяется здесь, а не в запросе: в БД лежит полный прайс.
-    return { ...r, ...t, prices: buildDisplayPrice(r.priceTiyn, rates, main) };
+    return {
+      ...r,
+      ...t,
+      // Отрасль и длительность — тоже витринные подписи, переводим и их.
+      industry: localizedIndustry(r.industry, locale),
+      hoursLabel: localizedDuration(r.hoursLabel, locale),
+      prices: buildDisplayPrice(r.priceTiyn, rates, main, locale),
+    };
   });
 }
 

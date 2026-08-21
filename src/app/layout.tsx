@@ -68,7 +68,7 @@ export default async function RootLayout({
   const orgPhone = s.orgPhone;
   // Страна обслуживания — по домену захода (гео-сигнал для поиска своей страны),
   // для неизвестного хоста — значение из /admin/seo.
-  const areaCountry = site?.country ?? s.orgCountry;
+  const areaCountry = site?.country.ru ?? s.orgCountry;
   const orgJsonLd = {
     "@context": "https://schema.org",
     // Organization, а не EducationalOrganization: по D-012 услуги оформлены как

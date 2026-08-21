@@ -17,7 +17,7 @@ export const SITE_HOSTS = [
   {
     host: "study.activesales.by",
     hreflang: "ru-BY",
-    country: "Беларусь",
+    country: { ru: "Беларусь", kk: "Беларусь", uz: "Belarus" },
     code: "BY",
     /** Гео-строка витрины на языках сайта: «курсы … · <geo>» в первом экране. */
     geo: {
@@ -31,7 +31,7 @@ export const SITE_HOSTS = [
   {
     host: "study.activesales.kz",
     hreflang: "ru-KZ",
-    country: "Казахстан",
+    country: { ru: "Казахстан", kk: "Қазақстан", uz: "Qozogʻiston" },
     code: "KZ",
     geo: {
       ru: "Астана · Алматы · весь Казахстан",
@@ -43,7 +43,7 @@ export const SITE_HOSTS = [
   {
     host: "study.sales-active.ru",
     hreflang: "ru-RU",
-    country: "Россия",
+    country: { ru: "Россия", kk: "Ресей", uz: "Rossiya" },
     code: "RU",
     geo: {
       ru: "Москва · вся Россия",
@@ -55,7 +55,7 @@ export const SITE_HOSTS = [
   {
     host: "study.activesales.uz",
     hreflang: "ru-UZ",
-    country: "Узбекистан",
+    country: { ru: "Узбекистан", kk: "Өзбекстан", uz: "Oʻzbekiston" },
     code: "UZ",
     geo: {
       ru: "Ташкент · весь Узбекистан",

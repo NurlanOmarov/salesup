@@ -6,6 +6,8 @@ import { BookOpen } from "lucide-react";
 import { Reveal } from "@/components/landing/reveal";
 import { CourseCard, type CourseCardData } from "@/components/catalog/course-card";
 import { useLocale } from "@/i18n/client";
+import type { Locale } from "@/i18n/routing";
+import { localizedIndustry } from "@/content/industries";
 import { messagesFor, type UiMessages } from "@/i18n/messages";
 
 /**
@@ -25,7 +27,7 @@ const INDUSTRY_PREFIX = "industry:";
 
 type Facet = { value: string; label: string; count: number };
 
-function buildFacets(courses: CourseCardData[], t: UiMessages): Facet[] {
+function buildFacets(courses: CourseCardData[], t: UiMessages, locale: Locale): Facet[] {
   const facets: Facet[] = [{ value: ALL, label: t.catalog.all, count: courses.length }];
 
   const everyoneCount = courses.filter((c) => c.audience === "EVERYONE").length;
@@ -42,7 +44,12 @@ function buildFacets(courses: CourseCardData[], t: UiMessages): Facet[] {
   for (const [industry, count] of [...industryCounts].sort((a, b) =>
     a[0].localeCompare(b[0], "ru"),
   )) {
-    facets.push({ value: `${INDUSTRY_PREFIX}${industry}`, label: industry, count });
+    // value остаётся русским: это ключ фильтра и часть расшариваемой ссылки.
+    facets.push({
+      value: `${INDUSTRY_PREFIX}${industry}`,
+      label: localizedIndustry(industry, locale) ?? industry,
+      count,
+    });
   }
 
   return facets;
@@ -65,8 +72,9 @@ export function CoursesCatalog({ courses }: { courses: CourseCardData[] }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const t = messagesFor(useLocale());
-  const facets = useMemo(() => buildFacets(courses, t), [courses, t]);
+  const locale = useLocale();
+  const t = messagesFor(locale);
+  const facets = useMemo(() => buildFacets(courses, t, locale), [courses, t, locale]);
 
   const rawFilter = searchParams.get("f") ?? ALL;
   // Игнорируем фильтр, под который нет ни одной таблетки (устаревшая ссылка).
