@@ -53,7 +53,7 @@ export interface Market {
   code: "BY" | "RU" | "KZ" | "UZ";
   country: string;
   currency: string;
-  /** Домен рынка (docs/MULTI-DOMAIN-PLAN.md). Для Узбекистана домена пока нет. */
+  /** Домен рынка (docs/MULTI-DOMAIN-PLAN.md). null — рынка без своего домена. */
   domain: string | null;
   prices: Record<CourseAudience, MarketPrice>;
   /** Пакет «отраслевой + 2 общих», −17 % к сумме. */
@@ -132,7 +132,7 @@ export const MARKETS: readonly Market[] = [
     code: "UZ",
     country: "Узбекистан",
     currency: "сум",
-    domain: null,
+    domain: hostFor("UZ"),
     prices: {
       SPECIALIZED: { min: 1_790_000, max: 2_390_000, median: 1_990_000 },
       EVERYONE: { min: 990_000, max: 1_590_000, median: 1_290_000 },

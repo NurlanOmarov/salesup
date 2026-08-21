@@ -109,6 +109,14 @@ export default async function LicensesPage({
               Написать в WhatsApp
             </a>
           ) : null}
+          {support.viber ? (
+            <a
+              href={support.viber}
+              className="rounded-lg border border-foreground/15 px-3 py-1.5 font-medium transition-colors hover:bg-foreground/5"
+            >
+              Написать в Viber
+            </a>
+          ) : null}
           {support.phone ? (
             <a
               href={`tel:${support.phone.replace(/[^\d+]/g, "")}`}

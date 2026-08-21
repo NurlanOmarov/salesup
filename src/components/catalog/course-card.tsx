@@ -103,7 +103,7 @@ export function CourseCard({ course }: { course: CourseCardData }) {
                 </span>
               ) : null}
             </div>
-            {course.prices?.ready ? (
+            {course.prices?.alt ? (
               <p className="mt-0.5 text-xs text-foreground/45">{course.prices.alt}</p>
             ) : null}
           </div>

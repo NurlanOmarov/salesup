@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { buildSafe } from "@/lib/utils";
 import { applyOverride, scopeChain } from "@/lib/seo/scope";
 import { currentSite } from "@/lib/seo/site";
+import { DEFAULT_SITE } from "@/lib/seo/site-hosts";
 import { getLocale } from "@/i18n/server";
 import { messagesFor } from "@/i18n/messages";
 import { DEFAULT_LOCALE } from "@/i18n/routing";
@@ -145,19 +146,28 @@ export interface SupportContacts {
   phoneHref: string; // tel:+375296053032
   whatsapp: string; // ссылка wa.me
   telegram: string | null; // ссылка t.me (env — редко меняется)
+  viber: string | null; // viber://add?number=… — только на белорусском домене
 }
 
 /**
  * Контакты поддержки для футера, лендинга, «забыли пароль» и кабинета ученика.
  * Телефон и WhatsApp правятся владельцем в /admin/seo (SeoSettings, кэш 5 мин);
  * Telegram — из env (смена хэндла — редкое событие уровня деплоя).
+ *
+ * Viber показывается только на белорусском домене (в РБ это рабочий мессенджер
+ * поддержки, на .kz/.ru им не пользуются) и ведёт на тот же номер, что телефон
+ * поддержки этого домена, — отдельного поля в настройках он не требует.
+ * Неизвестный хост (dev, превью) считается белорусской витриной: DEFAULT_SITE.
  */
 export async function getSupportContacts(): Promise<SupportContacts> {
-  const s = await getSeoSettings();
+  const [s, site] = await Promise.all([getSeoSettings(), currentSite()]);
+  const digits = s.orgPhone.replace(/\D/g, "");
+  const isBelarus = (site?.code ?? DEFAULT_SITE.code) === "BY";
   return {
     phone: s.orgPhone,
     phoneHref: `tel:${s.orgPhone.replace(/[^\d+]/g, "")}`,
     whatsapp: s.supportWhatsapp,
     telegram: process.env.NEXT_PUBLIC_SUPPORT_TELEGRAM || null,
+    viber: isBelarus && digits ? `viber://add?number=${digits}` : null,
   };
 }

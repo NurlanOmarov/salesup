@@ -89,12 +89,20 @@ describe("formatCurrency / buildMultiPrice", () => {
 describe("buildMultiPrice — валюта страны домена", () => {
   const rates = { BYN: 163.29, RUB: 3.7 } as Record<string, number>;
 
-  it("главная валюта — из домена, остальные уходят в справочную строку", () => {
+  it("витрина показывает только валюту своей страны", () => {
     const kz = buildMultiPrice(100_00, rates, "kzt");
     expect(kz.main).toBe(kz.kzt);
-    expect(kz.alt).toContain(kz.byn);
-    expect(kz.alt).toContain(kz.rub);
-    expect(kz.alt).not.toContain(kz.kzt);
+    expect(kz.alt).toBe("");
+
+    const uz = buildMultiPrice(100_00, rates, "uzs");
+    expect(uz.main).toBe(uz.uzs);
+    expect(uz.alt).toBe("");
+  });
+
+  it("на белорусской витрине — только белорусский рубль", () => {
+    const by = buildMultiPrice(100_00, rates);
+    expect(by.main).toBe(by.byn);
+    expect(by.alt).toBe("");
   });
 
   it("по умолчанию — базовая валюта цены (BYN)", () => {

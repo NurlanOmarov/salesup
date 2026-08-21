@@ -110,7 +110,7 @@ export default async function LandingPage() {
   const b2bBestPerSeat = quoteSeats(20, entryPackTiyn(b2bCourses)).pricePerSeatTiyn / 100;
   const b2bBestPerMonth = Math.round(b2bBestPerSeat / 12);
   // Контакты — из SeoSettings (правятся в /admin/seo без деплоя).
-  const { whatsapp: wa, telegram: tg } = await getSupportContacts();
+  const { whatsapp: wa, telegram: tg, viber } = await getSupportContacts();
   // Оценки школы на Яндекс и Google Картах — правятся в /admin/seo.
   const ratings = externalRatings(await getSeoSettings());
   // Цитаты с карт: переносятся владельцем в /admin/reviews (парсинг карт не делаем).
@@ -601,6 +601,15 @@ export default async function LandingPage() {
                       className={buttonVariants({ variant: "outline-light" })}
                     >
                       {t.landing.writeTelegram}
+                    </a>
+                  ) : null}
+                  {/* Viber — белорусская витрина (см. getSupportContacts). */}
+                  {viber ? (
+                    <a
+                      href={viber}
+                      className={buttonVariants({ variant: "outline-light" })}
+                    >
+                      {t.landing.writeViber}
                     </a>
                   ) : null}
                 </div>

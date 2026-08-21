@@ -10,7 +10,7 @@ import { SocialLinks } from "@/components/landing/social-links";
 
 export async function SiteFooter() {
   // Контакты — из SeoSettings (правятся в /admin/seo без деплоя).
-  const { phone, phoneHref, whatsapp: wa, telegram: tg } = await getSupportContacts();
+  const { phone, phoneHref, whatsapp: wa, telegram: tg, viber } = await getSupportContacts();
   const year = 2026;
   // Домен захода: подсветка страны в переключателе и честная строка «работаем в …».
   // Юрлицо и реквизиты при этом одни (РБ) — их показываем на всех доменах.
@@ -98,6 +98,15 @@ export async function SiteFooter() {
                   className="transition-colors hover:text-brand-light"
                 >
                   WhatsApp
+                </a>
+              </li>
+            ) : null}
+            {/* Viber — только на белорусском домене: в РБ им пользуются наравне
+                с WhatsApp, ссылка ведёт на тот же номер поддержки. */}
+            {viber ? (
+              <li>
+                <a href={viber} className="transition-colors hover:text-brand-light">
+                  Viber
                 </a>
               </li>
             ) : null}

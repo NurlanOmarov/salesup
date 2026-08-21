@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { scopeChain, applyOverride, isKnownScope, SEO_SCOPES } from "./scope.js";
+import { SITE_HOSTS } from "./site-hosts.js";
 
 describe("scopeChain", () => {
   it("русская версия домена наследуется от общих настроек", () => {
@@ -44,9 +45,17 @@ describe("applyOverride", () => {
 });
 
 describe("SEO_SCOPES", () => {
-  it("содержит общий вариант, три домена и казахскую версию", () => {
-    expect(SEO_SCOPES.map((s) => s.scope)).toEqual(["global", "BY", "KZ", "RU", "KZ-kk"]);
+  it("список строится из доменов: общий вариант, каждый домен и казахская версия", () => {
+    expect(SEO_SCOPES.map((s) => s.scope)).toEqual([
+      "global",
+      ...SITE_HOSTS.map((h) => h.code),
+      "KZ-kk",
+    ]);
+  });
+
+  it("известны только разрезы из списка", () => {
     expect(isKnownScope("KZ-kk")).toBe(true);
-    expect(isKnownScope("UZ")).toBe(false);
+    expect(isKnownScope("UZ")).toBe(true); // узбекский домен добавлен
+    expect(isKnownScope("PL")).toBe(false);
   });
 });

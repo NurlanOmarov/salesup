@@ -1,9 +1,10 @@
-import { MessageCircle, Send, Phone, LifeBuoy } from "lucide-react";
+import { MessageCircle, MessagesSquare, Send, Phone, LifeBuoy } from "lucide-react";
 import { getSupportContacts } from "@/lib/seo/settings";
 
 /**
  * Контакты поддержки в кабинете (те же, что на лендинге/«забыли пароль»): WhatsApp,
- * Telegram, телефон владельца — из SeoSettings (правятся в /admin/seo без деплоя).
+ * Telegram, Viber (только белорусский домен), телефон владельца — из SeoSettings
+ * (правятся в /admin/seo без деплоя).
  * Для вопросов по доступу и оплате (онлайн-оплаты в MVP нет — D из CLAUDE.md).
  * `variant="card"` — секция в настройках; `variant="inline"` — компактно.
  */
@@ -12,7 +13,7 @@ function digits(s: string): string {
 }
 
 export async function SupportContact({ variant = "card" }: { variant?: "card" | "inline" }) {
-  const { phone, phoneHref, whatsapp: wa, telegram: tg } = await getSupportContacts();
+  const { phone, phoneHref, whatsapp: wa, telegram: tg, viber } = await getSupportContacts();
 
   const links = [
     wa && {
@@ -26,6 +27,12 @@ export async function SupportContact({ variant = "card" }: { variant?: "card" | 
       label: "Telegram",
       icon: Send,
       cls: "text-sky-600",
+    },
+    viber && {
+      href: viber,
+      label: "Viber",
+      icon: MessagesSquare,
+      cls: "text-violet-600",
     },
     phone && {
       href: phoneHref,
@@ -41,8 +48,11 @@ export async function SupportContact({ variant = "card" }: { variant?: "card" | 
         <a
           key={l.label}
           href={l.href}
-          target="_blank"
-          rel="noopener noreferrer"
+          // Внешняя вкладка — только для веб-ссылок: tel: и viber:// открывает
+          // приложение, пустая вкладка при этом не нужна.
+          {...(l.href.startsWith("http")
+            ? { target: "_blank", rel: "noopener noreferrer" }
+            : {})}
           className="inline-flex items-center gap-2 rounded-xl border border-foreground/10 px-3 py-2 text-sm font-medium transition-colors hover:bg-foreground/5"
         >
           <l.icon className={`size-4 ${l.cls}`} />

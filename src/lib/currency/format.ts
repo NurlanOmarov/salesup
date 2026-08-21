@@ -11,15 +11,16 @@ import type { RatesMap } from "./rates";
  *   не округляется.
  */
 
-export type CurrencyCode = "KZT" | "RUB" | "BYN";
+export type CurrencyCode = "KZT" | "RUB" | "BYN" | "UZS";
 
 /** Валюты, показываемые на витрине: белорусский рубль (основная), тенге, российский рубль. */
-export const DISPLAY_CURRENCIES: CurrencyCode[] = ["BYN", "KZT", "RUB"];
+export const DISPLAY_CURRENCIES: CurrencyCode[] = ["BYN", "KZT", "RUB", "UZS"];
 
 const SYMBOLS: Record<CurrencyCode, string> = {
   KZT: "₸",
   RUB: "₽",
   BYN: "Br",
+  UZS: "сум",
 };
 
 /**
@@ -28,6 +29,8 @@ const SYMBOLS: Record<CurrencyCode, string> = {
  */
 function roundForCurrency(amount: number, code: CurrencyCode): number {
   if (code === "KZT" || code === "RUB") return Math.ceil(amount / 100) * 100;
+  // Сумы: цены шестизначные, округление до сотни выглядит фальшивой точностью.
+  if (code === "UZS") return Math.ceil(amount / 1000) * 1000;
   return amount; // BYN — базовая цена, без округления
 }
 
@@ -69,16 +72,21 @@ export interface MultiPrice {
   kzt: string;
   rub: string;
   byn: string;
+  uzs: string;
   /** Цена в валюте страны домена — её посетитель видит крупно. */
   main: string;
-  /** Остальные валюты одной строкой: «≈ 1 000 Br · ≈ 30 000 ₽». Пусто, пока нет курса. */
+  /**
+   * Раньше — строка с остальными валютами. Сейчас всегда пусто: витрина каждой
+   * страны показывает только свою валюту. Поле осталось, чтобы не переписывать
+   * потребителей; они уже проверяют его на пустоту.
+   */
   alt: string;
   /** false, если кросс-курс ещё не загружен (тогда KZT/RUB = «—»). */
   ready: boolean;
 }
 
 /** Валюта витрины по домену (мультидомен): ключ поля MultiPrice. */
-export type MainCurrency = "byn" | "kzt" | "rub";
+export type MainCurrency = "byn" | "kzt" | "rub" | "uzs";
 
 /**
  * Три валюты разом — для карточек и блоков цены. main — валюта страны домена:
@@ -95,15 +103,15 @@ export function buildMultiPrice(
     kzt: formatCurrency(tiyn, "KZT", rates),
     rub: formatCurrency(tiyn, "RUB", rates),
     byn: formatCurrency(tiyn, "BYN", rates),
+    uzs: formatCurrency(tiyn, "UZS", rates),
   };
   // Без курса конвертация недоступна — показываем базовую цену в BYN.
   const mainKey: MainCurrency = ready ? main : "byn";
-  const alt = ready
-    ? (["byn", "kzt", "rub"] as const)
-        .filter((c) => c !== mainKey)
-        .map((c) => `≈ ${values[c]}`)
-        .join(" · ")
-    : "";
+  // Решение владельца: витрина показывает только валюту своей страны. Раньше
+  // рядом шла строка «≈» с остальными курсами — на четырёх рынках она стала
+  // шумом и не помещалась в карточку. Цена договора (BYN) и оговорка о
+  // справочном эквиваленте остаются в оферте (src/content/legal).
+  const alt = "";
   return { ...values, main: values[mainKey], alt, ready };
 }
 

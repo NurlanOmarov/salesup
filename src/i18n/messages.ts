@@ -65,6 +65,7 @@ const ru = {
     subtitles: "Субтитры на 4 языках",
     writeWhatsapp: "Написать в WhatsApp",
     writeTelegram: "Написать в Telegram",
+    writeViber: "Написать в Viber",
   },
   staticSeo: {
     "/courses": {
@@ -150,6 +151,7 @@ const ru = {
       "Оставьте заявку — расскажем о курсах, подберём программу под вашу отрасль и подскажем удобный способ оплаты. Онлайн-оплата не требуется.",
     writeWhatsapp: "Написать в WhatsApp",
     writeTelegram: "Написать в Telegram",
+    writeViber: "Написать в Viber",
   },
   b2b: {
     badge: "Для компаний",
@@ -259,6 +261,7 @@ const kk = {
     subtitles: "4 тілде субтитрлер",
     writeWhatsapp: "WhatsApp-қа жазу",
     writeTelegram: "Telegram-ға жазу",
+    writeViber: "Viber-ге жазу",
   },
   staticSeo: {
     "/courses": {
@@ -342,6 +345,7 @@ const kk = {
       "Өтінім қалдырыңыз — курстар туралы айтып, салаңызға сай бағдарлама таңдап, ыңғайлы төлем тәсілін ұсынамыз. Онлайн төлеудің қажеті жоқ.",
     writeWhatsapp: "WhatsApp-қа жазу",
     writeTelegram: "Telegram-ға жазу",
+    writeViber: "Viber-ге жазу",
   },
   b2b: {
     badge: "Компанияларға",

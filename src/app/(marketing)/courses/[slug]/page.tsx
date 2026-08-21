@@ -15,7 +15,7 @@ import { db } from "@/lib/db";
 import { accessDurationLabel } from "@/lib/pricing";
 import { formatPrice, coverPublicUrl } from "@/lib/utils";
 import { cn } from "@/lib/utils";
-import { currency, buildMultiPrice, ratesAvailable } from "@/lib/currency";
+import { currency, buildMultiPrice } from "@/lib/currency";
 import { buttonVariants } from "@/components/ui/button";
 import { Reveal } from "@/components/landing/reveal";
 import { CourseCta, CourseCtaSection } from "@/components/landing/course-cta";
@@ -129,7 +129,6 @@ export default async function CoursePage({
   // Интерфейс карточки — на языке страницы; содержимое курса приходит из БД.
   const t = messagesFor(await getLocale());
   const prices = buildMultiPrice(course.priceTiyn, ratesPayload.rates, site?.currency ?? "byn");
-  const hasRates = ratesAvailable(ratesPayload.rates);
   // Оплата картой идёт в магазине на activesales.by (эквайринг Альфа-Банка) и
   // работает только для белорусской витрины: цена там в BYN, а договор эквайринга
   // заключён на белорусскую площадку (docs/WOO-INTEGRATION.md). На .kz/.ru курс
@@ -140,7 +139,7 @@ export default async function CoursePage({
       : null;
 
   // Контакты — из SeoSettings (правятся в /admin/seo без деплоя).
-  const { whatsapp: wa, telegram: tg } = await getSupportContacts();
+  const { whatsapp: wa, telegram: tg, viber } = await getSupportContacts();
   const reviews = course.reviews as ReviewItem[];
 
   const learnPoints = Array.isArray(course.learnPoints)
@@ -352,10 +351,8 @@ export default async function CoursePage({
                     </span>
                   ) : null}
                 </div>
-                {hasRates ? (
-                  <p className="mt-1 text-sm text-white/50">
-                    {prices.alt}
-                  </p>
+                {prices.alt ? (
+                  <p className="mt-1 text-sm text-white/50">{prices.alt}</p>
                 ) : null}
                 {checkoutUrl ? null : (
                   <p className="mt-1 text-sm text-white/50">
@@ -390,6 +387,18 @@ export default async function CoursePage({
                       )}
                     >
                       {t.course.writeTelegram}
+                    </a>
+                  ) : null}
+                  {/* Viber — белорусская витрина (см. getSupportContacts). */}
+                  {viber ? (
+                    <a
+                      href={viber}
+                      className={cn(
+                        buttonVariants({ variant: "outline-light", size: "sm" }),
+                        "w-full",
+                      )}
+                    >
+                      {t.course.writeViber}
                     </a>
                   ) : null}
                 </div>
@@ -562,7 +571,7 @@ export default async function CoursePage({
           courseId={course.id}
           courseTitle={course.title}
           priceByn={prices.main}
-          priceOther={hasRates ? prices.alt : null}
+          priceOther={prices.alt || null}
         />
       </section>
 

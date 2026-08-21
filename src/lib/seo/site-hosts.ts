@@ -39,6 +39,14 @@ export const SITE_HOSTS = [
     geo: { ru: "Москва · вся Россия", kk: "Мәскеу · бүкіл Ресей" },
     currency: "rub",
   },
+  {
+    host: "study.activesales.uz",
+    hreflang: "ru-UZ",
+    country: "Узбекистан",
+    code: "UZ",
+    geo: { ru: "Ташкент · весь Узбекистан", kk: "Ташкент · бүкіл Өзбекстан" },
+    currency: "uzs",
+  },
 ] as const;
 
 export type SiteHost = (typeof SITE_HOSTS)[number];
