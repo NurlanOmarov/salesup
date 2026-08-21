@@ -1,3 +1,4 @@
+import { salePrice } from "@/lib/pricing/promo";
 import type { RatesMap } from "./rates";
 
 /**
@@ -118,4 +119,49 @@ export function buildMultiPrice(
 /** Доступен ли кросс-курс BYN→KZT/RUB (rates.BYN и rates.RUB присутствуют). */
 export function ratesAvailable(rates: RatesMap): boolean {
   return !!(rates.RUB && rates.BYN);
+}
+
+export interface DisplayPrice extends MultiPrice {
+  /** Зачёркнутая цена в валюте витрины. null — акции нет. */
+  old: string | null;
+  /** Размер скидки, % (0 вне акции) — для бейджа «−50 %». */
+  percent: number;
+}
+
+/**
+ * Цена для витрины с учётом акции (lib/pricing/promo): `main` — то, что платит
+ * покупатель, `old` — зачёркнутая полная цена в той же валюте.
+ *
+ * Именно здесь, а не в БД: в базе лежит полный прайс, и когда акция кончится,
+ * витрина вернётся к нему сама, без миграции и без риска потерять исходные цены.
+ */
+export function buildDisplayPrice(
+  fullTiyn: number,
+  rates: RatesMap,
+  main: MainCurrency = "byn",
+): DisplayPrice {
+  const sale = salePrice(fullTiyn);
+  const prices = buildMultiPrice(sale.tiyn, rates, main);
+  const old = sale.oldTiyn ? buildMultiPrice(sale.oldTiyn, rates, main).main : null;
+  return { ...prices, old, percent: sale.percent };
+}
+
+/**
+ * Запасной курс доллара к BYN, если фид Нацбанка ещё не подгрузился: цена
+ * тренерского пакета не должна превращаться в «—» на холодном старте контейнера.
+ * Соответствует справочнику рынков (lib/pricing/markets: 1 Br ≈ 0,345 $).
+ */
+const FALLBACK_USD_BYN = 1 / 0.345;
+
+/**
+ * Доллары → BYN-копейки. Курсы НБ РК заданы в тенге за единицу валюты, поэтому
+ * идём через кросс-курс USD → KZT → BYN — тем же путём, что и витрина цен.
+ */
+export function usdToTiyn(usd: number, rates: RatesMap): number {
+  const usdKzt = rates.USD;
+  const bynKzt = rates.BYN;
+  if (!usdKzt || !bynKzt || bynKzt <= 0) {
+    return Math.round(usd * FALLBACK_USD_BYN * 100);
+  }
+  return Math.round(((usd * usdKzt) / bynKzt) * 100);
 }

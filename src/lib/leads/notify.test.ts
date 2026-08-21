@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { salePrice } from "@/lib/pricing/promo";
 import { applicantLeadEmail, contactEmail, leadTelegramText, ownerLeadEmail } from "./notify.js";
 import { byn } from "@/lib/pricing";
 import { leadQuote } from "./quote.js";
@@ -86,7 +87,13 @@ describe("leadTelegramText", () => {
       courseTitle: "Продажи в аптеке",
       quote: leadQuote({ kind: "B2C", courseTiyn: 49000 }),
     });
-    expect(text).toContain("Тариф: курс, 490\u00A0Br");
+    // Во время акции в уведомлении стоит цена к оплате и полная — от чего скидка.
+    // Ожидание считаем через lib/pricing/promo, чтобы тест пережил её окончание.
+    const sale = salePrice(49000);
+    expect(text).toContain(`Тариф: курс, ${sale.tiyn / 100}\u00A0Br`);
+    if (sale.oldTiyn) {
+      expect(text).toContain(`акция −${sale.percent}% от ${sale.oldTiyn / 100}\u00A0Br`);
+    }
   });
 
   it("не печатает пустые поля", () => {

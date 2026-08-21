@@ -14,8 +14,11 @@ import {
   SEAT_TIERS,
   SUBSCRIPTION_MONTH_TIYN,
   SUBSCRIPTION_YEAR_TIYN,
+  TRAINER_PACK_USD,
   VOLUME_TIERS,
 } from "@/lib/pricing";
+import { currency, usdToTiyn } from "@/lib/currency";
+import { PROMO, promoActive, promoEndsLabel } from "@/lib/pricing/promo";
 import {
   AUDIENCE_EXAMPLES,
   AUDIENCE_TITLE,
@@ -43,6 +46,9 @@ export const dynamic = "force-dynamic";
  * Обоснование каждой цифры — docs/PRICING-PLAN.md; здесь только рабочая выжимка.
  */
 export default async function PricingPage() {
+  // Пакет тренера задан в долларах (lib/pricing TRAINER_PACK) — переводим по
+  // тому же курсу, что и витрина.
+  const trainerTiyn = usdToTiyn(TRAINER_PACK_USD, (await currency.getRates()).rates);
   const rows = await db.course.findMany({
     orderBy: [{ status: "asc" }, { sortOrder: "asc" }],
     select: {
@@ -94,6 +100,21 @@ export default async function PricingPage() {
         назначаем цену новому курсу и готовим договор. Полное обоснование — в{" "}
         <span className="font-mono text-foreground/80">docs/PRICING-PLAN.md</span>.
       </p>
+      {promoActive() ? (
+        /* Владелец должен видеть это первым: в справочнике ниже — ПОЛНЫЕ цены,
+           а витрина и калькулятор сейчас показывают половину. Без этой строки
+           легко назвать клиенту цифру из таблицы и разойтись с сайтом. */
+        <p className="mt-3 flex max-w-3xl items-start gap-2 rounded-lg border border-brand/30 bg-brand/[0.06] p-3 text-sm">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-brand-strong" />
+          <span>
+            <b>Идёт акция −{PROMO.percent} % до {promoEndsLabel("ru")}.</b> В таблицах
+            ниже — полные цены; витрина, калькулятор и заявки показывают половину.
+            Срок и размер меняются в{" "}
+            <span className="font-mono text-foreground/80">src/lib/pricing/promo.ts</span>.
+          </span>
+        </p>
+      ) : null}
+
       <p className="mt-2 flex max-w-3xl items-start gap-2 rounded-lg bg-foreground/[0.03] p-3 text-sm text-foreground/65">
         <Info className="mt-0.5 size-4 shrink-0" />
         {/* Цена — решение владельца, а не системы: справочник подсказывает и
@@ -338,6 +359,7 @@ export default async function PricingPage() {
               title: c.title,
               priceTiyn: c.priceTiyn,
             }))}
+            trainerTiyn={trainerTiyn}
           />
         </div>
 

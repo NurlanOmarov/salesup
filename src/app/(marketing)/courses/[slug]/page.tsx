@@ -14,9 +14,10 @@ import {
 } from "lucide-react";
 import { db } from "@/lib/db";
 import { accessDurationLabel } from "@/lib/pricing";
+import { promoEndsAt, promoEndsLabel, salePrice } from "@/lib/pricing/promo";
 import { formatPrice, coverPublicUrl } from "@/lib/utils";
 import { cn } from "@/lib/utils";
-import { currency, buildMultiPrice } from "@/lib/currency";
+import { currency, buildDisplayPrice } from "@/lib/currency";
 import { buttonVariants } from "@/components/ui/button";
 import { Reveal } from "@/components/landing/reveal";
 import { CourseCta, CourseCtaSection } from "@/components/landing/course-cta";
@@ -147,8 +148,15 @@ export default async function CoursePage({
   // Валюта страны домена крупно, остальные — справочной строкой.
   const site = await currentSite();
   // Интерфейс карточки — на языке страницы; содержимое курса приходит из БД.
-  const t = messagesFor(await getLocale());
-  const prices = buildMultiPrice(course.priceTiyn, ratesPayload.rates, site?.currency ?? "byn");
+  const t = messagesFor(locale);
+  const tPromo = t.promo;
+  // Цена с учётом акции: prices.main — к оплате, prices.old — зачёркнутая.
+  const prices = buildDisplayPrice(
+    course.priceTiyn,
+    ratesPayload.rates,
+    site?.currency ?? "byn",
+  );
+  const sale = salePrice(course.priceTiyn);
   // Оплата картой идёт в магазине на activesales.by (эквайринг Альфа-Банка) и
   // работает только для белорусской витрины: цена там в BYN, а договор эквайринга
   // заключён на белорусскую площадку (docs/WOO-INTEGRATION.md). На .kz/.ru курс
@@ -194,9 +202,12 @@ export default async function CoursePage({
     },
     offers: {
       "@type": "Offer",
-      price: Math.round(course.priceTiyn / 100),
+      // В разметке — та цена, которую человек реально заплатит сейчас; на время
+      // акции добавляем priceValidUntil, иначе поисковик покажет её бессрочно.
+      price: Math.round(sale.tiyn / 100),
       priceCurrency: "BYN",
       availability: "https://schema.org/InStock",
+      ...(sale.oldTiyn ? { priceValidUntil: promoEndsAt().toISOString().slice(0, 10) } : {}),
     },
     ...(course.hoursLabel ? { timeRequired: course.hoursLabel } : {}),
     ...(ratingAgg._count > 0 && ratingAgg._avg.rating
@@ -361,16 +372,32 @@ export default async function CoursePage({
                   </div>
                 ) : null}
 
-                <div className="flex items-baseline gap-3">
+                {/* Во время акции зачёркиваем полную цену курса (prices.old);
+                    собственная старая цена из админки — только вне акции. */}
+                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                   <span className="text-3xl font-bold text-white">
                     {prices.main}
                   </span>
-                  {course.oldPriceTiyn ? (
+                  {prices.old ? (
+                    <>
+                      <span className="text-lg text-white/40 line-through">
+                        {prices.old}
+                      </span>
+                      <span className="rounded-full bg-brand px-2 py-0.5 text-xs font-bold text-white">
+                        −{prices.percent} %
+                      </span>
+                    </>
+                  ) : course.oldPriceTiyn ? (
                     <span className="text-lg text-white/40 line-through">
                       {formatPrice(course.oldPriceTiyn)}
                     </span>
                   ) : null}
                 </div>
+                {prices.old ? (
+                  <p className="mt-1 text-sm text-brand-light">
+                    {tPromo.until(promoEndsLabel(locale))}
+                  </p>
+                ) : null}
                 {prices.alt ? (
                   <p className="mt-1 text-sm text-white/50">{prices.alt}</p>
                 ) : null}

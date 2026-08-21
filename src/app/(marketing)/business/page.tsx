@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { buildSafe } from "@/lib/utils";
 import { getStaticPageSeo } from "@/lib/seo/static-pages";
 import { entryPackTiyn, MIN_B2B_SEATS, quoteSeats } from "@/lib/pricing";
+import { salePrice } from "@/lib/pricing/promo";
 import { AudienceSwitch } from "@/components/landing/audience-switch";
 import { Reveal } from "@/components/landing/reveal";
 import { Faq } from "@/components/landing/faq";
@@ -86,8 +87,12 @@ export default async function BusinessPage() {
   const entryPack = entryPackTiyn(courses);
 
   // Крайние точки сетки: лучшая цена места (максимальный объём) и цена на входе.
-  const bestPerSeat = quoteSeats(20, entryPack).pricePerSeatTiyn / 100;
-  const entryPerSeat = quoteSeats(MIN_B2B_SEATS, entryPack).pricePerSeatTiyn / 100;
+  // Акция −50 % (lib/pricing/promo): в первом экране показываем цену со
+  // скидкой и зачёркнутую полную — ту же пару, что считает калькулятор ниже.
+  const bestSale = salePrice(quoteSeats(20, entryPack).pricePerSeatTiyn);
+  const entrySale = salePrice(quoteSeats(MIN_B2B_SEATS, entryPack).pricePerSeatTiyn);
+  const bestPerSeat = bestSale.tiyn / 100;
+  const entryPerSeat = entrySale.tiyn / 100;
   const bestPerMonth = Math.round(bestPerSeat / 12);
 
   return (
@@ -132,6 +137,11 @@ export default async function BusinessPage() {
               <p className="whitespace-nowrap text-2xl font-bold sm:text-3xl">
                 {c.hero.priceFrom} {money(bestPerSeat)}
               </p>
+              {bestSale.oldTiyn ? (
+                <p className="whitespace-nowrap text-lg text-white/45 line-through">
+                  {formatCurrency(bestSale.oldTiyn, code, rates)}
+                </p>
+              ) : null}
               <p className="text-white/75">
                 {c.hero.perSeatYear} {money(bestPerMonth)} {c.hero.perMonth}
               </p>

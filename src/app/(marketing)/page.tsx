@@ -45,6 +45,7 @@ import { pageAlternates, currentSite } from "@/lib/seo/site";
 import { getLocale } from "@/i18n/server";
 import { messagesFor } from "@/i18n/messages";
 import { currency, formatCurrency, type CurrencyCode } from "@/lib/currency";
+import { salePrice } from "@/lib/pricing/promo";
 import { DEFAULT_SITE } from "@/lib/seo/site-hosts";
 
 // ISR: страница статична, отзывы обновляются раз в 10 минут.
@@ -107,7 +108,11 @@ export default async function LandingPage() {
       }),
     [] as { priceTiyn: number; audience: CourseAudience }[],
   );
-  const b2bBestPerSeat = quoteSeats(20, entryPackTiyn(b2bCourses)).pricePerSeatTiyn / 100;
+  // Акция −50 % (lib/pricing/promo) применяется к цене места так же, как к
+  // рознице: тизер обязан совпасть с тем, что посчитает калькулятор /business.
+  const b2bFullPerSeatTiyn = quoteSeats(20, entryPackTiyn(b2bCourses)).pricePerSeatTiyn;
+  const b2bSale = salePrice(b2bFullPerSeatTiyn);
+  const b2bBestPerSeat = b2bSale.tiyn / 100;
   const b2bBestPerMonth = Math.round(b2bBestPerSeat / 12);
   // Контакты — из SeoSettings (правятся в /admin/seo без деплоя).
   const { whatsapp: wa, telegram: tg, viber } = await getSupportContacts();
@@ -523,6 +528,11 @@ export default async function LandingPage() {
                 <span className="whitespace-nowrap text-xl font-bold">
                   {t.b2b.priceFrom} {formatCurrency(b2bBestPerSeat * 100, b2bCode, rates)}
                 </span>{" "}
+                {b2bSale.oldTiyn ? (
+                  <span className="whitespace-nowrap text-foreground/40 line-through">
+                    {formatCurrency(b2bSale.oldTiyn, b2bCode, rates)}
+                  </span>
+                ) : null}{" "}
                 {t.b2b.perSeatYear} {formatCurrency(b2bBestPerMonth * 100, b2bCode, rates)}{" "}
                 {t.b2b.perMonth}
               </p>

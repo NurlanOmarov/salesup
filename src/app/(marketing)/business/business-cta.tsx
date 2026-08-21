@@ -44,6 +44,8 @@ export function BusinessCta({
   // Состав набора уходит в заявку: иначе в уведомлении не видно, что именно
   // человек считал, — и какую сумму он уже держит в голове.
   const [courseIds, setCourseIds] = useState<string[]>([]);
+  // Пакет с живыми сессиями тренера: в заявке он меняет и состав, и сумму.
+  const [withTrainer, setWithTrainer] = useState(false);
 
   const isOffline = format === "OFFLINE";
 
@@ -102,6 +104,7 @@ export function BusinessCta({
               setSeats(v.seats);
               setCourseTitles(v.courseTitles);
               setCourseIds(v.courseIds);
+              setWithTrainer(v.withTrainer);
             }}
           />
         )}
@@ -120,6 +123,7 @@ export function BusinessCta({
               kind="B2B"
               defaultSeats={seats}
               planCourseIds={courseIds}
+              withTrainer={withTrainer}
               defaultMessage={
                 courseTitles.length > 0
                   ? `Интересуют курсы: ${courseTitles.join(", ")}`

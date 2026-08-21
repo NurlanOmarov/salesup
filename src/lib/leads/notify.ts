@@ -53,7 +53,15 @@ function br(tiyn: number): string {
 export function quoteLine(quote: LeadQuote | null | undefined): string | null {
   if (!quote) return null;
 
-  if (quote.plan === "COURSE") return `💰 Тариф: курс, ${br(quote.totalTiyn)}`;
+  // Акция: показываем и зачёркнутую сумму — на звонке владельцу нужно знать,
+  // от какой цены человек получил скидку.
+  const promo = quote.fullTotalTiyn
+    ? ` (акция −${quote.promoPercent}% от ${br(quote.fullTotalTiyn)})`
+    : "";
+
+  if (quote.plan === "COURSE") {
+    return `💰 Тариф: курс, ${br(quote.totalTiyn)}${promo}`;
+  }
 
   const subject = PLAN_LABELS[quote.plan];
   const perSeat = quote.perSeatTiyn ?? 0;
@@ -62,8 +70,11 @@ export function quoteLine(quote: LeadQuote | null | undefined): string | null {
       ? ` (${quote.tierLabel ? `«${quote.tierLabel}», ` : ""}−${Math.round(quote.discount * 100)}%)`
       : "";
   const warn = quote.belowMinSeats ? "\n⚠️ Мест меньше минимального пакета — скидка не действует" : "";
+  const trainer = quote.trainerTiyn
+    ? `\n👨‍🏫 Пакет с тренером: 2 онлайн-сессии + группа сопровождения, ${br(quote.trainerTiyn)} к чеку`
+    : "";
 
-  return `💰 Тариф: ${subject}\n💵 Расчёт: ${br(perSeat)} × ${quote.seats} = ${br(quote.totalTiyn)}${discount}${warn}`;
+  return `💰 Тариф: ${subject}\n💵 Расчёт: ${br(perSeat)} × ${quote.seats} = ${br(quote.totalTiyn)}${discount}${promo}${trainer}${warn}`;
 }
 
 /**

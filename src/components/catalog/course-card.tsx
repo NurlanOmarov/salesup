@@ -21,6 +21,10 @@ export interface CoursePrices {
   main: string;
   alt: string;
   ready: boolean;
+  /** Зачёркнутая цена акции в валюте витрины (lib/pricing/promo). */
+  old?: string | null;
+  /** Размер скидки, % — 0 вне акции. */
+  percent?: number;
 }
 
 export type CourseCardData = {
@@ -93,11 +97,27 @@ export function CourseCard({ course }: { course: CourseCardData }) {
 
         <div className="mt-auto pt-4 flex items-end justify-between gap-2">
           <div>
-            <div className="flex items-baseline gap-2">
+            {/*
+              Во время акции зачёркиваем её полную цену (prices.old): она
+              считается из того же priceTiyn и приходит в валюте витрины.
+              Собственная «старая цена» курса (oldPriceTiyn, поле админки)
+              используется только вне акции — иначе на карточке оказались бы
+              два зачёркнутых числа подряд.
+            */}
+            <div className="flex flex-wrap items-baseline gap-2">
               <span className="whitespace-nowrap text-lg font-bold">
                 {course.prices?.main ?? formatPrice(course.priceTiyn)}
               </span>
-              {course.oldPriceTiyn ? (
+              {course.prices?.old ? (
+                <>
+                  <span className="whitespace-nowrap text-sm text-foreground/40 line-through">
+                    {course.prices.old}
+                  </span>
+                  <span className="rounded-full bg-brand/10 px-1.5 py-0.5 text-[11px] font-bold text-brand-strong">
+                    −{course.prices.percent} %
+                  </span>
+                </>
+              ) : course.oldPriceTiyn ? (
                 <span className="text-sm text-foreground/40 line-through">
                   {formatPrice(course.oldPriceTiyn)}
                 </span>

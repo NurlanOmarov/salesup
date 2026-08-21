@@ -2,13 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { Minus, Plus } from "lucide-react";
-import { MIN_B2B_SEATS, packRetailTiyn, quoteSeats, SEAT_TIERS } from "@/lib/pricing";
+import {
+  MIN_B2B_SEATS,
+  packRetailTiyn,
+  quoteSeats,
+  SEAT_TIERS,
+  TRAINER_PACK_USD,
+} from "@/lib/pricing";
+import { salePrice } from "@/lib/pricing/promo";
 import { cn } from "@/lib/utils";
 import { useLocale } from "@/i18n/client";
 import { businessContent } from "@/content/business-content";
 // Импорт из конкретных модулей, а не из индекса: индекс тянет CurrencyService
 // с доступом к файлам, и клиентская сборка на нём падает.
-import { formatCurrency, type CurrencyCode } from "@/lib/currency/format";
+import { formatCurrency, usdToTiyn, type CurrencyCode } from "@/lib/currency/format";
 import type { RatesMap } from "@/lib/currency/rates";
 
 export interface CalculatorCourse {
@@ -54,6 +61,8 @@ export function SeatsCalculator({
     courseTitles: string[];
     courseIds: string[];
     mode: CalculatorMode;
+    /** Выбран пакет с живыми сессиями тренера — уходит в заявку. */
+    withTrainer: boolean;
   }) => void;
 }) {
   const industries = courses.filter((c) => c.audience === "SPECIALIZED");
@@ -66,6 +75,9 @@ export function SeatsCalculator({
   );
   const [industryId, setIndustryId] = useState<string>(industries[0]?.id ?? "");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  // Пакет с тренером выключен по умолчанию: сначала человек должен увидеть
+  // порог входа, а уже потом решать, добавлять ли живые сессии.
+  const [withTrainer, setWithTrainer] = useState(false);
 
   const industry = industries.find((c) => c.id === industryId) ?? industries[0];
   // В отраслевом наборе общие курсы идут всегда: продажи есть продажи, они
@@ -85,6 +97,7 @@ export function SeatsCalculator({
     mode?: CalculatorMode;
     selected?: Set<string>;
     industryId?: string;
+    withTrainer?: boolean;
   }) {
     const nextMode = next.mode ?? mode;
     const nextIndustryId = next.industryId ?? industryId;
@@ -100,6 +113,7 @@ export function SeatsCalculator({
       courseTitles: picked.map((c) => c.title),
       courseIds: picked.map((c) => c.id),
       mode: nextMode,
+      withTrainer: next.withTrainer ?? withTrainer,
     });
   }
 
@@ -117,6 +131,11 @@ export function SeatsCalculator({
   function changeMode(next: CalculatorMode) {
     setMode(next);
     emit({ mode: next });
+  }
+
+  function changeTrainer(next: boolean) {
+    setWithTrainer(next);
+    emit({ withTrainer: next });
   }
 
   function changeIndustry(id: string) {
@@ -138,6 +157,22 @@ export function SeatsCalculator({
   // компании расчёт в белорусских рублях ничего не говорит.
   const money = (tiyn: number) => formatCurrency(tiyn, currencyCode, rates);
   const c = businessContent(useLocale()).calculator;
+
+  /*
+    Итог собирается в три слоя, и порядок здесь принципиален:
+      1) места по сетке объёма (quoteSeats) — растут с числом сотрудников;
+      2) пакет тренера — фиксированная сумма НА КОМПАНИЮ (две живые сессии и
+         группа сопровождения ведутся для всего отдела разом, а не для каждого);
+      3) акция −50 % — применяется к сумме целиком, поэтому зачёркиваем полный
+         чек, а не только платформенную часть.
+    Считать скидку раньше надбавки нельзя: тогда «минус 50 %» на экране не
+    совпал бы с половиной зачёркнутого числа, и калькулятор выглядел бы жульём.
+  */
+  const trainerTiyn = usdToTiyn(TRAINER_PACK_USD, rates);
+  const fullTotalTiyn = quote.totalTiyn + (withTrainer ? trainerTiyn : 0);
+  const sale = salePrice(fullTotalTiyn);
+  const perSeatTiyn = Math.round(sale.tiyn / seats);
+  const oldPerSeatTiyn = sale.oldTiyn ? Math.round(sale.oldTiyn / seats) : null;
 
   return (
     <div className="rounded-2xl border border-foreground/10 bg-background p-5 sm:p-6">
@@ -293,12 +328,73 @@ export function SeatsCalculator({
         идёт крупно на всю ширину, годовая сумма и помесячная — под ней мельче;
         whitespace-nowrap не даёт разорвать сумму со знаком валюты.
       */}
+      {/* Пакет: платформа или платформа + живые сессии тренера. Табами, а не
+          галочкой — так видно, что это два предложения, и второе не «доплата
+          мелким шрифтом», а другой формат обучения. */}
+      <div className="mt-5">
+        <p className="text-sm font-semibold">{c.packTitle}</p>
+        <div className="mt-2 grid gap-2 sm:grid-cols-2">
+          <button
+            type="button"
+            aria-pressed={!withTrainer}
+            onClick={() => changeTrainer(false)}
+            className={cn(
+              "rounded-lg border px-3 py-2 text-left text-sm transition-colors",
+              !withTrainer
+                ? "border-brand bg-brand/10 font-medium"
+                : "border-foreground/15 text-foreground/70 hover:bg-foreground/5",
+            )}
+          >
+            {c.packPlatform}
+          </button>
+          <button
+            type="button"
+            aria-pressed={withTrainer}
+            onClick={() => changeTrainer(true)}
+            className={cn(
+              "rounded-lg border px-3 py-2 text-left text-sm transition-colors",
+              withTrainer
+                ? "border-brand bg-brand/10 font-medium"
+                : "border-foreground/15 text-foreground/70 hover:bg-foreground/5",
+            )}
+          >
+            {c.packTrainer}
+            <span className="mt-0.5 block text-xs font-normal text-foreground/55">
+              {c.packTrainerHint}
+            </span>
+          </button>
+        </div>
+
+        {withTrainer ? (
+          <ul className="mt-2 space-y-1 text-xs text-foreground/60">
+            <li>• {c.trainerIntro}</li>
+            <li>• {c.trainerFinal}</li>
+            <li>• {c.trainerGroup}</li>
+            <li className="text-foreground/50">
+              {c.trainerNote} {money(trainerTiyn)}
+            </li>
+          </ul>
+        ) : null}
+      </div>
+
       <dl className="mt-5 rounded-xl border border-foreground/10 bg-foreground/[0.03] p-4">
         <dt className="text-xs uppercase tracking-wide text-foreground/50">
           {c.perSeatYear}
         </dt>
-        <dd className="mt-1 whitespace-nowrap text-3xl font-bold tabular-nums">
-          {money(quote.pricePerSeatTiyn)}
+        <dd className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <span className="whitespace-nowrap text-3xl font-bold tabular-nums">
+            {money(perSeatTiyn)}
+          </span>
+          {oldPerSeatTiyn ? (
+            <>
+              <span className="whitespace-nowrap text-lg text-foreground/40 line-through tabular-nums">
+                {money(oldPerSeatTiyn)}
+              </span>
+              <span className="rounded-full bg-brand px-2 py-0.5 text-xs font-bold text-white">
+                −{sale.percent} %
+              </span>
+            </>
+          ) : null}
         </dd>
 
         {/*
@@ -311,8 +407,15 @@ export function SeatsCalculator({
             <dt className="text-xs uppercase tracking-wide text-foreground/50">
               {c.totalYear(seats)}
             </dt>
-            <dd className="whitespace-nowrap text-lg font-semibold tabular-nums">
-              {money(quote.totalTiyn)}
+            <dd className="flex flex-wrap items-baseline justify-end gap-2">
+              {sale.oldTiyn ? (
+                <span className="whitespace-nowrap text-sm text-foreground/40 line-through tabular-nums">
+                  {money(sale.oldTiyn)}
+                </span>
+              ) : null}
+              <span className="whitespace-nowrap text-lg font-semibold tabular-nums">
+                {money(sale.tiyn)}
+              </span>
             </dd>
           </div>
           <div className="flex items-baseline justify-between gap-3">
@@ -320,7 +423,7 @@ export function SeatsCalculator({
               {c.perMonth}
             </dt>
             <dd className="whitespace-nowrap text-lg font-semibold tabular-nums">
-              {money(Math.round(quote.pricePerSeatTiyn / 12))}
+              {money(Math.round(perSeatTiyn / 12))}
             </dd>
           </div>
         </div>
@@ -331,6 +434,11 @@ export function SeatsCalculator({
         спрашивали, платить ли ещё и помесячно. Говорим прямо — счёт один.
       */}
       <p className="mt-2 text-xs text-foreground/50">{c.paymentNote}</p>
+      {sale.oldTiyn ? (
+        <p className="mt-1 text-xs font-medium text-brand-strong">
+          {c.promoNote(sale.percent)}
+        </p>
+      ) : null}
 
       {quote.tier ? (
         <p className="mt-4 rounded-lg bg-emerald-500/[0.07] px-3 py-2 text-sm text-emerald-800">

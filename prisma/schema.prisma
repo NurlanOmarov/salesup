@@ -1188,6 +1188,10 @@ model Lead {
   plan              LeadPlan?
   quotedPerSeatTiyn Int? // цена одного места со скидкой, только B2B
   quotedTotalTiyn   Int? // итог: чек за все места (B2B) или цена курса (B2C)
+  /// Выбран ли пакет с живыми сессиями тренера (две онлайн-встречи + группа
+  /// сопровождения, lib/pricing TRAINER_PACK). Надбавка уже включена в
+  /// quotedTotalTiyn, но менеджеру нужно видеть состав, а не только сумму.
+  withTrainer       Boolean    @default(false)
   status            LeadStatus @default(NEW)
   comment           String?    @db.Text // заметки владельца
   // Отметка о согласии на обработку ПДн в форме заявки (Закон № 99-З, ст. 5):

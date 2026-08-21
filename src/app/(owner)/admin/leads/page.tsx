@@ -32,6 +32,7 @@ export default async function LeadsPage() {
       plan: true,
       quotedPerSeatTiyn: true,
       quotedTotalTiyn: true,
+      withTrainer: true,
       site: true,
     },
   });
@@ -62,6 +63,7 @@ export default async function LeadsPage() {
       seats: l.seatsWanted,
       perSeatTiyn: l.quotedPerSeatTiyn,
       totalTiyn: l.quotedTotalTiyn,
+      withTrainer: l.withTrainer,
     }),
     message: l.message,
     status: l.status,

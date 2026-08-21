@@ -8,6 +8,7 @@ import {
   SEAT_TIERS,
   SUBSCRIPTION_YEAR_TIYN,
 } from "@/lib/pricing";
+import { salePrice } from "@/lib/pricing/promo";
 import { formatAmount } from "@/lib/pricing/markets";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,14 +26,27 @@ interface CourseOption {
  * формулировка для счёта и договора, чтобы цифры в переписке и в лицензии
  * совпадали (считает тот же lib/pricing, что и форма выдачи лицензии).
  */
-export function B2bCalculator({ courses }: { courses: CourseOption[] }) {
+export function B2bCalculator({
+  courses,
+  trainerTiyn,
+}: {
+  courses: CourseOption[];
+  /** Пакет тренера (300 $) в BYN-копейках: курс считает сервер. */
+  trainerTiyn: number;
+}) {
   const [seats, setSeats] = useState(10);
   const [subject, setSubject] = useState<"library" | string>("library");
+  const [withTrainer, setWithTrainer] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const course = courses.find((c) => c.id === subject);
   const retailTiyn = subject === "library" ? SUBSCRIPTION_YEAR_TIYN : (course?.priceTiyn ?? 0);
   const quote = quoteSeats(seats, retailTiyn);
+  // Тот же порядок слоёв, что и в витринном калькуляторе: места → пакет тренера
+  // (фикс на компанию) → акция на всю сумму. Иначе счёт разойдётся с сайтом.
+  const fullTotalTiyn = quote.totalTiyn + (withTrainer ? trainerTiyn : 0);
+  const sale = salePrice(fullTotalTiyn);
+  const perSeatTiyn = Math.round(sale.tiyn / seats);
 
   const subjectLabel =
     subject === "library"
@@ -40,10 +54,15 @@ export function B2bCalculator({ courses }: { courses: CourseOption[] }) {
       : `курс «${course?.title ?? ""}» на год`;
 
   const wording =
-    `${seats} мест — ${subjectLabel}. ` +
-    `Цена места: ${formatAmount(quote.pricePerSeatTiyn / 100)} BYN в год` +
+    `${seats} мест — ${subjectLabel}` +
+    (withTrainer
+      ? ", плюс пакет с тренером: вводная онлайн-сессия (1 ч), итоговая онлайн-сессия (1 ч) и группа сопровождения в мессенджере"
+      : "") +
+    `. Цена места: ${formatAmount(perSeatTiyn / 100)} BYN в год` +
     (quote.tier ? ` (тариф «${quote.tier.label}», скидка ${Math.round(quote.discount * 100)}%)` : "") +
-    `. Итого: ${formatAmount(quote.totalTiyn / 100)} BYN.`;
+    (sale.oldTiyn
+      ? `. Акция −${sale.percent}%: итого ${formatAmount(sale.tiyn / 100)} BYN вместо ${formatAmount(sale.oldTiyn / 100)} BYN.`
+      : `. Итого: ${formatAmount(sale.tiyn / 100)} BYN.`);
 
   return (
     <div className="rounded-xl border border-foreground/10 bg-background p-4">
@@ -81,9 +100,33 @@ export function B2bCalculator({ courses }: { courses: CourseOption[] }) {
         </div>
       </div>
 
+      <label className="mt-3 flex cursor-pointer items-start gap-2 rounded-lg border border-foreground/10 p-3 text-sm">
+        <input
+          type="checkbox"
+          checked={withTrainer}
+          onChange={(e) => setWithTrainer(e.target.checked)}
+          className="mt-0.5 size-4"
+        />
+        <span>
+          Пакет с тренером: 2 онлайн-сессии (старт и итоги) + группа сопровождения
+          <span className="block text-xs text-foreground/55">
+            Фиксированные {formatAmount(trainerTiyn / 100)} BYN на компанию (300 $ по курсу
+            НБ РК), не зависят от числа мест
+          </span>
+        </span>
+      </label>
+
       <dl className="mt-4 grid gap-3 sm:grid-cols-3">
-        <Metric label="Цена места в год" value={`${formatAmount(quote.pricePerSeatTiyn / 100)} BYN`} />
-        <Metric label="Итого за год" value={`${formatAmount(quote.totalTiyn / 100)} BYN`} />
+        <Metric
+          label="Цена места в год"
+          value={`${formatAmount(perSeatTiyn / 100)} BYN`}
+          hint={sale.oldTiyn ? `без акции ${formatAmount(Math.round(sale.oldTiyn / seats) / 100)} BYN` : undefined}
+        />
+        <Metric
+          label="Итого за год"
+          value={`${formatAmount(sale.tiyn / 100)} BYN`}
+          hint={sale.oldTiyn ? `без акции ${formatAmount(sale.oldTiyn / 100)} BYN` : undefined}
+        />
         <Metric
           label="Скидка"
           value={quote.tier ? `${Math.round(quote.discount * 100)} %` : "нет"}

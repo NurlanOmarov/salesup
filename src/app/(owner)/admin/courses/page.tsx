@@ -5,6 +5,7 @@ import { Pencil } from "lucide-react";
 import { db } from "@/lib/db";
 import { currency } from "@/lib/currency";
 import { buildMultiPrice, ratesAvailable } from "@/lib/currency";
+import { salePrice } from "@/lib/pricing/promo";
 import { coverPublicUrl } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -125,7 +126,14 @@ export default async function AdminCoursesPage() {
                         {c.industry ?? "—"}
                       </td>
                       <td className="px-4 py-3">
+                        {/* В списке — полная цена курса; во время акции рядом
+                            показываем, сколько за него платят на витрине. */}
                         <div className="font-medium">{prices.byn}</div>
+                        {salePrice(c.priceTiyn).oldTiyn ? (
+                          <div className="text-xs font-medium text-brand-strong">
+                            акция: {buildMultiPrice(salePrice(c.priceTiyn).tiyn, rates).byn}
+                          </div>
+                        ) : null}
                         {hasRates ? (
                           <div className="text-xs text-foreground/50">
                             {prices.kzt} · {prices.rub}

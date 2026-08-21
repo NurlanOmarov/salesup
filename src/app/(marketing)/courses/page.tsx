@@ -5,7 +5,7 @@ import { BookOpen } from "lucide-react";
 import { db } from "@/lib/db";
 import { buttonVariants } from "@/components/ui/button";
 import { cn, buildSafe } from "@/lib/utils";
-import { currency, buildMultiPrice, type MainCurrency } from "@/lib/currency";
+import { currency, buildDisplayPrice, type MainCurrency } from "@/lib/currency";
 import { getStaticPageSeo } from "@/lib/seo/static-pages";
 import { Reveal } from "@/components/landing/reveal";
 import type { CourseCardData } from "@/components/catalog/course-card";
@@ -78,7 +78,8 @@ async function getCourses(main: MainCurrency, locale: Locale): Promise<CourseCar
   const rates = ratesPayload.rates;
   return rows.map((r) => {
     const t = localizedCard(r, locale);
-    return { ...r, ...t, prices: buildMultiPrice(r.priceTiyn, rates, main) };
+    // Акция применяется здесь, а не в запросе: в БД лежит полный прайс.
+    return { ...r, ...t, prices: buildDisplayPrice(r.priceTiyn, rates, main) };
   });
 }
 

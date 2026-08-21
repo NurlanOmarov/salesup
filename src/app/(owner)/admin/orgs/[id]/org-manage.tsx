@@ -15,6 +15,7 @@ import {
 } from "../actions";
 import { ACCESS_DURATIONS, ACCESS_DURATION_LABELS } from "@/lib/admin/enrollment";
 import { MIN_B2B_SEATS, quoteSeats, SUBSCRIPTION_YEAR_TIYN } from "@/lib/pricing";
+import { salePrice } from "@/lib/pricing/promo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -303,6 +304,9 @@ export function LicenseForm({
       ? SUBSCRIPTION_YEAR_TIYN
       : (courses.find((c) => c.id === courseId)?.priceTiyn ?? 0);
   const quote = quoteSeats(seatCount, retailTiyn);
+  // Во время акции клиент платит половину, и в лицензию должна попасть именно
+  // эта сумма: иначе отчёты по выручке покажут деньги, которых не было.
+  const seatSale = salePrice(quote.pricePerSeatTiyn);
 
   async function onSubmit(formData: FormData) {
     setPending(true);
@@ -442,10 +446,8 @@ export function LicenseForm({
           type="number"
           min={0}
           step="0.01"
-          key={quote.pricePerSeatTiyn}
-          defaultValue={
-            quote.pricePerSeatTiyn > 0 ? quote.pricePerSeatTiyn / 100 : undefined
-          }
+          key={seatSale.tiyn}
+          defaultValue={seatSale.tiyn > 0 ? seatSale.tiyn / 100 : undefined}
         />
       </div>
 
@@ -462,13 +464,22 @@ export function LicenseForm({
             <p>
               <span className="font-medium">{quote.tier.label}</span> ·{" "}
               {seatCount} мест · скидка {Math.round(quote.discount * 100)} % →{" "}
-              <span className="font-semibold">{quote.pricePerSeatTiyn / 100} Br</span> за
+              <span className="font-semibold">{seatSale.tiyn / 100} Br</span> за
               место, итого{" "}
-              <span className="font-semibold">{quote.totalTiyn / 100} Br</span> в год
+              <span className="font-semibold">
+                {(seatSale.tiyn * seatCount) / 100} Br
+              </span>{" "}
+              в год
               <span className="text-foreground/50">
                 {" "}
                 (экономия {quote.savingTiyn / 100} Br)
               </span>
+              {seatSale.oldTiyn ? (
+                <span className="block text-brand-strong">
+                  Акция −{seatSale.percent} %: без неё было бы{" "}
+                  {seatSale.oldTiyn / 100} Br за место и {quote.totalTiyn / 100} Br за год.
+                </span>
+              ) : null}
             </p>
           ) : (
             <p className="text-amber-700">

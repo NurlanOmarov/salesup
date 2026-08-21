@@ -1,14 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { byn, quoteSeats } from "@/lib/pricing";
+import { salePrice } from "@/lib/pricing/promo";
 import { describeStoredPlan, leadQuote } from "./quote.js";
 
 describe("leadQuote — розница", () => {
-  it("берёт цену курса как есть", () => {
+  it("берёт цену курса и применяет к ней акцию витрины", () => {
     const q = leadQuote({ kind: "B2C", courseTiyn: byn(490) });
+    const sale = salePrice(byn(490));
     expect(q).toMatchObject({
       plan: "COURSE",
       seats: null,
-      totalTiyn: byn(490),
+      // Полная цена остаётся в retailTiyn, в чек идёт акционная.
+      retailTiyn: byn(490),
+      totalTiyn: sale.tiyn,
+      fullTotalTiyn: sale.oldTiyn,
       discount: 0,
       perSeatTiyn: null,
     });
@@ -28,16 +33,47 @@ describe("leadQuote — корпоратив", () => {
       selectedCoursesTiyn: [byn(350), byn(250)],
     });
     const expected = quoteSeats(20, byn(600));
+    const sale = salePrice(expected.totalTiyn);
     expect(q).toMatchObject({
       plan: "COURSES",
       seats: 20,
       retailTiyn: byn(600),
-      perSeatTiyn: expected.pricePerSeatTiyn,
-      totalTiyn: expected.totalTiyn,
+      perSeatTiyn: Math.round(sale.tiyn / 20),
+      totalTiyn: sale.tiyn,
+      fullTotalTiyn: sale.oldTiyn,
       discount: 0.35,
       tierLabel: "Компания",
       belowMinSeats: false,
+      trainerTiyn: 0,
     });
+  });
+
+  it("пакет с тренером — фиксированная надбавка на компанию, поверх неё акция", () => {
+    const trainerTiyn = byn(870); // ≈ 300 $ в BYN, считает вызывающий код
+    const q = leadQuote({
+      kind: "B2B",
+      seats: 10,
+      selectedCoursesTiyn: [byn(490), byn(320)],
+      withTrainer: true,
+      trainerTiyn,
+    });
+    const seatsPart = quoteSeats(10, byn(810)).totalTiyn;
+    const sale = salePrice(seatsPart + trainerTiyn);
+    expect(q?.trainerTiyn).toBe(trainerTiyn);
+    expect(q?.totalTiyn).toBe(sale.tiyn);
+    // Надбавка не умножается на число мест: сессии идут для всего отдела разом.
+    expect(q?.fullTotalTiyn).toBe(seatsPart + trainerTiyn);
+  });
+
+  it("без выбора пакета тренер в чек не попадает", () => {
+    const q = leadQuote({
+      kind: "B2B",
+      seats: 10,
+      selectedCoursesTiyn: [byn(490), byn(320)],
+      trainerTiyn: byn(870),
+    });
+    expect(q?.trainerTiyn).toBe(0);
+    expect(q?.totalTiyn).toBe(salePrice(quoteSeats(10, byn(810)).totalTiyn).tiyn);
   });
 
   it("набор «отрасль + общие»: база — сумма всех его курсов", () => {

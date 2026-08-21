@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
 import { db } from "@/lib/db";
+import { saleTiyn } from "@/lib/pricing/promo";
 import { formatPrice } from "@/lib/utils";
 import { ogFileResponse } from "@/lib/seo/og";
 
@@ -44,7 +45,9 @@ export default async function CourseOgImage({
   const subtitle = course?.subtitle ?? "Авторские программы бизнес-тренера";
   const industry = course?.industry ?? "";
   const accentColor = industry ? (industryColors[industry] ?? "#f59e0b") : "#f59e0b";
-  const price = course ? formatPrice(course.priceTiyn) : "";
+  // Цена в OG-картинке — акционная: иначе в мессенджере превью обещает один
+  // прайс, а на странице человек видит другой.
+  const price = course ? formatPrice(saleTiyn(course.priceTiyn)) : "";
   const hours = course?.hoursLabel ?? "";
 
   return new ImageResponse(

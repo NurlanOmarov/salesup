@@ -9,6 +9,8 @@ import { leadTelegramText, ownerLeadEmail } from "@/lib/leads/notify";
 import { leadQuote } from "@/lib/leads/quote";
 import { acceptedLegalVersion } from "@/lib/legal/version";
 import { currentSite } from "@/lib/seo/site";
+import { currency, usdToTiyn } from "@/lib/currency";
+import { TRAINER_PACK_USD } from "@/lib/pricing";
 
 const schema = z.object({
   name: z.string().trim().max(120).optional().or(z.literal("")),
@@ -30,6 +32,13 @@ const schema = z.object({
   // Выбранные в калькуляторе курсы. Присылается только выбор — цену считает
   // сервер (lib/leads/quote), клиентской сумме верить нельзя.
   planCourseIds: z.string().trim().max(500).optional().or(z.literal("")),
+  // Пакет с живыми сессиями тренера (lib/pricing TRAINER_PACK): надбавка
+  // фиксированная, но сумму всё равно считает сервер — из формы приходит только
+  // сам факт выбора.
+  withTrainer: z
+    .union([z.literal("1"), z.literal("")])
+    .optional()
+    .transform((v) => v === "1"),
   // Согласие на обработку ПДн — обязательное условие приёма заявки (Закон № 99-З):
   // без отметки заявка не сохраняется вовсе, а не сохраняется «без согласия».
   consent: z.literal("on", {
@@ -61,14 +70,25 @@ export async function createLeadAction(
     company: formData.get("company") ?? "",
     seatsWanted: formData.get("seatsWanted") || undefined,
     planCourseIds: formData.get("planCourseIds") ?? "",
+    withTrainer: formData.get("withTrainer") ?? "",
     consent: formData.get("consent") ?? "",
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Проверьте поля" };
   }
 
-  const { name, contact, message, courseId, kind, company, seatsWanted, planCourseIds, format } =
-    parsed.data;
+  const {
+    name,
+    contact,
+    message,
+    courseId,
+    kind,
+    company,
+    seatsWanted,
+    planCourseIds,
+    format,
+    withTrainer,
+  } = parsed.data;
   // Офлайн-тренинг платформа не продаёт: тариф и расчёт к нему неприменимы,
   // поэтому обнуляем их даже если что-то пришло из формы.
   const isOffline = format === "OFFLINE";
@@ -105,6 +125,13 @@ export async function createLeadAction(
         ).map((c) => c.priceTiyn)
       : [];
 
+  // Тренерский пакет задан в долларах — в BYN переводим по тому же курсу, что
+  // и витрина, иначе сумма в заявке разойдётся с калькулятором.
+  const trainerTiyn =
+    kind === "B2B" && withTrainer && !isOffline
+      ? usdToTiyn(TRAINER_PACK_USD, (await currency.getRates()).rates)
+      : 0;
+
   const quote = isOffline
     ? null
     : leadQuote({
@@ -112,6 +139,8 @@ export async function createLeadAction(
         seats: seatsWanted ?? null,
         courseTiyn: courseTiyn ?? null,
         selectedCoursesTiyn,
+        withTrainer: withTrainer && kind === "B2B",
+        trainerTiyn,
       });
 
   const site = await currentSite();
@@ -129,6 +158,7 @@ export async function createLeadAction(
       plan: quote?.plan ?? null,
       quotedPerSeatTiyn: quote?.perSeatTiyn ?? null,
       quotedTotalTiyn: quote?.totalTiyn ?? null,
+      withTrainer: (quote?.trainerTiyn ?? 0) > 0,
       status: "NEW",
       // Доказательство согласия: момент + принятая редакция документов.
       consentAt: new Date(),

@@ -98,6 +98,17 @@ export const businessUz = {
     alwaysIncluded: (courses: string) =>
       `To'plamga sotuv bo'yicha umumiy kurslar doim kiradi: ${courses}.`,
     pickCourses: "Kurslarni belgilang — shular bo'yicha hisoblaymiz.",
+    packTitle: "Paketga nima kiradi",
+    packPlatform: "Faqat platforma",
+    packTrainer: "Platforma + jonli trener",
+    packTrainerHint: "Dubovik bilan ikkita onlayn uchrashuv va umumiy qo'llab-quvvatlash guruhi",
+    trainerIntro: "Trener bilan kirish onlayn sessiyasi — boshida 1 soat",
+    trainerFinal: "Yakuniy onlayn sessiya — 1 soat: savollarga javob va yakun",
+    trainerGroup: "Messenjerdagi umumiy guruh: trener bo'limni yil davomida qo'llab-quvvatlaydi",
+    trainerNote:
+      "Sessiyalar va guruh — butun bo'limga birdan: narx qat'iy va xodimlar soniga bog'liq emas.",
+    promoNote: (percent: number) =>
+      `Ishga tushirish narxi: to'liq qiymatdan −${percent} %. Chizilgani — aksiyasiz narx.`,
     perSeatYear: "Bir xodimga — bir yillik kirish",
     totalYear: (seats: number) => `Butun jamoa uchun, ${seats} kishi`,
     perMonth: "Oyiga hisoblaganda, bir kishiga",

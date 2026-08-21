@@ -28,6 +28,7 @@ export function LeadForm({
   defaultSeats,
   defaultMessage,
   planCourseIds,
+  withTrainer = false,
 }: {
   courseId?: string;
   className?: string;
@@ -40,6 +41,8 @@ export function LeadForm({
   /** id выбранных в калькуляторе курсов — по ним сервер считает ту же сумму,
    *  что человек видел на экране (тариф выводится из самого набора). */
   planCourseIds?: string[];
+  /** Выбран пакет с живыми сессиями тренера — влияет на сумму в заявке. */
+  withTrainer?: boolean;
 }) {
   const isB2b = kind === "B2B";
   const isOffline = format === "OFFLINE";
@@ -84,6 +87,7 @@ export function LeadForm({
       {courseId ? <input type="hidden" name="courseId" value={courseId} /> : null}
       <input type="hidden" name="kind" value={kind} />
       <input type="hidden" name="format" value={format} />
+      {withTrainer ? <input type="hidden" name="withTrainer" value="1" /> : null}
       {planCourseIds && planCourseIds.length > 0 ? (
         <input type="hidden" name="planCourseIds" value={planCourseIds.join(",")} />
       ) : null}
