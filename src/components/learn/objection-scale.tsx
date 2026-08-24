@@ -180,51 +180,76 @@ export function ObjectionScale({ data }: { data: ObjectionScaleData }) {
   );
 }
 
+const SCALE_SPRING = { type: "spring", stiffness: 160, damping: 16 } as const;
+
+/**
+ * Геометрия честно считается в координатах, а не через вложенные SVG-transform:
+ * точка подвеса едет по дуге вместе с коромыслом (жёсткая деталь), а нить и чаша
+ * под ней всегда висят строго вертикально (свободный подвес, как в реальных
+ * весах) — чаша не поворачивается и её центр всегда точно под точкой подвеса.
+ */
 function Scale({ tilt }: { tilt: number }) {
   // tilt: -2..2 (отрицательное — влево к «оправданию», положительное — вправо к «позитиву»)
-  const angle = tilt * 9;
+  const angleRad = (tilt * 9 * Math.PI) / 180;
+  const pivot = { x: 100, y: 30 };
+  const armLen = 78;
+  const stringLen = 30;
+
+  const leftTop = { x: pivot.x - armLen * Math.cos(angleRad), y: pivot.y - armLen * Math.sin(angleRad) };
+  const rightTop = { x: pivot.x + armLen * Math.cos(angleRad), y: pivot.y + armLen * Math.sin(angleRad) };
+  const leftPan = { x: leftTop.x, y: leftTop.y + stringLen };
+  const rightPan = { x: rightTop.x, y: rightTop.y + stringLen };
+
   return (
-    <svg viewBox="0 0 200 140" className="h-32 w-40 shrink-0 justify-self-center sm:h-36 sm:w-44" role="img" aria-label="Весы возражения">
+    <svg viewBox="0 0 200 150" className="h-32 w-40 shrink-0 justify-self-center sm:h-36 sm:w-44" role="img" aria-label="Весы возражения">
       {/* стойка */}
       <rect x="96" y="20" width="8" height="90" rx="3" className="fill-foreground/20" />
       <rect x="70" y="106" width="60" height="10" rx="4" className="fill-foreground/20" />
 
-      <motion.g
+      {/* коромысло — жёсткое, поворачивается целиком */}
+      <motion.line
+        x1={leftTop.x}
+        y1={leftTop.y}
+        x2={rightTop.x}
+        y2={rightTop.y}
         initial={false}
-        animate={{ rotate: angle }}
-        transition={{ type: "spring", stiffness: 160, damping: 16 }}
-        style={{ originX: "100px", originY: "30px" }}
-      >
-        <rect x="20" y="27" width="160" height="4" className="fill-foreground/30" />
-        {/* нити подвеса — поворачиваются вместе с коромыслом, как в реальных весах */}
-        <line x1="30" y1="29" x2="30" y2="60" className="stroke-red-400/60" strokeWidth="2" />
-        <line x1="170" y1="29" x2="170" y2="60" className="stroke-emerald-400/60" strokeWidth="2" />
+        animate={{ x1: leftTop.x, y1: leftTop.y, x2: rightTop.x, y2: rightTop.y }}
+        transition={SCALE_SPRING}
+        className="stroke-foreground/30"
+        strokeWidth="4"
+        strokeLinecap="round"
+      />
 
-        {/* левая чаша — «оправдание». Встречный поворот: чаша висит на нити свободно и остаётся горизонтальной. */}
-        <motion.g
-          initial={false}
-          animate={{ rotate: -angle }}
-          transition={{ type: "spring", stiffness: 160, damping: 16 }}
-          style={{ originX: "30px", originY: "60px" }}
-        >
-          <path d="M12 60 h36 a18 10 0 0 1 -36 0 z" className="fill-red-500/20 stroke-red-400/50" strokeWidth="1.5" />
-          <text x="30" y="78" textAnchor="middle" className="fill-red-600 text-[9px] font-semibold">
-            оправдание
-          </text>
-        </motion.g>
+      {/* нить подвеса — точка на коромысле едет по дуге, дальше нить всегда вертикальна */}
+      <motion.line
+        initial={false}
+        animate={{ x1: leftTop.x, y1: leftTop.y, x2: leftPan.x, y2: leftPan.y }}
+        transition={SCALE_SPRING}
+        className="stroke-red-400/60"
+        strokeWidth="2"
+      />
+      <motion.line
+        initial={false}
+        animate={{ x1: rightTop.x, y1: rightTop.y, x2: rightPan.x, y2: rightPan.y }}
+        transition={SCALE_SPRING}
+        className="stroke-emerald-400/60"
+        strokeWidth="2"
+      />
 
-        {/* правая чаша — «позитив», тот же встречный поворот */}
-        <motion.g
-          initial={false}
-          animate={{ rotate: -angle }}
-          transition={{ type: "spring", stiffness: 160, damping: 16 }}
-          style={{ originX: "170px", originY: "60px" }}
-        >
-          <path d="M152 60 h36 a18 10 0 0 1 -36 0 z" className="fill-emerald-500/20 stroke-emerald-400/50" strokeWidth="1.5" />
-          <text x="170" y="78" textAnchor="middle" className="fill-emerald-700 text-[9px] font-semibold">
-            позитив
-          </text>
-        </motion.g>
+      {/* левая чаша — «оправдание». Никогда не поворачивается, только едет за нитью. */}
+      <motion.g initial={false} animate={{ x: leftPan.x, y: leftPan.y }} transition={SCALE_SPRING}>
+        <path d="M-18 0 h36 a18 10 0 0 1 -36 0 z" className="fill-red-500/20 stroke-red-400/50" strokeWidth="1.5" />
+        <text y="18" textAnchor="middle" className="fill-red-600 text-[9px] font-semibold">
+          оправдание
+        </text>
+      </motion.g>
+
+      {/* правая чаша — «позитив» */}
+      <motion.g initial={false} animate={{ x: rightPan.x, y: rightPan.y }} transition={SCALE_SPRING}>
+        <path d="M-18 0 h36 a18 10 0 0 1 -36 0 z" className="fill-emerald-500/20 stroke-emerald-400/50" strokeWidth="1.5" />
+        <text y="18" textAnchor="middle" className="fill-emerald-700 text-[9px] font-semibold">
+          позитив
+        </text>
       </motion.g>
 
       <circle cx="100" cy="30" r="5" className="fill-foreground/40" />
