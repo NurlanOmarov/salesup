@@ -26,6 +26,15 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    # Ротация логов. Проверено 2026-08-24: глобальный /etc/docker/daemon.json
+    # через `systemctl reload docker` НЕ применяется (reload не перечитывает
+    # log-opts) — контейнер без явных опций писал один json.log на 31 МБ и рос
+    # дальше. С этими опциями получается 3 файла по 10 МБ: потолок 30 МБ.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     deploy:
       resources:
         limits:
@@ -63,6 +72,15 @@ services:
       - media:/media                              # app пишет обложки/OG сам (admin upload) + читает медиа фабрики
     expose:
       - "3000"
+    # Ротация логов. Проверено 2026-08-24: глобальный /etc/docker/daemon.json
+    # через `systemctl reload docker` НЕ применяется (reload не перечитывает
+    # log-opts) — контейнер без явных опций писал один json.log на 31 МБ и рос
+    # дальше. С этими опциями получается 3 файла по 10 МБ: потолок 30 МБ.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     deploy:
       resources:
         limits:
@@ -97,6 +115,15 @@ services:
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
     volumes:
       - media:/media                             # worker (фабрика) пишет медиа
+    # Ротация логов. Проверено 2026-08-24: глобальный /etc/docker/daemon.json
+    # через `systemctl reload docker` НЕ применяется (reload не перечитывает
+    # log-opts) — контейнер без явных опций писал один json.log на 31 МБ и рос
+    # дальше. С этими опциями получается 3 файла по 10 МБ: потолок 30 МБ.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     deploy:
       resources:
         limits:
@@ -118,6 +145,13 @@ services:
       - ./proxy_params.conf:/etc/nginx/proxy_params.conf:ro
       - ./proxy_cache_public.conf:/etc/nginx/proxy_cache_public.conf:ro
       - media:/media:ro                          # X-Accel-Redirect раздаёт из /media (internal)
+    # Ротация логов — см. пояснение выше. Для nginx особенно важна: он пишет
+    # access-лог на каждый запрос, то есть растёт быстрее всех остальных сервисов.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   pgdata:
