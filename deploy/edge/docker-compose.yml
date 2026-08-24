@@ -21,6 +21,15 @@ services:
       - certbot-www:/var/www/certbot:ro
       - certbot-certs:/etc/letsencrypt:ro
     networks: [edge-net]
+    # Ротация логов: edge пишет строку на КАЖДЫЙ запрос ко всем проектам сразу,
+    # поэтому растёт быстрее любого отдельного сервиса. Глобальный daemon.json
+    # здесь не поможет — `systemctl reload docker` не перечитывает log-opts
+    # (проверено 2026-08-24), нужны явные опции.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   certbot:
     image: certbot/certbot
