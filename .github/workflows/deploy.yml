@@ -156,7 +156,42 @@ jobs:
             # каждый релиз оставляет ТЕГИРОВАННУЮ пару app+worker (~2.9 ГБ) — под
             # этот фильтр она не попадала, и за время работы на VPS скопилось 78
             # образов и 26 ГБ мусора при диске 63 ГБ (дошло до 96 % занятости).
-            # -a убирает и тегированные, `until=168h` оставляет неделю релизов на
-            # откат, а образы работающих контейнеров не трогаются в любом случае.
-            docker image prune -af --filter "until=168h"
+            # -a убирает и тегированные, а образы работающих контейнеров не трогаются
+            # в любом случае.
+            #
+            # 2026-08-24: порог снижен 168h → 48h. Недели оказалось мало: при такой
+            # частоте релизов под фильтр не попадали образы моложе 7 суток, и их
+            # накопилось 57 штук — 13.4 ГБ из 18.4 ГБ (72 % мусора), диск дошёл до 79 %.
+            # Каждый релиз добавляет пару app (662 МБ) + worker (2.27 ГБ) = ~2.9 ГБ.
+            # Двух дней для отката достаточно: плохой релиз виден в первые часы,
+            # а вернуться всегда можно `docker pull` нужного sha-тега из GHCR.
+            docker image prune -af --filter "until=48h"
+            docker container prune -f --filter "until=48h"   # обрывки от `run --rm`
+            docker builder prune -af --filter "until=48h"    # сборки здесь нет, но на всякий
+
+            echo "--- занятость после чистки ---"
+            docker system df
+            df -h / | tail -1
+
             docker logout ghcr.io || true
+
+  # GHCR тоже копит: каждый релиз кладёт туда пару образов с тегом sha, а у приватных
+  # пакетов есть квота хранилища. Оставляем 10 последних версий.
+  # continue-on-error: удаление версий пакетов пользователя иногда требует PAT —
+  # если GITHUB_TOKEN не хватит прав, деплой из-за этого падать не должен.
+  cleanup-registry:
+    needs: deploy
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    continue-on-error: true
+    strategy:
+      matrix:
+        package: [salesup-app, salesup-worker]
+    steps:
+      - uses: actions/delete-package-versions@v5
+        with:
+          package-name: ${{ matrix.package }}
+          package-type: container
+          min-versions-to-keep: 10
+          delete-only-untagged-versions: false
