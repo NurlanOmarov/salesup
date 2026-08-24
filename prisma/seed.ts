@@ -117,6 +117,24 @@ import {
   TIME_EXAM,
   TIME_EXAM_PASS_SCORE,
 } from "./seed-data/time-content.js";
+import {
+  DIY_SUMMARIES,
+  DIY_SLIDES,
+  DIY_LESSON_QUIZZES,
+  DIY_FLASHCARDS,
+  DIY_OBJECTIONS,
+  DIY_CHECKLISTS,
+  DIY_SCRIPTS,
+  DIY_AUDITS,
+  DIY_BRANCHING,
+  DIY_CLIENT_TYPES,
+  DIY_LADDER,
+  DIY_CART,
+  DIY_SCALE,
+  DIY_SCENARIOS,
+  DIY_EXAM,
+  DIY_EXAM_PASS_SCORE,
+} from "./seed-data/diy-content.js";
 
 /**
  * Сиды для локальной разработки (BACKLOG P0.3).
@@ -922,7 +940,81 @@ const REALTY_MODULES: ModuleSpec[] = [
   },
 ];
 
+// ── Курс «Продажи в DIY-магазине» (реальный YouTube-плейлист) ────────────────
+// Источник: https://www.youtube.com/playlist?list=PLI6WxUjNFy44
+// Тренер: Виталий Дубовик (activesales.by). В плейлисте 3 ролика — порядок уроков
+// сохранён по авторской нумерации («урок №1/2/3» в названиях), хотя в самом
+// плейлисте видео идут вперемешку (2, 1, 3). Всего ~25 минут. Бесплатный превью —
+// первый урок (этапы продажи).
+const DIY_MODULES: ModuleSpec[] = [
+  {
+    title: "Модуль 1. Продажи в зале DIY-магазина",
+    lessons: [
+      {
+        title: "Этапы продажи: от контакта до закрытия сделки",
+        yt: "https://www.youtube.com/watch?v=ilhhp4k7q7E",
+        durationSec: 477,
+        free: true,
+      },
+      {
+        title: "Три психотипа покупателя: синий, зелёный, красный",
+        yt: "https://www.youtube.com/watch?v=kpPyqiiMAkk",
+        durationSec: 411,
+      },
+      {
+        title: "Возражения в DIY-рознице: «дорого», доставка и обмен",
+        yt: "https://www.youtube.com/watch?v=8UepyKKgoMQ",
+        durationSec: 614,
+      },
+    ],
+  },
+];
+
 const COURSES: CourseSpec[] = [
+  // ── Курс: Продажи в DIY-магазине (реальный плейлист, контент по видео) ────
+  {
+    slug: "sales-diy",
+    title: "Продажи в DIY-магазине",
+    subtitle: "Этапы продажи, психотипы покупателей и работа с возражениями — тренинг для продавцов магазина стройматериалов",
+    description:
+      "Практический видеокурс бизнес-тренера Виталия Дубовика (activesales.by) для продавцов-консультантов DIY-гипермаркетов и магазинов стройматериалов. 3 урока по реальному тренингу: пять этапов продажи от быстрой консультации до закрытия сделки, четыре роли продавца (ходящий словарь, шоумен, киллер, партнёр), три психотипа покупателя (синий-логик, зелёный-социальный, красный-лидер) со своей эффективной тактикой под каждый, и работа с типичными возражениями DIY-розницы — «слишком дорого», «почему нет доставки», «почему нельзя обменять товар сразу», «довезите до кассы» — без единого оправдания, только позитивным конструктивным ответом.",
+    industry: "Стройматериалы и DIY",
+    hoursLabel: "~25 минут",
+    learnPoints: [
+      "Вести быструю консультацию и сразу предлагать помощь, не теряя покупателя в зале",
+      "Осознанно переключать роль продавца: ходящий словарь, шоумен, киллер, партнёр",
+      "Выявлять потребность через открытые → альтернативные → закрытые вопросы и проверять понимание",
+      "Презентовать по схеме характеристика → выгода → конкурентное преимущество",
+      "Узнавать три психотипа покупателя и подстраиваться под каждый: синий, зелёный, красный",
+      "Отвечать на типичные возражения DIY-розницы без оправданий, только позитивной подачей",
+      "Закрывать сделку пятью способами: прямое, через возражение, резюме преимуществ, гарантия, уступка",
+    ],
+    targetAudience: [
+      "Продавцы-консультанты строительных гипермаркетов и магазинов стройматериалов",
+      "Новые сотрудники торгового зала на онбординге",
+      "Руководители смен и администраторы, которые обучают продавцов",
+      "Все, кто продаёт товары для ремонта и нуждается в готовых скриптах",
+    ],
+    faq: [
+      {
+        q: "Нужен ли опыт продаж?",
+        a: "Нет. Курс начинается с азов: с чего начать разговор в торговом зале и как довести покупателя до кассы.",
+      },
+      {
+        q: "Курс только про стройматериалы?",
+        a: "Курс ориентирован на DIY-розницу — краска, плитка, линолеум и похожие товары для ремонта, но техники (этапы продажи, психотипы, работа с возражениями) переносятся на любую розничную торговлю.",
+      },
+      {
+        q: "Сколько времени займёт прохождение?",
+        a: "Около 25 минут видео плюс задания и тренажёры. Курс реально пройти за один вечер.",
+      },
+      {
+        q: "Будет ли сертификат?",
+        a: "Да. После прохождения уроков и итогового теста вы получаете именной сертификат с уникальным номером и публичной страницей проверки.",
+      },
+    ],
+    modules: DIY_MODULES,
+  },
   {
     slug: "sales-pharma",
     title: "Активные продажи для медицинских представителей",
@@ -2004,7 +2096,10 @@ async function seedArtifacts(
     | "RULE_6040"
     | "SMART_GOAL"
     | "TIME_AUDIT"
-    | "CLIENT_TYPES",
+    | "CLIENT_TYPES"
+    | "STAGE_LADDER"
+    | "OBJECTION_SCALE"
+    | "NEEDS_CART",
   rows: { titleMatch: string; data: unknown }[],
 ) {
   const lessons = await db.lesson.findMany({
@@ -2340,6 +2435,38 @@ async function main() {
       description:
         "Проверка знаний по курсу: приоритеты и матрица Эйзенхауэра, правило 60/40, лягушка/слон/три гвоздя, цели по SMART, ежедневник и хронометраж.",
       passScore: TIME_EXAM_PASS_SCORE,
+    });
+  }
+
+  // ── Курс «Продажи в DIY-магазине» ────────────────────────────────────────
+  // Контент по видео Виталия Дубовика (транскрипты в «Презентации/Продажи DIY»),
+  // см. prisma/seed-data/diy-content.ts. Раздатки уроков — PDF (factory:handout).
+  const diyCourse = courses.find((c) => c.slug === "sales-diy");
+  if (diyCourse) {
+    await seedSummaries(diyCourse.id, DIY_SUMMARIES);
+    await seedSlides(diyCourse.id, DIY_SLIDES);
+    await seedLessonQuizzes(diyCourse.id, DIY_LESSON_QUIZZES);
+    await seedFlashcards(diyCourse.id, DIY_FLASHCARDS);
+    await seedObjections(diyCourse.id, DIY_OBJECTIONS);
+    await seedArtifacts(diyCourse.id, "CHECKLIST", DIY_CHECKLISTS);
+    await seedArtifacts(diyCourse.id, "SCRIPT_BUILDER", DIY_SCRIPTS);
+    await seedArtifacts(diyCourse.id, "DIALOGUE_AUDIT", DIY_AUDITS);
+    await seedArtifacts(diyCourse.id, "BRANCHING", DIY_BRANCHING);
+    await seedArtifacts(diyCourse.id, "CLIENT_TYPES", DIY_CLIENT_TYPES);
+    await seedArtifacts(diyCourse.id, "STAGE_LADDER", DIY_LADDER);
+    await seedArtifacts(diyCourse.id, "NEEDS_CART", DIY_CART);
+    await seedArtifacts(diyCourse.id, "OBJECTION_SCALE", DIY_SCALE);
+    await seedScenarios(diyCourse.id, DIY_SCENARIOS);
+    await seedFinalExam(diyCourse.id, {
+      questions: DIY_EXAM,
+      description:
+        "Проверка знаний по курсу: пять этапов продажи, роли продавца, три психотипа покупателя (синий, зелёный, красный) и работа с возражениями без оправданий.",
+      passScore: DIY_EXAM_PASS_SCORE,
+    });
+    // Уроки с готовым HLS публикуем: поурочный контент к ним собран.
+    await db.lesson.updateMany({
+      where: { module: { courseId: diyCourse.id }, videoStatus: "READY" },
+      data: { status: "PUBLISHED" },
     });
   }
 

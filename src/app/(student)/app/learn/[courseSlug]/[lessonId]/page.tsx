@@ -25,6 +25,9 @@ import {
   parseSmartGoal,
   parseTimeAudit,
   parseClientTypes,
+  parseStageLadder,
+  parseObjectionScale,
+  parseNeedsCart,
 } from "@/lib/interactive";
 import { loadScenario } from "@/lib/ai/simulate";
 import { listLessonNotes } from "@/lib/learn/notes";
@@ -161,6 +164,21 @@ export default async function LearnPage({
     }),
   ]);
 
+  const [ladderArtifact, scaleArtifact, cartArtifact] = await Promise.all([
+    db.aiArtifact.findUnique({
+      where: { lessonId_type: { lessonId, type: "STAGE_LADDER" } },
+      select: { content: true, validation: true },
+    }),
+    db.aiArtifact.findUnique({
+      where: { lessonId_type: { lessonId, type: "OBJECTION_SCALE" } },
+      select: { content: true, validation: true },
+    }),
+    db.aiArtifact.findUnique({
+      where: { lessonId_type: { lessonId, type: "NEEDS_CART" } },
+      select: { content: true, validation: true },
+    }),
+  ]);
+
   const summary = summaryArtifact?.validation === "VALIDATED" ? summaryArtifact.content : null;
   const slides =
     slidesArtifact?.validation === "VALIDATED" ? parseDeck(slidesArtifact.content) : null;
@@ -190,6 +208,12 @@ export default async function LearnPage({
     timeAuditArtifact?.validation === "VALIDATED" ? parseTimeAudit(timeAuditArtifact.content) : null;
   const clientTypes =
     clientTypesArtifact?.validation === "VALIDATED" ? parseClientTypes(clientTypesArtifact.content) : null;
+  const ladder =
+    ladderArtifact?.validation === "VALIDATED" ? parseStageLadder(ladderArtifact.content) : null;
+  const scale =
+    scaleArtifact?.validation === "VALIDATED" ? parseObjectionScale(scaleArtifact.content) : null;
+  const cart =
+    cartArtifact?.validation === "VALIDATED" ? parseNeedsCart(cartArtifact.content) : null;
   const transcriptText =
     transcript && transcript.status === "CLEANED" ? transcript.cleanText : null;
 
@@ -306,6 +330,9 @@ export default async function LearnPage({
             smart={smart}
             timeaudit={timeaudit}
             clientTypes={clientTypes}
+            ladder={ladder}
+            scale={scale}
+            cart={cart}
             simulation={simulation}
             voiceEnabled={env.VOICE_ENABLED}
             subtitles={subtitles}

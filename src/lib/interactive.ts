@@ -501,3 +501,140 @@ export function parseBranching(content: string | null | undefined): BranchingDat
     return null;
   }
 }
+
+// ─── Лестница этапов продажи (climb: 3 шага → «реакция клиента» → закрытие) ───
+
+/**
+ * Игра «лестница этапов»: ученик поднимается по названным ступеням урока, на
+ * ступени «реакция клиента» видит реплику и выбирает верное действие — закрыть
+ * сделку или вернуться к потребностям. Механика несёт правило урока буквально:
+ * первая карточка — негативная реакция (правильный ход — откат вниз по
+ * лестнице), вторая — позитивная (правильный ход — закрытие наверху).
+ * Неверный выбор не откатывает прогресс насовсем — трясёт ступень и даёт
+ * попробовать снова, чтобы урок дошёл, а не наказывал случайным кликом.
+ */
+export interface LadderReactionCard {
+  clientLine: string;
+  positive: boolean;
+  explanation: string;
+}
+
+export interface StageLadderData {
+  title?: string;
+  prompt?: string;
+  /** Ровно 5 подписей ступеней, снизу вверх: например «Потребности компании» … «Закрытие сделки». */
+  stepTitles: string[];
+  /** Ровно 2 карточки: [0] — негативная реакция (учит откату), [1] — позитивная (учит закрытию). */
+  reactionCards: LadderReactionCard[];
+}
+
+/** Безопасный парсинг лестницы этапов. Нужно ровно 5 ступеней и ровно 2 карточки (негатив, позитив). */
+export function parseStageLadder(content: string | null | undefined): StageLadderData | null {
+  if (!content) return null;
+  try {
+    const data = JSON.parse(content) as StageLadderData;
+    if (!data || !Array.isArray(data.stepTitles) || data.stepTitles.length !== 5) return null;
+    if (!data.stepTitles.every((s) => typeof s === "string" && s.trim())) return null;
+    if (!Array.isArray(data.reactionCards) || data.reactionCards.length !== 2) return null;
+    const cards = data.reactionCards.filter(
+      (c) => c && typeof c.clientLine === "string" && typeof c.explanation === "string" && typeof c.positive === "boolean",
+    );
+    const [first, second] = cards;
+    if (cards.length !== 2 || !first || !second) return null;
+    if (first.positive !== false || second.positive !== true) return null;
+    return { title: data.title, prompt: data.prompt, stepTitles: data.stepTitles, reactionCards: [first, second] };
+  } catch {
+    return null;
+  }
+}
+
+// ─── Весы возражения (выбор ответа наклоняет чашу к «оправданию» или «позитиву») ─
+
+/**
+ * Игра «весы возражения»: на каждый раунд — реплика клиента и пул вариантов
+ * ответа, среди которых есть оправдания (оправдание = минус, весы клонятся
+ * влево, вариант выбывает) и позитивные конструктивные ответы (закрывают
+ * раунд, весы клонятся вправо). Два подряд оправдания в раунде — клиент
+ * «уходит», раунд начинается заново с тем же пулом. Учит правило урока:
+ * возражение не нужно оправдываться, нужно отвечать позитивно.
+ */
+export interface ScaleOption {
+  text: string;
+  positive: boolean;
+  feedback: string;
+}
+
+export interface ScaleRound {
+  objection: string;
+  options: ScaleOption[];
+}
+
+export interface ObjectionScaleData {
+  title?: string;
+  prompt?: string;
+  rounds: ScaleRound[];
+}
+
+/** Безопасный парсинг весов возражения. В каждом раунде нужно ≥1 позитивный и ≥1 оправдание. */
+export function parseObjectionScale(content: string | null | undefined): ObjectionScaleData | null {
+  if (!content) return null;
+  try {
+    const data = JSON.parse(content) as ObjectionScaleData;
+    if (!data || !Array.isArray(data.rounds)) return null;
+    const rounds = data.rounds.filter(
+      (r) =>
+        r &&
+        typeof r.objection === "string" &&
+        Array.isArray(r.options) &&
+        r.options.length >= 2 &&
+        r.options.every((o) => o && typeof o.text === "string" && typeof o.feedback === "string" && typeof o.positive === "boolean") &&
+        r.options.some((o) => o.positive) &&
+        r.options.some((o) => !o.positive),
+    );
+    return rounds.length > 0 ? { title: data.title, prompt: data.prompt, rounds } : null;
+  } catch {
+    return null;
+  }
+}
+
+// ─── Тележка потребностей (собрать вопросы: открытый → альтернативный → закрытый) ─
+
+/**
+ * Игра «тележка потребностей»: пул реальных вопросов из урока, у каждого тип —
+ * открытый/альтернативный/закрытый. Клик принимается, только если тип вопроса
+ * не «раньше» уже собранных по воронке (открытый→альтернативный→закрытый) —
+ * иначе тележка «отталкивает» вопрос и объясняет, почему рано. Учит: сначала
+ * открытые вопросы, потом уточняющие, закрытые — только под конец.
+ */
+export type CartQuestionKind = "open" | "alt" | "closed";
+
+export interface CartQuestion {
+  text: string;
+  kind: CartQuestionKind;
+}
+
+export interface NeedsCartData {
+  title?: string;
+  prompt?: string;
+  questions: CartQuestion[];
+}
+
+export const CART_KIND_ORDER: Record<CartQuestionKind, number> = { open: 0, alt: 1, closed: 2 };
+
+/** Безопасный парсинг тележки потребностей. Нужно ≥3 вопроса минимум двух разных типов. */
+export function parseNeedsCart(content: string | null | undefined): NeedsCartData | null {
+  if (!content) return null;
+  try {
+    const data = JSON.parse(content) as NeedsCartData;
+    if (!data || !Array.isArray(data.questions)) return null;
+    const questions = data.questions.filter(
+      (q): q is CartQuestion => !!q && typeof q.text === "string" && q.text.trim() !== "" && q.kind in CART_KIND_ORDER,
+    );
+    if (questions.length < 3) return null;
+    const kinds = new Set(questions.map((q) => q.kind));
+    if (kinds.size < 2) return null;
+    return { title: data.title, prompt: data.prompt, questions };
+  } catch {
+    return null;
+  }
+}

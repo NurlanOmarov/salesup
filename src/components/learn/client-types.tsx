@@ -190,7 +190,7 @@ export function ClientTypesTrainer({ data }: { data: ClientTypesData }) {
           <Quote className="size-4" />
         </div>
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-foreground/50">Турист говорит</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-foreground/50">Клиент говорит</p>
           <p className="mt-0.5 font-semibold">«{card.quote}»</p>
         </div>
       </div>

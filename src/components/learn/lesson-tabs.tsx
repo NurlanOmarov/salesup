@@ -30,6 +30,9 @@ import {
   Target,
   Hourglass,
   Users,
+  Milestone,
+  Scale,
+  ShoppingCart,
 } from "lucide-react";
 import { SecurePlayer, type SubtitleTrackInfo } from "@/components/player/secure-player";
 import { PlayerProvider } from "@/components/player/player-context";
@@ -54,6 +57,9 @@ import { Rule6040 } from "@/components/learn/rule-6040";
 import { SmartGoal } from "@/components/learn/smart-goal";
 import { TimeAudit } from "@/components/learn/time-audit";
 import { ClientTypesTrainer } from "@/components/learn/client-types";
+import { StageLadder } from "@/components/learn/stage-ladder";
+import { ObjectionScale } from "@/components/learn/objection-scale";
+import { NeedsCart } from "@/components/learn/needs-cart";
 import type { SlideDeckData } from "@/lib/slides";
 import type {
   FlashcardsData,
@@ -69,6 +75,9 @@ import type {
   SmartGoalData,
   TimeAuditData,
   ClientTypesData,
+  StageLadderData,
+  ObjectionScaleData,
+  NeedsCartData,
 } from "@/lib/interactive";
 
 export interface SimulationInfo {
@@ -107,6 +116,9 @@ type Tab =
   | "smart"
   | "timeaudit"
   | "clienttypes"
+  | "ladder"
+  | "scale"
+  | "cart"
   | "simulation"
   | "transcript"
   | "notes"
@@ -146,6 +158,9 @@ export function LessonTabs({
   smart = null,
   timeaudit = null,
   clientTypes = null,
+  ladder = null,
+  scale = null,
+  cart = null,
   simulation = null,
   voiceEnabled = false,
   subtitles = [],
@@ -175,6 +190,9 @@ export function LessonTabs({
   smart?: SmartGoalData | null;
   timeaudit?: TimeAuditData | null;
   clientTypes?: ClientTypesData | null;
+  ladder?: StageLadderData | null;
+  scale?: ObjectionScaleData | null;
+  cart?: NeedsCartData | null;
   simulation?: SimulationInfo | null;
   voiceEnabled?: boolean;
   subtitles?: SubtitleTrackInfo[];
@@ -209,6 +227,9 @@ export function LessonTabs({
     { key: "smart", label: "SMART-цель", icon: Target, show: !!smart, group: "practice" },
     { key: "timeaudit", label: "Пожиратели", icon: Hourglass, show: !!timeaudit, group: "practice" },
     { key: "clienttypes", label: "Типы клиента", icon: Users, show: !!clientTypes, group: "practice" },
+    { key: "ladder", label: "Лестница", icon: Milestone, show: !!ladder, group: "practice" },
+    { key: "scale", label: "Весы", icon: Scale, show: !!scale, group: "practice" },
+    { key: "cart", label: "Тележка", icon: ShoppingCart, show: !!cart, group: "practice" },
     { key: "simulation", label: "Симулятор", icon: MessagesSquare, show: !!simulation, group: "practice" },
     { key: "tutor", label: "Наставник", icon: Bot, show: true, group: "tutor" },
   ];
@@ -487,6 +508,24 @@ export function LessonTabs({
         {tab === "clienttypes" && clientTypes ? (
           <motion.div key="clienttypes" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
             <ClientTypesTrainer data={clientTypes} />
+          </motion.div>
+        ) : null}
+
+        {tab === "ladder" && ladder ? (
+          <motion.div key="ladder" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
+            <StageLadder data={ladder} />
+          </motion.div>
+        ) : null}
+
+        {tab === "scale" && scale ? (
+          <motion.div key="scale" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
+            <ObjectionScale data={scale} />
+          </motion.div>
+        ) : null}
+
+        {tab === "cart" && cart ? (
+          <motion.div key="cart" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
+            <NeedsCart data={cart} />
           </motion.div>
         ) : null}
 

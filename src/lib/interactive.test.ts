@@ -15,6 +15,9 @@ import {
   parseSmartGoal,
   parseTimeAudit,
   parseClientTypes,
+  parseStageLadder,
+  parseObjectionScale,
+  parseNeedsCart,
   type BranchingData,
 } from "./interactive";
 
@@ -315,5 +318,113 @@ describe("parseClientTypes", () => {
   it("null на битом JSON и пустом контенте", () => {
     expect(parseClientTypes("{")).toBeNull();
     expect(parseClientTypes(null)).toBeNull();
+  });
+});
+
+describe("parseStageLadder", () => {
+  const valid = {
+    stepTitles: ["A", "B", "C", "D", "E"],
+    reactionCards: [
+      { clientLine: "плохо", positive: false, explanation: "откат" },
+      { clientLine: "хорошо", positive: true, explanation: "закрытие" },
+    ],
+  };
+
+  it("парсит валидную лестницу", () => {
+    const r = parseStageLadder(JSON.stringify(valid));
+    expect(r?.stepTitles).toHaveLength(5);
+    expect(r?.reactionCards[0]?.positive).toBe(false);
+    expect(r?.reactionCards[1]?.positive).toBe(true);
+  });
+
+  it("отбрасывает, если ступеней не ровно 5", () => {
+    expect(parseStageLadder(JSON.stringify({ ...valid, stepTitles: ["A", "B"] }))).toBeNull();
+  });
+
+  it("отбрасывает, если карточек не ровно 2", () => {
+    expect(parseStageLadder(JSON.stringify({ ...valid, reactionCards: [valid.reactionCards[0]] }))).toBeNull();
+  });
+
+  it("отбрасывает, если порядок карточек не негатив→позитив", () => {
+    const swapped = { ...valid, reactionCards: [valid.reactionCards[1], valid.reactionCards[0]] };
+    expect(parseStageLadder(JSON.stringify(swapped))).toBeNull();
+  });
+
+  it("null на битом JSON и пустом контенте", () => {
+    expect(parseStageLadder("{")).toBeNull();
+    expect(parseStageLadder(null)).toBeNull();
+  });
+});
+
+describe("parseObjectionScale", () => {
+  const round = {
+    objection: "Дорого",
+    options: [
+      { text: "Оправдание", positive: false, feedback: "минус" },
+      { text: "Позитив", positive: true, feedback: "плюс" },
+    ],
+  };
+
+  it("парсит валидные раунды", () => {
+    const r = parseObjectionScale(JSON.stringify({ rounds: [round] }));
+    expect(r?.rounds).toHaveLength(1);
+  });
+
+  it("отбрасывает раунд без позитивного варианта", () => {
+    const onlyNegative = { ...round, options: [round.options[0], { ...round.options[0], text: "Ещё оправдание" }] };
+    const r = parseObjectionScale(JSON.stringify({ rounds: [onlyNegative] }));
+    expect(r).toBeNull();
+  });
+
+  it("отбрасывает раунд без оправдания", () => {
+    const onlyPositive = { ...round, options: [round.options[1], { ...round.options[1], text: "Ещё позитив" }] };
+    const r = parseObjectionScale(JSON.stringify({ rounds: [onlyPositive] }));
+    expect(r).toBeNull();
+  });
+
+  it("null, если раундов нет вовсе", () => {
+    expect(parseObjectionScale(JSON.stringify({ rounds: [] }))).toBeNull();
+  });
+
+  it("null на битом JSON и пустом контенте", () => {
+    expect(parseObjectionScale("{")).toBeNull();
+    expect(parseObjectionScale(null)).toBeNull();
+  });
+});
+
+describe("parseNeedsCart", () => {
+  const questions = [
+    { text: "Открытый?", kind: "open" },
+    { text: "Альтернативный?", kind: "alt" },
+    { text: "Закрытый?", kind: "closed" },
+  ];
+
+  it("парсит валидный пул вопросов", () => {
+    const r = parseNeedsCart(JSON.stringify({ questions }));
+    expect(r?.questions).toHaveLength(3);
+  });
+
+  it("отбрасывает, если вопросов меньше трёх", () => {
+    expect(parseNeedsCart(JSON.stringify({ questions: questions.slice(0, 2) }))).toBeNull();
+  });
+
+  it("отбрасывает, если все вопросы одного типа", () => {
+    const sameKind = [
+      { text: "1?", kind: "open" },
+      { text: "2?", kind: "open" },
+      { text: "3?", kind: "open" },
+    ];
+    expect(parseNeedsCart(JSON.stringify({ questions: sameKind }))).toBeNull();
+  });
+
+  it("отбрасывает вопрос с неизвестным kind, но считает остальные", () => {
+    const withBad = [...questions, { text: "?", kind: "weird" }];
+    const r = parseNeedsCart(JSON.stringify({ questions: withBad }));
+    expect(r?.questions).toHaveLength(3);
+  });
+
+  it("null на битом JSON и пустом контенте", () => {
+    expect(parseNeedsCart("{")).toBeNull();
+    expect(parseNeedsCart(null)).toBeNull();
   });
 });
