@@ -373,7 +373,6 @@ export function SeatsCalculator({
           <ul className="mt-2 space-y-1 text-xs text-foreground/60">
             <li>• {c.trainerIntro}</li>
             <li>• {c.trainerFinal}</li>
-            <li>• {c.trainerGroup}</li>
             <li className="text-foreground/50">
               {c.trainerNote} {money(trainerTiyn)}
             </li>

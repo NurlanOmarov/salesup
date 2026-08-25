@@ -101,12 +101,11 @@ export const businessUz = {
     packTitle: "Paketga nima kiradi",
     packPlatform: "Faqat platforma",
     packTrainer: "Platforma + jonli trener",
-    packTrainerHint: "Biznes-trener bilan ikkita onlayn uchrashuv va qo'llab-quvvatlash guruhi",
+    packTrainerHint: "Biznes-trener bilan ikkita onlayn uchrashuv",
     trainerIntro: "Trener bilan kirish onlayn sessiyasi — boshida 1 soat",
     trainerFinal: "Yakuniy onlayn sessiya — 1 soat: savollarga javob va yakun",
-    trainerGroup: "Messenjerdagi umumiy guruh: trener bo'limni yil davomida qo'llab-quvvatlaydi",
     trainerNote:
-      "Sessiyalar va guruh — butun bo'limga birdan: narx qat'iy va xodimlar soniga bog'liq emas.",
+      "Sessiyalar — butun bo'limga birdan: narx qat'iy va xodimlar soniga bog'liq emas.",
     promoNote: (percent: number) =>
       `Ishga tushirish narxi: to'liq qiymatdan −${percent} %. Chizilgani — aksiyasiz narx.`,
     perSeatYear: "Bir xodimga — bir yillik kirish",
