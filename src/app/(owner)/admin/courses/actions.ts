@@ -47,6 +47,15 @@ export const updateCourseAction = safeAction(
       canonicalPath: z.string().trim().max(300).optional().or(z.literal("")),
       focusKeyword: z.string().trim().max(120).optional().or(z.literal("")),
       coverAlt: z.string().trim().max(200).optional().or(z.literal("")),
+      // ID промо-ролика на YouTube: только сам ID (11 символов), не ссылка —
+      // нормализацию из вставленного URL делает форма.
+      promoYoutubeId: z
+        .string()
+        .trim()
+        .regex(/^[A-Za-z0-9_-]{11}$/, "ID видео YouTube — 11 символов")
+        .optional()
+        .or(z.literal("")),
+      promoYoutubeVertical: z.boolean(),
       seoNoindex: z.boolean(),
       certificateEnabled: z.boolean(),
       // ID товара в магазине activesales.by: связывает курс с оплатой
@@ -88,6 +97,8 @@ export const updateCourseAction = safeAction(
       canonicalPath: input.canonicalPath || null,
       focusKeyword: input.focusKeyword || null,
       coverAlt: input.coverAlt || null,
+      promoYoutubeId: input.promoYoutubeId || null,
+      promoYoutubeVertical: input.promoYoutubeVertical,
       seoNoindex: input.seoNoindex,
       certificateEnabled: input.certificateEnabled,
       wooProductId: typeof input.wooProductId === "number" ? input.wooProductId : null,

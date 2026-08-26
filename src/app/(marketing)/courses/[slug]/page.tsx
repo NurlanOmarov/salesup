@@ -23,6 +23,7 @@ import { Reveal } from "@/components/landing/reveal";
 import { CourseCta, CourseCtaSection } from "@/components/landing/course-cta";
 import { shopCheckoutUrl } from "@/lib/payments/woo/links";
 import { Reviews, type ReviewItem } from "@/components/landing/reviews";
+import { PromoVideo } from "@/components/landing/promo-video";
 import { trainer } from "@/content/landing";
 import { resolveRedirect } from "@/lib/seo/redirects";
 import { getRelatedCards } from "@/lib/seo/related";
@@ -511,6 +512,35 @@ export default async function CoursePage({
           </div>
         </div>
       </section>
+
+      {/* Промо-ролик: живёт на YouTube, у нас — только ID (Course.promoYoutubeId).
+          Ставим сразу под hero: минутный ролик о содержании курса отвечает на
+          «а что там внутри» раньше, чем человек дойдёт до списка уроков. */}
+      {course.promoYoutubeId ? (
+        <section className="mx-auto max-w-4xl px-4 pt-14">
+          <Reveal>
+            {/* Вертикальный ролик стоит узкой колонкой по центру — заголовок
+                держим над ним, иначе он повисает сбоку от видео. */}
+            <h2
+              className={cn(
+                "text-2xl font-bold",
+                course.promoYoutubeVertical && "text-center",
+              )}
+            >
+              {t.course.promoVideo}
+            </h2>
+          </Reveal>
+          <Reveal delay={0.05}>
+            <div className="mt-6">
+              <PromoVideo
+                videoId={course.promoYoutubeId}
+                title={course.title}
+                vertical={course.promoYoutubeVertical}
+              />
+            </div>
+          </Reveal>
+        </section>
+      ) : null}
 
       {/* Программа курса */}
       <section className="mx-auto max-w-6xl px-4 py-14">

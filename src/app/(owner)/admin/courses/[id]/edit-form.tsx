@@ -53,8 +53,22 @@ interface CourseFields {
   canonicalPath: string | null;
   focusKeyword: string | null;
   coverAlt: string | null;
+  promoYoutubeId: string | null;
+  promoYoutubeVertical: boolean;
   seoNoindex: boolean;
   certificateEnabled: boolean;
+}
+
+/**
+ * ID ролика из любой ссылки YouTube (watch, youtu.be, /shorts/, /embed/) — чтобы
+ * владелец мог просто вставить адрес из адресной строки. Не распознали — отдаём
+ * введённое как есть, ошибку покажет валидация при сохранении.
+ */
+function youtubeId(input: string): string {
+  const v = input.trim();
+  if (/^[A-Za-z0-9_-]{11}$/.test(v)) return v;
+  const m = v.match(/(?:v=|youtu\.be\/|\/shorts\/|\/embed\/|\/live\/)([A-Za-z0-9_-]{11})/);
+  return m?.[1] ?? v;
 }
 
 const SYMBOLS = { KZT: "₸", RUB: "₽", BYN: "Br" } as const;
@@ -123,6 +137,11 @@ export function CourseEditForm({
   );
 
   const [coverAlt, setCoverAlt] = useState(course.coverAlt ?? "");
+  // Промо-ролик курса: у нас хранится только ID видео, само оно остаётся на YouTube.
+  const [promoYoutubeId, setPromoYoutubeId] = useState(course.promoYoutubeId ?? "");
+  const [promoYoutubeVertical, setPromoYoutubeVertical] = useState(
+    course.promoYoutubeVertical,
+  );
   const [ogKey, setOgKey] = useState(course.ogImageUrl);
   const [ogMsg, setOgMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -246,6 +265,8 @@ export function CourseEditForm({
     setCanonicalPath(course.canonicalPath ?? "");
     setFocusKeyword(course.focusKeyword ?? "");
     setCoverAlt(course.coverAlt ?? "");
+    setPromoYoutubeId(course.promoYoutubeId ?? "");
+    setPromoYoutubeVertical(course.promoYoutubeVertical);
     setSeoNoindex(course.seoNoindex);
     setCertificateEnabled(course.certificateEnabled);
     setMetaSuggestion(null);
@@ -295,6 +316,8 @@ export function CourseEditForm({
         canonicalPath,
         focusKeyword,
         coverAlt,
+        promoYoutubeId,
+        promoYoutubeVertical,
         seoNoindex,
         certificateEnabled,
         wooProductId: wooProductId > 0 ? wooProductId : "",
@@ -930,6 +953,37 @@ export function CourseEditForm({
           ) : null}
           <p className="mt-1 text-xs text-foreground/40">
             Пусто → используется название курса. Сохраняется кнопкой «Сохранить».
+          </p>
+        </div>
+
+        {/* Промо-ролик на витрине курса: храним только ID, видео остаётся на YouTube */}
+        <div className="border-t border-foreground/10 pt-3">
+          <label
+            className="text-sm font-medium text-foreground/80"
+            htmlFor="promoYoutubeId"
+          >
+            Промо-ролик на YouTube
+          </label>
+          <input
+            id="promoYoutubeId"
+            className={inputCls}
+            placeholder="Ссылка на видео или ID"
+            value={promoYoutubeId}
+            onChange={(e) => setPromoYoutubeId(youtubeId(e.target.value))}
+          />
+          <label className="mt-2 flex cursor-pointer items-center gap-2 text-sm font-medium text-foreground/80">
+            <input
+              type="checkbox"
+              className="size-4 rounded border-foreground/30 accent-amber-500"
+              checked={promoYoutubeVertical}
+              onChange={(e) => setPromoYoutubeVertical(e.target.checked)}
+            />
+            Вертикальный ролик (Shorts)
+          </label>
+          <p className="mt-1 text-xs text-foreground/40">
+            Вставьте адрес ролика — ID подставится сам. Видео остаётся на YouTube:
+            на странице курса до клика грузится только превью-кадр. Пусто → блока
+            с видео на витрине нет.
           </p>
         </div>
 
