@@ -47,15 +47,20 @@ export const updateCourseAction = safeAction(
       canonicalPath: z.string().trim().max(300).optional().or(z.literal("")),
       focusKeyword: z.string().trim().max(120).optional().or(z.literal("")),
       coverAlt: z.string().trim().max(200).optional().or(z.literal("")),
-      // ID промо-ролика на YouTube: только сам ID (11 символов), не ссылка —
-      // нормализацию из вставленного URL делает форма.
-      promoYoutubeId: z
-        .string()
-        .trim()
-        .regex(/^[A-Za-z0-9_-]{11}$/, "ID видео YouTube — 11 символов")
-        .optional()
-        .or(z.literal("")),
-      promoYoutubeVertical: z.boolean(),
+      // Промо-ролики витрины: храним только ID видео (11 символов), сами ролики
+      // остаются на YouTube. Ссылку в ID превращает форма.
+      promoVideos: z
+        .array(
+          z.object({
+            id: z
+              .string()
+              .trim()
+              .regex(/^[A-Za-z0-9_-]{11}$/, "ID видео YouTube — 11 символов"),
+            vertical: z.boolean(),
+            title: z.string().trim().max(80).optional(),
+          }),
+        )
+        .max(6, "Больше шести роликов на карточке — это уже не промо"),
       seoNoindex: z.boolean(),
       certificateEnabled: z.boolean(),
       // ID товара в магазине activesales.by: связывает курс с оплатой
@@ -97,8 +102,15 @@ export const updateCourseAction = safeAction(
       canonicalPath: input.canonicalPath || null,
       focusKeyword: input.focusKeyword || null,
       coverAlt: input.coverAlt || null,
-      promoYoutubeId: input.promoYoutubeId || null,
-      promoYoutubeVertical: input.promoYoutubeVertical,
+      // Дубль ролика витрина всё равно отбросит (parsePromoVideos) — чистим
+      // список здесь, чтобы в базе не лежало то, чего никто не увидит.
+      promoVideos: input.promoVideos
+        .filter((v, i, all) => all.findIndex((x) => x.id === v.id) === i)
+        .map((v) => ({
+          id: v.id,
+          vertical: v.vertical,
+          ...(v.title ? { title: v.title } : {}),
+        })),
       seoNoindex: input.seoNoindex,
       certificateEnabled: input.certificateEnabled,
       wooProductId: typeof input.wooProductId === "number" ? input.wooProductId : null,

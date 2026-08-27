@@ -199,10 +199,11 @@ type CourseSpec = {
   faq: { q: string; a: string }[];
   modules: ModuleSpec[];
   coverUrl?: string;
-  /** ID промо-ролика на YouTube; видео остаётся на YouTube, у нас только ID. */
-  promoYoutubeId?: string;
-  /** Ролик вертикальный (Shorts) — плеер показываем 9:16. */
-  promoYoutubeVertical?: boolean;
+  /**
+   * Промо-ролики витрины: только ID видео, сами ролики остаются на YouTube
+   * (lib/courses/promo-video.ts). `vertical` — Shorts, показываем 9:16.
+   */
+  promoVideos?: { id: string; vertical: boolean; title?: string }[];
 };
 
 // ── Курс «Эффективные продажи кухонь 2.0» (реальный YouTube-плейлист) ────────
@@ -1018,9 +1019,12 @@ const COURSES: CourseSpec[] = [
       },
     ],
     modules: DIY_MODULES,
-    // Вертикальный промо-ролик тренера (YouTube Shorts) — остаётся на YouTube.
-    promoYoutubeId: "8BpOtMv_Qzk",
-    promoYoutubeVertical: true,
+    // Вертикальные промо-ролики тренера (YouTube Shorts) — остаются на YouTube.
+    promoVideos: [
+      { id: "8BpOtMv_Qzk", vertical: true },
+      { id: "ctzDBxj4Ctc", vertical: true },
+      { id: "h4lIYHm6PpU", vertical: true },
+    ],
   },
   {
     slug: "sales-pharma",
@@ -1337,7 +1341,7 @@ const COURSES: CourseSpec[] = [
     coverUrl: "/images/courses/sales-shoes.png",
     // Промо-ролик тренера «Содержание видео-уроков по продажам обуви в розницу
     // за 1 минуту» — остаётся на YouTube, у нас только ID.
-    promoYoutubeId: "OXDSOlTZg_Y",
+    promoVideos: [{ id: "OXDSOlTZg_Y", vertical: false }],
   },
   {
     slug: "sales-b2b",
@@ -1627,8 +1631,7 @@ async function upsertCourse(spec: CourseSpec) {
       targetAudience: spec.targetAudience,
       faq: spec.faq,
       coverUrl: spec.coverUrl ?? null,
-      promoYoutubeId: spec.promoYoutubeId ?? null,
-      promoYoutubeVertical: spec.promoYoutubeVertical ?? false,
+      promoVideos: spec.promoVideos ?? [],
     },
     create: {
       slug: spec.slug,
@@ -1649,8 +1652,7 @@ async function upsertCourse(spec: CourseSpec) {
       faq: spec.faq,
       publishedAt: new Date("2026-01-01"),
       coverUrl: spec.coverUrl ?? null,
-      promoYoutubeId: spec.promoYoutubeId ?? null,
-      promoYoutubeVertical: spec.promoYoutubeVertical ?? false,
+      promoVideos: spec.promoVideos ?? [],
     },
   });
 

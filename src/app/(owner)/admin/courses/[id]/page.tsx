@@ -48,8 +48,7 @@ export default async function CourseEditPage({
         canonicalPath: true,
         focusKeyword: true,
         coverAlt: true,
-        promoYoutubeId: true,
-        promoYoutubeVertical: true,
+        promoVideos: true,
         seoNoindex: true,
         certificateEnabled: true,
         modules: {

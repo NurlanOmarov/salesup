@@ -194,13 +194,10 @@ model Course {
   coverUrl            String?
   coverAlt            String? // alt-текст обложки (image SEO/доступность); генерируется AI по картинке
   promoVideoKey       String? // ключ HLS-папки трейлера в lib/storage (публичный, без шифрования)
-  /// ID промо-ролика на YouTube (например «OXDSOlTZg_Y»). Заполнено → на карточке
-  /// курса показывается фасад плеера, а само видео остаётся на YouTube: тянуть
-  /// его к себе на VPS ради витрины незачем (правило 10 — бюджет диска).
-  promoYoutubeId      String?
-  /// Ролик снят вертикально (YouTube Shorts) — плеер и превью показываем 9:16,
-  /// иначе вертикальное видео тонет в чёрных полях внутри 16:9.
-  promoYoutubeVertical Boolean       @default(false)
+  /// Промо-ролики курса на витрине: [{ id, vertical, title? }] — только ID видео,
+  /// сами ролики остаются на YouTube (правило 10 — бюджет диска VPS). Разбор и
+  /// нормализация — lib/courses/promo-video.ts.
+  promoVideos         Json?
   priceTiyn           Int
   oldPriceTiyn        Int?
   /// ID товара в WooCommerce на activesales.by. Заполнен → на витрине кнопка

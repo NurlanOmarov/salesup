@@ -27,6 +27,12 @@ import {
 } from "../../seo/serp-preview";
 import { AiSuggestionCard, UndoBar } from "../../seo/ai-suggestion";
 import type { MetaScore, MetaSuggestion } from "@/lib/seo/ai";
+import {
+  parsePromoVideos,
+  youtubeId,
+  isShortsUrl,
+  type PromoVideo,
+} from "@/lib/courses/promo-video";
 
 interface CourseFields {
   id: string;
@@ -53,23 +59,13 @@ interface CourseFields {
   canonicalPath: string | null;
   focusKeyword: string | null;
   coverAlt: string | null;
-  promoYoutubeId: string | null;
-  promoYoutubeVertical: boolean;
+  promoVideos: unknown;
   seoNoindex: boolean;
   certificateEnabled: boolean;
 }
 
-/**
- * ID ролика из любой ссылки YouTube (watch, youtu.be, /shorts/, /embed/) — чтобы
- * владелец мог просто вставить адрес из адресной строки. Не распознали — отдаём
- * введённое как есть, ошибку покажет валидация при сохранении.
- */
-function youtubeId(input: string): string {
-  const v = input.trim();
-  if (/^[A-Za-z0-9_-]{11}$/.test(v)) return v;
-  const m = v.match(/(?:v=|youtu\.be\/|\/shorts\/|\/embed\/|\/live\/)([A-Za-z0-9_-]{11})/);
-  return m?.[1] ?? v;
-}
+/** Строка списка промо-роликов: разобранный ролик + то, что владелец ввёл. */
+type PromoVideoRow = PromoVideo & { input: string };
 
 const SYMBOLS = { KZT: "₸", RUB: "₽", BYN: "Br" } as const;
 
@@ -137,10 +133,11 @@ export function CourseEditForm({
   );
 
   const [coverAlt, setCoverAlt] = useState(course.coverAlt ?? "");
-  // Промо-ролик курса: у нас хранится только ID видео, само оно остаётся на YouTube.
-  const [promoYoutubeId, setPromoYoutubeId] = useState(course.promoYoutubeId ?? "");
-  const [promoYoutubeVertical, setPromoYoutubeVertical] = useState(
-    course.promoYoutubeVertical,
+  // Промо-ролики курса: у нас хранятся только ID видео, сами ролики остаются
+  // на YouTube. В форме к каждому держим исходный ввод (ссылку), чтобы владелец
+  // видел то, что вставил, а не голый ID.
+  const [promoVideos, setPromoVideos] = useState<PromoVideoRow[]>(() =>
+    parsePromoVideos(course.promoVideos).map((v) => ({ ...v, input: v.id })),
   );
   const [ogKey, setOgKey] = useState(course.ogImageUrl);
   const [ogMsg, setOgMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -265,8 +262,7 @@ export function CourseEditForm({
     setCanonicalPath(course.canonicalPath ?? "");
     setFocusKeyword(course.focusKeyword ?? "");
     setCoverAlt(course.coverAlt ?? "");
-    setPromoYoutubeId(course.promoYoutubeId ?? "");
-    setPromoYoutubeVertical(course.promoYoutubeVertical);
+    setPromoVideos(parsePromoVideos(course.promoVideos).map((v) => ({ ...v, input: v.id })));
     setSeoNoindex(course.seoNoindex);
     setCertificateEnabled(course.certificateEnabled);
     setMetaSuggestion(null);
@@ -316,8 +312,9 @@ export function CourseEditForm({
         canonicalPath,
         focusKeyword,
         coverAlt,
-        promoYoutubeId,
-        promoYoutubeVertical,
+        promoVideos: promoVideos
+          .filter((v) => v.id)
+          .map((v) => ({ id: v.id, vertical: v.vertical, title: v.title || undefined })),
         seoNoindex,
         certificateEnabled,
         wooProductId: wooProductId > 0 ? wooProductId : "",
@@ -956,34 +953,393 @@ export function CourseEditForm({
           </p>
         </div>
 
-        {/* Промо-ролик на витрине курса: храним только ID, видео остаётся на YouTube */}
-        <div className="border-t border-foreground/10 pt-3">
-          <label
-            className="text-sm font-medium text-foreground/80"
-            htmlFor="promoYoutubeId"
-          >
-            Промо-ролик на YouTube
-          </label>
+        <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-foreground/80">
           <input
-            id="promoYoutubeId"
-            className={inputCls}
-            placeholder="Ссылка на видео или ID"
-            value={promoYoutubeId}
-            onChange={(e) => setPromoYoutubeId(youtubeId(e.target.value))}
+            type="checkbox"
+            className="size-4 rounded border-foreground/30 accent-amber-500"
+            checked={seoNoindex}
+            onChange={(e) => setSeoNoindex(e.target.checked)}
           />
-          <label className="mt-2 flex cursor-pointer items-center gap-2 text-sm font-medium text-foreground/80">
-            <input
-              type="checkbox"
-              className="size-4 rounded border-foreground/30 accent-amber-500"
-              checked={promoYoutubeVertical}
-              onChange={(e) => setPromoYoutubeVertical(e.target.checked)}
+          Скрыть из поисковиков (noindex)
+        </label>
+
+        <div className="flex items-center gap-3 pt-1">
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={pending}
+            className="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-5 py-2.5 text-sm font-semibold text-slate-950 transition-colors hover:bg-amber-400 disabled:opacity-60"
+          >
+            {pending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <CheckCircle2 className="size-4" />
+            )}
+            Сохранить
+          </button>
+          <button
+            type="button"
+            onClick={handleReset}
+            disabled={pending}
+            className="rounded-lg border border-foreground/15 px-4 py-2.5 text-sm font-medium text-foreground/60 transition-colors hover:bg-foreground/5 disabled:opacity-60"
+          >
+            Отменить изменения
+          </button>
+          {result ? (
+            <span
+              className={
+                result.ok ? "text-sm text-emerald-700" : "text-sm text-red-700"
+              }
+            >
+              {result.text}
+            </span>
+          ) : null}
+        </div>
+      </div>
+
+      {/* Правая колонка — обложка */}
+      <div className="space-y-4 rounded-2xl border border-foreground/10 bg-background p-5">
+        <p className="text-sm font-medium text-foreground/80">Обложка курса</p>
+        <div className="relative aspect-video overflow-hidden rounded-xl bg-gradient-to-br from-slate-700 to-slate-900">
+          {coverSrc ? (
+            <Image
+              key={coverVersion}
+              src={coverSrc}
+              alt={title}
+              fill
+              className="object-cover"
+              sizes="320px"
+              unoptimized
             />
-            Вертикальный ролик (Shorts)
-          </label>
+          ) : null}
+        </div>
+
+        <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-foreground/25 px-4 py-3 text-sm font-medium text-foreground/70 transition-colors hover:border-amber-500 hover:text-amber-700">
+          <Upload className="size-4" />
+          Загрузить новое фото
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/avif,image/gif"
+            className="hidden"
+            onChange={handleCover}
+          />
+        </label>
+        <p className="text-xs text-foreground/40">
+          PNG, JPEG, WebP, AVIF или GIF. До 8 МБ. Рекомендуемое соотношение 16:9.
+        </p>
+        {coverMsg ? (
+          <p
+            className={
+              coverMsg.ok
+                ? "text-sm text-emerald-700"
+                : "text-sm text-red-700"
+            }
+          >
+            {coverMsg.ok ? "✓ " : ""}
+            {coverMsg.text}
+          </p>
+        ) : null}
+
+        {/* Alt-текст обложки (image SEO/доступность): автозаполнение из названия+отрасли */}
+        <div className="border-t border-foreground/10 pt-3">
+          <div className="flex items-center justify-between">
+            <label
+              className="text-sm font-medium text-foreground/80"
+              htmlFor="coverAlt"
+            >
+              Alt-текст обложки (alt)
+            </label>
+            <button
+              type="button"
+              onClick={handleAltAi}
+              disabled={altPending || !coverSrc}
+              className="inline-flex items-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/5 px-2 py-1 text-[11px] font-medium text-amber-700 transition-colors hover:bg-amber-500/10 disabled:opacity-50"
+            >
+              {altPending ? (
+                <Loader2 className="size-3 animate-spin" />
+              ) : (
+                <Sparkles className="size-3" />
+              )}
+              Заполнить из названия
+            </button>
+          </div>
+          <input
+            id="coverAlt"
+            className={inputCls}
+            placeholder={title}
+            value={coverAlt}
+            onChange={(e) => setCoverAlt(e.target.value)}
+          />
+          {altSuggestion ? (
+            <div className="mt-2">
+              <AiSuggestionCard
+                fields={[{ label: "Alt-текст", current: coverAlt, suggested: altSuggestion }]}
+                onApply={() => {
+                  setAltUndo(coverAlt);
+                  setCoverAlt(altSuggestion);
+                  setAltSuggestion(null);
+                }}
+                onDismiss={() => setAltSuggestion(null)}
+              />
+            </div>
+          ) : null}
+          {altUndo != null && !altSuggestion ? (
+            <div className="mt-1.5">
+              <UndoBar
+                onUndo={() => {
+                  setCoverAlt(altUndo);
+                  setAltUndo(null);
+                }}
+              />
+            </div>
+          ) : null}
           <p className="mt-1 text-xs text-foreground/40">
+            Пусто → используется название курса. Сохраняется кнопкой «Сохранить».
+          </p>
+        </div>
+
+        {/* Промо-ролики на витрине курса: храним только ID, видео остаются на YouTube */}
+        <div className="border-t border-foreground/10 pt-3">
+          <p className="text-sm font-medium text-foreground/80">
+            Промо-ролики на YouTube
+          </p>
+          <div className="mt-2 space-y-3">
+            {promoVideos.map((row, i) => (
+              <div
+                key={i}
+                className="rounded-lg border border-foreground/10 p-3"
+              >
+                <div className="flex items-start gap-2">
+                  <input
+                    className={inputCls}
+                    placeholder="Ссылка на видео или ID"
+                    value={row.input}
+                    onChange={(e) => {
+                      const input = e.target.value;
+                      setPromoVideos((rows) =>
+                        rows.map((r, idx) =>
+                          idx === i
+                            ? {
+                                ...r,
+                                input,
+                                id: youtubeId(input) ?? "",
+                                // Ссылка /shorts/ — ролик заведомо вертикальный;
+                                // ручную галочку это не перебивает.
+                                vertical: isShortsUrl(input) || r.vertical,
+                              }
+                            : r,
+                        ),
+                      );
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPromoVideos((rows) => rows.filter((_, idx) => idx !== i))
+                    }
+                    className="mt-1 shrink-0 rounded-md border border-foreground/15 px-2 py-1.5 text-xs text-foreground/60 transition-colors hover:border-red-300 hover:text-red-700"
+                  >
+                    Убрать
+                  </button>
+                </div>
+                <input
+                  className={inputCls}
+                  placeholder="Подпись под роликом (необязательно)"
+                  value={row.title ?? ""}
+                  onChange={(e) =>
+                    setPromoVideos((rows) =>
+                      rows.map((r, idx) =>
+                        idx === i ? { ...r, title: e.target.value } : r,
+                      ),
+                    )
+                  }
+                />
+                <div className="mt-1.5 flex items-center justify-between gap-3">
+                  <label className="flex cursor-pointer items-center gap-2 text-sm text-foreground/80">
+                    <input
+                      type="checkbox"
+                      className="size-4 rounded border-foreground/30 accent-amber-500"
+                      checked={row.vertical}
+                      onChange={(e) =>
+                        setPromoVideos((rows) =>
+                          rows.map((r, idx) =>
+                            idx === i ? { ...r, vertical: e.target.checked } : r,
+                          ),
+                        )
+                      }
+                    />
+                    Вертикальный (Shorts)
+                  </label>
+                  <span className="text-xs text-foreground/40">
+                    {row.id ? `ID: ${row.id}` : "ссылка не распознана"}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+          {promoVideos.length < 6 ? (
+            <button
+              type="button"
+              onClick={() =>
+                setPromoVideos((rows) => [
+                  ...rows,
+                  { id: "", vertical: false, input: "" },
+                ])
+              }
+              className="mt-2 rounded-md border border-foreground/15 px-3 py-1.5 text-xs font-medium text-foreground/70 transition-colors hover:border-amber-400 hover:text-amber-700"
+            >
+              + Добавить ролик
+            </button>
+          ) : null}
+          <p className="mt-1.5 text-xs text-foreground/40">
             Вставьте адрес ролика — ID подставится сам. Видео остаётся на YouTube:
-            на странице курса до клика грузится только превью-кадр. Пусто → блока
-            с видео на витрине нет.
+            на странице курса до клика грузится только превью-кадр. Список пуст →
+            блока с видео на витрине нет.
+          </p>
+        </div>
+
+        <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-foreground/80">
+          <input
+            type="checkbox"
+            className="size-4 rounded border-foreground/30 accent-amber-500"
+            checked={seoNoindex}
+            onChange={(e) => setSeoNoindex(e.target.checked)}
+          />
+          Скрыть из поисковиков (noindex)
+        </label>
+
+        <div className="flex items-center gap-3 pt-1">
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={pending}
+            className="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-5 py-2.5 text-sm font-semibold text-slate-950 transition-colors hover:bg-amber-400 disabled:opacity-60"
+          >
+            {pending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <CheckCircle2 className="size-4" />
+            )}
+            Сохранить
+          </button>
+          <button
+            type="button"
+            onClick={handleReset}
+            disabled={pending}
+            className="rounded-lg border border-foreground/15 px-4 py-2.5 text-sm font-medium text-foreground/60 transition-colors hover:bg-foreground/5 disabled:opacity-60"
+          >
+            Отменить изменения
+          </button>
+          {result ? (
+            <span
+              className={
+                result.ok ? "text-sm text-emerald-700" : "text-sm text-red-700"
+              }
+            >
+              {result.text}
+            </span>
+          ) : null}
+        </div>
+      </div>
+
+      {/* Правая колонка — обложка */}
+      <div className="space-y-4 rounded-2xl border border-foreground/10 bg-background p-5">
+        <p className="text-sm font-medium text-foreground/80">Обложка курса</p>
+        <div className="relative aspect-video overflow-hidden rounded-xl bg-gradient-to-br from-slate-700 to-slate-900">
+          {coverSrc ? (
+            <Image
+              key={coverVersion}
+              src={coverSrc}
+              alt={title}
+              fill
+              className="object-cover"
+              sizes="320px"
+              unoptimized
+            />
+          ) : null}
+        </div>
+
+        <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-foreground/25 px-4 py-3 text-sm font-medium text-foreground/70 transition-colors hover:border-amber-500 hover:text-amber-700">
+          <Upload className="size-4" />
+          Загрузить новое фото
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/avif,image/gif"
+            className="hidden"
+            onChange={handleCover}
+          />
+        </label>
+        <p className="text-xs text-foreground/40">
+          PNG, JPEG, WebP, AVIF или GIF. До 8 МБ. Рекомендуемое соотношение 16:9.
+        </p>
+        {coverMsg ? (
+          <p
+            className={
+              coverMsg.ok
+                ? "text-sm text-emerald-700"
+                : "text-sm text-red-700"
+            }
+          >
+            {coverMsg.ok ? "✓ " : ""}
+            {coverMsg.text}
+          </p>
+        ) : null}
+
+        {/* Alt-текст обложки (image SEO/доступность): автозаполнение из названия+отрасли */}
+        <div className="border-t border-foreground/10 pt-3">
+          <div className="flex items-center justify-between">
+            <label
+              className="text-sm font-medium text-foreground/80"
+              htmlFor="coverAlt"
+            >
+              Alt-текст обложки (alt)
+            </label>
+            <button
+              type="button"
+              onClick={handleAltAi}
+              disabled={altPending || !coverSrc}
+              className="inline-flex items-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/5 px-2 py-1 text-[11px] font-medium text-amber-700 transition-colors hover:bg-amber-500/10 disabled:opacity-50"
+            >
+              {altPending ? (
+                <Loader2 className="size-3 animate-spin" />
+              ) : (
+                <Sparkles className="size-3" />
+              )}
+              Заполнить из названия
+            </button>
+          </div>
+          <input
+            id="coverAlt"
+            className={inputCls}
+            placeholder={title}
+            value={coverAlt}
+            onChange={(e) => setCoverAlt(e.target.value)}
+          />
+          {altSuggestion ? (
+            <div className="mt-2">
+              <AiSuggestionCard
+                fields={[{ label: "Alt-текст", current: coverAlt, suggested: altSuggestion }]}
+                onApply={() => {
+                  setAltUndo(coverAlt);
+                  setCoverAlt(altSuggestion);
+                  setAltSuggestion(null);
+                }}
+                onDismiss={() => setAltSuggestion(null)}
+              />
+            </div>
+          ) : null}
+          {altUndo != null && !altSuggestion ? (
+            <div className="mt-1.5">
+              <UndoBar
+                onUndo={() => {
+                  setCoverAlt(altUndo);
+                  setAltUndo(null);
+                }}
+              />
+            </div>
+          ) : null}
+          <p className="mt-1 text-xs text-foreground/40">
+            Пусто → используется название курса. Сохраняется кнопкой «Сохранить».
           </p>
         </div>
 
