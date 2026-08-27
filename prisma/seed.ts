@@ -1295,6 +1295,9 @@ const COURSES: CourseSpec[] = [
     ],
     modules: KITCHEN_MODULES,
     coverUrl: "/images/courses/sales-kitchens.png",
+    // Промо-ролик тренера «Содержание видео курса для продавцов кухонь» —
+    // остаётся на YouTube, у нас только ID.
+    promoVideos: [{ id: "W2EIMlXSmQs", vertical: false }],
   },
   {
     slug: "sales-shoes",
