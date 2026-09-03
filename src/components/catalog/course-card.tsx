@@ -1,7 +1,8 @@
 import { Link } from "@/components/i18n/link";
 import Image from "next/image";
 import { Clock } from "lucide-react";
-import { formatPrice, coverPublicUrl } from "@/lib/utils";
+import { formatPrice, coverPublicUrl, cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
 
 const industryGradients: Record<string, string> = {
   "Туризм": "from-sky-700 via-sky-800 to-slate-900",
@@ -134,6 +135,15 @@ export function CourseCard({ course }: { course: CourseCardData }) {
             </span>
           ) : null}
         </div>
+
+        {/* Явный CTA: карточка кликабельна целиком, но без кнопки это
+            не считывается на тач-экранах, где нет hover-подсветки. */}
+        <span
+          aria-hidden
+          className={cn(buttonVariants({ variant: "brand", size: "sm" }), "mt-4 w-full")}
+        >
+          Забронировать
+        </span>
       </div>
     </Link>
   );
