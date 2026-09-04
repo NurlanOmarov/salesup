@@ -46,7 +46,9 @@ test.beforeAll(async () => {
   // к медпредам ломалась, когда видео заливали другим курсам, а проверка искала
   // доступ не к тому курсу, который выдали.
   const intro = await db.lesson.findFirstOrThrow({
-    where: { isFreePreview: true, videoStatus: "READY" },
+    // Донор медиа: любой урок с готовым видео. Раньше искали бесплатный, но
+    // бесплатных уроков в каталоге больше нет — фикстура падала на пустом поиске.
+    where: { videoStatus: "READY" },
     select: {
       videoKey: true,
       videoAesKeyEnc: true,

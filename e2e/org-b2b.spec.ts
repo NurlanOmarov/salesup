@@ -53,7 +53,9 @@ test.beforeAll(async () => {
 
   // Платный урок на реальном медиа — доступ к нему определяется местом в лицензии.
   const intro = await db.lesson.findFirstOrThrow({
-    where: { isFreePreview: true, videoStatus: "READY" },
+    // Донор медиа: любой урок с готовым видео. Раньше искали бесплатный, но
+    // бесплатных уроков в каталоге больше нет — фикстура падала на пустом поиске.
+    where: { videoStatus: "READY" },
     select: { videoKey: true, videoAesKeyEnc: true, module: { select: { id: true, courseId: true } } },
   });
   courseId = intro.module.courseId;

@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Check, Copy } from "lucide-react";
+import { Check } from "lucide-react";
 import { createStudentAction } from "../actions";
 import { ACCESS_DURATIONS, ACCESS_DURATION_LABELS } from "@/lib/admin/enrollment";
 import { SITE_HOSTS } from "@/lib/seo/site-hosts";
+import { studentWelcomeMessage } from "@/lib/messages/templates";
+import { ShareMessage } from "@/components/share-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,7 +41,7 @@ export function CreateStudentForm({
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [created, setCreated] = useState<Created | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [issued, setIssued] = useState<{ courses: string[]; host: string } | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [accessDuration, setAccessDuration] = useState("");
   const [site, setSite] = useState(defaultSite ?? SITE_HOSTS[0].code);
@@ -76,6 +78,13 @@ export function CreateStudentForm({
       });
       if (res.ok) {
         setCreated(res.data);
+        // Курсы и домен фиксируем в момент создания: форма после этого
+        // не перерисовывается, а сообщение должно вести на тот сайт, с
+        // которого ученику продали доступ.
+        setIssued({
+          courses: courses.filter((c) => selected.has(c.id)).map((c) => c.title),
+          host: (SITE_HOSTS.find((h) => h.code === site) ?? SITE_HOSTS[0]).host,
+        });
       } else {
         setError(res.error);
         if (res.fieldErrors) setFieldErrors(res.fieldErrors);
@@ -110,27 +119,27 @@ export function CreateStudentForm({
           </div>
           <div>
             <dt className="text-xs uppercase tracking-wide text-foreground/50">Временный пароль</dt>
-            <dd className="flex items-center gap-2">
+            <dd>
               <code className="rounded bg-foreground/10 px-3 py-1.5 font-mono text-lg font-bold tracking-wide">
                 {created.tempPassword}
               </code>
-              <button
-                type="button"
-                onClick={() => {
-                  void navigator.clipboard.writeText(
-                    `Логин: ${created.email}\nПароль: ${created.tempPassword}`,
-                  );
-                  setCopied(true);
-                  setTimeout(() => setCopied(false), 2000);
-                }}
-                className="inline-flex items-center gap-1.5 rounded-md border border-foreground/15 px-2.5 py-1.5 text-sm transition-colors hover:bg-foreground/5"
-              >
-                {copied ? <Check className="size-4 text-emerald-600" /> : <Copy className="size-4" />}
-                {copied ? "Скопировано" : "Копировать"}
-              </button>
             </dd>
           </div>
         </dl>
+
+        <div className="mt-4">
+          <ShareMessage
+            text={studentWelcomeMessage({
+              login: created.email,
+              tempPassword: created.tempPassword,
+              siteUrl: `https://${issued?.host ?? SITE_HOSTS[0].host}`,
+              courses: issued?.courses,
+            })}
+            title="Сообщение ученику"
+            hint="Скопируйте и отправьте в мессенджере"
+            rows={8}
+          />
+        </div>
 
         <div className="mt-6 flex gap-3">
           <Link

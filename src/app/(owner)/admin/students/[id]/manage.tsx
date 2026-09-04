@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Check, Copy } from "lucide-react";
+import { Check } from "lucide-react";
 import {
   grantEnrollmentAction,
   revokeEnrollmentAction,
@@ -11,6 +11,8 @@ import {
 } from "../actions";
 import { ACCESS_DURATIONS, ACCESS_DURATION_LABELS } from "@/lib/admin/enrollment";
 import { SITE_HOSTS } from "@/lib/seo/site-hosts";
+import { studentPasswordMessage } from "@/lib/messages/templates";
+import { ShareMessage } from "@/components/share-message";
 import { Button } from "@/components/ui/button";
 
 /** Селект периода доступа. Пустое значение = по тарифу курса. */
@@ -326,13 +328,17 @@ export function DeviceLimitForm({
 export function DangerZone({
   userId,
   blocked,
+  login,
+  siteUrl,
 }: {
   userId: string;
   blocked: boolean;
+  /** Логин ученика (e-mail или org-0042) — попадает в готовое сообщение. */
+  login: string;
+  siteUrl: string;
 }) {
   const [pending, start] = useTransition();
   const [newPassword, setNewPassword] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
 
   return (
     <section className="rounded-2xl border border-foreground/10 bg-background p-5">
@@ -368,27 +374,12 @@ export function DangerZone({
       </div>
 
       {newPassword ? (
-        <div className="mt-4 rounded-xl border border-amber-600/30 bg-amber-500/5 p-4">
-          <p className="text-sm text-foreground/70">
-            Новый временный пароль (показывается один раз):
-          </p>
-          <div className="mt-2 flex items-center gap-2">
-            <code className="rounded bg-foreground/10 px-3 py-1.5 font-mono text-lg font-bold">
-              {newPassword}
-            </code>
-            <button
-              type="button"
-              onClick={() => {
-                void navigator.clipboard.writeText(newPassword);
-                setCopied(true);
-                setTimeout(() => setCopied(false), 2000);
-              }}
-              className="inline-flex items-center gap-1.5 rounded-md border border-foreground/15 px-2.5 py-1.5 text-sm hover:bg-foreground/5"
-            >
-              {copied ? <Check className="size-4 text-emerald-600" /> : <Copy className="size-4" />}
-              {copied ? "Скопировано" : "Копировать"}
-            </button>
-          </div>
+        <div className="mt-4">
+          <ShareMessage
+            text={studentPasswordMessage({ login, tempPassword: newPassword, siteUrl })}
+            title="Новый временный пароль"
+            hint="Показывается один раз — скопируйте и отправьте ученику"
+          />
         </div>
       ) : null}
     </section>

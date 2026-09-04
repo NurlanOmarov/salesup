@@ -7,7 +7,9 @@ import { createInvitesAction, revokeInviteAction } from "../../actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { inviteMessage, maskInviteCode } from "@/lib/org/invite-message";
+import { maskInviteCode } from "@/lib/org/seats";
+import { inviteMessage } from "@/lib/messages/templates";
+import { ShareMessage } from "@/components/share-message";
 
 interface LicenseOption {
   id: string;
@@ -229,6 +231,17 @@ export function InvitesManager({
             код одноразовый. Коды показываются полностью только сейчас — позже в
             списке будет видна лишь их часть.
           </p>
+
+          {codes.length === 1 ? (
+            <div className="mt-3">
+              <ShareMessage
+                text={messageFor(codes[0]!)}
+                title="Сообщение сотруднику"
+                hint="Скопируйте и отправьте тому, кому предназначен код"
+                printable
+              />
+            </div>
+          ) : null}
 
           <ul className="mt-3 grid gap-1.5 text-sm sm:grid-cols-3">
             {codes.map((c) => (
