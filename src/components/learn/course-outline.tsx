@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ChevronDown, ListChecks } from "lucide-react";
-import { LessonSidebar, type SidebarModule } from "./lesson-sidebar";
+import { LessonSidebar, type SidebarModule, type SidebarExam } from "./lesson-sidebar";
 
 /**
  * Адаптивное оглавление курса. На десктопе (lg+) — обычный сайдбар слева.
@@ -16,12 +16,14 @@ export function CourseOutline({
   modules,
   currentLessonId,
   position,
+  exam = null,
 }: {
   courseSlug: string;
   courseTitle: string;
   modules: SidebarModule[];
   currentLessonId: string;
   position: { index: number; total: number };
+  exam?: SidebarExam | null;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -34,6 +36,7 @@ export function CourseOutline({
           courseTitle={courseTitle}
           modules={modules}
           currentLessonId={currentLessonId}
+          exam={exam}
         />
       </div>
 
@@ -70,6 +73,7 @@ export function CourseOutline({
               courseTitle={courseTitle}
               modules={modules}
               currentLessonId={currentLessonId}
+              exam={exam}
             />
           </div>
         ) : null}

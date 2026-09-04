@@ -2506,11 +2506,33 @@ async function main() {
     }
   }
 
+  // ── Последовательное прохождение ──────────────────────────────────────────
+  // Урок с заданием открывает следующий только после сдачи теста
+  // (lib/access.evaluateLessonUnlock). Ставим флаг всем урокам, у которых есть
+  // опубликованный LESSON_QUIZ, и снимаем у остальных — чтобы «О курсе» и другие
+  // уроки без задания не блокировали курс.
+  const lessonsWithQuiz = await db.quiz.findMany({
+    where: { kind: "LESSON_QUIZ", status: "PUBLISHED", lessonId: { not: null } },
+    select: { lessonId: true },
+  });
+  const gatedIds = lessonsWithQuiz
+    .map((q) => q.lessonId)
+    .filter((id): id is string => !!id);
+  await db.lesson.updateMany({
+    where: { id: { in: gatedIds } },
+    data: { requiresQuizPass: true },
+  });
+  await db.lesson.updateMany({
+    where: { id: { notIn: gatedIds } },
+    data: { requiresQuizPass: false },
+  });
+
   console.log("✅ Сиды применены:");
   console.log(`   владелец:  ${owner.email}`);
   console.log(`   ученик:    ${student.email} (mustChangePassword=true)`);
   console.log(`   курсы:     ${courses.map((c) => c.slug).join(", ")}`);
   console.log(`   бейджи:    ${BADGES.length}`);
+  console.log(`   гейты:     ${gatedIds.length} уроков требуют сдачи задания`);
 }
 
 main()

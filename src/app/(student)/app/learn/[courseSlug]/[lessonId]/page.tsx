@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, LayoutGrid, CheckCircle2, GraduationCap, Info } from "lucide-react";
+import { ChevronLeft, ChevronRight, LayoutGrid, CheckCircle2, GraduationCap, Info, Lock } from "lucide-react";
 import { requireUser } from "@/lib/auth/guards";
 import { env } from "@/env";
 import { buttonVariants } from "@/components/ui/button";
 import { db } from "@/lib/db";
-import { canAccessLesson } from "@/lib/access";
+import { canAccessLesson, evaluateLessonUnlock } from "@/lib/access";
 import { LessonTabs } from "@/components/learn/lesson-tabs";
 import { type SidebarModule } from "@/components/learn/lesson-sidebar";
 import { CourseOutline } from "@/components/learn/course-outline";
@@ -58,6 +58,7 @@ export default async function LearnPage({
   const course = await db.course.findUnique({
     where: { slug: courseSlug },
     select: {
+      id: true,
       title: true,
       modules: {
         orderBy: { sortOrder: "asc" },
@@ -65,7 +66,16 @@ export default async function LearnPage({
           title: true,
           lessons: {
             orderBy: { sortOrder: "asc" },
-            select: { id: true, title: true, status: true, videoStatus: true, audioKey: true, podcastKey: true, slidesPdfKey: true },
+            select: {
+              id: true,
+              title: true,
+              status: true,
+              videoStatus: true,
+              audioKey: true,
+              podcastKey: true,
+              slidesPdfKey: true,
+              requiresQuizPass: true,
+            },
           },
         },
       },
@@ -79,6 +89,21 @@ export default async function LearnPage({
     select: { lessonId: true },
   });
   const completedSet = new Set(progress.map((p) => p.lessonId));
+
+  // Последовательное прохождение: урок с заданием открывает следующий только
+  // после сдачи теста (lib/access.evaluateLessonUnlock). Владелец видит всё.
+  const isOwner = session.user.role === "OWNER";
+  const passedLessonQuizzes = await db.quizAttempt.findMany({
+    where: {
+      userId,
+      status: "PASSED",
+      quiz: { kind: "LESSON_QUIZ", lesson: { module: { course: { slug: courseSlug } } } },
+    },
+    select: { quiz: { select: { lessonId: true } } },
+  });
+  const passedLessonIds = new Set(
+    passedLessonQuizzes.map((a) => a.quiz.lessonId).filter((id): id is string => !!id),
+  );
 
   const lessonPos = await db.lessonProgress.findUnique({
     where: { userId_lessonId: { userId, lessonId } },
@@ -223,6 +248,22 @@ export default async function LearnPage({
     select: { id: true, title: true },
   });
 
+  // Итоговый экзамен курса — показываем в оглавлении, чтобы его было видно
+  // с любого урока, а не только из кабинета.
+  const finalExam = await db.quiz.findFirst({
+    where: { courseId: course.id, kind: "FINAL_EXAM", status: "PUBLISHED" },
+    select: { id: true, title: true, passScore: true },
+  });
+  const examPassed = finalExam
+    ? (await db.quizAttempt.count({
+        where: {
+          quizId: finalExam.id,
+          userId,
+          status: "PASSED",
+        },
+      })) > 0
+    : false;
+
   // Доступные дорожки субтитров + язык по умолчанию из профиля + заметки ученика.
   const [subtitleTracks, viewer, notes] = await Promise.all([
     db.subtitleTrack.findMany({
@@ -238,18 +279,33 @@ export default async function LearnPage({
     .map((t) => ({ lang: t.lang as "RU" | "KK" | "EN" | "UZ", label: LANG_LABELS[t.lang] ?? t.lang }))
     .sort((a, b) => langOrder.indexOf(a.lang) - langOrder.indexOf(b.lang));
 
+  // Порядок прохождения курса: только опубликованные уроки, модуль за модулем.
+  const orderedLessons = course.modules
+    .flatMap((m) => m.lessons)
+    .filter((l) => l.status === "PUBLISHED")
+    .map((l) => ({ id: l.id, requiresQuizPass: l.requiresQuizPass }));
+  const isUnlocked = (id: string) =>
+    isOwner ||
+    evaluateLessonUnlock({
+      orderedLessons,
+      isQuizPassed: (lid) => passedLessonIds.has(lid),
+      targetLessonId: id,
+    }).ok;
+
   // Оглавление + плоский порядок доступных уроков для prev/next.
   const flat: { id: string; title: string }[] = [];
   const modules: SidebarModule[] = course.modules.map((m) => ({
     title: m.title,
     lessons: m.lessons.map((l) => {
-      const available = l.status === "PUBLISHED";
-      if (available) flat.push({ id: l.id, title: l.title });
+      const published = l.status === "PUBLISHED";
+      const available = published && isUnlocked(l.id);
+      if (published) flat.push({ id: l.id, title: l.title });
       return {
         id: l.id,
         title: l.title,
         available,
         completed: completedSet.has(l.id),
+        locked: published && !available,
       };
     }),
   }));
@@ -260,6 +316,48 @@ export default async function LearnPage({
   const idx = flat.findIndex((l) => l.id === lessonId);
   const prev = idx > 0 ? flat[idx - 1] : null;
   const next = idx >= 0 && idx < flat.length - 1 ? flat[idx + 1] : null;
+
+  // Текущий урок закрыт: не отдаём 404 (урок существует и оплачен), а объясняем,
+  // какое задание нужно сдать, и ведём прямо к нему.
+  if (!isUnlocked(lessonId)) {
+    const blockerIdx = orderedLessons.findIndex(
+      (l) => l.requiresQuizPass && !passedLessonIds.has(l.id),
+    );
+    const blocker = blockerIdx >= 0 ? orderedLessons[blockerIdx]! : null;
+    const blockerTitle = blocker ? flat.find((l) => l.id === blocker.id)?.title : null;
+    return (
+      <main className="mx-auto max-w-xl px-4 py-16 text-center">
+        <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-600">
+          <Lock className="size-7" />
+        </div>
+        <h1 className="mt-4 text-xl font-bold">Урок пока закрыт</h1>
+        <p className="mt-2 text-foreground/70">
+          Уроки курса проходятся по порядку: следующий открывается после того, как сдано
+          задание предыдущего урока.
+          {blockerTitle ? <> Сейчас нужно сдать задание урока «{blockerTitle}».</> : null}
+        </p>
+        <div className="mt-6 flex flex-wrap justify-center gap-3">
+          {blocker ? (
+            <Link
+              href={`/app/learn/${courseSlug}/${blocker.id}`}
+              className={buttonVariants({ variant: "accent", size: "sm" })}
+            >
+              Перейти к уроку
+              <ChevronRight className="size-4" />
+            </Link>
+          ) : null}
+          <Link href="/app" className={buttonVariants({ variant: "outline", size: "sm" })}>
+            <LayoutGrid className="size-4" />
+            Моё обучение
+          </Link>
+        </div>
+      </main>
+    );
+  }
+
+  // Задание текущего урока открывает следующий: пока не сдано — «Следующий урок»
+  // недоступен, вместо кнопки показываем понятное объяснение.
+  const nextLocked = !!next && !isUnlocked(next.id);
 
   return (
     <div className="mx-auto grid max-w-6xl gap-8 px-4 py-6 lg:grid-cols-[260px_1fr]">
@@ -287,6 +385,7 @@ export default async function LearnPage({
           modules={modules}
           currentLessonId={lessonId}
           position={{ index: idx + 1, total: flat.length }}
+          exam={finalExam ? { ...finalExam, passed: examPassed } : null}
         />
       </aside>
 
@@ -334,6 +433,7 @@ export default async function LearnPage({
             scale={scale}
             cart={cart}
             simulation={simulation}
+            quiz={lessonQuiz}
             voiceEnabled={env.VOICE_ENABLED}
             subtitles={subtitles}
             defaultSubtitleLang={viewer?.subtitleLang ?? null}
@@ -361,6 +461,11 @@ export default async function LearnPage({
               <div>
                 <p className="font-semibold">Проверь себя</p>
                 <p className="text-sm text-foreground/60">{lessonQuiz.title}</p>
+                {nextLocked ? (
+                  <p className="mt-1 text-sm font-medium text-amber-700 dark:text-amber-400">
+                    Сдайте задание — оно открывает следующий урок.
+                  </p>
+                ) : null}
               </div>
             </div>
             <ChevronRight className="size-5 text-amber-700" />
@@ -380,7 +485,7 @@ export default async function LearnPage({
           ) : (
             <span />
           )}
-          {next ? (
+          {next && !nextLocked ? (
             <Link
               href={`/app/learn/${courseSlug}/${next.id}`}
               className={buttonVariants({ variant: "accent", size: "sm" })}
@@ -388,6 +493,11 @@ export default async function LearnPage({
               Следующий урок
               <ChevronRight className="size-4" />
             </Link>
+          ) : next ? (
+            <span className="inline-flex items-center gap-1.5 rounded-lg border border-foreground/10 px-3 py-1.5 text-sm text-foreground/45">
+              <Lock className="size-4" />
+              Следующий урок откроется после сдачи задания
+            </span>
           ) : (
             <span />
           )}

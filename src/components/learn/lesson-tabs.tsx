@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import {
@@ -33,6 +34,8 @@ import {
   Milestone,
   Scale,
   ShoppingCart,
+  GraduationCap,
+  ChevronRight,
 } from "lucide-react";
 import { SecurePlayer, type SubtitleTrackInfo } from "@/components/player/secure-player";
 import { PlayerProvider } from "@/components/player/player-context";
@@ -120,6 +123,7 @@ type Tab =
   | "scale"
   | "cart"
   | "simulation"
+  | "quiz"
   | "transcript"
   | "notes"
   | "tutor";
@@ -162,6 +166,7 @@ export function LessonTabs({
   scale = null,
   cart = null,
   simulation = null,
+  quiz = null,
   voiceEnabled = false,
   subtitles = [],
   defaultSubtitleLang = null,
@@ -194,6 +199,8 @@ export function LessonTabs({
   scale?: ObjectionScaleData | null;
   cart?: NeedsCartData | null;
   simulation?: SimulationInfo | null;
+  /** Задание к уроку (LESSON_QUIZ) — открывается на отдельной странице. */
+  quiz?: { id: string; title: string } | null;
   voiceEnabled?: boolean;
   subtitles?: SubtitleTrackInfo[];
   defaultSubtitleLang?: string | null;
@@ -231,6 +238,7 @@ export function LessonTabs({
     { key: "scale", label: "Весы", icon: Scale, show: !!scale, group: "practice" },
     { key: "cart", label: "Тележка", icon: ShoppingCart, show: !!cart, group: "practice" },
     { key: "simulation", label: "Симулятор", icon: MessagesSquare, show: !!simulation, group: "practice" },
+    { key: "quiz", label: "Задание", icon: GraduationCap, show: !!quiz, group: "practice" },
     { key: "tutor", label: "Наставник", icon: Bot, show: true, group: "tutor" },
   ];
 
@@ -532,6 +540,28 @@ export function LessonTabs({
         {tab === "simulation" && simulation ? (
           <motion.div key="simulation" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
             <SimulationChat scenario={simulation} voiceEnabled={voiceEnabled} />
+          </motion.div>
+        ) : null}
+
+        {tab === "quiz" && quiz ? (
+          <motion.div key="quiz" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
+            <Link
+              href={`/app/quiz/${quiz.id}`}
+              className="flex items-center justify-between gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/[0.06] p-5 transition-colors hover:bg-amber-500/10"
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex size-11 items-center justify-center rounded-xl bg-amber-500/15 text-amber-700">
+                  <GraduationCap className="size-5" />
+                </div>
+                <div>
+                  <p className="font-semibold">{quiz.title}</p>
+                  <p className="text-sm text-foreground/60">
+                    Задание к уроку: проверьте, что усвоили материал. Пересдавать можно сколько угодно раз.
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="size-5 shrink-0 text-amber-700" />
+            </Link>
           </motion.div>
         ) : null}
 

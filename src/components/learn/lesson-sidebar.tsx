@@ -1,16 +1,26 @@
 import Link from "next/link";
-import { CheckCircle2, Circle, Lock, PlayCircle } from "lucide-react";
+import { CheckCircle2, Circle, Lock, PlayCircle, GraduationCap } from "lucide-react";
 
 export interface SidebarLesson {
   id: string;
   title: string;
-  available: boolean; // опубликован и есть видео
+  available: boolean; // опубликован и открыт по порядку прохождения
   completed: boolean;
+  /** Опубликован, но закрыт: не сдано задание одного из предыдущих уроков. */
+  locked?: boolean;
 }
 
 export interface SidebarModule {
   title: string;
   lessons: SidebarLesson[];
+}
+
+/** Итоговый экзамен курса — доступен с любого урока, не только из кабинета. */
+export interface SidebarExam {
+  id: string;
+  title: string;
+  passScore: number;
+  passed: boolean;
 }
 
 /** Оглавление курса для страницы обучения (S4.2): модули, статусы уроков, текущий. */
@@ -19,11 +29,13 @@ export function LessonSidebar({
   courseTitle,
   modules,
   currentLessonId,
+  exam = null,
 }: {
   courseSlug: string;
   courseTitle: string;
   modules: SidebarModule[];
   currentLessonId: string;
+  exam?: SidebarExam | null;
 }) {
   return (
     <nav className="text-sm" aria-label="Оглавление курса">
@@ -66,7 +78,12 @@ export function LessonSidebar({
                         {inner}
                       </Link>
                     ) : (
-                      <div aria-disabled>{inner}</div>
+                      <div
+                        aria-disabled
+                        title={l.locked ? "Откроется после сдачи задания предыдущего урока" : undefined}
+                      >
+                        {inner}
+                      </div>
                     )}
                   </li>
                 );
@@ -75,6 +92,21 @@ export function LessonSidebar({
           </div>
         ))}
       </div>
+
+      {exam ? (
+        <Link
+          href={`/app/quiz/${exam.id}`}
+          className="mt-4 flex items-center gap-2.5 rounded-lg border border-amber-500/30 bg-amber-500/[0.06] px-3 py-2.5 transition-colors hover:bg-amber-500/10"
+        >
+          <GraduationCap className={`size-4 shrink-0 ${exam.passed ? "text-emerald-600" : "text-amber-600"}`} />
+          <span className="min-w-0">
+            <span className="block font-medium text-foreground/85">{exam.title}</span>
+            <span className="block text-xs text-foreground/50">
+              {exam.passed ? "Сдан" : `Проходной балл — ${exam.passScore}%`}
+            </span>
+          </span>
+        </Link>
+      ) : null}
     </nav>
   );
 }

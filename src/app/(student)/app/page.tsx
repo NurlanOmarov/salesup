@@ -49,7 +49,7 @@ export default async function DashboardPage() {
         lessons: {
           where: { status: "PUBLISHED" as const },
           orderBy: { sortOrder: "asc" as const },
-          select: { id: true, title: true },
+          select: { id: true, title: true, requiresQuizPass: true },
         },
       },
     },
@@ -106,12 +106,32 @@ export default async function DashboardPage() {
   ]);
   const recentSlug = lastActivity?.lesson.module.course.slug ?? null;
 
+  // Последовательное прохождение: «Продолжить» не должно вести на урок, который
+  // закрыт несданным заданием — в таком случае возвращаем сам блокирующий урок.
+  const passedLessonQuizzes = await db.quizAttempt.findMany({
+    where: { userId, status: "PASSED", quiz: { kind: "LESSON_QUIZ", lessonId: { not: null } } },
+    select: { quiz: { select: { lessonId: true } } },
+  });
+  const passedLessonIds = new Set(
+    passedLessonQuizzes.map((a) => a.quiz.lessonId).filter((id): id is string => !!id),
+  );
+
   const courses = accessibleCourses.map((course) => {
     const lessons = course.modules
       .flatMap((m) => m.lessons)
       .map((l) => ({ id: l.id, title: l.title, completed: completedSet.has(l.id) }));
     const progress = courseProgress(lessons);
-    const next = nextLesson(lessons);
+    const ordered = course.modules.flatMap((m) => m.lessons);
+    const blockerIdx = isOwner
+      ? -1
+      : ordered.findIndex((l) => l.requiresQuizPass && !passedLessonIds.has(l.id));
+    const candidate = nextLesson(lessons);
+    // Урок за первым несданным заданием закрыт — ведём на сам блокирующий урок.
+    const blocked =
+      blockerIdx >= 0 &&
+      candidate != null &&
+      ordered.findIndex((l) => l.id === candidate.id) > blockerIdx;
+    const next = blocked ? (ordered[blockerIdx] ?? candidate) : candidate;
     return {
       ...course,
       progress,
