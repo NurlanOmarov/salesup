@@ -1936,33 +1936,149 @@ const PHARMA_EXAM: SeedQuestion[] = [
       { text: "Агрессивная реклама в СМИ", correct: false },
     ],
   },
+  // ── Модуль 1: «7 вопросов» и «5 косвенных вопросов» ────────────────────────
+  {
+    type: "MULTI_CHOICE",
+    text: "Какие из этих вопросов входят в список семи вопросов для выявления потребностей врача? (несколько вариантов)",
+    explanation:
+      "Семь вопросов идут от профиля пациентов к прямому запросу на решение: с какими пациентами работаете чаще, какие сложности при назначении терапии, какие факторы важны при выборе препарата, насколько удовлетворены текущими схемами, как реагируют пациенты и что хотели бы улучшить.",
+    options: [
+      { text: "С какими пациентами вы работаете чаще всего?", correct: true },
+      { text: "Какие сложности возникают при назначении терапии?", correct: true },
+      { text: "Какие факторы важны при выборе препарата?", correct: true },
+      { text: "Что бы вы хотели улучшить в текущем лечении?", correct: true },
+      { text: "Какая у вас зарплата в этой клинике?", correct: false },
+    ],
+  },
+  {
+    type: "SINGLE_CHOICE",
+    text: "Для чего нужны косвенные вопросы?",
+    explanation:
+      "Они применяются, когда врач не отвечает напрямую: потребность выявляется мягко, без давления — «чем обычно лечите таких пациентов?», «чем пациенты продолжают лечиться после выписки?», «приходится ли работать с тем, что есть в наличии?»",
+    options: [
+      { text: "Выявить потребность мягко, когда врач не отвечает напрямую", correct: true },
+      { text: "Ускорить визит и сразу перейти к цене", correct: false },
+      { text: "Заставить врача признать ошибку в назначениях", correct: false },
+      { text: "Собрать личные данные врача для базы", correct: false },
+    ],
+  },
+  {
+    type: "SINGLE_CHOICE",
+    text: "О чём говорит вопрос «Бывает, приходится работать с тем, что есть в наличии?»",
+    explanation:
+      "Это косвенный вопрос на скрытую неудовлетворённость: врач не жалуется прямо, но по ответу видно, что текущее обеспечение его не устраивает.",
+    options: [
+      { text: "О скрытой неудовлетворённости текущим обеспечением", correct: true },
+      { text: "О размере закупочного бюджета отделения", correct: false },
+      { text: "О графике работы аптеки при клинике", correct: false },
+      { text: "О личном отношении врача к медпредставителю", correct: false },
+    ],
+  },
+  {
+    type: "TRUE_FALSE",
+    text: "Если на проблемные вопросы врач отвечает «нет», нужно всё равно переходить к презентации препарата.",
+    explanation:
+      "Нет: если врач не признаёт проблем, переходить к презентации рано. Тренер советует составить другие вопросы к следующему визиту.",
+    options: [
+      { text: "Верно", correct: false },
+      { text: "Неверно", correct: true },
+    ],
+  },
+  // ── Модуль 3: отстройка от конкурентов ────────────────────────────────────
+  {
+    type: "MULTI_CHOICE",
+    text: "Какие маркетинговые стратегии отстройки от конкурентов разбираются в курсе? (несколько вариантов)",
+    explanation:
+      "Пять стратегий: дифференциация продукта (формула, форма выпуска), маркетинговая стратегия (персонализация, образовательный контент), репутация и доверие (исследования, отзывы, сертификаты), ценовая и промо-стратегия, digital-маркетинг.",
+    options: [
+      { text: "Дифференциация продукта: формула, форма выпуска", correct: true },
+      { text: "Репутация и доверие: клинические исследования, отзывы, сертификаты", correct: true },
+      { text: "Ценовая и промо-стратегия: гибкие цены, программы лояльности", correct: true },
+      { text: "Digital-маркетинг: SEO, соцсети, медицинские блогеры", correct: true },
+      { text: "Публичная критика конкурентов в профессиональных сообществах", correct: false },
+    ],
+  },
+  {
+    type: "MULTI_CHOICE",
+    text: "Что, кроме стопроцентной веры в продукт, входит в составляющие успеха продажи дорогого препарата? (несколько вариантов)",
+    explanation:
+      "Ещё три составляющие: 3–5 выгод наготове, чтобы мгновенно назвать отличия от аналога; нужная целевая аудитория — пациенты, которым препарат нужен, и врач-промоутер; и умение врача убеждать — убедили врача, он убедит пациента соблюдать назначение.",
+    options: [
+      { text: "3–5 выгод наготове, чтобы сразу назвать отличия от аналога", correct: true },
+      { text: "Нужная целевая аудитория: пациенты и врач-промоутер", correct: true },
+      { text: "Врач умеет убеждать пациента соблюдать назначение", correct: true },
+      { text: "Самая большая скидка на рынке", correct: false },
+    ],
+  },
+  // ── Модуль 4: пять методов закрытия (мостики) ─────────────────────────────
+  {
+    type: "MATCHING",
+    text: "Сопоставьте метод закрытия из урока о пяти мостиках с его целью.",
+    explanation:
+      "Через конкретное действие — мотивировать врача на шаг; через опыт врача — перевести интерес в действие и поднять его статус; через заботу о пациенте — усилить ценность; через мнение коллег — снять тревогу социальным доказательством; через следующий шаг — зафиксировать точку возврата.",
+    options: [
+      { text: "Через конкретное действие", correct: true, pairKey: "мотивировать врача сделать шаг: назначение, тест, информирование коллег" },
+      { text: "Через мнение коллег", correct: true, pairKey: "снять тревогу, если врач сомневается" },
+      { text: "Через заботу о пациенте", correct: true, pairKey: "усилить ценность через интерес к пациенту" },
+      { text: "Через следующий шаг", correct: true, pairKey: "зафиксировать точку возврата" },
+    ],
+  },
+  // ── Модуль 5: конфликтные ситуации ────────────────────────────────────────
+  {
+    type: "SINGLE_CHOICE",
+    text: "Каков общий принцип ответа на агрессивную подачу врача?",
+    explanation:
+      "Амортизировать давление и перейти к конструктиву: признать занятость и предложить 30 секунд, поблагодарить за мнение и уточнить критерии, посочувствовать и разобраться в условиях — а не спорить и не оправдываться.",
+    options: [
+      { text: "Амортизировать давление и перевести разговор в конструктив", correct: true },
+      { text: "Ответить встречной претензией", correct: false },
+      { text: "Молча закончить визит и уйти", correct: false },
+      { text: "Пообещать любую скидку, лишь бы сгладить конфликт", correct: false },
+    ],
+  },
+  {
+    type: "MATCHING",
+    text: "Сопоставьте конфликтную ситуацию с рекомендованной реакцией.",
+    explanation:
+      "«Мне некогда» — признать занятость и предложить 30 секунд или удобный формат. «Препарат ерунда» — поблагодарить за мнение, уточнить критерии, предложить свежие данные. Намёк на личную выгоду — сместить фокус на качество и официальные программы, честный отказ. Обвинение в побочных — сочувствие, разобраться в условиях, передать в медотдел.",
+    options: [
+      { text: "«Мне некогда»", correct: true, pairKey: "признать занятость, предложить 30 секунд или удобный формат" },
+      { text: "«Ваш препарат — ерунда»", correct: true, pairKey: "поблагодарить за мнение, уточнить критерии, предложить свежие данные" },
+      { text: "Намёк на личную выгоду", correct: true, pairKey: "сместить фокус на качество и официальные программы, честный отказ" },
+      { text: "Обвинение в побочных эффектах", correct: true, pairKey: "сочувствие, разобраться в условиях, передать в медотдел" },
+    ],
+  },
 ];
 
-async function seedFinalExam(
-  courseId: string,
-  spec: { questions: SeedQuestion[]; description: string; passScore: number },
+/**
+ * Синхронизация вопросов теста с сидом. Тесты правятся после релиза (дописываем
+ * покрытие по модулям, чиним формулировки), поэтому «создали один раз и больше
+ * не трогаем» не годится: правки никогда не доехали бы до боевой базы.
+ *
+ * Сам Quiz сохраняется (на него ссылаются попытки учеников), а вопросы
+ * пересоздаются, только если набор реально изменился. Удаление вопросов каскадом
+ * уносит AttemptAnswer, но не сами попытки: итоговый балл (QuizAttempt.scorePct)
+ * и статус сдачи остаются, теряется лишь пораздельная расшифровка ответов.
+ */
+async function syncQuestions(
+  quizId: string,
+  questions: (SeedQuestion | LessonQuizSeed["questions"][number])[],
 ) {
-  const existing = await db.quiz.findFirst({
-    where: { courseId, kind: "FINAL_EXAM" },
-    select: { id: true },
+  const existing = await db.question.findMany({
+    where: { quizId },
+    orderBy: { sortOrder: "asc" },
+    select: { text: true },
   });
-  if (existing) return;
+  const same =
+    existing.length === questions.length &&
+    existing.every((q, i) => q.text === questions[i]!.text);
+  if (same) return false;
 
-  const quiz = await db.quiz.create({
-    data: {
-      kind: "FINAL_EXAM",
-      courseId,
-      title: "Итоговый экзамен курса",
-      description: spec.description,
-      passScore: spec.passScore,
-      status: "PUBLISHED",
-    },
-  });
-
-  for (const [qi, q] of spec.questions.entries()) {
+  await db.question.deleteMany({ where: { quizId } });
+  for (const [qi, q] of questions.entries()) {
     await db.question.create({
       data: {
-        quizId: quiz.id,
+        quizId,
         type: q.type,
         text: q.text,
         explanation: q.explanation,
@@ -1982,6 +2098,39 @@ async function seedFinalExam(
       },
     });
   }
+  return true;
+}
+
+async function seedFinalExam(
+  courseId: string,
+  spec: { questions: SeedQuestion[]; description: string; passScore: number },
+) {
+  const existing = await db.quiz.findFirst({
+    where: { courseId, kind: "FINAL_EXAM" },
+    select: { id: true },
+  });
+
+  const quiz = existing
+    ? await db.quiz.update({
+        where: { id: existing.id },
+        data: { description: spec.description, passScore: spec.passScore, status: "PUBLISHED" },
+        select: { id: true },
+      })
+    : await db.quiz.create({
+        data: {
+          kind: "FINAL_EXAM",
+          courseId,
+          title: "Итоговый экзамен курса",
+          description: spec.description,
+          passScore: spec.passScore,
+          status: "PUBLISHED",
+        },
+        select: { id: true },
+      });
+
+  if (await syncQuestions(quiz.id, spec.questions)) {
+    console.log(`   ~ экзамен обновлён: ${spec.questions.length} вопрос(ов)`);
+  }
 }
 
 /** Задания к отдельным урокам (LESSON_QUIZ) — тип подобран под содержание урока. */
@@ -1993,40 +2142,28 @@ async function seedLessonQuizzes(courseId: string, rows: LessonQuizSeed[]) {
   for (const lq of rows) {
     const lesson = lessons.find((l) => l.title.includes(lq.lessonMatch));
     if (!lesson) continue;
-    if (await db.quiz.findFirst({ where: { lessonId: lesson.id, kind: "LESSON_QUIZ" }, select: { id: true } })) continue;
-
-    const quiz = await db.quiz.create({
-      data: {
-        kind: "LESSON_QUIZ",
-        lessonId: lesson.id,
-        title: lq.title,
-        passScore: lq.passScore,
-        status: "PUBLISHED",
-      },
+    const existing = await db.quiz.findFirst({
+      where: { lessonId: lesson.id, kind: "LESSON_QUIZ" },
+      select: { id: true },
     });
-    for (const [qi, q] of lq.questions.entries()) {
-      await db.question.create({
-        data: {
-          quizId: quiz.id,
-          type: q.type,
-          text: q.text,
-          explanation: q.explanation,
-          points: 1,
-          sortOrder: qi,
-          origin: "MANUAL",
-          validation: "VALIDATED",
-          validatedAt: new Date(),
-          options: {
-            create: q.options.map((o, oi) => ({
-              text: o.text,
-              isCorrect: o.correct,
-              sortOrder: oi,
-              pairKey: o.pairKey ?? null,
-            })),
+    const quiz = existing
+      ? await db.quiz.update({
+          where: { id: existing.id },
+          data: { title: lq.title, passScore: lq.passScore, status: "PUBLISHED" },
+          select: { id: true },
+        })
+      : await db.quiz.create({
+          data: {
+            kind: "LESSON_QUIZ",
+            lessonId: lesson.id,
+            title: lq.title,
+            passScore: lq.passScore,
+            status: "PUBLISHED",
           },
-        },
-      });
-    }
+          select: { id: true },
+        });
+
+    await syncQuestions(quiz.id, lq.questions);
   }
 }
 
