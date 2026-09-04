@@ -60,7 +60,6 @@ const ru = {
     relatedNote: "Программы по смежным темам — усильте навыки продаж.",
     trainer: "Ваш тренер",
     trainerMore: "Подробнее о тренере →",
-    free: "Бесплатно",
     noOnlinePayment: "Онлайн-оплата не требуется",
     certificate: "Сертификат по окончании",
     subtitles: "Субтитры на 4 языках",
@@ -93,7 +92,7 @@ const ru = {
     faqTitle: "Частые вопросы о курсах",
     helpTitle: "Не знаете, с какого курса начать?",
     helpText:
-      "Опишите, что продаёте и где буксует разговор с клиентом, — подскажем подходящую программу. Первый урок в любом курсе бесплатный, а онлайн-оплата не требуется.",
+      "Опишите, что продаёте и где буксует разговор с клиентом, — подскажем подходящую программу. Онлайн-оплата не требуется: доступ выдаём после подтверждения оплаты.",
     helpCta: "Оставить заявку",
     seoDescription:
       "Видеокурсы по продажам для туризма, мебели, обуви, недвижимости, медпредставителей и B2B. Авторские программы бизнес-тренера Виталия Дубовика.",
@@ -278,7 +277,6 @@ const kk = {
     relatedNote: "Сабақтас тақырыптардағы бағдарламалар — сату дағдыңызды күшейтіңіз.",
     trainer: "Сіздің тренеріңіз",
     trainerMore: "Тренер туралы толығырақ →",
-    free: "Тегін",
     noOnlinePayment: "Онлайн төлеудің қажеті жоқ",
     certificate: "Аяқтағаннан кейін сертификат",
     subtitles: "4 тілде субтитрлер",
@@ -309,7 +307,7 @@ const kk = {
     faqTitle: "Курстар туралы жиі қойылатын сұрақтар",
     helpTitle: "Қай курстан бастауды білмей тұрсыз ба?",
     helpText:
-      "Не сататыныңызды және клиентпен әңгіме қай жерде тұрып қалатынын жазыңыз — лайықты бағдарламаны ұсынамыз. Кез келген курстың бірінші сабағы тегін, онлайн төлеудің қажеті жоқ.",
+      "Не сататыныңызды және клиентпен әңгіме қай жерде тұрып қалатынын жазыңыз — лайықты бағдарламаны ұсынамыз. Онлайн төлеудің қажеті жоқ: төлем расталған соң қолжетімділік береміз.",
     helpCta: "Өтінім қалдыру",
     seoDescription:
       "Туризм, жиһаз, аяқ киім, жылжымайтын мүлік, медициналық өкілдер және B2B үшін сату бойынша бейнекурстар. Бизнес-тренер Виталий Дубовиктің авторлық бағдарламалары.",
@@ -486,7 +484,6 @@ const uz = {
     relatedNote: "Yaqin mavzulardagi dasturlar — sotuv ko'nikmangizni kuchaytiring.",
     trainer: "Sizning treneringiz",
     trainerMore: "Trener haqida batafsil →",
-    free: "Bepul",
     noOnlinePayment: "Onlayn to'lash shart emas",
     certificate: "Tugatgach sertifikat",
     subtitles: "4 tilda subtitrlar",
@@ -517,7 +514,7 @@ const uz = {
     faqTitle: "Kurslar haqida ko'p beriladigan savollar",
     helpTitle: "Qaysi kursdan boshlashni bilmayapsizmi?",
     helpText:
-      "Nima sotayotganingizni va mijoz bilan suhbat qayerda to'xtab qolayotganini yozing — mos dasturni tavsiya qilamiz. Istalgan kursning birinchi darsi bepul, onlayn to'lash shart emas.",
+      "Nima sotayotganingizni va mijoz bilan suhbat qayerda to'xtab qolayotganini yozing — mos dasturni tavsiya qilamiz. Onlayn to'lash shart emas: to'lov tasdiqlangach kirish beramiz.",
     helpCta: "Ariza qoldirish",
     seoDescription:
       "Turizm, mebel, poyabzal, ko'chmas mulk, tibbiyot vakillari va B2B uchun sotuv bo'yicha videokurslar. Biznes-trener Vitaliy Dubovikning mualliflik dasturlari.",

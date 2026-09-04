@@ -16,7 +16,7 @@ export const landingUz = {
       "20 yillik tajribaga ega amaldagi biznes-trenerning videokurslari. Har bir dars shunchaki video emas: yo'lda o'rganish uchun AI-podkast va audioversiya, konspekt, kartochkalar va e'tirozlar bilan ishlash trenajyorlari. Turizm, mebel, ko'chmas mulk, FMCG va B2B uchun real metodikalar.",
     primaryCta: "Kurs tanlash",
     secondaryCta: "Sohamga mos kurs tanlab bering",
-    note: "Har bir kursning birinchi darsi — bepul",
+    note: "Kursga umrbod kirish va yakunida sertifikat",
   },
 
   steps: [

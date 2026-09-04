@@ -82,7 +82,7 @@ export const coursesPageUz = {
     },
     {
       q: "Sotib olishdan oldin kursni ko'rish mumkinmi?",
-      a: "Ha. Har bir kursning birinchi darsi bepul ochiq — to'lovgacha trenerning berilishini ham, trenajyorlar qanday tuzilganini ham baholash mumkin.",
+      a: "Kurs sahifasida kurs haqida video, to'liq dastur va tavsif bor — kurs nima haqda va qanday tuzilgani ko'rinadi. Darslarning o'zi to'lovdan keyin ochiladi. Shubhalansangiz, ariza qoldiring: batafsil aytamiz va dastur vazifangizga mos kelishini aytib beramiz.",
     },
     {
       q: "O'qish qancha vaqt oladi?",

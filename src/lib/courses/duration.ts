@@ -1,5 +1,6 @@
 import type { Locale } from "@/i18n/routing";
 import { DEFAULT_LOCALE } from "@/i18n/routing";
+import { pluralRu } from "./plural";
 
 /**
  * Длительность курса на языке витрины.
@@ -21,15 +22,6 @@ export function parseDurationLabel(label: string | null | undefined): number | n
   const minutes = Number(MINUTES_RE.exec(label)?.[1] ?? 0);
   const total = hours * 60 + minutes;
   return total > 0 ? total : null;
-}
-
-/** Русское склонение: 1 час / 2 часа / 5 часов. */
-function pluralRu(n: number, one: string, few: string, many: string): string {
-  const mod10 = n % 10;
-  const mod100 = n % 100;
-  if (mod10 === 1 && mod100 !== 11) return one;
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return few;
-  return many;
 }
 
 export function formatDuration(minutes: number, locale: Locale): string {

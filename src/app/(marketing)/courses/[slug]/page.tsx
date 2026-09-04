@@ -35,8 +35,11 @@ import { DEFAULT_LOCALE } from "@/i18n/routing";
 import { messagesFor } from "@/i18n/messages";
 import { localizedCourse, translatedLocales } from "@/lib/courses/i18n";
 import { localizedDuration } from "@/lib/courses/duration";
+import { lessonsLabel, modulesLabel } from "@/lib/courses/plural";
 import { localizedIndustry } from "@/content/industries";
 import { parsePromoVideos } from "@/lib/courses/promo-video";
+import { flattenDescription } from "@/lib/courses/description";
+import { CourseDescription } from "@/components/landing/course-description";
 
 /**
  * Страница рендерится динамически: в теле вызываются currentSite()/siteOrigin(),
@@ -76,7 +79,6 @@ async function getCourse(slug: string) {
             select: {
               id: true,
               title: true,
-              isFreePreview: true,
               videoStatus: true,
             },
           },
@@ -219,7 +221,7 @@ export default async function CoursePage({
     "@context": "https://schema.org",
     "@type": "Course",
     name: course.title,
-    description: course.subtitle ?? course.description,
+    description: flattenDescription(course.subtitle ?? course.description),
     url: `${siteUrl}/courses/${slug}`,
     provider: {
       "@type": "Organization",
@@ -353,7 +355,7 @@ export default async function CoursePage({
                   ) : null}
                   <span className="flex items-center gap-1.5">
                     <PlayCircle className="size-4" />
-                    {totalLessons} уроков
+                    {lessonsLabel(totalLessons, locale)}
                   </span>
                   <span className="flex items-center gap-1.5">
                     <Award className="size-4" />
@@ -540,7 +542,7 @@ export default async function CoursePage({
         <Reveal>
           <h2 className="text-2xl font-bold">{t.course.program}</h2>
           <p className="mt-1 text-foreground/60">
-            {course.modules.length} модулей · {totalLessons} уроков
+            {modulesLabel(course.modules.length, locale)} · {lessonsLabel(totalLessons, locale)}
           </p>
         </Reveal>
 
@@ -556,7 +558,7 @@ export default async function CoursePage({
                     <span className="font-semibold">{module.title}</span>
                   </div>
                   <div className="flex items-center gap-3 text-sm text-foreground/40">
-                    <span>{module.lessons.length} уроков</span>
+                    <span>{lessonsLabel(module.lessons.length, locale)}</span>
                     <ChevronDown className="size-4 shrink-0 transition-transform group-open:rotate-180" />
                   </div>
                 </summary>
@@ -567,17 +569,10 @@ export default async function CoursePage({
                       className="flex items-center gap-3 py-2.5 text-sm"
                     >
                       <span className="text-foreground/30">{lIdx + 1}.</span>
-                      {lesson.isFreePreview ? (
-                        <PlayCircle className="size-4 shrink-0 text-amber-600" />
-                      ) : (
-                        <Lock className="size-4 shrink-0 text-foreground/20" />
-                      )}
+                      {/* Бесплатных превью нет: доступ к любому уроку — только
+                          после оплаты, поэтому у всех уроков замок. */}
+                      <Lock className="size-4 shrink-0 text-foreground/20" />
                       <span className="flex-1 text-foreground/80">{lesson.title}</span>
-                      {lesson.isFreePreview ? (
-                        <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-700">
-                          {t.course.free}
-                        </span>
-                      ) : null}
                     </li>
                   ))}
                 </ul>
@@ -613,7 +608,7 @@ export default async function CoursePage({
         <div className="grid gap-10 lg:grid-cols-2">
           <Reveal>
             <h2 className="text-2xl font-bold">{t.course.about}</h2>
-            <p className="mt-4 leading-relaxed text-foreground/70">{course.description}</p>
+            <CourseDescription text={course.description} />
           </Reveal>
 
           {/* Тренер — краткий блок */}
