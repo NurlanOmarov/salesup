@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Building2, ExternalLink } from "lucide-react";
 import { getOrgsList } from "@/lib/org/reports";
+import { nextOrgStepHint } from "@/lib/org/setup";
 import { OrgStatusBadge, SeatsBar } from "./org-ui";
 
 export const metadata: Metadata = {
@@ -122,6 +123,13 @@ export default async function OrgsPage() {
                   </td>
                   <td className="px-4 py-3">
                     <OrgStatusBadge status={o.status} />
+                    {/* Подсказка вместо необходимости открывать карточку и
+                        вспоминать, на чём остановились с этим клиентом. */}
+                    {o.status === "ACTIVE" && nextOrgStepHint(o) ? (
+                      <p className="mt-1 text-xs text-amber-700">
+                        дальше: {nextOrgStepHint(o)}
+                      </p>
+                    ) : null}
                   </td>
                 </tr>
               ))}

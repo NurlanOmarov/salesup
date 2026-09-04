@@ -133,3 +133,12 @@ export function slugifyOrgName(name: string): string {
   }
   return out.replace(/-+/g, "-").replace(/^-|-$/g, "").slice(0, 24);
 }
+
+/**
+ * Маска кода для списка выданных: целиком код виден только по явному клику.
+ * Защита не от подбора (код лежит в базе как есть и переотправляется по
+ * просьбе), а от взгляда через плечо и скриншота всего списка.
+ */
+export function maskInviteCode(code: string): string {
+  return `${code.slice(0, 3)}•••${code.slice(-2)}`;
+}

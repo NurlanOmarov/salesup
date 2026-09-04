@@ -3,6 +3,8 @@ import Link from "next/link";
 import { AlertTriangle, ArrowRight, ShieldCheck } from "lucide-react";
 import { requireOrgAdmin } from "@/lib/org/guards";
 import { getOrgOverview } from "@/lib/org/reports";
+import { getOrgSetupState, orgAdminSetupSteps } from "@/lib/org/setup";
+import { SetupChecklist } from "@/components/setup-checklist";
 import { SeatsBar } from "@/app/(owner)/admin/orgs/org-ui";
 import { LiveSessionsBlock } from "@/components/live/sessions-block";
 
@@ -25,7 +27,10 @@ export default async function OrgOverviewPage({
 }) {
   const { orgId } = await params;
   const ctx = await requireOrgAdmin(orgId);
-  const overview = await getOrgOverview(ctx.orgId);
+  const [overview, setup] = await Promise.all([
+    getOrgOverview(ctx.orgId),
+    getOrgSetupState(ctx.orgId),
+  ]);
 
   const freeSeats = overview.seatsTotal - overview.seatsUsed;
   const base = `/org/${ctx.orgId}`;
@@ -36,6 +41,18 @@ export default async function OrgOverviewPage({
       <p className="mt-1 text-sm text-foreground/60">
         Данные обновляются автоматически по мере занятий работников.
       </p>
+
+      {/* Пошаговый запуск — выше цифр: пока людей нет, цифры пустые, а человеку
+          нужно понимать, что делать дальше и в каком порядке. */}
+      <div className="mt-6">
+        <SetupChecklist
+          title="С чего начать"
+          intro="Три шага — и сотрудники учатся. Отмечаются сами, ничего подтверждать не нужно."
+          steps={orgAdminSetupSteps(setup, ctx.orgId)}
+          doneTitle="Всё настроено: сотрудники подключены и учатся"
+          doneBody="Дальше следите за обучением во вкладках «Работники» и «Отчёты». Понадобится подключить ещё людей — создайте новые коды доступа."
+        />
+      </div>
 
       <section className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Card

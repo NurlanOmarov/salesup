@@ -2,9 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ExternalLink, ShieldCheck } from "lucide-react";
+import { env } from "@/env";
 import { db } from "@/lib/db";
 import { getOrgMembers, getOrgOverview } from "@/lib/org/reports";
+import { getOrgSetupState, ownerSetupSteps } from "@/lib/org/setup";
 import { ACCESS_DURATION_LABELS } from "@/lib/admin/enrollment";
+import { SetupChecklist } from "@/components/setup-checklist";
 import { OrgStatusBadge, ProgressBar, relativeDays, SeatsBar } from "../org-ui";
 import {
   DeleteOrgAction,
@@ -55,9 +58,10 @@ export default async function OrgPage({
   });
   if (!org) notFound();
 
-  const [overview, members, courses, admins, keyWraps, namedMembers, logs] =
+  const [overview, setup, members, courses, admins, keyWraps, namedMembers, logs] =
     await Promise.all([
       getOrgOverview(org.id),
+      getOrgSetupState(org.id),
       getOrgMembers(org.id),
       db.course.findMany({
         where: { status: "PUBLISHED" },
@@ -83,6 +87,7 @@ export default async function OrgPage({
     ]);
 
   const learners = members.filter((m) => m.role === "ORG_LEARNER");
+  const siteUrl = env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "");
 
   return (
     <main>
@@ -135,6 +140,19 @@ export default async function OrgPage({
         </p>
       ) : null}
 
+      {/* ── Пошаговый запуск ─────────────────────────────────────────── */}
+      <div className="mt-6">
+        <SetupChecklist
+          title="Запуск клиента"
+          intro="Порядок действий, чтобы люди начали учиться. Шаги закрываются сами — в том числе если что-то сделал сам клиент в своём кабинете."
+          steps={ownerSetupSteps(setup, org.id, {
+            hasRequisites: Boolean(org.unp || org.contactEmail || org.contactNote),
+          })}
+          doneTitle="Клиент запущен: лицензия выдана, ответственный работает, работники подключаются"
+          doneBody="Дальше всё идёт без вас: коды раздаёт ответственный, прогресс виден ниже и в отчётах кабинета клиента."
+        />
+      </div>
+
       {/* ── Состояние ────────────────────────────────────────────────── */}
       <section className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Card
@@ -160,7 +178,7 @@ export default async function OrgPage({
       </section>
 
       {/* ── Лицензии ─────────────────────────────────────────────────── */}
-      <section className="mt-8">
+      <section id="licenses" className="mt-8 scroll-mt-20">
         <h2 className="text-lg font-semibold">Лицензии</h2>
         <p className="mt-1 text-sm text-foreground/55">
           Единица лицензии — курс × человек: работник, которому открыли три курса,
@@ -221,7 +239,7 @@ export default async function OrgPage({
       </section>
 
       {/* ── Ответственные представители ──────────────────────────────── */}
-      <section className="mt-8">
+      <section id="admins" className="mt-8 scroll-mt-20">
         <h2 className="text-lg font-semibold">Ответственные представители</h2>
         <p className="mt-1 text-sm text-foreground/55">
           Управляют кабинетом организации: заводят работников, раздают коды, смотрят
@@ -236,7 +254,8 @@ export default async function OrgPage({
           ) : (
             <ul className="divide-y divide-foreground/5">
               {admins.map((a) => (
-                <li key={a.id} className="flex items-center justify-between px-4 py-3 text-sm">
+                <li key={a.id} className="px-4 py-3 text-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <p className="font-medium">{a.user.name ?? a.user.email}</p>
                     <p className="text-xs text-foreground/50">{a.user.email}</p>
@@ -256,7 +275,13 @@ export default async function OrgPage({
                         отключён
                       </span>
                     ) : null}
-                    <ResetOrgAdminPassword orgId={org.id} userId={a.user.id} />
+                    <ResetOrgAdminPassword
+                      orgId={org.id}
+                      userId={a.user.id}
+                      login={a.user.email ?? ""}
+                      siteUrl={siteUrl}
+                    />
+                  </div>
                   </div>
                 </li>
               ))}
@@ -267,7 +292,7 @@ export default async function OrgPage({
         <div className="mt-4 rounded-xl border border-foreground/10 bg-background p-4">
           <h3 className="text-sm font-semibold">Назначить ответственного</h3>
           <div className="mt-3">
-            <OrgAdminForm orgId={org.id} />
+            <OrgAdminForm orgId={org.id} orgName={org.name} siteUrl={siteUrl} />
           </div>
         </div>
 
@@ -355,7 +380,7 @@ export default async function OrgPage({
       </section>
 
       {/* ── Реквизиты ────────────────────────────────────────────────── */}
-      <section className="mt-8">
+      <section id="requisites" className="mt-8 scroll-mt-20">
         <h2 className="text-lg font-semibold">Реквизиты и заметки</h2>
         <div className="mt-4 rounded-xl border border-foreground/10 bg-background p-4">
           <OrgDetailsForm org={org} />

@@ -55,7 +55,9 @@ test.beforeAll(async () => {
 
   // Реальный закодированный бесплатный урок медпреда (videoStatus READY).
   const intro = await db.lesson.findFirstOrThrow({
-    where: { isFreePreview: true, videoStatus: "READY" },
+    // Донор медиа: любой урок с готовым видео. Раньше искали бесплатный, но
+    // бесплатных уроков в каталоге больше нет — фикстура падала на пустом поиске.
+    where: { videoStatus: "READY" },
     select: { id: true, videoAesKeyEnc: true, videoKey: true },
   });
   freeLessonId = intro.id;

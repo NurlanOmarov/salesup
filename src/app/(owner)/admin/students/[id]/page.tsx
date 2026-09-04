@@ -33,6 +33,7 @@ export default async function StudentPage({
     select: {
       id: true,
       email: true,
+      login: true,
       name: true,
       phone: true,
       industry: true,
@@ -142,7 +143,12 @@ export default async function StudentPage({
           grantable={grantable}
           defaultSite={site?.code ?? DEFAULT_SITE.code}
         />
-        <DangerZone userId={student.id} blocked={!!student.deletedAt} />
+        <DangerZone
+          userId={student.id}
+          blocked={!!student.deletedAt}
+          login={student.email ?? student.login ?? ""}
+          siteUrl={`https://${(site ?? DEFAULT_SITE).host}`}
+        />
         <DeviceLimitForm userId={student.id} deviceLimit={student.deviceLimit} />
       </div>
 

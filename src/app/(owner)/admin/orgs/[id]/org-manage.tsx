@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Copy, KeyRound, Pause, Play, Trash2 } from "lucide-react";
+import { Check, KeyRound, Pause, Play, Trash2 } from "lucide-react";
 import {
   createOrgAdminAction,
   resetOrgAdminPasswordAction,
@@ -16,6 +16,11 @@ import {
 import { ACCESS_DURATIONS, ACCESS_DURATION_LABELS } from "@/lib/admin/enrollment";
 import { MIN_B2B_SEATS, quoteSeats, SUBSCRIPTION_YEAR_TIYN } from "@/lib/pricing";
 import { salePrice } from "@/lib/pricing/promo";
+import {
+  orgAdminPasswordMessage,
+  orgAdminWelcomeMessage,
+} from "@/lib/messages/templates";
+import { ShareMessage } from "@/components/share-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -511,7 +516,15 @@ export function LicenseForm({
 
 // ─────────────────────────── Ответственный представитель ───────────────────────────
 
-export function OrgAdminForm({ orgId }: { orgId: string }) {
+export function OrgAdminForm({
+  orgId,
+  orgName,
+  siteUrl,
+}: {
+  orgId: string;
+  orgName: string;
+  siteUrl: string;
+}) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -520,7 +533,6 @@ export function OrgAdminForm({ orgId }: { orgId: string }) {
     tempPassword: string | null;
     existed: boolean;
   } | null>(null);
-  const [copied, setCopied] = useState(false);
 
   async function onSubmit(formData: FormData) {
     setPending(true);
@@ -558,14 +570,16 @@ export function OrgAdminForm({ orgId }: { orgId: string }) {
         <p className="mt-2 text-sm text-foreground/70">
           {created.tempPassword ? (
             <>
-              Передайте данные лично. Пароль показывается <strong>один раз</strong>: при
-              первом входе он будет заменён.
+              Пароль показывается <strong>один раз</strong>: при первом входе он будет
+              заменён. Скопируйте сообщение ниже и отправьте его клиенту — в нём
+              есть логин, пароль и объяснение, что делать дальше.
             </>
           ) : (
             <>
               Учётная запись с таким e-mail уже была — мы только выдали ей права
               в кабинете. Пароль <strong>остался прежним</strong>; если он утерян,
-              сбросьте его в списке представителей.
+              сбросьте его в списке представителей — сообщение с новым паролем
+              появится там же.
             </>
           )}
         </p>
@@ -579,23 +593,27 @@ export function OrgAdminForm({ orgId }: { orgId: string }) {
               <dt className="text-xs uppercase tracking-wide text-foreground/50">
                 Временный пароль
               </dt>
-              <dd className="flex items-center gap-2 font-mono">
-                {created.tempPassword}
-                <button
-                  type="button"
-                  onClick={() => {
-                    void navigator.clipboard.writeText(created.tempPassword!);
-                    setCopied(true);
-                  }}
-                  className="rounded p-1 text-foreground/50 transition-colors hover:bg-foreground/5 hover:text-foreground"
-                  aria-label="Скопировать пароль"
-                >
-                  {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-                </button>
-              </dd>
+              <dd className="font-mono">{created.tempPassword}</dd>
             </div>
           ) : null}
         </dl>
+
+        {created.tempPassword ? (
+          <div className="mt-4">
+            <ShareMessage
+              text={orgAdminWelcomeMessage({
+                orgName,
+                login: created.email,
+                tempPassword: created.tempPassword,
+                siteUrl,
+              })}
+              title="Сообщение ответственному"
+              hint="Скопируйте и отправьте клиенту в мессенджере"
+              rows={10}
+            />
+          </div>
+        ) : null}
+
         <Button
           variant="outline"
           size="sm"
@@ -720,38 +738,36 @@ export function OrgDetailsForm({
 export function ResetOrgAdminPassword({
   orgId,
   userId,
+  login,
+  siteUrl,
 }: {
   orgId: string;
   userId: string;
+  /** Логин ответственного — попадёт в готовое сообщение вместе с паролем. */
+  login: string;
+  siteUrl: string;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [password, setPassword] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
 
   if (password) {
     return (
-      <span className="inline-flex items-center gap-2 rounded-lg border border-emerald-600/30 bg-emerald-500/5 px-2.5 py-1">
-        <span className="font-mono text-sm">{password}</span>
-        <button
-          type="button"
-          aria-label="Скопировать пароль"
-          onClick={() => {
-            void navigator.clipboard.writeText(password).then(() => setCopied(true));
-          }}
-          className="text-foreground/50 hover:text-foreground"
-        >
-          {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-        </button>
+      <div className="w-full">
+        <ShareMessage
+          text={orgAdminPasswordMessage({ login, tempPassword: password, siteUrl })}
+          title="Новый временный пароль"
+          hint="Показывается один раз — скопируйте и отправьте клиенту"
+        />
         <button
           type="button"
           onClick={() => setPassword(null)}
-          className="text-xs text-foreground/50 hover:underline"
+          className="mt-2 text-xs text-foreground/50 hover:underline"
         >
           скрыть
         </button>
-      </span>
+      </div>
     );
   }
 
