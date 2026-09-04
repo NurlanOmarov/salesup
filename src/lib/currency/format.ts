@@ -17,21 +17,27 @@ export type CurrencyCode = "KZT" | "RUB" | "BYN" | "UZS";
 /** Валюты, показываемые на витрине: белорусский рубль (основная), тенге, российский рубль. */
 export const DISPLAY_CURRENCIES: CurrencyCode[] = ["BYN", "KZT", "RUB", "UZS"];
 
+/**
+ * Валюты подписываем словами, а не значками: «350 бел. руб.» читается
+ * однозначно, а «350 Br» и «₸/₽» покупатель на чужом домене принимает за свою
+ * валюту (решение владельца, 2026-09-04).
+ */
+// Внутри подписи тоже неразрывный пробел: «рос. руб.» не должно разрываться
+// переносом строки посреди названия валюты.
 const SYMBOLS: Record<CurrencyCode, string> = {
-  KZT: "₸",
-  RUB: "₽",
-  BYN: "Br",
+  KZT: "тенге",
+  RUB: "рос.\u00A0руб.",
+  BYN: "бел.\u00A0руб.",
   UZS: "сум",
 };
 
 /**
- * Обозначения валют на языке витрины. Символы (₸, ₽) интернациональны, а
- * словесные — нет: узбекский сум на латинице пишется «so'm», и на узбекской
- * витрине «сум» выглядит чужеродно. Пусто → берём значение из SYMBOLS.
+ * Названия валют на языке витрины: словесную подпись переводим, иначе на
+ * казахской и узбекской странице цена подписана по-русски. Пусто → SYMBOLS.
  */
 const SYMBOLS_BY_LOCALE: Record<string, Partial<Record<CurrencyCode, string>>> = {
-  kk: { UZS: "сом", BYN: "Br" },
-  uz: { UZS: "so'm", BYN: "Br" },
+  kk: { KZT: "теңге", RUB: "рес.\u00A0рубль", BYN: "бел.\u00A0рубль", UZS: "сом" },
+  uz: { KZT: "tenge", RUB: "Rossiya\u00A0rubli", BYN: "Belarus\u00A0rubli", UZS: "so'm" },
 };
 
 /** Обозначение валюты для языка страницы. */
@@ -50,7 +56,7 @@ function roundForCurrency(amount: number, code: CurrencyCode): number {
   return amount; // BYN — базовая цена, без округления
 }
 
-/** tiyn (Int, BYN-копейки) → major units (Br/₸/₽) по курсу. 0 если курс недоступен. */
+/** tiyn (Int, BYN-копейки) → major units (бел. руб./тенге/рос. руб.) по курсу. 0 если курс недоступен. */
 export function convertTiyn(
   tiyn: number,
   code: CurrencyCode,
@@ -67,7 +73,7 @@ export function convertTiyn(
   return roundForCurrency(kzt / rate, code);
 }
 
-/** Готовая строка цены в валюте, напр. «7 600 ₽». «—» при отсутствии курса. */
+/** Готовая строка цены в валюте, напр. «7 600 рос. руб.». «—» при отсутствии курса. */
 export function formatCurrency(
   tiyn: number,
   code: CurrencyCode,
@@ -77,8 +83,8 @@ export function formatCurrency(
 ): string {
   const amount = convertTiyn(tiyn, code, rates);
   if (amount <= 0) return "—";
-  // Неразрывный пробел перед символом: с обычным «147 800 ₸» переносится знаком
-  // валюты на следующую строку, и цифра выглядит оборванной.
+  // Неразрывный пробел перед подписью: с обычным «147 800 тенге» название
+  // валюты переносится на следующую строку, и цифра выглядит оборванной.
   return (
     Math.round(amount).toLocaleString("ru-RU", { maximumFractionDigits: 0 }) +
     "\u00A0" +

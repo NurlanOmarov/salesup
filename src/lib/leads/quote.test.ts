@@ -124,13 +124,15 @@ describe("describeStoredPlan", () => {
         totalTiyn: byn(11640),
       }),
       // toLocaleString ставит неразрывный пробел в разряде — берём его же
-    ).toBe(`Тариф: вся библиотека на год — 970 Br × 12 = ${(11640).toLocaleString("ru-RU")} Br`);
+    ).toBe(
+      `Тариф: вся библиотека на год — 970 бел. руб. × 12 = ${(11640).toLocaleString("ru-RU")} бел. руб.`,
+    );
   });
 
   it("для розницы показывает цену курса", () => {
     expect(
       describeStoredPlan({ plan: "COURSE", seats: null, perSeatTiyn: null, totalTiyn: byn(490) }),
-    ).toBe("Тариф: курс, 490 Br");
+    ).toBe("Тариф: курс, 490 бел. руб.");
   });
 
   it("для старых заявок без тарифа возвращает null", () => {

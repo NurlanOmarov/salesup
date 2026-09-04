@@ -73,7 +73,7 @@ export const MARKETS: readonly Market[] = [
   {
     code: "BY",
     country: "Беларусь",
-    currency: "BYN",
+    currency: "бел. руб.",
     domain: hostFor("BY"),
     // Беларусь — базовый рынок: цифры выводятся из PRICE_MATRIX, а не дублируются.
     // Иначе правка матрицы разошлась бы с этой таблицей и заметили бы это нескоро.
@@ -103,7 +103,7 @@ export const MARKETS: readonly Market[] = [
   {
     code: "RU",
     country: "Россия",
-    currency: "₽",
+    currency: "рос. руб.",
     domain: hostFor("RU"),
     prices: {
       SPECIALIZED: { min: 11_900, max: 16_900, median: 13_900 },
@@ -112,12 +112,12 @@ export const MARKETS: readonly Market[] = [
     bundle: 26_400,
     subscriptionYear: 34_900,
     benchmark:
-      "Независимые видеокурсы 1 950–19 990 ₽; Нетология «Передовые практики продаж» — 39 000 ₽",
+      "Независимые видеокурсы 1 950–19 990 рос. руб.; Нетология «Передовые практики продаж» — 39 000 рос. руб.",
   },
   {
     code: "KZ",
     country: "Казахстан",
-    currency: "₸",
+    currency: "тенге",
     domain: hostFor("KZ"),
     prices: {
       SPECIALIZED: { min: 69_900, max: 94_900, median: 79_900 },
@@ -126,7 +126,7 @@ export const MARKETS: readonly Market[] = [
     bundle: 151_000,
     subscriptionYear: 199_000,
     benchmark:
-      "МШП «Техники продаж» — 78 700 ₸; Skillbox.kz со скидкой — около 119 000 ₸",
+      "МШП «Техники продаж» — 78 700 тенге; Skillbox.kz со скидкой — около 119 000 тенге",
   },
   {
     code: "UZ",

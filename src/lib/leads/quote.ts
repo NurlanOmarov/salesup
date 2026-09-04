@@ -41,7 +41,7 @@ export function describeStoredPlan(input: {
   withTrainer?: boolean;
 }): string | null {
   if (!input.plan) return null;
-  const br = (tiyn: number) => `${(tiyn / 100).toLocaleString("ru-RU")} Br`;
+  const br = (tiyn: number) => `${(tiyn / 100).toLocaleString("ru-RU")} бел. руб.`;
   const label = PLAN_LABELS[input.plan];
   const trainer = input.withTrainer ? " + пакет с тренером" : "";
 

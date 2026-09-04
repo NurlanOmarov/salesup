@@ -390,7 +390,7 @@ export function LicenseForm({
           >
             {courses.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.title} — {c.priceTiyn / 100} Br
+                {c.title} — {c.priceTiyn / 100} бел. руб.
               </option>
             ))}
           </select>
@@ -464,27 +464,27 @@ export function LicenseForm({
             <p>
               <span className="font-medium">{quote.tier.label}</span> ·{" "}
               {seatCount} мест · скидка {Math.round(quote.discount * 100)} % →{" "}
-              <span className="font-semibold">{seatSale.tiyn / 100} Br</span> за
+              <span className="font-semibold">{seatSale.tiyn / 100} бел. руб.</span> за
               место, итого{" "}
               <span className="font-semibold">
-                {(seatSale.tiyn * seatCount) / 100} Br
+                {(seatSale.tiyn * seatCount) / 100} бел. руб.
               </span>{" "}
               в год
               <span className="text-foreground/50">
                 {" "}
-                (экономия {quote.savingTiyn / 100} Br)
+                (экономия {quote.savingTiyn / 100} бел. руб.)
               </span>
               {seatSale.oldTiyn ? (
                 <span className="block text-brand-strong">
                   Акция −{seatSale.percent} %: без неё было бы{" "}
-                  {seatSale.oldTiyn / 100} Br за место и {quote.totalTiyn / 100} Br за год.
+                  {seatSale.oldTiyn / 100} бел. руб. за место и {quote.totalTiyn / 100} бел. руб. за год.
                 </span>
               ) : null}
             </p>
           ) : (
             <p className="text-amber-700">
               Меньше {MIN_B2B_SEATS} мест — корпоративная скидка не применяется.
-              Такой объём выгоднее продать в розницу: {retailTiyn / 100} Br за место.
+              Такой объём выгоднее продать в розницу: {retailTiyn / 100} бел. руб. за место.
             </p>
           )}
         </div>

@@ -90,9 +90,9 @@ describe("leadTelegramText", () => {
     // Во время акции в уведомлении стоит цена к оплате и полная — от чего скидка.
     // Ожидание считаем через lib/pricing/promo, чтобы тест пережил её окончание.
     const sale = salePrice(49000);
-    expect(text).toContain(`Тариф: курс, ${sale.tiyn / 100}\u00A0Br`);
+    expect(text).toContain(`Тариф: курс, ${sale.tiyn / 100}\u00A0бел.\u00A0руб.`);
     if (sale.oldTiyn) {
-      expect(text).toContain(`акция −${sale.percent}% от ${sale.oldTiyn / 100}\u00A0Br`);
+      expect(text).toContain(`акция −${sale.percent}% от ${sale.oldTiyn / 100}\u00A0бел.\u00A0руб.`);
     }
   });
 

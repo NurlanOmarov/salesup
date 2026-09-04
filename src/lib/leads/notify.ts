@@ -41,7 +41,7 @@ function line(label: string, value: string | number | null | undefined): string 
   return `${label}: ${value}`;
 }
 
-/** «1 290 Br» — базовая валюта, кросс-курсы для уведомления не нужны. */
+/** «1 290 бел. руб.» — базовая валюта, кросс-курсы для уведомления не нужны. */
 function br(tiyn: number): string {
   return formatCurrency(tiyn, "BYN", {});
 }

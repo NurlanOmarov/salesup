@@ -6,10 +6,12 @@ export function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs));
 }
 
-/** Форматирование цены из tiyn (Int, BYN-копейки) в строку «300 Br». */
+/** Форматирование цены из tiyn (Int, BYN-копейки) в строку «300 бел. руб.». */
 export function formatPrice(tiyn: number): string {
+  // Неразрывный пробел: подпись валюты не должна отрываться от суммы.
   return (
-    Math.round(tiyn / 100).toLocaleString("ru-RU", { maximumFractionDigits: 0 }) + " Br"
+    Math.round(tiyn / 100).toLocaleString("ru-RU", { maximumFractionDigits: 0 }) +
+    "\u00A0бел.\u00A0руб."
   );
 }
 

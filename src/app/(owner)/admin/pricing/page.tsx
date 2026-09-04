@@ -385,7 +385,8 @@ export default async function PricingPage() {
         <h2 className="text-lg font-semibold">Другие рынки</h2>
         <p className="mt-1 max-w-3xl text-sm text-foreground/60">
           Справочные цены из тарифного исследования, курсы валют на {RATES_AS_OF}{" "}
-          (1 BYN ≈ {PER_BYN.RUB} ₽ ≈ {PER_BYN.KZT} ₸ ≈ {formatAmount(PER_BYN.UZS)} сум).
+          (1 бел. руб. ≈ {PER_BYN.RUB} рос. руб. ≈ {PER_BYN.KZT} тенге ≈{" "}
+          {formatAmount(PER_BYN.UZS)} сум).
           Витрина пока считает цену конвертацией из BYN, поэтому эти значения —
           ориентир для переговоров, а не то, что видит покупатель.
         </p>

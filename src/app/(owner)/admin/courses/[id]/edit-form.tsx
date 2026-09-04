@@ -67,7 +67,7 @@ interface CourseFields {
 /** Строка списка промо-роликов: разобранный ролик + то, что владелец ввёл. */
 type PromoVideoRow = PromoVideo & { input: string };
 
-const SYMBOLS = { KZT: "₸", RUB: "₽", BYN: "Br" } as const;
+const SYMBOLS = { KZT: "тенге", RUB: "рос. руб.", BYN: "бел. руб." } as const;
 
 // Зеркало округления lib/currency/format (ceil до 100 для KZT/RUB, BYN — база, без округления).
 function roundFor(amount: number, code: "KZT" | "RUB" | "BYN"): number {
@@ -430,7 +430,7 @@ export function CourseEditForm({
         <div className="grid gap-5 sm:grid-cols-2">
           <div>
             <label className={labelCls} htmlFor="price">
-              Цена, Br (BYN)
+              Цена, бел. руб. (BYN)
             </label>
             <input
               id="price"
@@ -451,9 +451,9 @@ export function CourseEditForm({
                 onClick={() => setPriceByn(band.price / 100)}
                 className="underline hover:text-foreground"
               >
-                {band.price / 100} Br
+                {band.price / 100} бел. руб.
               </button>{" "}
-              (коридор {band.min / 100}–{band.max / 100} Br)
+              (коридор {band.min / 100}–{band.max / 100} бел. руб.)
               {!isPriceWithinRange(audience, Math.round(priceByn * 100), totalSec) ? (
                 <span className="ml-1 text-amber-700">— цена вне коридора</span>
               ) : null}
@@ -461,7 +461,7 @@ export function CourseEditForm({
           </div>
           <div>
             <label className={labelCls} htmlFor="oldPrice">
-              Старая цена, Br (для зачёркивания)
+              Старая цена, бел. руб. (для зачёркивания)
             </label>
             <input
               id="oldPrice"

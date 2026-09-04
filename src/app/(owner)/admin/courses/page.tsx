@@ -65,7 +65,7 @@ export default async function AdminCoursesPage() {
 
       <p className="mt-1 text-sm text-foreground/60">
         Управление ценами, обложками и статусом публикации. Цена задаётся в белорусских
-        рублях, пересчёт в ₸/₽ — по курсу НБ РК.
+        рублях, пересчёт в тенге и рос. рубли — по курсу НБ РК.
       </p>
 
       <div className="mt-5 overflow-hidden rounded-xl border border-foreground/10 bg-background">
