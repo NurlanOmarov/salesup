@@ -44,6 +44,19 @@ services:
       EMAIL_ENABLED: ${EMAIL_ENABLED:-false}
       OWNER_EMAIL: ${OWNER_EMAIL}
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+      # Оплата курсов: приём уведомлений об оплате. Переменные перечисляются
+      # явно — env_file здесь не используется, и без этих строк контейнер их
+      # не увидит, а платёжные эндпоинты ответят 503 «payments disabled».
+      # Ссылки Альфа-Банка (docs/ALFA-PAYMENT-LINKS.md):
+      ALFA_CALLBACK_TOKEN: ${ALFA_CALLBACK_TOKEN:-}
+      ALFA_API_URL: ${ALFA_API_URL:-https://ecom.alfabank.by/payment/rest/}
+      ALFA_API_LOGIN: ${ALFA_API_LOGIN:-}
+      ALFA_API_PASSWORD: ${ALFA_API_PASSWORD:-}
+      # Магазин WooCommerce (docs/WOO-INTEGRATION.md):
+      WOO_WEBHOOK_SECRET: ${WOO_WEBHOOK_SECRET:-}
+      WOO_STORE_URL: ${WOO_STORE_URL:-https://activesales.by}
+      WOO_CONSUMER_KEY: ${WOO_CONSUMER_KEY:-}
+      WOO_CONSUMER_SECRET: ${WOO_CONSUMER_SECRET:-}
     volumes:
       - media:/media # app пишет обложки/OG сам (admin upload) + читает медиа фабрики
     expose:
@@ -78,6 +91,19 @@ services:
       SMTP_FROM: ${SMTP_FROM:-}
       OWNER_EMAIL: ${OWNER_EMAIL}
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+      # Оплата курсов: приём уведомлений об оплате. Переменные перечисляются
+      # явно — env_file здесь не используется, и без этих строк контейнер их
+      # не увидит, а платёжные эндпоинты ответят 503 «payments disabled».
+      # Ссылки Альфа-Банка (docs/ALFA-PAYMENT-LINKS.md):
+      ALFA_CALLBACK_TOKEN: ${ALFA_CALLBACK_TOKEN:-}
+      ALFA_API_URL: ${ALFA_API_URL:-https://ecom.alfabank.by/payment/rest/}
+      ALFA_API_LOGIN: ${ALFA_API_LOGIN:-}
+      ALFA_API_PASSWORD: ${ALFA_API_PASSWORD:-}
+      # Магазин WooCommerce (docs/WOO-INTEGRATION.md):
+      WOO_WEBHOOK_SECRET: ${WOO_WEBHOOK_SECRET:-}
+      WOO_STORE_URL: ${WOO_STORE_URL:-https://activesales.by}
+      WOO_CONSUMER_KEY: ${WOO_CONSUMER_KEY:-}
+      WOO_CONSUMER_SECRET: ${WOO_CONSUMER_SECRET:-}
     volumes:
       - media:/media
     deploy:
