@@ -397,25 +397,6 @@ export default async function CoursePage({
 
             </div>
 
-            {/* Что вы получите */}
-            {learnPoints.length > 0 ? (
-              <Reveal delay={0.12} className="lg:col-start-1 lg:row-start-2">
-                <div className="-mt-2 lg:mt-0">
-                    <h2 className="text-sm font-semibold uppercase tracking-wider text-brand-light">
-                      {t.course.whatYouGet}
-                    </h2>
-                    <ul className="mt-3 space-y-2">
-                      {learnPoints.map((p) => (
-                        <li key={p} className="flex items-start gap-2.5">
-                          <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-amber-400" />
-                          <span className="text-white/80">{p}</span>
-                        </li>
-                    ))}
-                  </ul>
-                </div>
-              </Reveal>
-            ) : null}
-
             {/* Карточка с ценой: на десктопе — липкая колонка справа, на мобильном
                 поднимается сразу под заголовок (см. комментарий к сетке выше). */}
             <Reveal delay={0.15} className="lg:col-start-2 lg:row-start-1 lg:row-span-2">
@@ -554,6 +535,25 @@ export default async function CoursePage({
                 </p>
               </div>
             </Reveal>
+            {/* Что вы получите */}
+            {learnPoints.length > 0 ? (
+              <Reveal delay={0.12} className="lg:col-start-1 lg:row-start-2">
+                <div className="-mt-2 lg:mt-0">
+                    <h2 className="text-sm font-semibold uppercase tracking-wider text-brand-light">
+                      {t.course.whatYouGet}
+                    </h2>
+                    <ul className="mt-3 space-y-2">
+                      {learnPoints.map((p) => (
+                        <li key={p} className="flex items-start gap-2.5">
+                          <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-amber-400" />
+                          <span className="text-white/80">{p}</span>
+                        </li>
+                    ))}
+                  </ul>
+                </div>
+              </Reveal>
+            ) : null}
+
           </div>
         </div>
       </section>
