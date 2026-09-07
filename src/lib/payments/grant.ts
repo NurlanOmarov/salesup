@@ -5,7 +5,6 @@ import { enqueue } from "@/lib/jobs/enqueue";
 import { hashPassword } from "@/lib/auth/password";
 import { generateTempPassword } from "@/lib/auth/temp-password";
 import { computeExpiry } from "@/lib/admin/enrollment";
-import { env } from "@/env";
 import { accessGrantedEmail, ownerPurchaseMessage } from "./notify";
 
 /**
@@ -183,8 +182,13 @@ export async function revokeAccess(input: RevokeInput): Promise<{ revoked: strin
   return { revoked: courses.map((c) => c.slug) };
 }
 
-/** Сообщение владельцу в Telegram — тот же канал, что и для заявок с сайта. */
+/**
+ * Сообщение владельцу в Telegram — тот же канал, что и для заявок с сайта.
+ *
+ * Проверять здесь наличие токена нельзя: отправляет worker, и токен есть только
+ * у него, а приложение задачу лишь ставит в очередь. Проверка в приложении
+ * молча гасила все уведомления об оплатах.
+ */
 export async function notifyOwner(text: string): Promise<void> {
-  if (!env.TELEGRAM_BOT_TOKEN) return;
   await enqueue("telegram.send", { text });
 }

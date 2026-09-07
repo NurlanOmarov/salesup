@@ -90,7 +90,18 @@ export async function fulfillAlfaCallback(callback: AlfaCallback): Promise<AlfaR
         `Если это покупка в магазине activesales.by — всё в порядке, доступ выдаст канал магазина.\n` +
         `Если это курс по платёжной ссылке — выдайте доступ вручную и проверьте параметр в ссылке.`,
     );
-    log.info({ orderNumber: number }, "alfa: уведомление без параметра course — пропущено");
+    // Состав полей в логе: по нему видно, пришли ли описание и название заказа
+    // и есть ли в них то, по чему курс вообще можно опознать (ПДн сюда не идут).
+    log.info(
+      {
+        orderNumber: number,
+        hasDescription: Boolean(description),
+        hasName: Boolean(name),
+        description: description?.slice(0, 120) ?? null,
+        name: name?.slice(0, 120) ?? null,
+      },
+      "alfa: уведомление без параметра course — пропущено",
+    );
     return { kind: "skipped", reason: "в заказе нет параметра course" };
   }
 
