@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { createHmac } from "node:crypto";
-import { alfaChecksum, checksumSource, verifyAlfaChecksum } from "./checksum.js";
+import {
+  alfaChecksum,
+  checksumSource,
+  checksumVariants,
+  verifyAlfaCallback,
+  verifyAlfaChecksum,
+} from "./checksum.js";
 import {
   alfaCallbackSchema,
   alfaEventId,
@@ -219,5 +225,46 @@ describe("платёжная ссылка курса", () => {
     expect(alfaPaymentUrlSchema.safeParse("").success).toBe(true);
     expect(alfaPaymentUrlSchema.safeParse(undefined).success).toBe(true);
     expect(alfaPaymentUrlSchema.safeParse("https://example.com").success).toBe(false);
+  });
+});
+
+describe("двойное кодирование значений", () => {
+  // Шлюз присылает кириллицу закодированной дважды, а подпись считает по
+  // исходному тексту — на этом ломалась первая боевая оплата.
+  const readable = {
+    amount: "100",
+    mdOrder: "86bee09c-e5fd-784d-a203-5ae9009d7889",
+    operation: "reversed",
+    orderDescription: "Онлайн-курс, доступ на 12 месяцев.",
+    orderNumber: "2002",
+    payerEmail: "buyer@example.by",
+    status: "1",
+  };
+  /** То, что остаётся после обычного разбора тела: ещё одна percent-строка. */
+  const asDelivered = {
+    ...readable,
+    orderDescription: encodeURIComponent(readable.orderDescription).replace(/%20/g, "+"),
+  };
+
+  it("подпись сходится по раскодированным значениям", () => {
+    const checksum = alfaChecksum(readable, TOKEN);
+    const verified = verifyAlfaCallback({ ...asDelivered, checksum }, TOKEN);
+    expect(verified).not.toBeNull();
+    expect(verified?.orderDescription).toBe(readable.orderDescription);
+  });
+
+  it("подпись сходится и когда шлюз подписал пришедшие значения как есть", () => {
+    const checksum = alfaChecksum(asDelivered, TOKEN);
+    const verified = verifyAlfaCallback({ ...asDelivered, checksum }, TOKEN);
+    expect(verified?.orderDescription).toBe(asDelivered.orderDescription);
+  });
+
+  it("подделку не пропускает ни один из вариантов", () => {
+    const checksum = alfaChecksum(readable, "чужой-токен");
+    expect(verifyAlfaCallback({ ...asDelivered, checksum }, TOKEN)).toBeNull();
+  });
+
+  it("без кириллицы вариант один — лишней работы нет", () => {
+    expect(checksumVariants({ amount: "100", status: "1" })).toHaveLength(1);
   });
 });

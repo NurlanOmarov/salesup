@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { env } from "@/env";
 import { db } from "@/lib/db";
 import { log } from "@/lib/log";
-import { alfaChecksum, checksumSource, verifyAlfaChecksum } from "@/lib/payments/alfa/checksum";
+import { alfaChecksum, checksumSource, verifyAlfaCallback } from "@/lib/payments/alfa/checksum";
 import { fulfillAlfaCallback } from "@/lib/payments/alfa/fulfill";
 import {
   alfaCallbackSchema,
@@ -58,7 +58,8 @@ async function handle(params: Record<string, string>): Promise<NextResponse> {
     return NextResponse.json({ error: "payments disabled" }, { status: 503 });
   }
 
-  if (!verifyAlfaChecksum(params, token)) {
+  const verified = verifyAlfaCallback(params, token);
+  if (!verified) {
     // Диагностика расхождения подписи. Состав параметров у каждого мерчанта свой,
     // и понять, по какому набору шлюз считает сумму, можно только по факту.
     // Значения полей с ПДн маскируются (правило 9), подписи — обрезаются:
@@ -76,7 +77,9 @@ async function handle(params: Record<string, string>): Promise<NextResponse> {
     return NextResponse.json({ error: "bad checksum" }, { status: 401 });
   }
 
-  const parsed = alfaCallbackSchema.safeParse(params);
+  // Дальше работаем с тем набором значений, на котором сошлась подпись: в нём
+  // описание и название заказа уже читаемы, а не в percent-кодировке.
+  const parsed = alfaCallbackSchema.safeParse(verified);
   if (!parsed.success) {
     log.warn("alfa callback: неизвестный формат уведомления");
     // 200 — иначе банк будет повторять то, что мы всё равно не поймём.
@@ -95,7 +98,7 @@ async function handle(params: Record<string, string>): Promise<NextResponse> {
         provider: PROVIDER,
         providerEventId: eventId,
         // Payload — параметры уведомления: карточных данных в них нет.
-        payload: params as unknown as object,
+        payload: verified as unknown as object,
       },
     });
   } catch {

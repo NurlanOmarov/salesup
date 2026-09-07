@@ -45,3 +45,48 @@ export function verifyAlfaChecksum(params: Record<string, string>, token: string
   if (expected.length !== actual.length) return false;
   return timingSafeEqual(expected, actual);
 }
+
+/** Раскодировать значение ещё раз; на неполном проценте возвращает как есть. */
+function decodeOnce(value: string): string {
+  try {
+    return decodeURIComponent(value.replace(/\+/g, " "));
+  } catch {
+    return value;
+  }
+}
+
+/**
+ * Наборы значений, по которым имеет смысл проверять подпись.
+ *
+ * Шлюз присылает значения закодированными дважды: тело POST разбирается один
+ * раз, и в кириллических полях (`orderDescription`, `name`) остаётся ещё одна
+ * percent-строка. Подпись же считается по исходному тексту — тому, что владелец
+ * ввёл в кабинете. Поэтому проверяем и то, что пришло, и раскодированное:
+ * какой вариант сойдётся, тот и есть настоящий (это выясняется только опытом,
+ * состав полей у каждого мерчанта свой).
+ *
+ * Безопасность от этого не страдает: любой вариант нужно подписать токеном,
+ * известным только шлюзу и нам.
+ */
+export function checksumVariants(params: Record<string, string>): Array<Record<string, string>> {
+  const decoded = Object.fromEntries(
+    Object.entries(params).map(([k, v]) => [k, k === "checksum" ? v : decodeOnce(v)]),
+  );
+  // Если декодировать нечего, второй вариант совпадёт с первым — не дублируем.
+  const same = Object.entries(decoded).every(([k, v]) => params[k] === v);
+  return same ? [params] : [params, decoded];
+}
+
+/**
+ * Проверка по всем вариантам. Возвращает подошедший набор значений (его и
+ * используем дальше — в нём поля уже в читаемом виде) либо null.
+ */
+export function verifyAlfaCallback(
+  params: Record<string, string>,
+  token: string,
+): Record<string, string> | null {
+  for (const variant of checksumVariants(params)) {
+    if (verifyAlfaChecksum(variant, token)) return variant;
+  }
+  return null;
+}
