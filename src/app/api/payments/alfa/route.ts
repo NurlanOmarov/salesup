@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { env } from "@/env";
 import { db } from "@/lib/db";
 import { log } from "@/lib/log";
-import { verifyAlfaChecksum } from "@/lib/payments/alfa/checksum";
+import { alfaChecksum, checksumSource, verifyAlfaChecksum } from "@/lib/payments/alfa/checksum";
 import { fulfillAlfaCallback } from "@/lib/payments/alfa/fulfill";
 import {
   alfaCallbackSchema,
@@ -43,6 +43,14 @@ export async function POST(request: Request): Promise<NextResponse> {
   return handle({ ...paramsFromSearch(url.searchParams), ...paramsFromBody(raw) });
 }
 
+/** Персональные поля в диагностическом логе заменяются длиной значения. */
+function maskPersonal(params: Record<string, string>): Record<string, string> {
+  const hidden = new Set(["payerEmail", "email", "payerPhone", "cardholderName", "pan", "panMasked", "maskedPan"]);
+  return Object.fromEntries(
+    Object.entries(params).map(([k, v]) => [k, hidden.has(k) ? `<${v.length} симв.>` : v]),
+  );
+}
+
 async function handle(params: Record<string, string>): Promise<NextResponse> {
   const token = env.ALFA_CALLBACK_TOKEN;
   if (!token) {
@@ -51,8 +59,20 @@ async function handle(params: Record<string, string>): Promise<NextResponse> {
   }
 
   if (!verifyAlfaChecksum(params, token)) {
-    // Имя операции в лог можно: это не ПДн и помогает понять, чей запрос пришёл.
-    log.warn({ operation: params.operation }, "alfa callback: неверная контрольная сумма");
+    // Диагностика расхождения подписи. Состав параметров у каждого мерчанта свой,
+    // и понять, по какому набору шлюз считает сумму, можно только по факту.
+    // Значения полей с ПДн маскируются (правило 9), подписи — обрезаются:
+    // для сравнения хватает начала, а целиком они в лог не нужны.
+    log.warn(
+      {
+        operation: params.operation,
+        names: Object.keys(params).sort().join(","),
+        source: checksumSource(maskPersonal(params)),
+        expected: alfaChecksum(params, token).slice(0, 12),
+        received: (params.checksum ?? "").slice(0, 12),
+      },
+      "alfa callback: неверная контрольная сумма",
+    );
     return NextResponse.json({ error: "bad checksum" }, { status: 401 });
   }
 

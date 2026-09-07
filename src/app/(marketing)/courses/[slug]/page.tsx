@@ -344,8 +344,13 @@ export default async function CoursePage({
       {/* Hero */}
       <section className="bg-slate-950 text-white">
         <div className="mx-auto max-w-6xl px-4 py-12 sm:py-16">
+          {/* На мобильном порядок важнее сетки: цена с кнопкой оплаты должна быть
+              сразу под заголовком, а не под списком «что вы получите» — иначе
+              покупателю приходится искать, где платить. Поэтому «Что вы получите»
+              вынесено отдельным элементом сетки и на десктопе возвращается под
+              заголовок явными row/col. */}
           <div className="grid items-start gap-10 lg:grid-cols-[1fr_380px]">
-            <div>
+            <div className="lg:col-start-1 lg:row-start-1">
               {industry ? (
                 <Reveal>
                   <span className="inline-flex items-center rounded-full border border-brand-light/30 bg-brand/10 px-3 py-1 text-xs font-medium text-brand-light">
@@ -390,10 +395,12 @@ export default async function CoursePage({
                 </div>
               </Reveal>
 
-              {/* Что вы получите */}
-              {learnPoints.length > 0 ? (
-                <Reveal delay={0.12}>
-                  <div className="mt-8">
+            </div>
+
+            {/* Что вы получите */}
+            {learnPoints.length > 0 ? (
+              <Reveal delay={0.12} className="lg:col-start-1 lg:row-start-2">
+                <div className="-mt-2 lg:mt-0">
                     <h2 className="text-sm font-semibold uppercase tracking-wider text-brand-light">
                       {t.course.whatYouGet}
                     </h2>
@@ -403,15 +410,15 @@ export default async function CoursePage({
                           <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-amber-400" />
                           <span className="text-white/80">{p}</span>
                         </li>
-                      ))}
-                    </ul>
-                  </div>
-                </Reveal>
-              ) : null}
-            </div>
+                    ))}
+                  </ul>
+                </div>
+              </Reveal>
+            ) : null}
 
-            {/* Sticky price card */}
-            <Reveal delay={0.15}>
+            {/* Карточка с ценой: на десктопе — липкая колонка справа, на мобильном
+                поднимается сразу под заголовок (см. комментарий к сетке выше). */}
+            <Reveal delay={0.15} className="lg:col-start-2 lg:row-start-1 lg:row-span-2">
               <div className="rounded-2xl border border-white/10 bg-slate-900 p-6 lg:sticky lg:top-24">
                 {coverPublicUrl(course.coverUrl, course.id) ? (
                   <div className="relative mb-4 aspect-video overflow-hidden rounded-xl">
