@@ -122,7 +122,13 @@ export default async function BusinessPage() {
             и на телефоне страница получает горизонтальный скролл. */}
         <div className="mt-6 grid gap-10 lg:grid-cols-[1.05fr_1fr] lg:items-start [&>*]:min-w-0">
           <div>
-            <h1 className="text-balance text-3xl font-bold leading-tight drop-shadow-lg sm:text-4xl lg:text-5xl">
+            {/* Категория продукта до заголовка: компания покупает не пакет
+                доступов, а корпоративную академию — с этой рамкой цена места
+                сравнивается с внутренним тренером и LMS, а не с видеокурсом. */}
+            <p className="text-sm font-semibold uppercase tracking-wider text-brand-light">
+              {c.academy.eyebrow}
+            </p>
+            <h1 className="mt-2 text-balance text-3xl font-bold leading-tight drop-shadow-lg sm:text-4xl lg:text-5xl">
               {c.hero.title}
             </h1>
             <p className="mt-5 max-w-xl text-lg text-white/75">
@@ -224,6 +230,56 @@ export default async function BusinessPage() {
               </Reveal>
             ))}
           </ol>
+        </div>
+      </section>
+
+      {/* ── Академия: жизненный цикл сотрудника и альтернативы ─────── */}
+      <section className="mx-auto max-w-6xl px-4 py-14">
+        <h2 className="text-2xl font-bold sm:text-3xl">{c.academy.title}</h2>
+        <ol className="mt-6 flex flex-wrap items-stretch gap-2">
+          {c.academy.lifecycle.map((step, i) => (
+            <li
+              key={step}
+              className="flex flex-1 basis-[240px] items-start gap-2 rounded-xl border border-foreground/10 bg-background p-3 text-sm"
+            >
+              <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-brand/10 text-[11px] font-bold text-brand">
+                {i + 1}
+              </span>
+              <span className="text-foreground/75">{step}</span>
+            </li>
+          ))}
+        </ol>
+
+        <h3 className="mt-10 text-lg font-semibold">{c.academy.alternativesTitle}</h3>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          {c.academy.alternatives.map((a, i) => (
+            <Reveal key={a.title} delay={i * 0.05}>
+              <div className="h-full rounded-2xl border border-foreground/10 bg-background p-5">
+                <h4 className="font-semibold">{a.title}</h4>
+                <p className="mt-1.5 text-sm text-foreground/65">{a.body}</p>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Дополнения к лицензии ──────────────────────────────────── */}
+      <section className="border-y border-foreground/8 bg-foreground/[0.015]">
+        <div className="mx-auto max-w-6xl px-4 py-14">
+          <h2 className="text-2xl font-bold sm:text-3xl">{c.upsell.title}</h2>
+          <p className="mt-2 max-w-2xl text-foreground/65">{c.upsell.subtitle}</p>
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {c.upsell.items.map((item, i) => (
+              <Reveal key={item.title} delay={i * 0.04}>
+                <div className="h-full rounded-2xl border border-foreground/10 bg-background p-5">
+                  <CheckCircle2 className="size-5 text-brand" />
+                  <h3 className="mt-3 font-semibold">{item.title}</h3>
+                  <p className="mt-1.5 text-sm text-foreground/65">{item.body}</p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+          <p className="mt-6 text-sm text-foreground/55">{c.upsell.note}</p>
         </div>
       </section>
 

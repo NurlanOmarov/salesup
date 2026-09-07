@@ -60,8 +60,11 @@ const ru = {
     relatedNote: "Программы по смежным темам — усильте навыки продаж.",
     trainer: "Ваш тренер",
     trainerMore: "Подробнее о тренере →",
-    noOnlinePayment: "Онлайн-оплата не требуется",
+    noOnlinePayment: "Оплата после заявки: пришлём счёт или реквизиты",
     certificate: "Сертификат по окончании",
+    // Состав курса, а не хронометраж: покупатель получает практику, а не минуты.
+    simulator: "Тренажёр клиента и голосовой ролплей",
+    materials: "Конспект, карточки и скрипты в кабинете",
     subtitles: "Субтитры на 4 языках",
     // Язык курса называем прямо: на казахской и узбекской витрине название и
     // описание переведены, а видео и материалы остаются русскими.
@@ -92,7 +95,7 @@ const ru = {
     faqTitle: "Частые вопросы о курсах",
     helpTitle: "Не знаете, с какого курса начать?",
     helpText:
-      "Опишите, что продаёте и где буксует разговор с клиентом, — подскажем подходящую программу. Онлайн-оплата не требуется: доступ выдаём после подтверждения оплаты.",
+      "Опишите, что продаёте и где буксует разговор с клиентом, — подскажем подходящую программу. Оплатить можно картой онлайн или по счёту — доступ откроем сразу после оплаты.",
     helpCta: "Оставить заявку",
     seoDescription:
       "Видеокурсы по продажам для туризма, мебели, обуви, недвижимости, медпредставителей и B2B. Авторские программы бизнес-тренера Виталия Дубовика.",
@@ -169,7 +172,7 @@ const ru = {
     faqTitle: "Частые вопросы",
     startTitle: "Начните обучение",
     startText:
-      "Оставьте заявку — расскажем о курсах, подберём программу под вашу отрасль и подскажем удобный способ оплаты. Онлайн-оплата не требуется.",
+      "Оставьте заявку — расскажем о курсах, подберём программу под вашу отрасль и подскажем удобный способ оплаты — картой онлайн или по счёту.",
     writeWhatsapp: "Написать в WhatsApp",
     writeTelegram: "Написать в Telegram",
     writeViber: "Написать в Viber",
@@ -211,6 +214,27 @@ const ru = {
     submitOffline: "Отправить запрос",
     submitB2b: "Получить расчёт",
     submitB2c: "Оставить заявку",
+  },
+  /**
+   * Подписи состава программы на карточке каталога. Хронометраж рядом с ценой
+   * провоцирует считать стоимость минуты видео — поэтому рядом перечислено, что
+   * ещё входит в курс.
+   */
+  catalogCard: {
+    lessons: (n: number) => {
+      const mod10 = n % 10;
+      const mod100 = n % 100;
+      const word =
+        mod10 === 1 && mod100 !== 11
+          ? "урок"
+          : mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)
+            ? "урока"
+            : "уроков";
+      return `${n} ${word}`;
+    },
+    ai: "AI-тренажёр и наставник",
+    certificate: "Тесты и сертификат",
+    cta: "Смотреть курс",
   },
   cta: {
     enroll: "Записаться на курс",
@@ -277,8 +301,10 @@ const kk = {
     relatedNote: "Сабақтас тақырыптардағы бағдарламалар — сату дағдыңызды күшейтіңіз.",
     trainer: "Сіздің тренеріңіз",
     trainerMore: "Тренер туралы толығырақ →",
-    noOnlinePayment: "Онлайн төлеудің қажеті жоқ",
+    noOnlinePayment: "Төлем өтінімнен кейін: шот немесе деректемелерді жібереміз",
     certificate: "Аяқтағаннан кейін сертификат",
+    simulator: "Клиент тренажёрі және дауыстық рөлдік ойын",
+    materials: "Кабинетте конспект, карточкалар және скрипттер",
     subtitles: "4 тілде субтитрлер",
     courseLanguage: "Курс орыс тілінде",
     subtitleLanguages: "Субтитрлер: орысша, қазақша, ағылшынша, өзбекше",
@@ -421,6 +447,12 @@ const kk = {
     submitB2b: "Есеп алу",
     submitB2c: "Өтінім қалдыру",
   },
+  catalogCard: {
+    lessons: (n: number) => `${n} сабақ`,
+    ai: "AI-жаттықтырғыш және тәлімгер",
+    certificate: "Тесттер және сертификат",
+    cta: "Курсты қарау",
+  },
   cta: {
     enroll: "Курсқа жазылу",
     enrolled: "Сіз бұл курсқа жазылғансыз",
@@ -484,8 +516,10 @@ const uz = {
     relatedNote: "Yaqin mavzulardagi dasturlar — sotuv ko'nikmangizni kuchaytiring.",
     trainer: "Sizning treneringiz",
     trainerMore: "Trener haqida batafsil →",
-    noOnlinePayment: "Onlayn to'lash shart emas",
+    noOnlinePayment: "To'lov arizadan keyin: hisob yoki rekvizitlarni yuboramiz",
     certificate: "Tugatgach sertifikat",
+    simulator: "Mijoz trenajyori va ovozli rolpley",
+    materials: "Kabinetda konspekt, kartochkalar va skriptlar",
     subtitles: "4 tilda subtitrlar",
     courseLanguage: "Kurs rus tilida",
     subtitleLanguages: "Subtitrlar: ruscha, qozoqcha, inglizcha, o'zbekcha",
@@ -627,6 +661,12 @@ const uz = {
     submitOffline: "So'rov yuborish",
     submitB2b: "Hisob-kitob olish",
     submitB2c: "Ariza qoldirish",
+  },
+  catalogCard: {
+    lessons: (n: number) => `${n} ta dars`,
+    ai: "AI-trenajyor va murabbiy",
+    certificate: "Testlar va sertifikat",
+    cta: "Kursni ko'rish",
   },
   cta: {
     enroll: "Kursga yozilish",

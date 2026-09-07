@@ -123,6 +123,77 @@ export const businessUz = {
     includesAny:
       "Narxga tanlangan kurslarga bir yillik kirish, hisobotli kompaniya kabineti va har bir xodimga AI-trenajyorlar kiradi.",
   },
+  academy: {
+    eyebrow: "Korporativ sotuv akademiyasi",
+    title: "Bu — kirishlar to'plami emas, bo'limni o'qitish tizimi",
+    lifecycle: [
+      "Yangi xodim ishga chiqadi",
+      "HR kirish kodini beradi",
+      "Xodim o'z sohasi dasturini o'taydi",
+      "AI-trenajyor e'tirozlarni har kuni mashq qildiradi",
+      "Rahbar kompaniya kabinetida progressni ko'radi",
+      "Xodim yakuniy attestatsiyani topshiradi",
+    ],
+    alternativesTitle: "Nima bilan solishtiriladi",
+    alternatives: [
+      {
+        title: "Ichki trener",
+        body: "Maosh, ta'til va ishdan bo'shash — metodika ham u bilan ketadi. Akademiya kompaniyada qoladi.",
+      },
+      {
+        title: "Mazmunsiz LMS",
+        body: "Tizim sotib olinadi, kurslarni esa kimdir yaratib, yangilab turishi kerak. Bu yerda kurslar tayyor.",
+      },
+      {
+        title: "Yiliga bir marta trening",
+        body: "Ikki kunlik zarba bir oyda unutiladi. Platforma ko'nikmani yil bo'yi ushlab turadi.",
+      },
+      {
+        title: "Korporativ universitet",
+        body: "Byudjeti va shtati bor alohida loyiha. Bu yerda o'sha kontur: dastur, amaliyot, attestatsiya, hisobotlar — shtatsiz.",
+      },
+    ],
+  },
+  upsell: {
+    title: "Akademiyaga nima qo'shiladi",
+    subtitle:
+      "Bazaviy litsenziya o'qish va amaliyotni qoplaydi. Qolgani kompaniya vazifalariga qarab ulanadi va alohida hisoblanadi.",
+    items: [
+      {
+        title: "O'qishdan oldingi ko'nikma diagnostikasi",
+        body: "Bo'limning kirish darajasini o'lchash: qaysi mavzularni birinchi qo'yish kerakligi ko'rinadi.",
+      },
+      {
+        title: "Trener bilan onlayn uchrashuvlar",
+        body: "Vitaliy Dubovik bilan kirish va yakuniy sessiyalar: kompaniya holatlarini tahlil qilish.",
+      },
+      {
+        title: "Sizning mahsulotingiz uchun skriptlar",
+        body: "Mavhum misollar emas, sizning bitim tsiklingizga yozilgan nutq modullari.",
+      },
+      {
+        title: "Kompaniya keyslari AI-trenajyorda",
+        body: "Mijoz simulyatori sizning bitimlaringiz bilan gapiradi: o'sha mahsulot, o'sha e'tirozlar, o'sha narx.",
+      },
+      {
+        title: "Yakuniy attestatsiya",
+        body: "O'tish bali va qayta topshirish imkoni bo'lgan imtihon — natijasi rahbar hisobotida.",
+      },
+      {
+        title: "HRD uchun hisobot",
+        body: "Bo'lim bo'yicha jamlanma: kim o'tdi, natijalar dinamikasi, qaysi mavzu cho'kkan.",
+      },
+      {
+        title: "Oflayn trening",
+        body: "Trener bilan jonli kun: platforma treningda tahlil qilinganni mustahkamlaydi.",
+      },
+      {
+        title: "Rahbarlarni baholash",
+        body: "Sotuv bo'limi rahbarlarining boshqaruv va muzokara kompetensiyalarini baholash.",
+      },
+    ],
+    note: "Qo'shimchalar narxi vazifaga qarab hisoblanadi — uni quyidagi arizada yozing.",
+  },
   cta: {
     format: "O'quv formati",
     online: "Onlayn kirish",

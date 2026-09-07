@@ -34,9 +34,18 @@ const GROUPS: { label: string; items: NavItem[] }[] = [
     label: "Контент",
     items: [
       { href: "/admin/courses", label: "Курсы", hint: "Публикация и метаданные" },
-      { href: "/admin/reviews", label: "Отзывы с карт", hint: "Цитаты с Яндекс и Google Карт" },
+      {
+        href: "/admin/reviews",
+        label: "Отзывы",
+        hint: "Отзывы учеников, с карт и из соцсетей",
+      },
       { href: "/admin/certificates", label: "Сертификаты", hint: "Выдача и проверка" },
       { href: "/admin/seo", label: "SEO", hint: "Метаданные по доменам и языкам" },
+      {
+        href: "/admin/seo/landings",
+        label: "Посадочные",
+        hint: "Страницы под кластеры запросов",
+      },
     ],
   },
   {

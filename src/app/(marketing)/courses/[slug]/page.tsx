@@ -13,7 +13,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { db } from "@/lib/db";
-import { accessDurationLabel } from "@/lib/pricing";
+import { accessDurationLabel, entryPackTiyn, quoteSeats } from "@/lib/pricing";
 import { promoEndsAt, promoEndsLabel, salePrice } from "@/lib/pricing/promo";
 import { formatPrice, coverPublicUrl } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -85,7 +85,9 @@ async function getCourse(slug: string) {
         },
       },
       reviews: {
-        where: { autoModeration: "VALIDATED" },
+        // publicConsent — согласие ученика на публикацию под своим именем (99-З):
+        // без него отзыв остаётся только у владельца в /admin/reviews.
+        where: { autoModeration: "VALIDATED", publicConsent: true },
         orderBy: { createdAt: "desc" },
         take: 6,
         select: { id: true, userName: true, rating: true, text: true },
@@ -145,13 +147,19 @@ export default async function CoursePage({
   const hoursLabel = localizedDuration(course.hoursLabel, locale);
 
   // Агрегат рейтинга по всем прошедшим модерацию отзывам (для звёзд в выдаче)
-  const [ratingAgg, related] = await Promise.all([
+  const [ratingAgg, related, b2bCourses] = await Promise.all([
     db.review.aggregate({
-      where: { courseId: course.id, autoModeration: "VALIDATED" },
+      where: { courseId: course.id, autoModeration: "VALIDATED", publicConsent: true },
       _avg: { rating: true },
       _count: true,
     }),
     getRelatedCards(course.id),
+    // Цена корпоративного места — та же база, что на главной и /business:
+    // набор «отраслевой курс + общие», иначе тизеры показывали бы разные суммы.
+    db.course.findMany({
+      where: { status: "PUBLISHED", inDevelopment: false },
+      select: { priceTiyn: true, audience: true },
+    }),
   ]);
 
   // Связанные курсы — те же витринные подписи: название и отрасль на языке
@@ -187,6 +195,15 @@ export default async function CoursePage({
     locale,
   );
   const sale = salePrice(course.priceTiyn);
+  // Корпоративное место: тот же расчёт, что в тизере на главной (20 мест, та же
+  // акция). Цена одного курса рядом с «от X за сотрудника в год» переводит
+  // разговор с розничного чека на корпоративный — там средний чек кратно выше.
+  const b2bPerSeat = buildDisplayPrice(
+    salePrice(quoteSeats(20, entryPackTiyn(b2bCourses)).pricePerSeatTiyn).tiyn,
+    ratesPayload.rates,
+    site?.currency ?? "byn",
+    locale,
+  );
   // Оплата картой идёт в магазине на activesales.by (эквайринг Альфа-Банка) и
   // работает только для белорусской витрины: цена там в BYN, а договор эквайринга
   // заключён на белорусскую площадку (docs/WOO-INTEGRATION.md). На .kz/.ru курс
@@ -486,10 +503,22 @@ export default async function CoursePage({
                   ) : null}
                 </div>
 
+                {/*
+                  Состав, а не хронометраж: рядом с ценой человек иначе считает
+                  стоимость минуты видео, хотя покупает тренажёр и разборы.
+                */}
                 <ul className="mt-5 space-y-1.5 border-t border-white/10 pt-4 text-sm text-white/60">
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="size-3.5 text-amber-400" />
                     AI-наставник 24/7
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="size-3.5 text-amber-400" />
+                    {t.course.simulator}
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="size-3.5 text-amber-400" />
+                    {t.course.materials}
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="size-3.5 text-amber-400" />
@@ -673,6 +702,35 @@ export default async function CoursePage({
           </div>
         </section>
       ) : null}
+
+      {/* Корпоративный тизер: тот же курс для отдела продаж. Форма здесь не
+          дублируется — заявки компаний собирает /business, чтобы не смешивать
+          их с розничными и не размывать выдачу корпоративной страницы. */}
+      <section className="mx-auto max-w-6xl px-4 pb-4 pt-10">
+        <Reveal>
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-6">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-wide text-brand">
+                {t.b2b.badge}
+              </p>
+              <h2 className="mt-1 text-xl font-bold">{t.b2b.title}</h2>
+              <p className="mt-1.5 max-w-2xl text-sm text-foreground/65">{t.b2b.text}</p>
+              <p className="mt-2 text-sm text-foreground/80">
+                <span className="text-lg font-bold">
+                  {t.b2b.priceFrom} {b2bPerSeat.main}
+                </span>{" "}
+                {t.b2b.perSeatYear}
+              </p>
+            </div>
+            <Link
+              href="/business"
+              className={cn(buttonVariants({ variant: "brand", size: "lg" }))}
+            >
+              {t.b2b.calculate}
+            </Link>
+          </div>
+        </Reveal>
+      </section>
 
       {/* CTA — форма заявки (или «вы уже записаны» для студента с доступом) */}
       <section id="zayavka" className="mx-auto max-w-6xl px-4 pb-20 pt-4">

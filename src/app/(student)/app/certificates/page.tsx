@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { isEnrollmentActive } from "@/lib/access";
 import { CERTIFICATE_REQUEST_EMAIL } from "@/lib/certificates/constants";
 import { CertificateCelebration } from "@/components/student/certificate-celebration";
+import { CertificateReviewForm } from "@/components/student/certificate-review-form";
 
 /** Салютуем только свежим сертификатам: иначе первый заход после релиза
  *  осыпал бы конфетти всех, кто получил документ месяцы назад. */
@@ -118,6 +119,22 @@ export default async function CertificatesPage() {
     };
   });
 
+  // Сертификат выдаётся после отзыва о курсе: он же наполняет витрину живыми
+  // отзывами. Смотрим, по каким курсам отзыв уже оставлен, и есть ли у ученика
+  // членство в организации (у работников компаний имя не спрашиваем — ПДн).
+  const readyCourseIds = certs.filter((c) => c.status !== "ISSUED").map((c) => c.courseId);
+  const [reviewedRows, membership] = await Promise.all([
+    readyCourseIds.length
+      ? db.review.findMany({
+          where: { userId: session.user.id, courseId: { in: readyCourseIds } },
+          select: { courseId: true },
+        })
+      : Promise.resolve([]),
+    db.orgMembership.findFirst({ where: { userId: session.user.id }, select: { id: true } }),
+  ]);
+  const reviewedCourseIds = new Set(reviewedRows.map((r) => r.courseId));
+  const isOrgLearner = membership !== null;
+
   const now = Date.now();
   const freshlyIssued = certs
     .filter(
@@ -186,21 +203,30 @@ export default async function CertificatesPage() {
                 </div>
 
                 {!issued ? (
-                  <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-amber-500/20 bg-amber-500/[0.04] p-4 text-sm">
-                    <Mail className="mt-0.5 size-4 shrink-0 text-amber-600" />
-                    <p className="text-foreground/80">
-                      Для получения сертификата отправьте ваше ФИО на почту{" "}
-                      <a
-                        href={`mailto:${CERTIFICATE_REQUEST_EMAIL}?subject=${encodeURIComponent(
-                          `Сертификат: ${c.course.title}`,
-                        )}`}
-                        className="font-semibold text-amber-700 underline underline-offset-2 dark:text-amber-400"
-                      >
-                        {CERTIFICATE_REQUEST_EMAIL}
-                      </a>
-                      . Мы подготовим сертификат и вышлем его вам.
-                    </p>
-                  </div>
+                  reviewedCourseIds.has(c.courseId) ? (
+                    <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-amber-500/20 bg-amber-500/[0.04] p-4 text-sm">
+                      <Mail className="mt-0.5 size-4 shrink-0 text-amber-600" />
+                      <p className="text-foreground/80">
+                        <span className="font-semibold">Шаг 2.</span> Спасибо за отзыв! Теперь
+                        отправьте ваше ФИО на почту{" "}
+                        <a
+                          href={`mailto:${CERTIFICATE_REQUEST_EMAIL}?subject=${encodeURIComponent(
+                            `Сертификат: ${c.course.title}`,
+                          )}`}
+                          className="font-semibold text-amber-700 underline underline-offset-2 dark:text-amber-400"
+                        >
+                          {CERTIFICATE_REQUEST_EMAIL}
+                        </a>
+                        . Мы подготовим сертификат и вышлем его вам.
+                      </p>
+                    </div>
+                  ) : (
+                    <CertificateReviewForm
+                      courseId={c.courseId}
+                      courseTitle={c.course.title}
+                      isOrgLearner={isOrgLearner}
+                    />
+                  )
                 ) : null}
               </div>
             );

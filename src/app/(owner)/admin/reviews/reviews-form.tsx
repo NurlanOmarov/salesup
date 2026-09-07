@@ -10,7 +10,15 @@ import {
 
 export interface ExternalReviewRow {
   id: string;
-  source: "YANDEX" | "GOOGLE" | "OTHER";
+  source:
+    | "YANDEX"
+    | "GOOGLE"
+    | "INSTAGRAM"
+    | "FACEBOOK"
+    | "VK"
+    | "YOUTUBE"
+    | "TELEGRAM"
+    | "OTHER";
   author: string;
   text: string;
   rating: number | null;
@@ -77,6 +85,11 @@ function ReviewCard({ row }: { row: ExternalReviewRow | null }) {
           >
             <option value="YANDEX">Яндекс Карты</option>
             <option value="GOOGLE">Google Карты</option>
+            <option value="INSTAGRAM">Instagram</option>
+            <option value="FACEBOOK">Facebook</option>
+            <option value="VK">ВКонтакте</option>
+            <option value="YOUTUBE">YouTube</option>
+            <option value="TELEGRAM">Telegram</option>
             <option value="OTHER">Другая</option>
           </select>
         </div>

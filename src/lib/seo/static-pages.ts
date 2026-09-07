@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { buildSafe } from "@/lib/utils";
 import { GLOBAL_SCOPE, scopeChain } from "@/lib/seo/scope";
 import { currentSite } from "@/lib/seo/site";
+import { countryPageSeo } from "@/lib/seo/country-seo";
 import { getLocale } from "@/i18n/server";
 import { messagesFor } from "@/i18n/messages";
 import { DEFAULT_LOCALE } from "@/i18n/routing";
@@ -133,11 +134,20 @@ export async function getStaticPageSeo(path: StaticPagePath): Promise<ResolvedSt
       : (messagesFor(locale).staticSeo as Record<string, { title: string; description: string }>)[
           path
         ];
+  // Страновой дефолт с гео («Курсы по продажам в Астане и Казахстане»): слабее
+  // ручного значения из админки, но сильнее общего фолбэка страницы, иначе на
+  // всех четырёх доменах стоял бы один и тот же заголовок (см. country-seo.ts).
+  const geo = countryPageSeo(path, site?.code, locale);
   return {
-    title: (pick("title") as string | undefined) || localized?.title || def.fallbackTitle,
+    title:
+      (pick("title") as string | undefined) ||
+      localized?.title ||
+      geo?.defaultTitle ||
+      def.fallbackTitle,
     description:
       (pick("description") as string | undefined) ||
       localized?.description ||
+      geo?.defaultDescription ||
       def.fallbackDescription,
     noindex: noindexRow ? noindexRow.noindex : def.defaultNoindex,
     body: (pick("body") as string | undefined) || null,

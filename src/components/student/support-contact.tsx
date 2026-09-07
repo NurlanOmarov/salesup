@@ -34,12 +34,13 @@ export async function SupportContact({ variant = "card" }: { variant?: "card" | 
       icon: MessagesSquare,
       cls: "text-violet-600",
     },
-    phone && {
-      href: phoneHref,
-      label: phone,
-      icon: Phone,
-      cls: "text-amber-600",
-    },
+    phone &&
+      phoneHref && {
+        href: phoneHref,
+        label: phone,
+        icon: Phone,
+        cls: "text-amber-600",
+      },
   ].filter(Boolean) as { href: string; label: string; icon: typeof Phone; cls: string }[];
 
   const buttons = (

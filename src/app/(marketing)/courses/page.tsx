@@ -10,6 +10,7 @@ import { getStaticPageSeo } from "@/lib/seo/static-pages";
 import { Reveal } from "@/components/landing/reveal";
 import type { CourseCardData } from "@/components/catalog/course-card";
 import { CoursesCatalog } from "@/components/catalog/courses-catalog";
+import { getPublishedLandings } from "@/lib/seo/landings";
 import { coursesPageContent } from "@/content/courses-page-content";
 import { currentSite, pageAlternates, siteOrigin } from "@/lib/seo/site";
 import { getLocale } from "@/i18n/server";
@@ -55,7 +56,13 @@ async function getCourses(main: MainCurrency, locale: Locale): Promise<CourseCar
             oldPriceTiyn: true,
             hoursLabel: true,
             inDevelopment: true,
+            certificateEnabled: true,
             _count: { select: { modules: true } },
+            // Уроки нужны карточке цифрой «N уроков»: покупатель сравнивает
+            // курсы по объёму программы, а не по хронометражу видео.
+            modules: {
+              select: { _count: { select: { lessons: { where: { status: "PUBLISHED" } } } } },
+            },
             // Перевод карточки на язык витрины (kk/uz); для русского — пусто.
             translations:
               locale === DEFAULT_LOCALE
@@ -73,13 +80,16 @@ async function getCourses(main: MainCurrency, locale: Locale): Promise<CourseCar
                   },
           },
         }),
-      [] as Array<Omit<CourseCardData, "prices">>,
+      // Тип строки выводится из самого запроса: перечислять поля второй раз
+      // здесь незачем — при добавлении поля в select фолбэк не расходится.
+      [],
     ),
     currency.getRates(),
   ]);
   const rates = ratesPayload.rates;
   return rows.map((r) => {
     const t = localizedCard(r, locale);
+    const lessonCount = r.modules.reduce((sum, m) => sum + m._count.lessons, 0);
     // Акция применяется здесь, а не в запросе: в БД лежит полный прайс.
     return {
       ...r,
@@ -87,6 +97,7 @@ async function getCourses(main: MainCurrency, locale: Locale): Promise<CourseCar
       // Отрасль и длительность — тоже витринные подписи, переводим и их.
       industry: localizedIndustry(r.industry, locale),
       hoursLabel: localizedDuration(r.hoursLabel, locale),
+      lessonCount,
       prices: buildDisplayPrice(r.priceTiyn, rates, main, locale),
     };
   });
@@ -100,6 +111,8 @@ export default async function CoursesPage() {
   const { audience, howItWorks, difference, faq } = coursesPageContent(locale);
   const t = messagesFor(locale);
   const courses = await getCourses(site?.currency ?? "byn", locale);
+  // Посадочные показываем только на русской витрине: тексты кластеров русские.
+  const landings = locale === DEFAULT_LOCALE ? await getPublishedLandings() : [];
 
   const siteUrl = await siteOrigin();
   const listJsonLd = {
@@ -256,6 +269,28 @@ export default async function CoursesPage() {
           ))}
         </div>
       </section>
+
+      {/* Разборы по темам: SEO-посадочные под кластеры запросов. Ссылки нужны
+          не только человеку — без них страницы остаются сиротами и медленно
+          попадают в индекс (docs/SEO-LANDINGS.md). */}
+      {landings.length > 0 ? (
+        <section className="mx-auto mt-16 max-w-6xl">
+          <h2 className="text-2xl font-bold">Разборы по темам</h2>
+          <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {landings.map((l) => (
+              <li key={l.slug}>
+                <Link
+                  href={`/obuchenie/${l.slug}`}
+                  className="block h-full rounded-xl border border-foreground/10 p-4 transition-colors hover:border-brand/40"
+                >
+                  <span className="font-medium">{l.h1}</span>
+                  <span className="mt-1 block text-sm text-foreground/60">{l.description}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <Reveal>
         <div className="mt-16 rounded-2xl border border-foreground/10 p-6 text-center sm:p-8">

@@ -70,11 +70,15 @@ export async function SiteFooter() {
         <div className="text-sm">
           <p className="font-semibold text-white/90">{t.footer.contacts}</p>
           <ul className="mt-2 space-y-1 text-white/60">
-            <li>
-              <a href={phoneHref} className="transition-colors hover:text-brand-light">
-                {phone}
-              </a>
-            </li>
+            {/* Телефон страны домена: в Узбекистане локального номера нет —
+                строка не рисуется, связь через Telegram ниже. */}
+            {phone && phoneHref ? (
+              <li>
+                <a href={phoneHref} className="transition-colors hover:text-brand-light">
+                  {phone}
+                </a>
+              </li>
+            ) : null}
             {/*
               Почта для обращений — на белорусском домене: адрес в зоне .by,
               совпадает с реквизитами в оферте и политике (ст. 7 Закона РБ

@@ -3,9 +3,10 @@ import { MessageSquareQuote } from "lucide-react";
 import { db } from "@/lib/db";
 import { buildSafe } from "@/lib/utils";
 import { ExternalReviewsForm, type ExternalReviewRow } from "./reviews-form";
+import { StudentReviews, type StudentReviewRow } from "./student-reviews";
 
 export const metadata: Metadata = {
-  title: "Отзывы с карт",
+  title: "Отзывы",
   robots: { index: false },
 };
 
@@ -21,14 +22,58 @@ export const dynamic = "force-dynamic";
  * утверждением, а не рекламным.
  */
 export default async function AdminReviewsPage() {
-  const rows = await buildSafe(
-    () => db.externalReview.findMany({ orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }] }),
-    [] as ExternalReviewRow[],
-  );
+  const [rows, studentRows] = await Promise.all([
+    buildSafe(
+      () => db.externalReview.findMany({ orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }] }),
+      [] as ExternalReviewRow[],
+    ),
+    buildSafe(
+      () =>
+        db.review.findMany({
+          orderBy: { createdAt: "desc" },
+          take: 100,
+          select: {
+            id: true,
+            userName: true,
+            rating: true,
+            text: true,
+            autoModeration: true,
+            moderationNote: true,
+            publicConsent: true,
+            createdAt: true,
+            course: { select: { title: true } },
+          },
+        }),
+      [],
+    ),
+  ]);
+
+  const students: StudentReviewRow[] = studentRows.map((r) => ({
+    id: r.id,
+    courseTitle: r.course.title,
+    userName: r.userName,
+    rating: r.rating,
+    text: r.text,
+    status: r.autoModeration,
+    moderationNote: r.moderationNote,
+    publicConsent: r.publicConsent,
+    createdAt: r.createdAt.toLocaleDateString("ru-RU"),
+  }));
 
   return (
     <main>
-      <h1 className="text-2xl font-bold">Отзывы с карт</h1>
+      <h1 className="text-2xl font-bold">Отзывы</h1>
+      <section className="mt-6">
+        <h2 className="text-lg font-semibold">Отзывы учеников</h2>
+        <p className="mt-1 max-w-2xl text-sm text-foreground/60">
+          Ученик оставляет отзыв, когда закончил курс и запрашивает сертификат. Хороший
+          текст публикуется на странице курса автоматически; сюда попадает спорное —
+          короткое, со ссылкой или отклонённое автопроверкой.
+        </p>
+        <StudentReviews rows={students} />
+      </section>
+
+      <h2 className="mt-10 text-lg font-semibold">Отзывы с карт и из соцсетей</h2>
       <p className="mt-1 max-w-2xl text-foreground/60">
         Скопируйте отзыв с карточки организации: текст без правок, имя автора как на
         площадке и ссылку на карточку. Отзывы показываются лентой на главной странице

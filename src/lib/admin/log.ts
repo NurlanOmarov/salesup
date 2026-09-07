@@ -25,6 +25,11 @@ export type AdminAction =
   | "review.external.create" // отзыв с Яндекс/Google Карт, перенесённый вручную
   | "review.external.update"
   | "review.external.delete"
+  | "review.student.status" // публикация/скрытие отзыва ученика владельцем
+  | "review.student.delete"
+  | "seo.landing.create" // посадочные под кластеры запросов (docs/SEO-LANDINGS.md)
+  | "seo.landing.update"
+  | "seo.landing.delete"
   | "seo.redirect.create"
   | "seo.redirect.update"
   | "seo.redirect.delete"

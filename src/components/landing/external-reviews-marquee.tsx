@@ -18,7 +18,16 @@ export interface ExternalReviewCard {
   text: string;
   /** 1–5, если оценка известна: у своих отзывов есть всегда, у карт — не всегда. */
   rating: number | null;
-  source: "PLATFORM" | "YANDEX" | "GOOGLE" | "OTHER";
+  source:
+    | "PLATFORM"
+    | "YANDEX"
+    | "GOOGLE"
+    | "INSTAGRAM"
+    | "FACEBOOK"
+    | "VK"
+    | "YOUTUBE"
+    | "TELEGRAM"
+    | "OTHER";
   url: string | null;
 }
 
@@ -26,6 +35,11 @@ const SOURCE_LABEL: Record<ExternalReviewCard["source"], string> = {
   PLATFORM: "Отзыв ученика",
   YANDEX: "Яндекс Карты",
   GOOGLE: "Google Карты",
+  INSTAGRAM: "Instagram",
+  FACEBOOK: "Facebook",
+  VK: "ВКонтакте",
+  YOUTUBE: "YouTube",
+  TELEGRAM: "Telegram",
   OTHER: "Отзыв",
 };
 

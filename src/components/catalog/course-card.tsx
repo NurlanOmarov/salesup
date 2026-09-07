@@ -1,8 +1,12 @@
+"use client";
+
 import { Link } from "@/components/i18n/link";
 import Image from "next/image";
-import { Clock } from "lucide-react";
+import { Clock, PlayCircle, Bot, Award } from "lucide-react";
 import { formatPrice, coverPublicUrl, cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
+import { useLocale } from "@/i18n/client";
+import { messagesFor } from "@/i18n/messages";
 
 const industryGradients: Record<string, string> = {
   "Туризм": "from-sky-700 via-sky-800 to-slate-900",
@@ -40,6 +44,10 @@ export type CourseCardData = {
   priceTiyn: number;
   oldPriceTiyn: number | null;
   hoursLabel: string | null;
+  /** Опубликованных уроков в курсе — цифра состава программы на карточке. */
+  lessonCount?: number;
+  /** Выдаётся ли сертификат — часть состава, а не украшение. */
+  certificateEnabled?: boolean;
   /** Бейдж «В разработке» — управляется в админке (настройки курса). */
   inDevelopment: boolean;
   /** Предрассчитанные строки цен в 3 валютах (BYN основная, KZT/RUB — конвертация по курсу НБ РК). */
@@ -48,6 +56,8 @@ export type CourseCardData = {
 };
 
 export function CourseCard({ course }: { course: CourseCardData }) {
+  // Подписи состава — на языке витрины (казахская и узбекская версии каталога).
+  const t = messagesFor(useLocale()).catalogCard;
   const gradient =
     course.industry && industryGradients[course.industry]
       ? industryGradients[course.industry]
@@ -96,6 +106,30 @@ export function CourseCard({ course }: { course: CourseCardData }) {
           </p>
         ) : null}
 
+        {/*
+          Состав программы рядом с хронометражом. Одна строка «38 минут» рядом с
+          ценой заставляет считать стоимость минуты видео, хотя покупатель
+          получает тренажёр, разборы и проверку знаний — их и называем.
+        */}
+        <ul className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-xs text-foreground/55">
+          {course.lessonCount ? (
+            <li className="inline-flex items-center gap-1">
+              <PlayCircle className="size-3.5 text-brand" />
+              {t.lessons(course.lessonCount)}
+            </li>
+          ) : null}
+          <li className="inline-flex items-center gap-1">
+            <Bot className="size-3.5 text-brand" />
+            {t.ai}
+          </li>
+          {course.certificateEnabled !== false ? (
+            <li className="inline-flex items-center gap-1">
+              <Award className="size-3.5 text-brand" />
+              {t.certificate}
+            </li>
+          ) : null}
+        </ul>
+
         <div className="mt-auto pt-4 flex items-end justify-between gap-2">
           <div>
             {/*
@@ -142,7 +176,7 @@ export function CourseCard({ course }: { course: CourseCardData }) {
           aria-hidden
           className={cn(buttonVariants({ variant: "brand", size: "sm" }), "mt-4 w-full")}
         >
-          Забронировать
+          {t.cta}
         </span>
       </div>
     </Link>

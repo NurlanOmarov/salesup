@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { buildSafe } from "@/lib/utils";
 import { getStaticPageSeo } from "@/lib/seo/static-pages";
 import { siteOrigin } from "@/lib/seo/site";
+import { getPublishedLandings } from "@/lib/seo/landings";
 
 // Карта строится под хост запроса (мультидомен): на каждом домене свой sitemap
 // с его же URL. Из-за headers() маршрут динамический — ответ кэширует nginx.
@@ -54,5 +55,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
-  return [...staticPages, ...coursePages];
+  // SEO-посадочные под кластеры запросов: у каждой свой URL и свой ответ,
+  // поэтому в карте они наравне с курсами (docs/SEO-LANDINGS.md).
+  const landings = await getPublishedLandings();
+  const landingPages: MetadataRoute.Sitemap = landings
+    .filter((l) => !l.noindex)
+    .map((l) => ({
+      url: `${base}/obuchenie/${l.slug}`,
+      lastModified: l.updatedAt,
+      changeFrequency: "monthly",
+      priority: 0.6,
+    }));
+
+  return [...staticPages, ...coursePages, ...landingPages];
 }

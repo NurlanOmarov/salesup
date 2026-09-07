@@ -12,7 +12,16 @@ import { writeAdminLog } from "@/lib/admin/log";
  * их условия, поэтому текст, автор и ссылка вводятся здесь.
  */
 const reviewSchema = z.object({
-  source: z.enum(["YANDEX", "GOOGLE", "OTHER"]),
+  source: z.enum([
+    "YANDEX",
+    "GOOGLE",
+    "INSTAGRAM",
+    "FACEBOOK",
+    "VK",
+    "YOUTUBE",
+    "TELEGRAM",
+    "OTHER",
+  ]),
   author: z.string().trim().min(1, "Укажите автора").max(120),
   text: z.string().trim().min(10, "Слишком короткий отзыв").max(2000),
   // Оценка необязательна: в выгрузке с карт её может не быть, а придумывать нельзя.
@@ -67,6 +76,56 @@ export const deleteExternalReviewAction = safeAction(
       meta: { id },
     });
     revalidatePath("/");
+    revalidatePath("/admin/reviews");
+    return { ok: true as const };
+  },
+);
+
+/**
+ * Отзывы учеников модерируются автоматически (lib/reviews/moderation): сюда
+ * попадают только спорные — короткие, со ссылками или отклонённые. Владелец
+ * решает судьбу одним кликом, очереди задач это не создаёт: без его действия
+ * отзыв просто не показывается.
+ */
+const studentStatusSchema = z.object({
+  id: z.string().min(1),
+  status: z.enum(["VALIDATED", "FAILED"]),
+});
+
+export const setStudentReviewStatusAction = safeAction(
+  { schema: studentStatusSchema, auth: "owner" },
+  async ({ id, status }, { session }) => {
+    const row = await db.review.update({
+      where: { id },
+      data: { autoModeration: status },
+      select: { course: { select: { slug: true } } },
+    });
+    await writeAdminLog({
+      actorId: session!.user.id,
+      action: "review.student.status",
+      meta: { id, status },
+    });
+    revalidatePath("/");
+    revalidatePath(`/courses/${row.course.slug}`);
+    revalidatePath("/admin/reviews");
+    return { ok: true as const };
+  },
+);
+
+export const deleteStudentReviewAction = safeAction(
+  { schema: z.object({ id: z.string().min(1) }), auth: "owner" },
+  async ({ id }, { session }) => {
+    const row = await db.review.delete({
+      where: { id },
+      select: { course: { select: { slug: true } } },
+    });
+    await writeAdminLog({
+      actorId: session!.user.id,
+      action: "review.student.delete",
+      meta: { id },
+    });
+    revalidatePath("/");
+    revalidatePath(`/courses/${row.course.slug}`);
     revalidatePath("/admin/reviews");
     return { ok: true as const };
   },

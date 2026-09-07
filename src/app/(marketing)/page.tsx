@@ -86,7 +86,8 @@ async function getReviews(): Promise<ReviewItem[]> {
   return buildSafe(
     () =>
       db.review.findMany({
-        where: { autoModeration: "VALIDATED" },
+        // Только отзывы с согласием на публикацию под именем (99-З).
+        where: { autoModeration: "VALIDATED", publicConsent: true },
         orderBy: { createdAt: "desc" },
         take: 8,
         select: { id: true, userName: true, rating: true, text: true },

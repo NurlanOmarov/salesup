@@ -3,8 +3,10 @@ import { unstable_cache, revalidateTag } from "next/cache";
 import type { SeoSettings } from "@prisma/client";
 import { db } from "@/lib/db";
 import { buildSafe } from "@/lib/utils";
-import { applyOverride, scopeChain } from "@/lib/seo/scope";
+import { applyOverride, scopeChain, GLOBAL_SCOPE } from "@/lib/seo/scope";
 import { currentSite } from "@/lib/seo/site";
+import { countrySeoDefaults } from "@/lib/seo/country-seo";
+import { countryContacts } from "@/lib/seo/country-contacts";
 import { DEFAULT_SITE } from "@/lib/seo/site-hosts";
 import { getLocale } from "@/i18n/server";
 import { messagesFor } from "@/i18n/messages";
@@ -92,8 +94,8 @@ export async function getSeoSettings(): Promise<SeoSettings> {
     currentSite(),
     getLocale(),
   ]);
-  const hasLocaleDefaults = locale !== DEFAULT_LOCALE;
-  if (!overrides.length && !hasLocaleDefaults) return base;
+  const country = countrySeoDefaults(site?.code, locale);
+  if (!overrides.length && locale === DEFAULT_LOCALE && !country) return base;
 
   let result = base;
   // Казахская версия получает свои заголовок и описание из словаря — иначе до
@@ -106,6 +108,9 @@ export async function getSeoSettings(): Promise<SeoSettings> {
       defaultDescription: seo.defaultDescription,
     });
   }
+  // Поверх словаря — страновой заголовок главной («курсы по продажам в Астане
+  // и Казахстане»): уникальный title на каждом домене (см. country-seo.ts).
+  if (country) result = applyOverride(result, country);
   // reverse: сначала общее, затем всё более частное — последнее слово за точным.
   for (const scope of [...scopeChain(site?.code ?? "BY", locale)].reverse()) {
     result = applyOverride(result, overrides.find((o) => o.scope === scope));
@@ -142,9 +147,9 @@ export { socialLinks, socialProfiles } from "./social";
 export { externalRatings } from "./ratings";
 
 export interface SupportContacts {
-  phone: string; // человекочитаемый, "+375 (29) 605-30-32"
-  phoneHref: string; // tel:+375296053032
-  whatsapp: string; // ссылка wa.me
+  phone: string | null; // человекочитаемый, "+375 (29) 605-30-32"; null — в стране номера нет
+  phoneHref: string | null; // tel:+375296053032
+  whatsapp: string | null; // ссылка wa.me; null — WhatsApp в стране не используем
   telegram: string | null; // ссылка t.me (env — редко меняется)
   viber: string | null; // viber://add?number=… — только на белорусском домене
 }
@@ -160,13 +165,32 @@ export interface SupportContacts {
  * Неизвестный хост (dev, превью) считается белорусской витриной: DEFAULT_SITE.
  */
 export async function getSupportContacts(): Promise<SupportContacts> {
-  const [s, site] = await Promise.all([getSeoSettings(), currentSite()]);
-  const digits = s.orgPhone.replace(/\D/g, "");
-  const isBelarus = (site?.code ?? DEFAULT_SITE.code) === "BY";
+  const [s, overrides, site, locale] = await Promise.all([
+    getSeoSettings(),
+    loadOverrides(),
+    currentSite(),
+    getLocale(),
+  ]);
+  const code = site?.code ?? DEFAULT_SITE.code;
+  // Приоритет: точечная настройка страны из /admin/seo → локальный контакт из
+  // кода → общая настройка. Отдельный разбор нужен потому, что общий orgPhone
+  // всегда заполнен: без него казахстанская витрина показывала бы +375.
+  const scoped = [...scopeChain(code, locale)]
+    .filter((sc) => sc !== GLOBAL_SCOPE)
+    .map((sc) => overrides.find((o) => o.scope === sc));
+  const local = countryContacts(code);
+  const phone =
+    scoped.find((o) => o?.orgPhone)?.orgPhone ??
+    (local ? local.phone : s.orgPhone);
+  const whatsapp =
+    scoped.find((o) => o?.supportWhatsapp)?.supportWhatsapp ??
+    (local ? local.whatsapp : s.supportWhatsapp);
+  const digits = phone?.replace(/\D/g, "") ?? "";
+  const isBelarus = code === "BY";
   return {
-    phone: s.orgPhone,
-    phoneHref: `tel:${s.orgPhone.replace(/[^\d+]/g, "")}`,
-    whatsapp: s.supportWhatsapp,
+    phone,
+    phoneHref: phone ? `tel:${phone.replace(/[^\d+]/g, "")}` : null,
+    whatsapp,
     telegram: process.env.NEXT_PUBLIC_SUPPORT_TELEGRAM || null,
     viber: isBelarus && digits ? `viber://add?number=${digits}` : null,
   };
