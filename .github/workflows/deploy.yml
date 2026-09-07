@@ -133,6 +133,18 @@ jobs:
             TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
             TELEGRAM_CHAT_ID=${{ secrets.TELEGRAM_CHAT_ID }}
             NEXT_PUBLIC_SITE_URL=${{ secrets.NEXT_PUBLIC_SITE_URL }}
+            # Оплата курсов (docs/ALFA-PAYMENT-LINKS.md, docs/WOO-INTEGRATION.md).
+            # .env пересоздаётся на каждый деплой, поэтому платёжные секреты живут
+            # в секретах репозитория: правка файла на сервере не переживёт выкатку.
+            # Пусто → приём выключен, эндпоинты отвечают 503.
+            ALFA_CALLBACK_TOKEN=${{ secrets.ALFA_CALLBACK_TOKEN }}
+            ALFA_API_URL=${{ secrets.ALFA_API_URL || 'https://ecom.alfabank.by/payment/rest/' }}
+            ALFA_API_LOGIN=${{ secrets.ALFA_API_LOGIN }}
+            ALFA_API_PASSWORD=${{ secrets.ALFA_API_PASSWORD }}
+            WOO_WEBHOOK_SECRET=${{ secrets.WOO_WEBHOOK_SECRET }}
+            WOO_STORE_URL=${{ secrets.WOO_STORE_URL || 'https://activesales.by' }}
+            WOO_CONSUMER_KEY=${{ secrets.WOO_CONSUMER_KEY }}
+            WOO_CONSUMER_SECRET=${{ secrets.WOO_CONSUMER_SECRET }}
             IMAGE_APP=ghcr.io/nurlanomarov/salesup-app:${{ github.sha }}
             IMAGE_WORKER=ghcr.io/nurlanomarov/salesup-worker:${{ github.sha }}
             EOF

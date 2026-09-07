@@ -68,6 +68,19 @@ services:
       # app только ставит письма в очередь (адресат заявок), сам SMTP не трогает
       LEADS_NOTIFY_EMAIL: ${LEADS_NOTIFY_EMAIL:-omarov.nb@gmail.com}
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+      # Оплата курсов: приём уведомлений об оплате. Переменные перечисляются
+      # явно — без этих строк контейнер их не увидит, и платёжные эндпоинты
+      # ответят 503 «payments disabled», даже когда токен лежит в .env.
+      # Ссылки Альфа-Банка (docs/ALFA-PAYMENT-LINKS.md):
+      ALFA_CALLBACK_TOKEN: ${ALFA_CALLBACK_TOKEN:-}
+      ALFA_API_URL: ${ALFA_API_URL:-https://ecom.alfabank.by/payment/rest/}
+      ALFA_API_LOGIN: ${ALFA_API_LOGIN:-}
+      ALFA_API_PASSWORD: ${ALFA_API_PASSWORD:-}
+      # Магазин WooCommerce (docs/WOO-INTEGRATION.md):
+      WOO_WEBHOOK_SECRET: ${WOO_WEBHOOK_SECRET:-}
+      WOO_STORE_URL: ${WOO_STORE_URL:-https://activesales.by}
+      WOO_CONSUMER_KEY: ${WOO_CONSUMER_KEY:-}
+      WOO_CONSUMER_SECRET: ${WOO_CONSUMER_SECRET:-}
     volumes:
       - media:/media                              # app пишет обложки/OG сам (admin upload) + читает медиа фабрики
     expose:
@@ -113,6 +126,19 @@ services:
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+      # Оплата курсов: приём уведомлений об оплате. Переменные перечисляются
+      # явно — без этих строк контейнер их не увидит, и платёжные эндпоинты
+      # ответят 503 «payments disabled», даже когда токен лежит в .env.
+      # Ссылки Альфа-Банка (docs/ALFA-PAYMENT-LINKS.md):
+      ALFA_CALLBACK_TOKEN: ${ALFA_CALLBACK_TOKEN:-}
+      ALFA_API_URL: ${ALFA_API_URL:-https://ecom.alfabank.by/payment/rest/}
+      ALFA_API_LOGIN: ${ALFA_API_LOGIN:-}
+      ALFA_API_PASSWORD: ${ALFA_API_PASSWORD:-}
+      # Магазин WooCommerce (docs/WOO-INTEGRATION.md):
+      WOO_WEBHOOK_SECRET: ${WOO_WEBHOOK_SECRET:-}
+      WOO_STORE_URL: ${WOO_STORE_URL:-https://activesales.by}
+      WOO_CONSUMER_KEY: ${WOO_CONSUMER_KEY:-}
+      WOO_CONSUMER_SECRET: ${WOO_CONSUMER_SECRET:-}
     volumes:
       - media:/media                             # worker (фабрика) пишет медиа
     # Ротация логов. Проверено 2026-08-24: глобальный /etc/docker/daemon.json
