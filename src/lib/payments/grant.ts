@@ -5,6 +5,7 @@ import { enqueue } from "@/lib/jobs/enqueue";
 import { hashPassword } from "@/lib/auth/password";
 import { generateTempPassword } from "@/lib/auth/temp-password";
 import { computeExpiry } from "@/lib/admin/enrollment";
+import { escapeHtml } from "@/lib/notify/escape";
 import { accessGrantedEmail, ownerPurchaseMessage } from "./notify";
 
 /**
@@ -52,10 +53,62 @@ export interface GrantResult {
   courses: string[];
 }
 
+/**
+ * Курсы, за которые этот человек уже заплатил и доступ к которым у него открыт.
+ *
+ * Так выглядит случайная двойная оплата: покупатель платил с телефона, зашёл с
+ * компьютера, не увидел на карточке подсказку про кабинет (она хранится в
+ * браузере) и заплатил ещё раз. Подсказки такой случай не ловят — устройство
+ * другое, — поэтому ловим здесь, чтобы владелец вернул деньги.
+ *
+ * Связи Enrollment → Order в схеме нет, только `orderId`, поэтому номера
+ * прошлых заказов забираем вторым запросом.
+ */
+async function findDoublePayments(
+  userId: string,
+  courses: PaidCourse[],
+  orderNumber: string,
+  now: Date,
+): Promise<Array<{ title: string; previousOrder: string }>> {
+  const active = await db.enrollment.findMany({
+    where: {
+      userId,
+      courseId: { in: courses.map((c) => c.id) },
+      source: "PURCHASE",
+      revokedAt: null,
+      orderId: { not: null },
+      // Бессрочный доступ (expiresAt = null) — тоже действующий.
+      OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+    },
+    select: { courseId: true, orderId: true },
+  });
+  if (active.length === 0) return [];
+
+  const paidOrders = await db.order.findMany({
+    where: { id: { in: active.map((e) => e.orderId!) }, status: "PAID" },
+    select: { id: true, number: true },
+  });
+  const numberById = new Map(paidOrders.map((o) => [o.id, o.number]));
+
+  return active.flatMap((enrollment) => {
+    const previousOrder = numberById.get(enrollment.orderId!);
+    // Тот же заказ — это повтор обработки одного платежа, а не вторая покупка.
+    if (!previousOrder || previousOrder === orderNumber) return [];
+    const course = courses.find((c) => c.id === enrollment.courseId);
+    return [{ title: course?.title ?? enrollment.courseId, previousOrder }];
+  });
+}
+
 export async function grantAccess(input: GrantInput): Promise<GrantResult> {
   const now = new Date();
   const { email, courses, orderNumber, provider, providerPaymentId, totalTiyn } = input;
   const existing = await db.user.findUnique({ where: { email }, select: { id: true } });
+
+  // Курсы, которые у этого человека уже открыты и оплачены другим заказом.
+  // Так выглядит случайная двойная оплата: покупатель платил с телефона, зашёл
+  // с компьютера, не увидел подсказку про кабинет и заплатил ещё раз. Подсказки
+  // в интерфейсе такой случай не ловят — устройство другое, — поэтому ловим здесь.
+  const alreadyPaid = existing ? await findDoublePayments(existing.id, courses, orderNumber, now) : [];
 
   // Пароль генерируем только новому ученику: у существующего свой, и менять его
   // покупкой нельзя — человек просто получит письмо «доступ открыт».
@@ -121,6 +174,18 @@ export async function grantAccess(input: GrantInput): Promise<GrantResult> {
 
     return { userId: user.id };
   });
+
+  // Деньги списаны дважды за то, что у человека и так есть, — это возврат, и
+  // решает его владелец. Номера заказов хватает, чтобы найти оба платежа в
+  // кабинете банка; e-mail покупателя в уведомление не кладём (правило 9).
+  for (const duplicate of alreadyPaid) {
+    await notifyOwner(
+      `⚠️ <b>Повторная оплата</b>\n` +
+        `Курс: ${escapeHtml(duplicate.title)}\n` +
+        `Заказы: ${escapeHtml(duplicate.previousOrder)} и ${escapeHtml(orderNumber)}\n` +
+        `Доступ у покупателя уже был — похоже на случайную оплату, проверьте и верните деньги.`,
+    );
+  }
 
   const titles = courses.map((c) => c.title);
   await enqueue("email.send", { ...accessGrantedEmail({ email, titles, tempPassword }) });
