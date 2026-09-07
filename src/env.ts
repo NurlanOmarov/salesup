@@ -57,6 +57,19 @@ const serverSchema = z.object({
   // Куда падают уведомления о новых заявках с сайта. По умолчанию — почта владельца.
   LEADS_NOTIFY_EMAIL: z.string().email().default("omarov.nb@gmail.com"),
 
+  // ── Оплата по ссылкам Альфа-Банка (docs/ALFA-PAYMENT-LINKS.md) ──
+  // Курс продаётся платёжной ссылкой, созданной в личном кабинете эквайринга:
+  // карту принимает страница банка, к нам приходит только факт оплаты.
+  // Токен симметричной подписи callback-уведомлений (генерируется в кабинете:
+  // Настройки → Мерчант → Callback уведомления). Пусто → приём выключен.
+  ALFA_CALLBACK_TOKEN: z.string().optional(),
+  /** База REST API шлюза: тест — https://abby.rbsuat.com/payment/rest/. */
+  ALFA_API_URL: z.string().url().default("https://ecom.alfabank.by/payment/rest/"),
+  // Учётка API (логин вида <merchant>-api) — нужна, чтобы добрать e-mail
+  // покупателя и параметр course, если их нет в самом уведомлении.
+  ALFA_API_LOGIN: z.string().optional(),
+  ALFA_API_PASSWORD: z.string().optional(),
+
   // ── Магазин WooCommerce на activesales.by (docs/WOO-INTEGRATION.md) ──
   // Карту принимает эквайринг Альфа-Банка на белорусском домене; к нам приходит
   // только факт оплаты заказа, поэтому карточных секретов здесь нет.

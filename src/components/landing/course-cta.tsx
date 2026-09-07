@@ -89,7 +89,7 @@ export function CourseCta({
           className={cn(buttonVariants({ variant: "brand", size: "lg" }), "w-full")}
         >
           <CreditCard className="size-5" />
-          Купить и начать
+          Оплатить и начать
         </a>
         <a
           href="#zayavka"

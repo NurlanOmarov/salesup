@@ -66,6 +66,18 @@ export const updateCourseAction = safeAction(
       // ID товара в магазине activesales.by: связывает курс с оплатой
       // (docs/WOO-INTEGRATION.md). Пусто → курс продаётся только вручную.
       wooProductId: z.coerce.number().int().positive().max(99_999_999).optional().or(z.literal("")),
+      // Платёжная ссылка курса из кабинета Альфа-Банка (docs/ALFA-PAYMENT-LINKS.md).
+      // Только адрес банка: чужой домен здесь означал бы увод оплаты на сторону.
+      alfaPaymentUrl: z
+        .string()
+        .trim()
+        .url("Укажите полный адрес ссылки")
+        .refine(
+          (url) => new URL(url).hostname.endsWith("alfabank.by"),
+          "Ссылка должна вести на домен alfabank.by",
+        )
+        .optional()
+        .or(z.literal("")),
     }),
     auth: "owner",
   },
@@ -114,6 +126,7 @@ export const updateCourseAction = safeAction(
       seoNoindex: input.seoNoindex,
       certificateEnabled: input.certificateEnabled,
       wooProductId: typeof input.wooProductId === "number" ? input.wooProductId : null,
+      alfaPaymentUrl: input.alfaPaymentUrl || null,
       publishedAt: !wasPublished && nowPublished ? new Date() : undefined,
     };
 

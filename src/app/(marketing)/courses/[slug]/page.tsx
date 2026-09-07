@@ -191,10 +191,13 @@ export default async function CoursePage({
   // работает только для белорусской витрины: цена там в BYN, а договор эквайринга
   // заключён на белорусскую площадку (docs/WOO-INTEGRATION.md). На .kz/.ru курс
   // по-прежнему продаётся через заявку.
+  // Приоритет — платёжная ссылка банка: покупатель уходит прямо на страницу
+  // оплаты, без промежуточной корзины магазина.
   const checkoutUrl =
-    site?.code === "BY" && course.wooProductId
-      ? shopCheckoutUrl(env.WOO_STORE_URL, course.wooProductId)
-      : null;
+    site?.code !== "BY"
+      ? null
+      : (course.alfaPaymentUrl ??
+        (course.wooProductId ? shopCheckoutUrl(env.WOO_STORE_URL, course.wooProductId) : null));
 
   // Контакты — из SeoSettings (правятся в /admin/seo без деплоя).
   const { whatsapp: wa, telegram: tg, viber } = await getSupportContacts();

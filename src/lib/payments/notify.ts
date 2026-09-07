@@ -67,20 +67,47 @@ export interface OwnerPurchaseInput {
   titles: string[];
   totalTiyn: number;
   isNewUser: boolean;
+  /** E-mail покупателя — включается в сообщение, только когда письмо отправить нельзя. */
+  email?: string;
+  /** Временный пароль новой учётки — тоже только как запасной канал (см. ниже). */
+  tempPassword?: string | null;
 }
 
-/** Сообщение владельцу: продажа прошла и доступ выдан без его участия. */
+/**
+ * Сообщение владельцу: продажа прошла и доступ выдан без его участия.
+ *
+ * Пока `EMAIL_ENABLED=false`, письмо покупателю уйти не может, а временный пароль
+ * в открытом виде нигде не хранится — поэтому доступы дописываются сюда, чтобы
+ * владелец передал их покупателю сам. Это ровно тот же порядок, каким доступы
+ * выдаются вручную в /admin/students, только инициирован оплатой. Как только
+ * SMTP настроен, блок исчезает и канал становится полностью автоматическим.
+ */
 export function ownerPurchaseMessage({
   number,
   titles,
   totalTiyn,
   isNewUser,
+  email,
+  tempPassword,
 }: OwnerPurchaseInput): string {
-  return [
-    "💳 <b>Оплата в магазине</b>",
+  const lines = [
+    "💳 <b>Оплата курса</b>",
     `Заказ: ${escapeHtml(number)}`,
     `Курсы: ${escapeHtml(titles.join(", "))}`,
     `Сумма: ${escapeHtml(formatCurrency(totalTiyn, "BYN", {}))}`,
     isNewUser ? "Учётка создана, доступ выдан автоматически." : "Доступ добавлен существующему ученику.",
-  ].join("\n");
+  ];
+
+  if (!env.EMAIL_ENABLED && email) {
+    lines.push(
+      "",
+      "⚠️ <b>Почта выключена — передайте доступ покупателю сами:</b>",
+      `Логин: ${escapeHtml(email)}`,
+      tempPassword
+        ? `Временный пароль: <code>${escapeHtml(tempPassword)}</code>`
+        : "Пароль у ученика прежний — он уже учится на платформе.",
+    );
+  }
+
+  return lines.join("\n");
 }

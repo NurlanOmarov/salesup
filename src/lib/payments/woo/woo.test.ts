@@ -11,7 +11,7 @@ import {
   wooOrderSchema,
   wooPingSchema,
 } from "./order.js";
-import { accessGrantedEmail, ownerPurchaseMessage } from "./notify.js";
+import { accessGrantedEmail, ownerPurchaseMessage } from "../notify.js";
 import { shopCheckoutUrl } from "./links.js";
 
 const SECRET = "woo-shared-secret";

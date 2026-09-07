@@ -46,6 +46,7 @@ interface CourseFields {
   priceTiyn: number;
   oldPriceTiyn: number | null;
   wooProductId: number | null;
+  alfaPaymentUrl: string | null;
   status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
   inDevelopment: boolean;
   accessDuration: (typeof ACCESS_DURATIONS)[number];
@@ -109,6 +110,8 @@ export function CourseEditForm({
   const [priceByn, setPriceByn] = useState(course.priceTiyn / 100);
   // ID товара в магазине activesales.by — связка курса с оплатой (docs/WOO-INTEGRATION.md).
   const [wooProductId, setWooProductId] = useState(course.wooProductId ?? 0);
+  // Платёжная ссылка курса из кабинета Альфа-Банка (docs/ALFA-PAYMENT-LINKS.md).
+  const [alfaPaymentUrl, setAlfaPaymentUrl] = useState(course.alfaPaymentUrl ?? "");
   // Ступень и коридор пересчитываются при смене класса прямо в форме.
   const band = priceBand(audience, totalSec);
   const [oldPriceByn, setOldPriceByn] = useState(
@@ -318,6 +321,7 @@ export function CourseEditForm({
         seoNoindex,
         certificateEnabled,
         wooProductId: wooProductId > 0 ? wooProductId : "",
+        alfaPaymentUrl: alfaPaymentUrl.trim(),
       });
       setResult(
         res.ok
@@ -488,6 +492,28 @@ export function CourseEditForm({
               {preview(priceByn, "RUB", rates)}
             </span>
           </div>
+        </div>
+
+        <div>
+          <label className={labelCls} htmlFor="alfaPaymentUrl">
+            Ссылка на оплату (Альфа-Банк)
+          </label>
+          <input
+            id="alfaPaymentUrl"
+            type="url"
+            inputMode="url"
+            placeholder="https://ecom.alfabank.by/sc/…"
+            className={inputCls}
+            value={alfaPaymentUrl}
+            onChange={(e) => setAlfaPaymentUrl(e.target.value)}
+          />
+          <p className="mt-1 text-xs text-foreground/50">
+            Ссылка из личного кабинета банка (Инструменты оплаты → Ссылки на оплату). Задана →
+            на витрине кнопка «Оплатить», доступ открывается автоматически после оплаты. В самой
+            ссылке должен быть параметр <code>course</code> со значением{" "}
+            <code>{course.slug}</code> — по нему платформа узнаёт курс. Сумму в банке нужно
+            держать равной цене выше: платформа изменить её не может.
+          </p>
         </div>
 
         <div>
