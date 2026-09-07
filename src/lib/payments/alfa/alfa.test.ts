@@ -9,6 +9,7 @@ import {
   paramsFromSearch,
 } from "./callback.js";
 import { matchCourseFromText } from "./course.js";
+import { alfaPaymentUrlSchema, isAlfaPaymentUrl } from "./link.js";
 
 const TOKEN = "alfa-callback-token";
 
@@ -194,5 +195,29 @@ describe("e-mail покупателя", () => {
     });
     expect(parsed.orderDescription).toContain("sales-spin");
     expect(parsed.name).toBe("СПИН-продажи");
+  });
+});
+
+describe("платёжная ссылка курса", () => {
+  it("принимает ссылку из кабинета банка", () => {
+    expect(isAlfaPaymentUrl("https://ecom.alfabank.by/sc/nezHjoLgDgdLpqjh")).toBe(true);
+    expect(isAlfaPaymentUrl("https://alfabank.by/pay/123")).toBe(true);
+  });
+
+  it("отклоняет чужой домен — иначе оплату можно увести на сторону", () => {
+    expect(isAlfaPaymentUrl("https://ecom.alfabank.by.evil.com/sc/x")).toBe(false);
+    expect(isAlfaPaymentUrl("https://example.com/pay")).toBe(false);
+  });
+
+  it("требует https и осмысленный адрес", () => {
+    expect(isAlfaPaymentUrl("http://ecom.alfabank.by/sc/x")).toBe(false);
+    expect(isAlfaPaymentUrl("ecom.alfabank.by/sc/x")).toBe(false);
+    expect(isAlfaPaymentUrl("")).toBe(false);
+  });
+
+  it("пустое поле допустимо: курс продаётся через заявку", () => {
+    expect(alfaPaymentUrlSchema.safeParse("").success).toBe(true);
+    expect(alfaPaymentUrlSchema.safeParse(undefined).success).toBe(true);
+    expect(alfaPaymentUrlSchema.safeParse("https://example.com").success).toBe(false);
   });
 });

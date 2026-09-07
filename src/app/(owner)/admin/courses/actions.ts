@@ -9,6 +9,7 @@ import { writeAdminLog } from "@/lib/admin/log";
 import { log } from "@/lib/log";
 import { safeAction, type ActionResult } from "@/lib/safe-action";
 import { ACCESS_DURATIONS } from "@/lib/admin/enrollment";
+import { alfaPaymentUrlSchema } from "@/lib/payments/alfa/link";
 
 /**
  * Управление каталогом курсов (реестр / цены / фото). Только OWNER.
@@ -67,17 +68,9 @@ export const updateCourseAction = safeAction(
       // (docs/WOO-INTEGRATION.md). Пусто → курс продаётся только вручную.
       wooProductId: z.coerce.number().int().positive().max(99_999_999).optional().or(z.literal("")),
       // Платёжная ссылка курса из кабинета Альфа-Банка (docs/ALFA-PAYMENT-LINKS.md).
-      // Только адрес банка: чужой домен здесь означал бы увод оплаты на сторону.
-      alfaPaymentUrl: z
-        .string()
-        .trim()
-        .url("Укажите полный адрес ссылки")
-        .refine(
-          (url) => new URL(url).hostname.endsWith("alfabank.by"),
-          "Ссылка должна вести на домен alfabank.by",
-        )
-        .optional()
-        .or(z.literal("")),
+      // Схема — в lib/payments/alfa/link.ts: в "use server" файле нельзя объявлять
+      // обычные функции, а проверка домена без них не обходится.
+      alfaPaymentUrl: alfaPaymentUrlSchema,
     }),
     auth: "owner",
   },
