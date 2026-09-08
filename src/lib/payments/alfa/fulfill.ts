@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { log } from "@/lib/log";
 import { escapeHtml } from "@/lib/notify/escape";
 import { formatCurrency } from "@/lib/currency/format";
+import { salePrice } from "@/lib/pricing/promo";
 import { grantAccess, notifyOwner, revokeAccess, type PaidCourse } from "@/lib/payments/grant";
 import { outcomeOf, type AlfaCallback } from "./callback";
 import { fetchOrderDetails, alfaApiConfigured } from "./status";
@@ -31,6 +32,33 @@ async function findCourse(slug: string): Promise<PaidCourse | null> {
   });
   if (!course) return null;
   return { ...course, paidTiyn: course.priceTiyn };
+}
+
+/**
+ * Сумма зашита в платёжную ссылку на стороне банка, а цена на витрине живёт у
+ * нас — и во время акции витринная цена меняется сама (lib/pricing/promo).
+ * Разойтись они могут незаметно: покупатель увидит одно, заплатит другое.
+ * Платформа изменить сумму в банке не может, поэтому просто зовёт владельца.
+ */
+async function warnOnPriceMismatch(
+  course: PaidCourse,
+  paidTiyn: number,
+  orderNumber: string,
+): Promise<void> {
+  const expected = salePrice(course.paidTiyn).tiyn;
+  if (paidTiyn === expected) return;
+
+  const br = (tiyn: number) => formatCurrency(tiyn, "BYN", {});
+  await notifyOwner(
+    `⚠️ <b>Цена в банке и на витрине разошлись</b>\n` +
+      `Курс: ${escapeHtml(course.title)}\n` +
+      `Заплачено: ${escapeHtml(br(paidTiyn))}, на витрине: ${escapeHtml(br(expected))}\n` +
+      `Заказ ${escapeHtml(orderNumber)}. Поправьте сумму в платёжной ссылке в кабинете банка.`,
+  );
+  log.warn(
+    { orderNumber, course: course.slug, paidTiyn, expected },
+    "alfa: сумма платежа не совпадает с ценой витрины",
+  );
 }
 
 export async function fulfillAlfaCallback(callback: AlfaCallback): Promise<AlfaResult> {
@@ -125,6 +153,8 @@ export async function fulfillAlfaCallback(callback: AlfaCallback): Promise<AlfaR
   // Сумма платежа — то, что реально списано; цена курса могла с тех пор поменяться.
   const total = amountTiyn > 0 ? amountTiyn : paidCourse.paidTiyn;
   const courses: PaidCourse[] = [{ ...paidCourse, paidTiyn: total }];
+
+  if (outcome === "paid") await warnOnPriceMismatch(paidCourse, total, number);
 
   if (outcome === "paid") {
     const result = await grantAccess({
