@@ -323,6 +323,15 @@ test("ответственный удаляет лишнюю учётку: ме�
   // Ошибочно заведённая учётка не должна оставаться в списке навсегда: без
   // удаления она занимала бы оплаченное место, а отключить её мало — строка
   // всё равно висит перед глазами клиента.
+  // Предыдущие тесты разобрали места лицензии — добавляем одно под этот сценарий.
+  await db.orgLicense.update({
+    where: { id: licenseId },
+    data: { seatsTotal: { increment: 1 } },
+  });
+  const seatsBefore = await db.enrollment.count({
+    where: { licenseId, revokedAt: null },
+  });
+
   await login(page, ADMIN_EMAIL, ADMIN_PASS);
   await page.goto(`/org/${orgId}/employees`);
 
@@ -353,6 +362,10 @@ test("ответственный удаляет лишнюю учётку: ме�
   // работником, которого уже нет.
   expect(await db.user.count({ where: { id: membership.userId } })).toBe(0);
   expect(await db.enrollment.count({ where: { userId: membership.userId } })).toBe(0);
+  // Место снова свободно: занятость лицензии вернулась к исходной.
+  expect(await db.enrollment.count({ where: { licenseId, revokedAt: null } })).toBe(
+    seatsBefore,
+  );
 });
 
 test("имена ведёт клиент: владелец платформы их не видит и ключ не заводит", async ({
