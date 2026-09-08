@@ -3,8 +3,14 @@ import { env } from "@/env";
 import { db } from "@/lib/db";
 import { requireOrgAdmin } from "@/lib/org/guards";
 import { getOrgLicenses } from "@/lib/org/reports";
-import { isInviteUsable } from "@/lib/org/seats";
-import { InviteCodeCell, InvitesManager, RevokeInviteButton } from "./invites-manager";
+import { countInviteReservations, isInviteUsable } from "@/lib/org/seats";
+import {
+  DeleteInviteButton,
+  InviteCodeCell,
+  InvitesManager,
+  PurgeInvitesButton,
+  RevokeInviteButton,
+} from "./invites-manager";
 
 export const metadata: Metadata = {
   title: "Коды доступа",
@@ -40,6 +46,7 @@ export default async function InvitesPage({
       select: {
         id: true,
         code: true,
+        licenseIds: true,
         maxUses: true,
         usedCount: true,
         expiresAt: true,
@@ -50,6 +57,12 @@ export default async function InvitesPage({
   ]);
 
   const now = new Date();
+  // Место занимает не код, а активация — но обещано оно уже кодом. Без этого
+  // счётчика на одно свободное место печатались десятки кодов.
+  const reserved = countInviteReservations(invites, now);
+  const purgeable = invites.filter(
+    (i) => i.usedCount === 0 && !isInviteUsable(i, now),
+  ).length;
   const siteUrl = env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "");
   const joinUrl = `${siteUrl}/join`;
 
@@ -103,6 +116,7 @@ export default async function InvitesPage({
             id: l.id,
             courseTitle: l.courseTitle,
             free: l.seats.free,
+            reserved: reserved.get(l.id) ?? 0,
           }))}
           groups={groups}
           siteUrl={siteUrl}
@@ -110,7 +124,10 @@ export default async function InvitesPage({
       </div>
 
       <section className="mt-8">
-        <h2 className="text-lg font-semibold">Выданные коды</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">Выданные коды</h2>
+          {purgeable > 0 ? <PurgeInvitesButton orgId={ctx.orgId} count={purgeable} /> : null}
+        </div>
         <div className="mt-3 overflow-hidden rounded-xl border border-foreground/10 bg-background">
           {invites.length === 0 ? (
             <p className="p-6 text-center text-sm text-foreground/55">
@@ -161,9 +178,14 @@ export default async function InvitesPage({
                         )}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        {usable ? (
-                          <RevokeInviteButton orgId={ctx.orgId} inviteId={i.id} />
-                        ) : null}
+                        <span className="inline-flex items-center gap-3">
+                          {usable ? (
+                            <RevokeInviteButton orgId={ctx.orgId} inviteId={i.id} />
+                          ) : null}
+                          {i.usedCount === 0 ? (
+                            <DeleteInviteButton orgId={ctx.orgId} inviteId={i.id} />
+                          ) : null}
+                        </span>
                       </td>
                     </tr>
                   );

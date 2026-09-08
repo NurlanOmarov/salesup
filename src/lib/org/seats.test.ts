@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   computeSeatExpiry,
   computeSeatUsage,
+  countInviteReservations,
   formatInviteCode,
   formatLogin,
   hasFreeSeat,
@@ -155,5 +156,53 @@ describe("slugifyOrgName", () => {
 
   it("оставляет только допустимые в логине символы", () => {
     expect(slugifyOrgName("Acme #1 & Co.")).toMatch(/^[a-z0-9-]+$/);
+  });
+});
+
+describe("countInviteReservations", () => {
+  const now = new Date("2026-09-08T10:00:00Z");
+  const base = { maxUses: 1, usedCount: 0, expiresAt: null, revokedAt: null };
+
+  it("считает каждый действующий код бронью места по всем его лицензиям", () => {
+    const reserved = countInviteReservations(
+      [
+        { ...base, licenseIds: ["l1"] },
+        { ...base, licenseIds: ["l1", "l2"] },
+      ],
+      now,
+    );
+    expect(reserved.get("l1")).toBe(2);
+    expect(reserved.get("l2")).toBe(1);
+  });
+
+  it("не держит место за отозванным, истёкшим и уже использованным кодом", () => {
+    const reserved = countInviteReservations(
+      [
+        { ...base, licenseIds: ["l1"], revokedAt: new Date("2026-09-01") },
+        { ...base, licenseIds: ["l1"], expiresAt: new Date("2026-09-07") },
+        { ...base, licenseIds: ["l1"], usedCount: 1 },
+      ],
+      now,
+    );
+    expect(reserved.get("l1")).toBeUndefined();
+  });
+
+  it("многоразовый код бронирует места по остатку активаций", () => {
+    const reserved = countInviteReservations(
+      [{ ...base, licenseIds: ["l1"], maxUses: 5, usedCount: 2 }],
+      now,
+    );
+    expect(reserved.get("l1")).toBe(3);
+  });
+
+  it("переживает битый licenseIds из Json-поля", () => {
+    const reserved = countInviteReservations(
+      [
+        { ...base, licenseIds: null },
+        { ...base, licenseIds: ["l1", 42] },
+      ],
+      now,
+    );
+    expect(reserved.get("l1")).toBe(1);
   });
 });

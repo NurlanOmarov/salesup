@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import {
   computeSeatExpiry,
   computeSeatUsage,
+  countInviteReservations,
   formatInviteCode,
   formatLogin,
   INVITE_CODE_LENGTH,
@@ -137,6 +138,29 @@ export async function revokeSeat(input: {
     where: { id: enrollment.id },
     data: { revokedAt: now },
   });
+}
+
+/**
+ * Сколько мест каждой лицензии уже забронировано действующими кодами. Нужно и
+ * перед выпуском новых кодов, и в UI: свободное место видно в отчёте, а вот
+ * «место обещано коду, который ещё не активировали» — нигде, и раньше на одно
+ * место можно было напечатать сколько угодно кодов.
+ */
+export async function getInviteReservations(
+  orgId: string,
+  now: Date = new Date(),
+): Promise<Map<string, number>> {
+  const invites = await db.orgInvite.findMany({
+    where: { orgId, revokedAt: null },
+    select: {
+      licenseIds: true,
+      maxUses: true,
+      usedCount: true,
+      expiresAt: true,
+      revokedAt: true,
+    },
+  });
+  return countInviteReservations(invites, now);
 }
 
 /** Сгенерировать код самозаписи, не совпадающий с существующими. */

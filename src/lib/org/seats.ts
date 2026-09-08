@@ -142,3 +142,35 @@ export function slugifyOrgName(name: string): string {
 export function maskInviteCode(code: string): string {
   return `${code.slice(0, 3)}•••${code.slice(-2)}`;
 }
+
+/**
+ * Сколько мест забронировано ещё не активированными кодами. Место списывается
+ * только при активации (Enrollment), поэтому без этого учёта можно напечатать
+ * 5 кодов на одно свободное место — и четверо работников получат отказ уже
+ * после ввода кода, когда объяснять это будет некому. Резерв считается по
+ * остатку активаций кода (maxUses − usedCount) для каждой его лицензии.
+ */
+export function countInviteReservations(
+  invites: {
+    licenseIds: unknown;
+    maxUses: number;
+    usedCount: number;
+    expiresAt: Date | null;
+    revokedAt: Date | null;
+  }[],
+  now: Date,
+): Map<string, number> {
+  const reserved = new Map<string, number>();
+  for (const invite of invites) {
+    if (!isInviteUsable(invite, now)) continue;
+    const left = Math.max(0, invite.maxUses - invite.usedCount);
+    if (left === 0) continue;
+    const licenseIds = Array.isArray(invite.licenseIds)
+      ? (invite.licenseIds as unknown[]).filter((v): v is string => typeof v === "string")
+      : [];
+    for (const id of licenseIds) {
+      reserved.set(id, (reserved.get(id) ?? 0) + left);
+    }
+  }
+  return reserved;
+}

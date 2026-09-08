@@ -9,6 +9,7 @@ import { assertOrgScope, assertOrgWritable, requireOrgAdmin } from "@/lib/org/gu
 import {
   createInvite,
   createMembers,
+  getInviteReservations,
   grantSeat,
   revokeSeat,
 } from "@/lib/org/service";
@@ -70,12 +71,35 @@ export const createInvitesAction = safeAction(
     // Лицензии и подразделение обязаны принадлежать этой организации.
     const licenses = await db.orgLicense.findMany({
       where: { id: { in: input.licenseIds } },
-      select: { id: true, orgId: true },
+      select: {
+        id: true,
+        orgId: true,
+        seatsTotal: true,
+        course: { select: { title: true } },
+        _count: { select: { enrollments: { where: { revokedAt: null } } } },
+      },
     });
     if (licenses.length !== input.licenseIds.length) {
       throw new Error("Лицензия не найдена");
     }
     for (const l of licenses) assertOrgScope(l, ctx);
+
+    // Код — это обещание места. Раньше их можно было напечатать сколько угодно,
+    // и отказ прилетал работнику при вводе кода: место занимал первый, а
+    // остальные видели «свободных мест нет» и шли выяснять к ответственному.
+    const reserved = await getInviteReservations(ctx.orgId);
+    for (const l of licenses) {
+      const free = Math.max(0, l.seatsTotal - l._count.enrollments);
+      const available = free - (reserved.get(l.id) ?? 0);
+      const needed = input.count * input.maxUses;
+      if (needed > available) {
+        throw new Error(
+          available <= 0
+            ? `Свободных мест на курсе «${l.course.title}» не осталось: все ${l.seatsTotal} заняты работниками или обещаны уже выданными кодами. Отзовите ненужные коды или увеличьте лицензию.`
+            : `На курсе «${l.course.title}» доступно мест: ${available} (занято работниками или обещано выданными кодами — ${l.seatsTotal - available} из ${l.seatsTotal}). Уменьшите количество кодов.`,
+        );
+      }
+    }
 
     if (input.groupId) {
       const group = await db.orgGroup.findUnique({
@@ -144,6 +168,76 @@ export const revokeInviteAction = safeAction(
 
     revalidatePath("/org/invites");
     return { ok: true };
+  },
+);
+
+/**
+ * Удалить код из списка. Отзыв гасит код, но строка остаётся в таблице и
+ * мешает читать список — поэтому неиспользованные коды можно убрать совсем.
+ * Код, по которому уже зарегистрировался работник, не удаляется: он остаётся
+ * единственным следом того, откуда взялось место (сам работник обезличен).
+ */
+export const deleteInviteAction = safeAction(
+  {
+    schema: z.object({ orgId: z.string().optional(), inviteId: z.string().min(1) }),
+    auth: "orgAdmin",
+  },
+  async (input) => {
+    const ctx = await writableCtx(input.orgId);
+    const invite = await db.orgInvite.findUnique({
+      where: { id: input.inviteId },
+      select: { id: true, orgId: true, usedCount: true },
+    });
+    assertOrgScope(invite, ctx);
+    if (invite!.usedCount > 0) {
+      throw new Error(
+        "По этому коду уже зарегистрировался работник — код остаётся в истории. Отозвать его можно, удалить нельзя.",
+      );
+    }
+
+    await db.orgInvite.delete({ where: { id: input.inviteId } });
+
+    await writeAdminLog({
+      actorId: ctx.userId,
+      action: "org.invite.delete",
+      meta: { orgId: ctx.orgId, inviteId: input.inviteId },
+    });
+
+    revalidatePath("/org/invites");
+    return { ok: true };
+  },
+);
+
+/**
+ * Убрать из списка все недействующие коды разом: отозванные и истёкшие, по
+ * которым никто не зарегистрировался. Действующие коды не трогаем — они на
+ * руках у работников.
+ */
+export const purgeInvitesAction = safeAction(
+  {
+    schema: z.object({ orgId: z.string().optional() }),
+    auth: "orgAdmin",
+  },
+  async (input) => {
+    const ctx = await writableCtx(input.orgId);
+    const now = new Date();
+
+    const { count } = await db.orgInvite.deleteMany({
+      where: {
+        orgId: ctx.orgId,
+        usedCount: 0,
+        OR: [{ revokedAt: { not: null } }, { expiresAt: { lt: now } }],
+      },
+    });
+
+    await writeAdminLog({
+      actorId: ctx.userId,
+      action: "org.invite.purge",
+      meta: { orgId: ctx.orgId, count },
+    });
+
+    revalidatePath("/org/invites");
+    return { count };
   },
 );
 
