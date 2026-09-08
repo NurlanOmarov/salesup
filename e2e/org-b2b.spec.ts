@@ -317,6 +317,44 @@ test("ответственный создаёт работников сам: л�
   expect(enrollment.source).toBe("B2B");
 });
 
+test("ответственный удаляет лишнюю учётку: место возвращается в пул", async ({
+  page,
+}) => {
+  // Ошибочно заведённая учётка не должна оставаться в списке навсегда: без
+  // удаления она занимала бы оплаченное место, а отключить её мало — строка
+  // всё равно висит перед глазами клиента.
+  await login(page, ADMIN_EMAIL, ADMIN_PASS);
+  await page.goto(`/org/${orgId}/employees`);
+
+  await page.getByRole("button", { name: "Создать работников" }).click();
+  await page.getByLabel("Сколько работников").fill("1");
+  await page.getByRole("button", { name: "Создать", exact: true }).click();
+  await expect(page.getByText(/Создано учётных записей: 1/)).toBeVisible();
+
+  const membership = await db.orgMembership.findFirstOrThrow({
+    where: { orgId, role: "ORG_LEARNER" },
+    orderBy: { joinedAt: "desc" },
+    select: { id: true, userId: true, user: { select: { login: true } } },
+  });
+  const login_ = membership.user.login!;
+
+  await page.goto(`/org/${orgId}/employees`);
+  const row = page.locator("tr", { hasText: login_ });
+  await row.locator("button[aria-expanded]").click();
+  page.once("dialog", (d) => d.accept());
+  await row.getByRole("button", { name: "Удалить" }).click();
+
+  await expect
+    .poll(() => db.orgMembership.count({ where: { id: membership.id } }), {
+      timeout: 15_000,
+    })
+    .toBe(0);
+  // Учётка и её место исчезают вместе: иначе лицензия осталась бы занята
+  // работником, которого уже нет.
+  expect(await db.user.count({ where: { id: membership.userId } })).toBe(0);
+  expect(await db.enrollment.count({ where: { userId: membership.userId } })).toBe(0);
+});
+
 test("имена ведёт клиент: владелец платформы их не видит и ключ не заводит", async ({
   page,
 }) => {

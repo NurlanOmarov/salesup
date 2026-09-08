@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { KeyRound, MoreHorizontal } from "lucide-react";
+import { KeyRound, MoreHorizontal, Trash2 } from "lucide-react";
 import {
+  deleteMemberAction,
   grantSeatAction,
   resetMemberPasswordAction,
   revokeSeatAction,
@@ -238,6 +239,29 @@ export function EmployeeActions({
               }
             >
               {data.isActive ? "Отключить" : "Включить"}
+            </Button>
+            {/* Удаление — для ошибочно заведённой учётки. Уходящему сотруднику
+                достаточно «Отключить»: там прогресс остаётся в отчётности. */}
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={pending}
+              onClick={() =>
+                run(async () => {
+                  if (
+                    !window.confirm(
+                      `Удалить учётную запись ${data.login}? Она и её результаты будут стёрты безвозвратно, место вернётся в пул. Если сотрудник просто уходит — лучше «Отключить»: тогда его прогресс останется в отчётах.`,
+                    )
+                  ) {
+                    return { ok: true };
+                  }
+                  return deleteMemberAction({ orgId, membershipId: data.membershipId });
+                })
+              }
+              className="text-red-600 hover:bg-red-600/5 hover:text-red-700"
+            >
+              <Trash2 className="mr-1.5 size-4" />
+              Удалить
             </Button>
           </div>
 

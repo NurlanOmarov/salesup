@@ -436,6 +436,70 @@ export const setMemberActiveAction = safeAction(
 );
 
 /**
+ * Удалить работника из организации.
+ *
+ * Нужно ровно для одного случая — ошибочно заведённой или лишней учётки: код
+ * создан, человек уволился или не пришёл, и держать его в списке незачем.
+ * Обычный уход сотрудника закрывается «Отключить»: место возвращается в пул,
+ * а прогресс остаётся в отчётности.
+ *
+ * Учётку с выданным сертификатом или оплаченным заказом физически не удаляем —
+ * за ней стоит документ, проверяемый по /verify, или платёжная история. Такая
+ * помечается удалённой (deletedAt): вход закрыт, место освобождено, сертификат
+ * продолжает проверяться.
+ */
+export const deleteMemberAction = safeAction(
+  {
+    schema: z.object({
+      orgId: z.string().optional(),
+      membershipId: z.string().min(1),
+    }),
+    auth: "orgAdmin",
+  },
+  async (input) => {
+    const ctx = await writableCtx(input.orgId);
+    const membership = await db.orgMembership.findUnique({
+      where: { id: input.membershipId },
+      select: { orgId: true, userId: true, role: true, user: { select: { login: true } } },
+    });
+    assertOrgScope(membership, ctx);
+    if (membership.role !== "ORG_LEARNER") {
+      throw new Error("Удалять можно только работников, не ответственных представителей");
+    }
+
+    const [certificates, orders] = await Promise.all([
+      db.certificate.count({ where: { userId: membership.userId } }),
+      db.order.count({ where: { userId: membership.userId } }),
+    ]);
+    const keep = certificates > 0 || orders > 0;
+
+    await db.$transaction(async (tx) => {
+      await tx.enrollment.deleteMany({ where: { userId: membership.userId } });
+      await tx.orgMembership.delete({ where: { id: input.membershipId } });
+      if (keep) {
+        await tx.user.update({
+          where: { id: membership.userId },
+          data: { deletedAt: new Date() },
+        });
+      } else {
+        await tx.user.delete({ where: { id: membership.userId } });
+      }
+    });
+
+    await writeAdminLog({
+      actorId: ctx.userId,
+      action: "org.member.delete",
+      // targetUserId не пишем: учётки чаще всего уже не существует. Логин в
+      // meta — не ПДн, это условное обозначение вида acme-0042.
+      meta: { orgId: ctx.orgId, login: membership.user.login, kept: keep },
+    });
+
+    revalidatePath(`/org/${ctx.orgId}/employees`);
+    return { kept: keep };
+  },
+);
+
+/**
  * Сбросить пароль работнику. Ответственный представитель делает это сам —
  * у работника нет e-mail, и восстановить пароль письмом невозможно by design.
  */
