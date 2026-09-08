@@ -13,6 +13,7 @@ import { ACCESS_DURATIONS, ACCESS_DURATION_LABELS } from "@/lib/admin/enrollment
 import { SITE_HOSTS } from "@/lib/seo/site-hosts";
 import { studentPasswordMessage } from "@/lib/messages/templates";
 import { ShareMessage } from "@/components/share-message";
+import { DEVICE_FLAG_FROM, DEVICE_LIMIT } from "@/lib/antishare/limits";
 import { ActionResult, useActionResult } from "@/components/action-result";
 import { Button } from "@/components/ui/button";
 
@@ -270,7 +271,7 @@ export function DeviceLimitForm({
   const [saved, setSaved] = useState(false);
 
   const options: { value: typeof mode; label: string; hint: string }[] = [
-    { value: "default", label: "Стандарт (2)", hint: "Лимит по умолчанию" },
+    { value: "default", label: `Стандарт (${DEVICE_LIMIT})`, hint: "Лимит по умолчанию" },
     { value: "custom", label: "Своё число", hint: "Точное число устройств" },
     { value: "unlimited", label: "Безлимит", hint: "Без ограничения" },
   ];
@@ -279,7 +280,11 @@ export function DeviceLimitForm({
     <section className="rounded-2xl border border-foreground/10 bg-background p-5">
       <h2 className="font-semibold">Лимит устройств</h2>
       <p className="mt-0.5 text-sm text-foreground/55">
-        Сколько устройств может одновременно пользоваться аккаунтом. Новое устройство сверх лимита не пустит на вход.
+        Сколько устройств может одновременно пользоваться аккаунтом. Вход с
+        лишнего устройства просто не состоится — учётную запись это не блокирует
+        и на привычных устройствах ничего не меняет. Неиспользуемое устройство
+        освобождает место через неделю. Если лимит поднят вручную, с
+        {DEVICE_FLAG_FROM} устройств учётка появляется в «Сигналах».
       </p>
 
       <div className="mt-3 grid grid-cols-3 gap-2">

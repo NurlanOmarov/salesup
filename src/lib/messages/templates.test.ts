@@ -6,6 +6,7 @@ import {
   studentPasswordMessage,
   studentWelcomeMessage,
 } from "./templates";
+import { DEVICE_LIMIT } from "@/lib/antishare/limits";
 
 const SITE = "https://study.activesales.by/";
 
@@ -88,6 +89,25 @@ describe("шаблоны сообщений о доступе", () => {
     expect(
       orgWorkerWelcomeMessage({ login: "x-0001", tempPassword: "pw", siteUrl: SITE }),
     ).toContain("кабинету сотрудника для онлайн-обучения");
+  });
+
+  it("оба приветствия предупреждают про лимит устройств", () => {
+    // Про лимит человек должен узнать вместе с паролем, а не упершись в отказ
+    // на входе с третьего устройства.
+    const student = studentWelcomeMessage({ login: "a@b.by", tempPassword: "pw", siteUrl: SITE });
+    const worker = orgWorkerWelcomeMessage({
+      login: "astrasintez-0001",
+      tempPassword: "pw",
+      siteUrl: SITE,
+      orgName: "АстраСинтез",
+    });
+    for (const text of [student, worker]) {
+      expect(text).toContain(`с ${DEVICE_LIMIT} устройств`);
+      // Куда идти за расширением — намеренно не пишем: приглашение в тексте
+      // доступа превращает редкий случай в поток обращений. Кому нужно, тот
+      // прочитает это в отказе на входе, когда действительно упрётся.
+      expect(text).not.toContain("напишите нам");
+    }
   });
 
   it("сообщения о сбросе предупреждают, что старый пароль не работает", () => {

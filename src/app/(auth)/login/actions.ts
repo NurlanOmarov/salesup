@@ -12,6 +12,7 @@ import {
   recordLoginAttempt,
 } from "@/lib/auth/login-attempts";
 import { registerDevice } from "@/lib/antishare/devices";
+import { DEVICE_LIMIT } from "@/lib/antishare/limits";
 import { identityWhere, parseIdentity } from "@/lib/auth/identity";
 
 const schema = z.object({
@@ -85,12 +86,13 @@ export async function loginAction(
     } catch {
       // учёт устройства не должен мешать входу при технической ошибке
     }
-    // Новое устройство сверх лимита: откатываем вход и просим обратиться к админу.
+    // Устройство сверх лимита: откатываем вход. Учётная запись при этом цела и
+    // с привычных устройств работает — говорим об этом прямо, иначе человек
+    // читает отказ как блокировку и идёт разбираться.
     if (!allowed) {
       await signOut({ redirect: false });
       return {
-        error:
-          "Достигнут лимит устройств для этого аккаунта. Войдите со знакомого устройства или обратитесь к администратору.",
+        error: `Вход возможен с ${DEVICE_LIMIT} устройств, и они уже заняты. Учётная запись не заблокирована — войдите с привычного устройства. Если оно сменилось, попросите администратора: он поднимет лимит.`,
       };
     }
   }

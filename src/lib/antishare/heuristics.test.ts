@@ -1,12 +1,12 @@
 import { describe, it, expect } from "vitest";
 import {
   deviceFingerprint,
-  tooManyDevices,
   suspiciousWatch,
   tooManyCities,
   evaluateFlags,
   effectiveDeviceLimit,
   DEVICE_LIMIT,
+  DEVICE_FLAG_FROM,
 } from "./heuristics.js";
 
 describe("deviceFingerprint", () => {
@@ -24,15 +24,6 @@ describe("deviceFingerprint", () => {
   });
   it("32 hex-символа", () => {
     expect(deviceFingerprint("x")).toMatch(/^[0-9a-f]{32}$/);
-  });
-});
-
-describe("tooManyDevices", () => {
-  it("в пределах лимита → false", () => {
-    expect(tooManyDevices(DEVICE_LIMIT)).toBe(false);
-  });
-  it("сверх лимита → true", () => {
-    expect(tooManyDevices(DEVICE_LIMIT + 1)).toBe(true);
   });
 });
 
@@ -67,9 +58,39 @@ describe("evaluateFlags", () => {
     const r = evaluateFlags({ activeDevices: 9, maxWatchedSec: 0, maxLessonDurationSec: 0, distinctCities: 1, deviceLimit: null });
     expect(r).not.toContain("MANY_DEVICES");
   });
-  it("персональный лимит учитывается", () => {
-    const r = evaluateFlags({ activeDevices: 4, maxWatchedSec: 0, maxLessonDurationSec: 0, distinctCities: 1, deviceLimit: 5 });
-    expect(r).not.toContain("MANY_DEVICES");
+  it("сигнал загорается с порога, а не с каждого второго устройства", () => {
+    const below = evaluateFlags({
+      activeDevices: DEVICE_FLAG_FROM - 1,
+      maxWatchedSec: 0,
+      maxLessonDurationSec: 0,
+      distinctCities: 1,
+    });
+    expect(below).not.toContain("MANY_DEVICES");
+
+    const at = evaluateFlags({
+      activeDevices: DEVICE_FLAG_FROM,
+      maxWatchedSec: 0,
+      maxLessonDurationSec: 0,
+      distinctCities: 1,
+    });
+    expect(at).toContain("MANY_DEVICES");
+  });
+
+  it("при стандартном лимите сигнал недостижим — столько устройств вход не пустит", () => {
+    // Не курьёз, а следствие решения: с двумя разрешёнными устройствами третье
+    // не появляется вовсе, и сигнал остаётся для учёток с поднятым лимитом.
+    expect(DEVICE_FLAG_FROM).toBeGreaterThan(DEVICE_LIMIT);
+  });
+
+  it("поднятый лимит не отключает сигнал: смотреть всё равно есть на что", () => {
+    const r = evaluateFlags({
+      activeDevices: 4,
+      maxWatchedSec: 0,
+      maxLessonDurationSec: 0,
+      distinctCities: 1,
+      deviceLimit: 8,
+    });
+    expect(r).toContain("MANY_DEVICES");
   });
 });
 

@@ -7,8 +7,9 @@ import { createHash } from "node:crypto";
  * ручную заморозку. Немедленный отзыв доступа — через Enrollment.revokedAt.
  */
 
-/** Лимит одновременных устройств на аккаунт (мягкий — выше флагуем). */
-export const DEVICE_LIMIT = 2;
+// Пороги живут в ./limits — их читает и клиентская форма лимита устройств.
+export { DEVICE_FLAG_FROM, DEVICE_LIMIT } from "./limits.js";
+import { DEVICE_FLAG_FROM, DEVICE_LIMIT } from "./limits.js";
 
 /** Грубый отпечаток устройства из User-Agent (браузер+ОС). Не ПДн. */
 export function deviceFingerprint(userAgent: string): string {
@@ -19,11 +20,6 @@ export function deviceFingerprint(userAgent: string): string {
     .replace(/\s+/g, " ")
     .trim();
   return createHash("sha256").update(normalized || "unknown").digest("hex").slice(0, 32);
-}
-
-/** Превышен ли лимит активных устройств. */
-export function tooManyDevices(activeCount: number, limit: number = DEVICE_LIMIT): boolean {
-  return activeCount > limit;
 }
 
 /**
@@ -64,7 +60,12 @@ export function evaluateFlags(input: {
 }): FlagReason[] {
   const reasons: FlagReason[] = [];
   const limit = input.deviceLimit === undefined ? DEVICE_LIMIT : input.deviceLimit;
-  if (limit !== null && tooManyDevices(input.activeDevices, limit)) reasons.push("MANY_DEVICES");
+  // Сигнал раньше блокировки: сверх лимита устройств просто не появится (вход не
+  // пустит), поэтому флагуем по собственному порогу. «Безлимит» не флагуем —
+  // владелец уже решил, что этому аккаунту так можно.
+  if (limit !== null && input.activeDevices >= DEVICE_FLAG_FROM) {
+    reasons.push("MANY_DEVICES");
+  }
   if (suspiciousWatch(input.maxWatchedSec, input.maxLessonDurationSec)) reasons.push("ABNORMAL_WATCH");
   if (tooManyCities(input.distinctCities)) reasons.push("MANY_CITIES");
   return reasons;

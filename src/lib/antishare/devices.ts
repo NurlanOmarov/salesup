@@ -18,9 +18,14 @@ const ACTIVE_WINDOW_DAYS = 7;
 
 /**
  * Зарегистрировать устройство при входе и проверить лимит устройств ученика.
- * Возвращает { allowed }: false — если это НОВОЕ устройство сверх персонального
- * лимита (User.deviceLimit) или ранее заблокированное. Владелец и «безлимит»
- * (deviceLimit=0) не ограничиваются. Известное устройство всегда проходит.
+ * Возвращает { allowed }: false — если устройств уже столько, сколько разрешено
+ * персональным лимитом (User.deviceLimit). Владелец и «безлимит» (deviceLimit=0)
+ * не ограничиваются, знакомое устройство проходит всегда.
+ *
+ * Отказ ничего не оставляет на учётной записи: лишнее устройство просто не
+ * записывается. Раньше на него заводилась пометка «сверх лимита», и она была
+ * вечной — человек не входил с этого браузера даже после того, как владелец
+ * поднимал лимит. Старые пометки снимаются здесь же, при первом входе.
  */
 export async function registerDevice(
   userId: string,
@@ -39,20 +44,31 @@ export async function registerDevice(
     select: { isBlocked: true },
   });
 
-  // Новое устройство сверх лимита — фиксируем как заблокированное и не пускаем.
-  if (!existing && limit !== null) {
+  // Занятых мест под лимитом считаем один раз: и для нового устройства, и для
+  // возврата ранее отклонённого.
+  const hasFreeSlot = async (): Promise<boolean> => {
+    if (limit === null) return true;
     const since = new Date(Date.now() - ACTIVE_WINDOW_DAYS * 24 * 60 * 60 * 1000);
     const active = await db.device.count({
       where: { userId, isBlocked: false, lastSeenAt: { gte: since } },
     });
-    if (active >= limit) {
-      await db.device.create({
-        data: { userId, fingerprint, lastIp: ip, isBlocked: true, label: "Сверх лимита" },
-      });
-      return { allowed: false };
-    }
+    return active < limit;
+  };
+
+  // Незнакомое устройство сверх лимита — отказываем и НИЧЕГО не записываем:
+  // вход с привычного устройства должен работать как ни в чём не бывало.
+  if (!existing && !(await hasFreeSlot())) return { allowed: false };
+
+  // Наследие прежнего поведения: пометки «сверх лимита» стояли вечно. Снимаем
+  // её, как только под лимитом освободилось место, — иначе старые отказы
+  // остались бы навсегда и чинились только запросом в базу.
+  if (existing?.isBlocked) {
+    if (!(await hasFreeSlot())) return { allowed: false };
+    await db.device.update({
+      where: { userId_fingerprint: { userId, fingerprint } },
+      data: { isBlocked: false, label: null },
+    });
   }
-  if (existing?.isBlocked) return { allowed: false };
 
   await db.device.upsert({
     where: { userId_fingerprint: { userId, fingerprint } },
