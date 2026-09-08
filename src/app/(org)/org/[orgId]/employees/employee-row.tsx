@@ -216,7 +216,7 @@ export function EmployeeActions({
               }}
             >
               <KeyRound className="mr-1.5 size-4" />
-              Сбросить пароль
+              Выдать пароль
             </Button>
             <Button
               variant="ghost"
