@@ -6,9 +6,8 @@ const EMPTY: OrgSetupState = {
   seatsTotal: 0,
   admins: 0,
   adminSignedIn: false,
-  invites: 0,
-  invitesUsed: 0,
   learners: 0,
+  learnersSignedIn: 0,
   namesConfigured: false,
 };
 
@@ -17,9 +16,8 @@ const READY: OrgSetupState = {
   seatsTotal: 10,
   admins: 1,
   adminSignedIn: true,
-  invites: 5,
-  invitesUsed: 3,
   learners: 3,
+  learnersSignedIn: 3,
   namesConfigured: false,
 };
 
@@ -29,9 +27,9 @@ describe("шаги запуска клиента", () => {
     expect(steps.filter((s) => !s.optional).every((s) => !s.done)).toBe(true);
   });
 
-  it("шаг закрывается тем, что сделал клиент сам: коды созданы — шаг владельца готов", () => {
-    const steps = ownerSetupSteps({ ...EMPTY, invites: 2 }, "org1", { hasRequisites: false });
-    expect(steps.find((s) => s.key === "invites")?.done).toBe(true);
+  it("шаг закрывается тем, что сделал клиент сам: работники заведены — шаг владельца готов", () => {
+    const steps = ownerSetupSteps({ ...EMPTY, learners: 2 }, "org1", { hasRequisites: false });
+    expect(steps.find((s) => s.key === "members")?.done).toBe(true);
   });
 
   it("передача доступа считается выполненной только после входа ответственного", () => {
@@ -63,12 +61,18 @@ describe("шаги запуска клиента", () => {
     expect(steps.find((s) => s.key === "license")?.href).toBeUndefined();
   });
 
-  it("раздача кодов засчитывается и по факту регистрации работника", () => {
-    const byUse = orgAdminSetupSteps({ ...EMPTY, invites: 3, invitesUsed: 1 }, "org1");
-    expect(byUse.find((s) => s.key === "handout")?.done).toBe(true);
+  it("раздача доступов закрывается только входом работника, а не созданием учёток", () => {
+    // Созданные учётки ещё ничего не значат: логины могли остаться в браузере
+    // ответственного и никому не уйти.
+    const created = orgAdminSetupSteps({ ...EMPTY, learners: 3 }, "org1");
+    expect(created.find((s) => s.key === "members")?.done).toBe(true);
+    expect(created.find((s) => s.key === "handout")?.done).toBe(false);
 
-    const byLearner = orgAdminSetupSteps({ ...EMPTY, invites: 3, learners: 1 }, "org1");
-    expect(byLearner.find((s) => s.key === "handout")?.done).toBe(true);
+    const signedIn = orgAdminSetupSteps(
+      { ...EMPTY, learners: 3, learnersSignedIn: 1 },
+      "org1",
+    );
+    expect(signedIn.find((s) => s.key === "handout")?.done).toBe(true);
   });
 
   it("имена работников — необязательный шаг: без него настройка считается завершённой", () => {

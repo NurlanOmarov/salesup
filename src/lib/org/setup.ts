@@ -4,8 +4,8 @@ import { db } from "@/lib/db";
  * Состояние подготовки корпоративного клиента и шаги, которые из него следуют.
  *
  * Запуск клиента — это цепочка из нескольких действий в разных местах: лицензия
- * и ответственный заводятся владельцем в /admin/orgs/<id>, коды доступа —
- * в кабинете клиента /org/<id>/invites. Делать это может кто угодно из двоих:
+ * и ответственный заводятся владельцем в /admin/orgs/<id>, работники —
+ * в кабинете клиента /org/<id>/employees. Делать это может кто угодно из двоих:
  * владелец умеет всё (он допущен в кабинет клиента как OWNER), ответственный —
  * всё, кроме лицензий. Поэтому состояние читается из БД и одинаково для обеих
  * ролей: шаг, выполненный одним, у второго сразу отмечен сделанным.
@@ -22,18 +22,16 @@ export interface OrgSetupState {
   admins: number;
   /** Хотя бы один ответственный уже входил и сменил временный пароль. */
   adminSignedIn: boolean;
-  /** Всего создано кодов самозаписи. */
-  invites: number;
-  /** По скольким кодам уже зарегистрировались. */
-  invitesUsed: number;
   /** Работников в организации (активных). */
   learners: number;
+  /** Сколько работников уже вошли и сменили временный пароль. */
+  learnersSignedIn: number;
   /** Настроен ли ПИН-код имён работников (необязательный шаг). */
   namesConfigured: boolean;
 }
 
 export async function getOrgSetupState(orgId: string): Promise<OrgSetupState> {
-  const [licenses, admins, adminsSignedIn, invites, invitesUsed, learners, keyWraps] =
+  const [licenses, admins, adminsSignedIn, learners, learnersSignedIn, keyWraps] =
     await Promise.all([
       db.orgLicense.aggregate({
         where: { orgId },
@@ -49,9 +47,15 @@ export async function getOrgSetupState(orgId: string): Promise<OrgSetupState> {
           user: { mustChangePassword: false },
         },
       }),
-      db.orgInvite.count({ where: { orgId } }),
-      db.orgInvite.count({ where: { orgId, usedCount: { gt: 0 } } }),
       db.orgMembership.count({ where: { orgId, role: "ORG_LEARNER", isActive: true } }),
+      db.orgMembership.count({
+        where: {
+          orgId,
+          role: "ORG_LEARNER",
+          isActive: true,
+          user: { mustChangePassword: false },
+        },
+      }),
       db.orgKeyWrap.count({ where: { orgId } }),
     ]);
 
@@ -60,9 +64,8 @@ export async function getOrgSetupState(orgId: string): Promise<OrgSetupState> {
     seatsTotal: licenses._sum.seatsTotal ?? 0,
     admins,
     adminSignedIn: adminsSignedIn > 0,
-    invites,
-    invitesUsed,
     learners,
+    learnersSignedIn,
     namesConfigured: keyWraps > 0,
   };
 }
@@ -81,8 +84,8 @@ export interface SetupStep {
 
 /**
  * Порядок запуска глазами владельца: от «нечего продавать» до «люди учатся».
- * Шаг 5 нарочно не требует идти к клиенту — если тот не спешит, владелец
- * создаёт коды за него в его же кабинете.
+ * Последний шаг нарочно не требует идти к клиенту — если тот не спешит,
+ * владелец заводит работников за него в его же кабинете.
  */
 export function ownerSetupSteps(
   state: OrgSetupState,
@@ -124,18 +127,18 @@ export function ownerSetupSteps(
       linkLabel: "К ответственным",
     },
     {
-      key: "invites",
-      title: "Раздать коды доступа работникам",
-      body: "Обычно это делает ответственный в своём кабинете. Если клиент не спешит, сделайте за него: откройте кабинет клиента, вкладка «Коды доступа» — там же копируется готовое сообщение для сотрудника.",
-      done: state.invites > 0,
-      href: `/org/${orgId}/invites`,
-      linkLabel: "Открыть коды доступа",
+      key: "members",
+      title: "Завести работников",
+      body: "Обычно это делает ответственный в своём кабинете. Если клиент не спешит, сделайте за него: откройте кабинет клиента, вкладка «Работники» — платформа выдаст логины и временные пароли, там же копируется готовое сообщение для сотрудника.",
+      done: state.learners > 0,
+      href: `/org/${orgId}/employees`,
+      linkLabel: "Открыть работников",
     },
     {
       key: "learners",
-      title: "Дождаться первых работников",
-      body: "Как только сотрудник введёт код и придумает пароль, он появится в списке работников под условным обозначением — ФИО платформа не получает.",
-      done: state.learners > 0,
+      title: "Дождаться первых входов",
+      body: "Шаг закроется, когда сотрудник войдёт по выданному логину и сменит временный пароль. В списке он остаётся под условным обозначением — ФИО платформа не получает.",
+      done: state.learnersSignedIn > 0,
     },
   ];
 }
@@ -161,20 +164,20 @@ export function orgAdminSetupSteps(state: OrgSetupState, orgId: string): SetupSt
       linkLabel: "Посмотреть лицензии",
     },
     {
-      key: "invites",
-      title: "Создайте коды доступа",
-      body: "Код — это приглашение для одного сотрудника. Создайте столько кодов, сколько человек будете подключать: выберите курсы, укажите количество и нажмите «Создать коды».",
-      done: state.invites > 0,
-      href: `${base}/invites`,
-      linkLabel: "Создать коды",
+      key: "members",
+      title: "Заведите работников",
+      body: "Укажите, сколько человек подключаете и какие курсы им открыть. Платформа выдаст логины вида org-0001 и временные пароли — по одному на сотрудника. При желании тут же подпишите учётки именами, чтобы не перепутать, кому какой логин достался.",
+      done: state.learners > 0,
+      href: `${base}/employees`,
+      linkLabel: "Завести работников",
     },
     {
       key: "handout",
-      title: "Раздайте коды сотрудникам",
-      body: "У каждого кода есть кнопка, которая копирует готовое сообщение с инструкцией — вставьте его в чат или письмо сотруднику. Код одноразовый, каждому нужен свой.",
-      done: state.invitesUsed > 0 || state.learners > 0,
-      href: `${base}/invites`,
-      linkLabel: "К кодам",
+      title: "Раздайте логины и пароли",
+      body: "После создания появится готовое сообщение для каждого сотрудника — вставьте его в чат или письмо. Пароли показываются один раз; потерянный сбрасывается в строке работника. Шаг закроется, когда кто-то войдёт и сменит временный пароль.",
+      done: state.learnersSignedIn > 0,
+      href: `${base}/employees`,
+      linkLabel: "К работникам",
     },
     {
       key: "names",
@@ -200,6 +203,6 @@ export function nextOrgStepHint(row: {
 }): string | null {
   if (row.licenses === 0) return "выдать лицензию";
   if (row.admins === 0) return "назначить ответственного";
-  if (row.members === 0) return "раздать коды работникам";
+  if (row.members === 0) return "завести работников";
   return null;
 }

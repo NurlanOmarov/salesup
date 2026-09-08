@@ -71,48 +71,6 @@ export function formatLogin(orgSlug: string, seq: number): string {
 }
 
 /**
- * Алфавит кодов самозаписи: без 0/O, 1/I/L — их путают при переписывании с бумаги,
- * а код работник вводит руками (оферта, п. 4.2 — коды раздаёт клиент вне платформы).
- */
-export const INVITE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
-export const INVITE_CODE_LENGTH = 8;
-
-/**
- * Код приглашения из уже полученных случайных байтов. Источник случайности
- * передаётся снаружи (crypto.randomBytes на сервере) — функция остаётся чистой
- * и проверяемой.
- */
-export function formatInviteCode(bytes: Uint8Array): string {
-  let out = "";
-  for (let i = 0; i < INVITE_CODE_LENGTH; i += 1) {
-    const b = bytes[i] ?? 0;
-    out += INVITE_ALPHABET[b % INVITE_ALPHABET.length];
-  }
-  return out;
-}
-
-/** Нормализация введённого кода: регистр и дефисы-разделители не важны. */
-export function normalizeInviteCode(raw: string): string {
-  return raw.trim().toUpperCase().replace(/[\s-]/g, "");
-}
-
-/** Пригоден ли код к активации прямо сейчас. */
-export function isInviteUsable(
-  invite: {
-    maxUses: number;
-    usedCount: number;
-    expiresAt: Date | null;
-    revokedAt: Date | null;
-  },
-  now: Date,
-): boolean {
-  if (invite.revokedAt) return false;
-  if (invite.usedCount >= invite.maxUses) return false;
-  if (invite.expiresAt && invite.expiresAt.getTime() <= now.getTime()) return false;
-  return true;
-}
-
-/**
  * Slug организации из названия: латиница/цифры/дефис. Кириллица транслитерируется —
  * логин работника должен набираться с любой раскладки.
  */
@@ -132,45 +90,4 @@ export function slugifyOrgName(name: string): string {
     else out += "-";
   }
   return out.replace(/-+/g, "-").replace(/^-|-$/g, "").slice(0, 24);
-}
-
-/**
- * Маска кода для списка выданных: целиком код виден только по явному клику.
- * Защита не от подбора (код лежит в базе как есть и переотправляется по
- * просьбе), а от взгляда через плечо и скриншота всего списка.
- */
-export function maskInviteCode(code: string): string {
-  return `${code.slice(0, 3)}•••${code.slice(-2)}`;
-}
-
-/**
- * Сколько мест забронировано ещё не активированными кодами. Место списывается
- * только при активации (Enrollment), поэтому без этого учёта можно напечатать
- * 5 кодов на одно свободное место — и четверо работников получат отказ уже
- * после ввода кода, когда объяснять это будет некому. Резерв считается по
- * остатку активаций кода (maxUses − usedCount) для каждой его лицензии.
- */
-export function countInviteReservations(
-  invites: {
-    licenseIds: unknown;
-    maxUses: number;
-    usedCount: number;
-    expiresAt: Date | null;
-    revokedAt: Date | null;
-  }[],
-  now: Date,
-): Map<string, number> {
-  const reserved = new Map<string, number>();
-  for (const invite of invites) {
-    if (!isInviteUsable(invite, now)) continue;
-    const left = Math.max(0, invite.maxUses - invite.usedCount);
-    if (left === 0) continue;
-    const licenseIds = Array.isArray(invite.licenseIds)
-      ? (invite.licenseIds as unknown[]).filter((v): v is string => typeof v === "string")
-      : [];
-    for (const id of licenseIds) {
-      reserved.set(id, (reserved.get(id) ?? 0) + left);
-    }
-  }
-  return reserved;
 }

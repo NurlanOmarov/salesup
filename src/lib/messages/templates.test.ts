@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  inviteMessage,
   orgWorkerWelcomeMessage,
   orgAdminPasswordMessage,
   orgAdminWelcomeMessage,
@@ -20,7 +19,12 @@ describe("шаблоны сообщений о доступе", () => {
         siteUrl: SITE,
       }),
       studentWelcomeMessage({ login: "a@b.by", tempPassword: "pw", siteUrl: SITE }),
-      inviteMessage({ code: "GTXRHYPG", siteUrl: SITE }),
+      orgWorkerWelcomeMessage({
+        login: "astrasintez-0001",
+        tempPassword: "pw",
+        siteUrl: SITE,
+        orgName: "АстраСинтез",
+      }),
     ];
     for (const t of texts) expect(t).not.toContain("by//");
   });
@@ -39,13 +43,18 @@ describe("шаблоны сообщений о доступе", () => {
     expect(text).toContain("Кабинет компании");
   });
 
-  it("сообщение работнику ведёт на /join с кодом и напоминает сохранить логин", () => {
-    const text = inviteMessage({ code: "GTXRHYPG", siteUrl: SITE });
-    expect(text).toContain("https://study.activesales.by/join");
-    expect(text).toContain("GTXRHYPG");
-    expect(text).toContain("сохраните его");
-    // Обезличивание — обещание оферты, и работник должен видеть его текстом.
-    expect(text).toContain("Ни имя, ни почта, ни телефон не запрашиваются");
+  it("сообщение работнику даёт логин, пароль и адрес входа", () => {
+    const text = orgWorkerWelcomeMessage({
+      login: "astrasintez-0001",
+      tempPassword: "hRYA-UhaG",
+      siteUrl: SITE,
+      orgName: "АстраСинтез",
+    });
+    expect(text).toContain("https://study.activesales.by/login");
+    expect(text).toContain("astrasintez-0001");
+    expect(text).toContain("hRYA-UhaG");
+    // Временный пароль без предупреждения о смене превращается в постоянный.
+    expect(text).toContain("временный после этого перестанет работать");
   });
 
   it("курсы ученика попадают в сообщение, когда переданы", () => {
@@ -65,22 +74,20 @@ describe("шаблоны сообщений о доступе", () => {
   it("сотрудник видит, от какой компании пришёл доступ", () => {
     // Сообщение приходит из личного чата коллеги: без названия работодателя оно
     // читается как спам, а логин вида acme-0001 ничего не проясняет.
-    const invite = inviteMessage({ code: "GTXRHYPG", siteUrl: SITE, orgName: "АстраСинтез" });
-    expect(invite).toContain("Компания «АстраСинтез»");
-
     const worker = orgWorkerWelcomeMessage({
       login: "astrasintez-0001",
       tempPassword: "pw",
       siteUrl: SITE,
       orgName: "АстраСинтез",
     });
-    expect(worker).toContain("Компания «АстраСинтез»");
+    expect(worker).toContain("сотрудника компании «АстраСинтез»");
     expect(worker).toContain("astrasintez-0001");
 
-    // Без наименования текст остаётся связным — просто «Компания».
-    expect(inviteMessage({ code: "GTXRHYPG", siteUrl: SITE })).toContain(
-      "Компания открыла вам доступ",
-    );
+    // Без наименования первая строка не разваливается: «…кабинету сотрудника
+    // для онлайн-обучения…».
+    expect(
+      orgWorkerWelcomeMessage({ login: "x-0001", tempPassword: "pw", siteUrl: SITE }),
+    ).toContain("кабинету сотрудника для онлайн-обучения");
   });
 
   it("сообщения о сбросе предупреждают, что старый пароль не работает", () => {

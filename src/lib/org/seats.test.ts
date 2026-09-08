@@ -2,14 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   computeSeatExpiry,
   computeSeatUsage,
-  countInviteReservations,
-  formatInviteCode,
   formatLogin,
   hasFreeSeat,
-  INVITE_ALPHABET,
-  INVITE_CODE_LENGTH,
-  isInviteUsable,
-  normalizeInviteCode,
   slugifyOrgName,
 } from "./seats";
 
@@ -93,54 +87,6 @@ describe("formatLogin", () => {
   });
 });
 
-describe("formatInviteCode", () => {
-  it("даёт код нужной длины из безопасного алфавита", () => {
-    const code = formatInviteCode(Uint8Array.from({ length: 8 }, (_, i) => i * 7));
-    expect(code).toHaveLength(INVITE_CODE_LENGTH);
-    for (const ch of code) expect(INVITE_ALPHABET).toContain(ch);
-  });
-
-  it("в алфавите нет символов, которые путают при переписывании", () => {
-    for (const ch of "01OIL") expect(INVITE_ALPHABET).not.toContain(ch);
-  });
-
-  it("не падает на коротком буфере", () => {
-    expect(formatInviteCode(new Uint8Array(2))).toHaveLength(INVITE_CODE_LENGTH);
-  });
-});
-
-describe("normalizeInviteCode", () => {
-  it("не различает регистр, пробелы и дефисы", () => {
-    expect(normalizeInviteCode(" abcd-2345 ")).toBe("ABCD2345");
-    expect(normalizeInviteCode("AB CD 23 45")).toBe("ABCD2345");
-  });
-});
-
-describe("isInviteUsable", () => {
-  const now = new Date("2026-08-14T12:00:00Z");
-  const base = { maxUses: 1, usedCount: 0, expiresAt: null, revokedAt: null };
-
-  it("свежий код годен", () => {
-    expect(isInviteUsable(base, now)).toBe(true);
-  });
-
-  it("использованный одноразовый код не годен", () => {
-    expect(isInviteUsable({ ...base, usedCount: 1 }, now)).toBe(false);
-  });
-
-  it("многоразовый код годен, пока есть остаток", () => {
-    expect(isInviteUsable({ ...base, maxUses: 5, usedCount: 4 }, now)).toBe(true);
-    expect(isInviteUsable({ ...base, maxUses: 5, usedCount: 5 }, now)).toBe(false);
-  });
-
-  it("истёкший и отозванный коды не годны", () => {
-    expect(
-      isInviteUsable({ ...base, expiresAt: new Date("2026-08-14T11:59:00Z") }, now),
-    ).toBe(false);
-    expect(isInviteUsable({ ...base, revokedAt: now }, now)).toBe(false);
-  });
-});
-
 describe("slugifyOrgName", () => {
   it("транслитерирует кириллицу — логин должен набираться с любой раскладки", () => {
     expect(slugifyOrgName("Фарм Дистрибьютор")).toBe("farm-distribyutor");
@@ -156,53 +102,5 @@ describe("slugifyOrgName", () => {
 
   it("оставляет только допустимые в логине символы", () => {
     expect(slugifyOrgName("Acme #1 & Co.")).toMatch(/^[a-z0-9-]+$/);
-  });
-});
-
-describe("countInviteReservations", () => {
-  const now = new Date("2026-09-08T10:00:00Z");
-  const base = { maxUses: 1, usedCount: 0, expiresAt: null, revokedAt: null };
-
-  it("считает каждый действующий код бронью места по всем его лицензиям", () => {
-    const reserved = countInviteReservations(
-      [
-        { ...base, licenseIds: ["l1"] },
-        { ...base, licenseIds: ["l1", "l2"] },
-      ],
-      now,
-    );
-    expect(reserved.get("l1")).toBe(2);
-    expect(reserved.get("l2")).toBe(1);
-  });
-
-  it("не держит место за отозванным, истёкшим и уже использованным кодом", () => {
-    const reserved = countInviteReservations(
-      [
-        { ...base, licenseIds: ["l1"], revokedAt: new Date("2026-09-01") },
-        { ...base, licenseIds: ["l1"], expiresAt: new Date("2026-09-07") },
-        { ...base, licenseIds: ["l1"], usedCount: 1 },
-      ],
-      now,
-    );
-    expect(reserved.get("l1")).toBeUndefined();
-  });
-
-  it("многоразовый код бронирует места по остатку активаций", () => {
-    const reserved = countInviteReservations(
-      [{ ...base, licenseIds: ["l1"], maxUses: 5, usedCount: 2 }],
-      now,
-    );
-    expect(reserved.get("l1")).toBe(3);
-  });
-
-  it("переживает битый licenseIds из Json-поля", () => {
-    const reserved = countInviteReservations(
-      [
-        { ...base, licenseIds: null },
-        { ...base, licenseIds: ["l1", 42] },
-      ],
-      now,
-    );
-    expect(reserved.get("l1")).toBe(1);
   });
 });

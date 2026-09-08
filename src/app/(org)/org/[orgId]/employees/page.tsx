@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { env } from "@/env";
 import { requireOrgAdmin } from "@/lib/org/guards";
 import { getOrgLicenses, getOrgMembers } from "@/lib/org/reports";
@@ -102,12 +101,6 @@ export default async function EmployeesPage({
             siteUrl={siteUrl}
             orgName={ctx.orgName}
           />
-          <Link
-            href={`/org/${ctx.orgId}/invites`}
-            className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-slate-950 transition-colors hover:bg-amber-400"
-          >
-            + Коды доступа
-          </Link>
         </div>
       </div>
 
@@ -122,19 +115,14 @@ export default async function EmployeesPage({
           <div className="p-10 text-center">
             <p className="font-medium">Работников пока нет</p>
             <p className="mx-auto mt-1 max-w-md text-sm text-foreground/55">
-              Создайте коды доступа и раздайте их сотрудникам: каждый введёт свой код
-              на странице регистрации, придумает пароль и сразу начнёт обучение.
+              Нажмите «Создать работников»: укажите, сколько человек подключаете и
+              какие курсы им открыть. Платформа выдаст логины и временные пароли —
+              останется отправить каждому готовое сообщение.
             </p>
-            <p className="mt-1 text-sm text-foreground/55">
-              Либо создайте учётные записи сами — получите список логинов и
-              временных паролей.
+            <p className="mx-auto mt-1 max-w-md text-sm text-foreground/55">
+              Ни имени, ни почты, ни телефона сотрудника вводить не нужно: на
+              платформе он остаётся под условным обозначением.
             </p>
-            <Link
-              href={`/org/${ctx.orgId}/invites`}
-              className="mt-4 inline-block rounded-lg border border-foreground/15 px-4 py-2 text-sm font-medium transition-colors hover:bg-foreground/5"
-            >
-              Создать коды
-            </Link>
           </div>
         ) : (
           <table className="w-full text-sm">

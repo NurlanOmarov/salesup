@@ -1092,7 +1092,6 @@ model Organization {
   memberships  OrgMembership[]
   licenses     OrgLicense[]
   groups       OrgGroup[]
-  invites      OrgInvite[]
   keyWraps     OrgKeyWrap[]
   liveSessions LiveSession[]
 
@@ -1180,26 +1179,6 @@ model OrgLicense {
 
   @@unique([orgId, courseId])
   @@index([orgId])
-}
-
-/// Код самозаписи: работник вводит его на /join и создаёт себе анонимную учётку.
-/// Коды раздаёт клиент вне платформы (оферта, п. 4.2) — мы не знаем, кому именно.
-model OrgInvite {
-  id         String    @id @default(cuid())
-  orgId      String
-  code       String    @unique // 8 символов без похожих букв (0/O, 1/I)
-  groupId    String?
-  licenseIds Json // string[]: какие лицензии выдать при активации
-  maxUses    Int       @default(1)
-  usedCount  Int       @default(0)
-  expiresAt  DateTime?
-  revokedAt  DateTime?
-  createdAt  DateTime  @default(now())
-  createdBy  String? // userId ORG_ADMIN либо OWNER
-
-  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-
-  @@index([orgId, revokedAt])
 }
 
 // ─────────────────────────── ЗАЯВКИ / АДМИН-ЖУРНАЛ / БЕЗОПАСНОСТЬ (v1.2) ───────────────────────────

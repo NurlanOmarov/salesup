@@ -1,21 +1,11 @@
-import { randomBytes } from "node:crypto";
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
-import {
-  computeSeatExpiry,
-  computeSeatUsage,
-  countInviteReservations,
-  formatInviteCode,
-  formatLogin,
-  INVITE_CODE_LENGTH,
-  isInviteUsable,
-  normalizeInviteCode,
-} from "@/lib/org/seats";
+import { computeSeatExpiry, computeSeatUsage, formatLogin } from "@/lib/org/seats";
 import { hashPassword } from "@/lib/auth/password";
 import { generateTempPassword } from "@/lib/auth/temp-password";
 
 /**
- * Операции над местами и кодами самозаписи. Используются и консолью владельца,
+ * Операции над местами и учётками работников. Используются и консолью владельца,
  * и кабинетом организации — поэтому живут в lib, а не в actions конкретной зоны.
  *
  * Инвариант: место = обычный Enrollment (source B2B, licenseId). Никакой второй
@@ -141,172 +131,6 @@ export async function revokeSeat(input: {
 }
 
 /**
- * Сколько мест каждой лицензии уже забронировано действующими кодами. Нужно и
- * перед выпуском новых кодов, и в UI: свободное место видно в отчёте, а вот
- * «место обещано коду, который ещё не активировали» — нигде, и раньше на одно
- * место можно было напечатать сколько угодно кодов.
- */
-export async function getInviteReservations(
-  orgId: string,
-  now: Date = new Date(),
-): Promise<Map<string, number>> {
-  const invites = await db.orgInvite.findMany({
-    where: { orgId, revokedAt: null },
-    select: {
-      licenseIds: true,
-      maxUses: true,
-      usedCount: true,
-      expiresAt: true,
-      revokedAt: true,
-    },
-  });
-  return countInviteReservations(invites, now);
-}
-
-/** Сгенерировать код самозаписи, не совпадающий с существующими. */
-export async function createInvite(input: {
-  orgId: string;
-  licenseIds: string[];
-  groupId?: string | null;
-  maxUses?: number;
-  expiresAt?: Date | null;
-  createdBy?: string | null;
-}): Promise<{ id: string; code: string }> {
-  // Коллизия кода из 31^8 вариантов маловероятна, но уникальность обеспечена
-  // индексом — просто пробуем ещё раз.
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    const code = formatInviteCode(randomBytes(INVITE_CODE_LENGTH));
-    const exists = await db.orgInvite.findUnique({
-      where: { code },
-      select: { id: true },
-    });
-    if (exists) continue;
-
-    const invite = await db.orgInvite.create({
-      data: {
-        orgId: input.orgId,
-        code,
-        licenseIds: input.licenseIds,
-        groupId: input.groupId ?? null,
-        maxUses: input.maxUses ?? 1,
-        expiresAt: input.expiresAt ?? null,
-        createdBy: input.createdBy ?? null,
-      },
-      select: { id: true, code: true },
-    });
-    return invite;
-  }
-  throw new SeatError("Не удалось сгенерировать код, попробуйте ещё раз");
-}
-
-export class JoinError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "JoinError";
-  }
-}
-
-/**
- * Самозапись работника по коду (оферта, п. 4.2) — ключевая операция обезличивания:
- * создаётся учётка БЕЗ e-mail, имени и телефона. Логин генерируется платформой из
- * счётчика организации, пароль работник задаёт сам. Мы не знаем, кто это.
- *
- * Всё в одной транзакции: инкремент счётчика логинов, создание пользователя,
- * членства и мест по всем лицензиям кода, инкремент usedCount.
- */
-export async function activateInvite(input: {
-  code: string;
-  password: string;
-  now?: Date;
-}): Promise<{ userId: string; login: string; courses: number }> {
-  const now = input.now ?? new Date();
-  const code = normalizeInviteCode(input.code);
-  const passwordHash = await hashPassword(input.password);
-
-  // Логин выделяем ДО транзакции и повторяем при коллизии. Номер берётся из
-  // счётчика организации, но занятым он может оказаться и без гонки: работники
-  // удалённой организации остаются в базе, а новая организация с тем же кодом
-  // начинает нумерацию сначала. Раньше это приводило к 500 на странице
-  // регистрации — работник видел «ошибка сервера» вместо понятного текста.
-  const inviteOrg = await db.orgInvite.findUnique({
-    where: { code },
-    select: { orgId: true },
-  });
-  if (!inviteOrg) throw new JoinError("Код не найден. Проверьте, верно ли он введён.");
-  const login = await allocateLogin(inviteOrg.orgId);
-
-  return db.$transaction(async (tx) => {
-    const invite = await tx.orgInvite.findUnique({
-      where: { code },
-      select: {
-        id: true,
-        orgId: true,
-        groupId: true,
-        licenseIds: true,
-        maxUses: true,
-        usedCount: true,
-        expiresAt: true,
-        revokedAt: true,
-        org: { select: { id: true, slug: true, status: true, loginSeq: true } },
-      },
-    });
-    if (!invite) throw new JoinError("Код не найден. Проверьте, верно ли он введён.");
-    if (!isInviteUsable(invite, now)) {
-      throw new JoinError("Код больше не действует. Запросите новый у своей компании.");
-    }
-    if (invite.org.status !== "ACTIVE") {
-      throw new JoinError("Доступ организации приостановлен. Обратитесь к ответственному за обучение.");
-    }
-
-    const user = await tx.user.create({
-      data: {
-        login,
-        // e-mail, имя и телефон НЕ заполняются: платформа не получает ПДн
-        // работника (оферта /offer-b2b, п. 10.1; docs/B2B-PLAN.md §5.1).
-        role: "STUDENT",
-        passwordHash,
-        mustChangePassword: false, // пароль работник задал сам
-      },
-      select: { id: true },
-    });
-
-    await tx.orgMembership.create({
-      data: {
-        orgId: invite.orgId,
-        userId: user.id,
-        role: "ORG_LEARNER",
-        groupId: invite.groupId,
-      },
-    });
-
-    const licenseIds = Array.isArray(invite.licenseIds)
-      ? (invite.licenseIds as unknown[]).filter(
-          (v): v is string => typeof v === "string",
-        )
-      : [];
-
-    let granted = 0;
-    for (const licenseId of licenseIds) {
-      await grantSeat({
-        orgId: invite.orgId,
-        userId: user.id,
-        licenseId,
-        now,
-        tx,
-      });
-      granted += 1;
-    }
-
-    await tx.orgInvite.update({
-      where: { id: invite.id },
-      data: { usedCount: { increment: 1 } },
-    });
-
-    return { userId: user.id, login, courses: granted };
-  });
-}
-
-/**
  * Пересчитать счётчик логинов организации по фактически существующим учёткам.
  *
  * Нужен после удаления работника: счётчик только рос, и клиент, удаливший
@@ -359,7 +183,7 @@ async function allocateLogin(orgId: string): Promise<string> {
     });
     if (!taken) return login;
   }
-  throw new JoinError(
+  throw new SeatError(
     "Не удалось создать учётную запись. Обратитесь к ответственному за обучение.",
   );
 }
@@ -480,7 +304,7 @@ export async function createOrgAdmin(input: {
   // (requireOrgAdmin пропускает OWNER без членства) — понижать его до ORG_ADMIN
   // незачем, а последствия у такого назначения были бы неочевидные.
   if (existing?.role === "OWNER") {
-    throw new JoinError(
+    throw new SeatError(
       "Это учётная запись владельца платформы: она и так открывает кабинет любой организации. Укажите e-mail сотрудника клиента.",
     );
   }

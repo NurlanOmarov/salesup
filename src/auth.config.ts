@@ -23,7 +23,6 @@ const cookieInsecure = process.env.AUTH_COOKIE_INSECURE === "true";
 
 const PUBLIC_PREFIXES = [
   "/login",
-  "/join", // самозапись работника организации по коду (учётки ещё нет)
   "/courses",
   "/verify",
   "/offer",

@@ -4,9 +4,9 @@ import { hashPassword } from "../src/lib/auth/password";
 
 /**
  * B2B (docs/B2B-PLAN.md §7): владелец заводит организацию и лицензию, ответственный
- * представитель создаёт код, работник регистрируется сам — без единого ПДн, — и
- * получает доступ к курсу. Проверяем и запреты: чужая организация, повторное
- * использование кода, заморозка, отзыв места.
+ * представитель заводит работников — без единого ПДн, — и те получают доступ к
+ * курсу по выданному логину. Проверяем и запреты: чужая организация, заморозка,
+ * отзыв места.
  */
 
 const db = new PrismaClient();
@@ -235,56 +235,7 @@ test("корпоративная заявка ведёт на создание �
   await expect(page.getByLabel("Заметка для себя")).toHaveValue(/12 сотрудников/);
 });
 
-test("работник регистрируется по коду без единого персонального данного", async ({
-  page,
-}) => {
-  await login(page, ADMIN_EMAIL, ADMIN_PASS);
-
-  await page.goto(`/org/${orgId}/invites`);
-  await page.getByLabel("Сколько кодов").fill("1");
-  await page.getByRole("button", { name: "Создать коды" }).click();
-  await expect(page.getByText(/Готово: 1/)).toBeVisible();
-
-  const invite = await db.orgInvite.findFirstOrThrow({
-    where: { orgId },
-    orderBy: { createdAt: "desc" },
-  });
-
-  // Регистрация работника — отдельный контекст, без сессии ответственного.
-  await page.context().clearCookies();
-  await page.goto(`/join?code=${invite.code}`);
-  await page.getByLabel("Придумайте пароль").fill(WORKER_PASS);
-  await page.getByLabel("Повторите пароль").fill(WORKER_PASS);
-  await page.getByRole("checkbox").check();
-  await page.getByRole("button", { name: "Начать обучение" }).click();
-
-  await expect(page.getByText("Доступ открыт")).toBeVisible();
-  await expect(page.getByText(`${ORG_SLUG}-0001`)).toBeVisible();
-
-  // Ключевая проверка обезличивания: учётка без e-mail, имени и телефона.
-  const worker = await db.user.findUniqueOrThrow({
-    where: { login: `${ORG_SLUG}-0001` },
-  });
-  expect(worker.email).toBeNull();
-  expect(worker.name).toBeNull();
-  expect(worker.phone).toBeNull();
-
-  // Место выдано из лицензии — доступ обычным Enrollment (правило 1).
-  const enrollment = await db.enrollment.findFirstOrThrow({
-    where: { userId: worker.id, courseId },
-  });
-  expect(enrollment.licenseId).toBe(licenseId);
-  expect(enrollment.source).toBe("B2B");
-  expect(enrollment.revokedAt).toBeNull();
-
-  // Доступ к платному уроку реально работает. Проверяем по ключу AES: он живёт
-  // в БД, тогда как playlist читает файл с диска — без медиа он вернул бы 404
-  // и скрыл бы настоящий результат проверки прав.
-  const res = await pageFetchStatus(page, `/api/video/key/${paidLessonId}`);
-  expect(res).toBe(200);
-});
-
-test("ответственный создаёт работников сам: логины, пароли и места", async ({
+test("ответственный заводит работника, тот входит и получает доступ к курсу", async ({
   page,
 }) => {
   await login(page, ADMIN_EMAIL, ADMIN_PASS);
@@ -293,10 +244,9 @@ test("ответственный создаёт работников сам: л�
   await page.getByRole("button", { name: "Создать работников" }).click();
   await page.getByLabel("Сколько работников").fill("1");
   await page.getByRole("button", { name: "Создать", exact: true }).click();
-
   await expect(page.getByText(/Создано учётных записей: 1/)).toBeVisible();
 
-  // Учётка создана без единого персонального данного — как и при самозаписи.
+  // Ключевая проверка обезличивания: учётка без e-mail, имени и телефона.
   const membership = await db.orgMembership.findFirstOrThrow({
     where: { orgId, role: "ORG_LEARNER" },
     orderBy: { joinedAt: "desc" },
@@ -305,16 +255,50 @@ test("ответственный создаёт работников сам: л�
   expect(membership.user.email).toBeNull();
   expect(membership.user.name).toBeNull();
   expect(membership.user.phone).toBeNull();
-  expect(membership.user.login).toMatch(new RegExp(`^${ORG_SLUG}-\\d{4}$`));
+  expect(membership.user.login).toBe(`${ORG_SLUG}-0001`);
   // Пароль временный: при первом входе платформа заставит его сменить.
   expect(membership.user.mustChangePassword).toBe(true);
+  // Имён никто не вводил — метка пуста, а не «пустая строка под шифром».
+  expect(membership.labelEnc).toBeNull();
 
-  // Место выдано из той же лицензии, что и при регистрации по коду.
+  // Место выдано из лицензии — доступ обычным Enrollment (правило 1).
   const enrollment = await db.enrollment.findFirstOrThrow({
     where: { userId: membership.userId, licenseId },
   });
   expect(enrollment.revokedAt).toBeNull();
   expect(enrollment.source).toBe("B2B");
+
+  // Пароль показывается один раз и только на экране — забираем его оттуда же,
+  // откуда его берёт ответственный, отправляя сообщение сотруднику.
+  const messageText = await page.locator("textarea[readonly]").first().inputValue();
+  const tempPassword = /Временный пароль: (\S+)/.exec(messageText)?.[1];
+  expect(tempPassword).toBeTruthy();
+  expect(messageText).toContain(`${ORG_SLUG}-0001`);
+
+  // Дальше — глазами работника: чужой сессии здесь быть не должно.
+  await page.context().clearCookies();
+  await login(page, `${ORG_SLUG}-0001`, tempPassword!);
+
+  // Временный пароль ведёт на принудительную смену, там же принимается оферта.
+  await expect(page).toHaveURL(/\/change-password/);
+  await page.getByLabel("Текущий (временный) пароль").fill(tempPassword!);
+  await page.getByLabel("Новый пароль", { exact: true }).fill(WORKER_PASS);
+  await page.getByLabel("Повторите новый пароль").fill(WORKER_PASS);
+  await page.getByRole("checkbox").check();
+  await page.getByRole("button", { name: "Сохранить и продолжить" }).click();
+  await expect(page).toHaveURL(/\/app/);
+
+  const after = await db.user.findUniqueOrThrow({ where: { login: `${ORG_SLUG}-0001` } });
+  expect(after.mustChangePassword).toBe(false);
+  // Акцепт оферты фиксируется моментом и редакцией (Закон № 99-З).
+  expect(after.termsAcceptedAt).not.toBeNull();
+  expect(after.termsVersion).toBeTruthy();
+
+  // Доступ к платному уроку реально работает. Проверяем по ключу AES: он живёт
+  // в БД, тогда как playlist читает файл с диска — без медиа он вернул бы 404
+  // и скрыл бы настоящий результат проверки прав.
+  const res = await pageFetchStatus(page, `/api/video/key/${paidLessonId}`);
+  expect(res).toBe(200);
 });
 
 test("ответственный удаляет лишнюю учётку: место возвращается в пул", async ({
@@ -417,22 +401,6 @@ test("имена ведёт клиент: владелец платформы и
   await expect(page.getByText("Александр", { exact: true })).toBeHidden();
   await expect(page.getByRole("button", { name: "Присвоить имена" })).toBeHidden();
   await expect(page.getByRole("button", { name: /имя/ })).toBeHidden();
-});
-
-test("код одноразовый: повторная регистрация отклоняется", async ({ page }) => {
-  const invite = await db.orgInvite.findFirstOrThrow({
-    where: { orgId },
-    orderBy: { createdAt: "desc" },
-  });
-
-  await page.context().clearCookies();
-  await page.goto(`/join?code=${invite.code}`);
-  await page.getByLabel("Придумайте пароль").fill("another-pass-123");
-  await page.getByLabel("Повторите пароль").fill("another-pass-123");
-  await page.getByRole("checkbox").check();
-  await page.getByRole("button", { name: "Начать обучение" }).click();
-
-  await expect(page.getByText(/Код больше не действует/)).toBeVisible();
 });
 
 test("ответственный не может открыть кабинет чужой организации", async ({ page }) => {
