@@ -61,5 +61,5 @@ export const SITE_DOMAIN = "study.activesales.by";
  * версия сохраняется в момент акцепта (User.termsVersion, Lead.consentVersion),
  * чтобы всегда было видно, какую редакцию принял конкретный человек.
  */
-export const LEGAL_VERSION = "1.1";
-export const LEGAL_DATE = "17 августа 2026 г.";
+export const LEGAL_VERSION = "1.2";
+export const LEGAL_DATE = "8 сентября 2026 г.";
