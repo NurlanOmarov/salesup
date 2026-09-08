@@ -35,11 +35,14 @@ export function InvitesManager({
   licenses,
   groups,
   siteUrl,
+  orgName,
 }: {
   orgId: string;
   licenses: LicenseOption[];
   groups: { id: string; name: string }[];
   siteUrl: string;
+  /** Наименование клиента — с него начинается сообщение сотруднику. */
+  orgName: string;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
@@ -104,7 +107,7 @@ export function InvitesManager({
 
   const joinUrl = `${siteUrl}/join`;
 
-  const messageFor = (code: string) => inviteMessage({ code, siteUrl });
+  const messageFor = (code: string) => inviteMessage({ code, siteUrl, orgName });
 
   function copy(text: string, key: string) {
     void navigator.clipboard.writeText(text).then(
@@ -441,10 +444,12 @@ export function PurgeInvitesButton({ orgId, count }: { orgId: string; count: num
 export function InviteCodeCell({
   code,
   siteUrl,
+  orgName,
   usable,
 }: {
   code: string;
   siteUrl: string;
+  orgName: string;
   usable: boolean;
 }) {
   const [shown, setShown] = useState(false);
@@ -474,7 +479,7 @@ export function InviteCodeCell({
         type="button"
         title="Скопировать сообщение для сотрудника"
         onClick={() => {
-          void navigator.clipboard.writeText(inviteMessage({ code, siteUrl })).then(() => {
+          void navigator.clipboard.writeText(inviteMessage({ code, siteUrl, orgName })).then(() => {
             setCopied(true);
             window.setTimeout(() => setCopied(false), 2500);
           });

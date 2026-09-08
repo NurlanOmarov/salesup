@@ -31,6 +31,7 @@ export function CreateMembers({
   licenses,
   groups,
   siteUrl,
+  orgName,
 }: {
   orgId: string;
   orgSlug: string;
@@ -38,6 +39,7 @@ export function CreateMembers({
   groups: { id: string; name: string }[];
   /** Адрес входа — попадает в сообщение сотруднику вместе с логином. */
   siteUrl: string;
+  orgName: string;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -98,6 +100,7 @@ export function CreateMembers({
         login: m.login,
         tempPassword: m.password,
         siteUrl,
+        orgName,
         courses: courseTitles,
       });
     // Табличный список — для тех, кто раздаёт доступы по своей ведомости.

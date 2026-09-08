@@ -100,6 +100,7 @@ export default async function EmployeesPage({
             licenses={licenseOptions}
             groups={groups}
             siteUrl={siteUrl}
+            orgName={ctx.orgName}
           />
           <Link
             href={`/org/${ctx.orgId}/invites`}
@@ -199,6 +200,7 @@ export default async function EmployeesPage({
                       licenses={licenseOptions}
                       groups={groups}
                       siteUrl={siteUrl}
+                      orgName={ctx.orgName}
                     />
                   </td>
                 </tr>

@@ -11,6 +11,7 @@ import {
   createMembers,
   getInviteReservations,
   grantSeat,
+  recalcLoginSeq,
   revokeSeat,
 } from "@/lib/org/service";
 import { hashPassword } from "@/lib/auth/password";
@@ -253,11 +254,25 @@ export const createMembersAction = safeAction(
       count: z.coerce.number().int().min(1).max(100),
       licenseIds: z.array(z.string()).min(1, "Выберите хотя бы один курс"),
       groupId: z.string().optional(),
+      // Метки работников — уже зашифрованные в браузере blob'ы (base64 AES-GCM),
+      // по одной на создаваемого. Открытым текстом имени здесь быть не может:
+      // поля name/email/phone в B2B-действиях запрещены схемой, а не только
+      // спрятаны в UI (CLAUDE.md, правило 9).
+      labels: z.array(z.string().max(2048).nullable()).max(100).optional(),
     }),
     auth: "orgAdmin",
   },
   async (input) => {
     const ctx = await writableCtx(input.orgId);
+
+    // Метки и число работников считаются по одному индексу — рассинхрон означал
+    // бы имя, приклеенное к чужому логину.
+    if (input.labels && input.labels.length !== input.count) {
+      throw new Error("Имена не совпали с числом работников — обновите страницу");
+    }
+    // Владелец платформы метки не пишет: как только он способен положить туда
+    // имя, он становится оператором ПДн работников (оферта /offer-b2b, п. 10).
+    if (input.labels?.some((l) => l !== null)) assertNotOwnerView(ctx);
 
     const licenses = await db.orgLicense.findMany({
       where: { id: { in: input.licenseIds } },
@@ -281,6 +296,7 @@ export const createMembersAction = safeAction(
       count: input.count,
       licenseIds: input.licenseIds,
       groupId: input.groupId ?? null,
+      labels: input.labels,
     });
 
     await writeAdminLog({
@@ -460,7 +476,13 @@ export const deleteMemberAction = safeAction(
     const ctx = await writableCtx(input.orgId);
     const membership = await db.orgMembership.findUnique({
       where: { id: input.membershipId },
-      select: { orgId: true, userId: true, role: true, user: { select: { login: true } } },
+      select: {
+        orgId: true,
+        userId: true,
+        role: true,
+        user: { select: { login: true } },
+        org: { select: { slug: true } },
+      },
     });
     assertOrgScope(membership, ctx);
     if (membership.role !== "ORG_LEARNER") {
@@ -484,6 +506,9 @@ export const deleteMemberAction = safeAction(
       } else {
         await tx.user.delete({ where: { id: membership.userId } });
       }
+      // Счётчик логинов идёт следом за учётками: иначе после удаления
+      // единственного acme-0001 следующий работник стал бы acme-0002.
+      await recalcLoginSeq(tx, ctx.orgId, membership.org.slug);
     });
 
     await writeAdminLog({

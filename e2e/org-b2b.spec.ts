@@ -366,6 +366,22 @@ test("ответственный удаляет лишнюю учётку: ме�
   expect(await db.enrollment.count({ where: { licenseId, revokedAt: null } })).toBe(
     seatsBefore,
   );
+  // И счётчик логинов откатился: следующий работник получит освободившийся
+  // номер, а не следующий по счёту. Иначе после удаления единственного acme-0001
+  // в компании «учился бы» acme-0002 — и клиент считает, что людей двое.
+  const org = await db.organization.findUniqueOrThrow({
+    where: { id: orgId },
+    select: { loginSeq: true },
+  });
+  const remaining = await db.user.findMany({
+    where: { login: { startsWith: `${ORG_SLUG}-` } },
+    select: { login: true },
+  });
+  const maxSeq = remaining.reduce(
+    (acc, u) => Math.max(acc, Number(u.login!.slice(ORG_SLUG.length + 1))),
+    0,
+  );
+  expect(org.loginSeq).toBe(maxSeq);
 });
 
 test("имена ведёт клиент: владелец платформы их не видит и ключ не заводит", async ({

@@ -47,6 +47,7 @@ export function EmployeeActions({
   licenses,
   groups,
   siteUrl,
+  orgName,
 }: {
   orgId: string;
   data: EmployeeRowData;
@@ -54,6 +55,7 @@ export function EmployeeActions({
   groups: { id: string; name: string }[];
   /** Адрес входа — без него сотрудник получает логин и пароль без двери. */
   siteUrl: string;
+  orgName: string;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -271,6 +273,7 @@ export function EmployeeActions({
                 login: reset.login,
                 tempPassword: reset.tempPassword,
                 siteUrl,
+                orgName,
               })}
               title="Сообщение сотруднику"
               hint="Пароль показывается один раз — скопируйте и отправьте"

@@ -14,6 +14,15 @@
  * где ни markdown, ни html не отрендерятся.
  */
 
+/**
+ * «Компания «АстраСинтез»» или просто «Компания», если наименование неизвестно.
+ * Сотрудник получает сообщение из чужого чата и первым делом решает, не спам ли
+ * это, — название работодателя отвечает на этот вопрос раньше всего остального.
+ */
+function company(orgName?: string): string {
+  return orgName ? `Компания «${orgName}»` : "Компания";
+}
+
 /** Убирает хвостовой слэш: адреса собираются конкатенацией. */
 function base(siteUrl: string): string {
   return siteUrl.replace(/\/$/, "");
@@ -141,12 +150,14 @@ export function orgWorkerWelcomeMessage(params: {
   login: string;
   tempPassword: string;
   siteUrl: string;
+  /** Наименование клиента: сотрудник должен понять, от кого пришёл доступ. */
+  orgName?: string;
   courses?: string[];
 }): string {
   const url = base(params.siteUrl);
   const courses = params.courses?.filter(Boolean) ?? [];
   return [
-    "Здравствуйте! Компания открыла вам доступ к онлайн-обучению ACTIVE SALES.",
+    `Здравствуйте! ${company(params.orgName)} открыла вам доступ к онлайн-обучению ACTIVE SALES.`,
     ...(courses.length > 0
       ? ["", courses.length === 1 ? "Ваш курс:" : "Ваши курсы:", ...courses.map((c) => `• ${c}`)]
       : []),
@@ -169,10 +180,13 @@ export function orgWorkerPasswordMessage(params: {
   login: string;
   tempPassword: string;
   siteUrl: string;
+  orgName?: string;
 }): string {
   const url = base(params.siteUrl);
   return [
-    "Мы выдали новый временный пароль для входа в обучение.",
+    params.orgName
+      ? `Новый временный пароль для входа в обучение от компании «${params.orgName}».`
+      : "Мы выдали новый временный пароль для входа в обучение.",
     "",
     `Адрес: ${url}/login`,
     `Логин: ${params.login}`,
@@ -190,10 +204,14 @@ export function orgWorkerPasswordMessage(params: {
  * причине отдельным пунктом сказано сохранить логин — он показывается один раз
  * на экране после регистрации.
  */
-export function inviteMessage(params: { code: string; siteUrl: string }): string {
+export function inviteMessage(params: {
+  code: string;
+  siteUrl: string;
+  orgName?: string;
+}): string {
   const url = base(params.siteUrl);
   return [
-    "Здравствуйте! Компания открыла вам доступ к онлайн-обучению ACTIVE SALES.",
+    `Здравствуйте! ${company(params.orgName)} открыла вам доступ к онлайн-обучению ACTIVE SALES.`,
     "",
     "ЧТО СДЕЛАТЬ (один раз, займёт минуту)",
     `1. Откройте ${url}/join`,

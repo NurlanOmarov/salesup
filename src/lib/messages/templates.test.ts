@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   inviteMessage,
+  orgWorkerWelcomeMessage,
   orgAdminPasswordMessage,
   orgAdminWelcomeMessage,
   studentPasswordMessage,
@@ -59,6 +60,27 @@ describe("шаблоны сообщений о доступе", () => {
 
     const without = studentWelcomeMessage({ login: "a@b.by", tempPassword: "pw", siteUrl: SITE });
     expect(without).not.toContain("Ваши курсы:");
+  });
+
+  it("сотрудник видит, от какой компании пришёл доступ", () => {
+    // Сообщение приходит из личного чата коллеги: без названия работодателя оно
+    // читается как спам, а логин вида acme-0001 ничего не проясняет.
+    const invite = inviteMessage({ code: "GTXRHYPG", siteUrl: SITE, orgName: "АстраСинтез" });
+    expect(invite).toContain("Компания «АстраСинтез»");
+
+    const worker = orgWorkerWelcomeMessage({
+      login: "astrasintez-0001",
+      tempPassword: "pw",
+      siteUrl: SITE,
+      orgName: "АстраСинтез",
+    });
+    expect(worker).toContain("Компания «АстраСинтез»");
+    expect(worker).toContain("astrasintez-0001");
+
+    // Без наименования текст остаётся связным — просто «Компания».
+    expect(inviteMessage({ code: "GTXRHYPG", siteUrl: SITE })).toContain(
+      "Компания открыла вам доступ",
+    );
   });
 
   it("сообщения о сбросе предупреждают, что старый пароль не работает", () => {

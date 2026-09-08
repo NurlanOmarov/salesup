@@ -120,6 +120,7 @@ export default async function InvitesPage({
           }))}
           groups={groups}
           siteUrl={siteUrl}
+          orgName={ctx.orgName}
         />
       </div>
 
@@ -150,7 +151,12 @@ export default async function InvitesPage({
                   return (
                     <tr key={i.id} className="border-b border-foreground/5 last:border-0">
                       <td className="px-4 py-3">
-                        <InviteCodeCell code={i.code} siteUrl={siteUrl} usable={usable} />
+                        <InviteCodeCell
+                          code={i.code}
+                          siteUrl={siteUrl}
+                          orgName={ctx.orgName}
+                          usable={usable}
+                        />
                       </td>
                       <td className="px-4 py-3 text-foreground/70">
                         {i.createdAt.toLocaleDateString("ru-RU")}

@@ -307,6 +307,37 @@ export async function activateInvite(input: {
 }
 
 /**
+ * Пересчитать счётчик логинов организации по фактически существующим учёткам.
+ *
+ * Нужен после удаления работника: счётчик только рос, и клиент, удаливший
+ * единственного ошибочно созданного acme-0001, следующего получал уже как
+ * acme-0002 — выглядело так, будто в компании учатся двое. Считаем максимум по
+ * оставшимся логинам, а не по числу работников: учётка с сертификатом остаётся
+ * в базе помеченной удалённой, и её номер переиспользовать нельзя (login
+ * уникален глобально).
+ *
+ * Работает с транзакционным клиентом: вызывается внутри удаления, чтобы счётчик
+ * и учётка менялись вместе.
+ */
+export async function recalcLoginSeq(
+  tx: Pick<typeof db, "user" | "organization">,
+  orgId: string,
+  orgSlug: string,
+): Promise<number> {
+  const users = await tx.user.findMany({
+    where: { login: { startsWith: `${orgSlug}-` } },
+    select: { login: true },
+  });
+  const max = users.reduce((acc, u) => {
+    const tail = u.login!.slice(orgSlug.length + 1);
+    const n = /^\d+$/.test(tail) ? Number(tail) : 0;
+    return n > acc ? n : acc;
+  }, 0);
+  await tx.organization.update({ where: { id: orgId }, data: { loginSeq: max } });
+  return max;
+}
+
+/**
  * Выделить свободный логин работника: `<slug>-0042`.
  *
  * Счётчик организации инкрементируется вне транзакции регистрации — «дырки» в
@@ -354,6 +385,12 @@ export async function createMembers(input: {
   count: number;
   licenseIds: string[];
   groupId?: string | null;
+  /**
+   * Зашифрованные в браузере метки работников — по одной на создаваемого,
+   * порядок совпадает с порядком выдачи логинов. Сервер видит только blob:
+   * имя шифруется ключом организации до отправки (docs/B2B-PLAN.md §5.2).
+   */
+  labels?: (string | null)[];
   now?: Date;
 }): Promise<CreatedMember[]> {
   const now = input.now ?? new Date();
@@ -403,6 +440,7 @@ export async function createMembers(input: {
           userId: user.id,
           role: "ORG_LEARNER",
           groupId: input.groupId ?? null,
+          labelEnc: input.labels?.[i] ?? null,
         },
       });
 
