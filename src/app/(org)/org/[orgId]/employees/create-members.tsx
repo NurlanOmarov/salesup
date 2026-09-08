@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Copy, Pencil, Printer, UserPlus } from "lucide-react";
 import { createMembersAction } from "../../actions";
@@ -58,11 +58,18 @@ export function CreateMembers({
   // Что именно скопировано последним кликом: список, все сообщения или строка
   // конкретного сотрудника — чтобы галочка загоралась ровно на своей кнопке.
   const [copied, setCopied] = useState<string | null>(null);
-  const [selected, setSelected] = useState<Set<string>>(
-    new Set(licenses.map((l) => l.id)),
-  );
+  // По умолчанию отмечаем только курсы, где есть свободные места: курс с нулём
+  // мест в наборе обнулял общий лимит, и форма встречала «свободно 0» при живой
+  // лицензии на соседний курс.
+  const [selected, setSelected] = useState<Set<string>>(() => {
+    const withSeats = licenses.filter((l) => l.free > 0).map((l) => l.id);
+    return new Set(withSeats.length > 0 ? withSeats : licenses.map((l) => l.id));
+  });
   const [groupId, setGroupId] = useState("");
-  const [count, setCount] = useState(5);
+  const [count, setCount] = useState(1);
+  // Пока число не трогали руками, оно следует за свободными местами: чаще всего
+  // подключают ровно столько людей, сколько мест куплено.
+  const [countTouched, setCountTouched] = useState(false);
   // Имена по порядку создания. Живут только здесь: на сервер уходит шифротекст,
   // а расшифровать его снова можно лишь ПИН-кодом.
   const [names, setNames] = useState<string[]>([]);
@@ -77,6 +84,17 @@ export function CreateMembers({
   const maxBySeats = licenses
     .filter((l) => selected.has(l.id))
     .reduce((min, l) => Math.min(min, l.free), Number.POSITIVE_INFINITY);
+  const seatsLeft = Number.isFinite(maxBySeats) ? maxBySeats : 0;
+
+  // Набор курсов меняется — вместе с ним меняется и потолок: не подставленное
+  // заново число ушло бы в отказ сервера «свободных мест меньше».
+  useEffect(() => {
+    if (countTouched) {
+      setCount((c) => Math.min(c, Math.max(1, seatsLeft)));
+    } else {
+      setCount(Math.max(1, seatsLeft));
+    }
+  }, [seatsLeft, countTouched]);
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -352,18 +370,29 @@ export function CreateMembers({
             name="count"
             type="number"
             min={1}
-            max={100}
+            max={Math.max(1, Math.min(100, seatsLeft))}
             value={count}
             onChange={(e) => {
               const next = Number(e.target.value);
-              setCount(Number.isFinite(next) ? Math.min(100, Math.max(1, next)) : 1);
+              setCountTouched(true);
+              setCount(
+                Number.isFinite(next)
+                  ? Math.min(100, Math.max(1, seatsLeft), Math.max(1, next))
+                  : 1,
+              );
             }}
           />
-          {Number.isFinite(maxBySeats) ? (
-            <p className="text-xs text-foreground/50">
-              Свободных мест по выбранным курсам: {maxBySeats}
-            </p>
-          ) : null}
+          <p
+            className={
+              seatsLeft === 0
+                ? "text-xs text-amber-700"
+                : "text-xs text-foreground/50"
+            }
+          >
+            {seatsLeft === 0
+              ? "Свободных мест по выбранным курсам нет — снимите курс без мест или попросите расширить лицензию."
+              : `Свободных мест по выбранным курсам: ${seatsLeft}. Подставлено максимальное — уменьшите, если подключаете не всех сразу.`}
+          </p>
         </div>
 
         {groups.length > 0 ? (
@@ -454,7 +483,7 @@ export function CreateMembers({
       {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
 
       <div className="mt-4 flex gap-2">
-        <Button type="submit" disabled={pending || selected.size === 0}>
+        <Button type="submit" disabled={pending || selected.size === 0 || seatsLeft === 0}>
           {pending ? "Создаём…" : "Создать"}
         </Button>
         <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
