@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Check, KeyRound, Pause, Play, Trash2 } from "lucide-react";
 import {
   createOrgAdminAction,
+  removeOrgAdminAction,
+  updateOrgAdminAction,
   resetOrgAdminPasswordAction,
   resetOrgKeyAction,
   deleteOrgAction,
@@ -642,6 +644,189 @@ export function OrgAdminForm({
           <KeyRound className="mr-1.5 size-4" />
           {pending ? "Создаём…" : "Назначить ответственного"}
         </Button>
+      </div>
+    </form>
+  );
+}
+
+/**
+ * Блок назначения. Пока представителя нет — форма открыта: это шаг запуска
+ * клиента. Как только кабинетом есть кому пользоваться, форма прячется за
+ * кнопку: открытые поля рядом со списком читались как «здесь меняют
+ * назначенного», хотя они заводят второго.
+ */
+export function AddOrgAdminPanel({
+  orgId,
+  orgName,
+  siteUrl,
+  hasAdmins,
+}: {
+  orgId: string;
+  orgName: string;
+  siteUrl: string;
+  hasAdmins: boolean;
+}) {
+  const [open, setOpen] = useState(!hasAdmins);
+
+  if (!open) {
+    return (
+      <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+        Назначить ещё одного представителя
+      </Button>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-foreground/10 bg-background p-4">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-sm font-semibold">
+          {hasAdmins ? "Назначить ещё одного представителя" : "Назначить ответственного"}
+        </h3>
+        {hasAdmins ? (
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="text-xs text-foreground/50 hover:underline"
+          >
+            свернуть
+          </button>
+        ) : null}
+      </div>
+      {hasAdmins ? (
+        <p className="mt-1 text-xs text-foreground/55">
+          Это создаст вторую учётку кабинета. Чтобы передать кабинет другому
+          человеку, не заводите вторую — нажмите «изменить» у назначенного.
+        </p>
+      ) : null}
+      <div className="mt-3">
+        <OrgAdminForm orgId={orgId} orgName={orgName} siteUrl={siteUrl} />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Правка назначенного представителя: e-mail (он же логин), имя и снятие с
+ * должности. Именно сюда ведёт «сменить ответственного» — передать кабинет
+ * другому человеку, а не завести рядом второго.
+ */
+export function EditOrgAdmin({
+  orgId,
+  userId,
+  email,
+  name,
+}: {
+  orgId: string;
+  userId: string;
+  email: string;
+  name: string | null;
+}) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="text-xs text-foreground/50 hover:text-foreground hover:underline"
+      >
+        изменить
+      </button>
+    );
+  }
+
+  async function onSubmit(formData: FormData) {
+    setPending(true);
+    setError(null);
+    try {
+      const res = await updateOrgAdminAction({
+        orgId,
+        userId,
+        email: formData.get("email"),
+        name: formData.get("name") || undefined,
+      });
+      if (res.ok) {
+        setOpen(false);
+        router.refresh();
+      } else {
+        setError(res.error);
+      }
+    } catch {
+      setError("Не удалось отправить форму — обновите страницу и попробуйте ещё раз.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <form action={onSubmit} className="mt-3 w-full space-y-3 rounded-lg border border-foreground/10 p-3">
+      <p className="text-xs text-foreground/55">
+        E-mail — это логин представителя. Меняете адрес — вход по старому
+        перестанет работать; пароль остаётся прежним, при передаче кабинета
+        другому человеку сбросьте его рядом.
+      </p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label htmlFor={`admin-email-${userId}`}>E-mail *</Label>
+          <Input
+            id={`admin-email-${userId}`}
+            name="email"
+            type="email"
+            required
+            defaultValue={email}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor={`admin-name-${userId}`}>Имя (необязательно)</Label>
+          <Input
+            id={`admin-name-${userId}`}
+            name="name"
+            defaultValue={name ?? ""}
+            placeholder="Для обращения в письмах"
+          />
+        </div>
+      </div>
+      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      <div className="flex flex-wrap items-center gap-3">
+        <Button type="submit" size="sm" disabled={pending}>
+          {pending ? "Сохраняем…" : "Сохранить"}
+        </Button>
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="text-xs text-foreground/50 hover:underline"
+        >
+          отмена
+        </button>
+        <button
+          type="button"
+          disabled={pending}
+          onClick={async () => {
+            if (
+              !window.confirm(
+                "Снять с должности? Учётная запись останется, но кабинет организации закроется.",
+              )
+            )
+              return;
+            setPending(true);
+            setError(null);
+            try {
+              const res = await removeOrgAdminAction({ orgId, userId });
+              if (res.ok) router.refresh();
+              else setError(res.error);
+            } catch {
+              setError("Не удалось отправить — попробуйте ещё раз.");
+            } finally {
+              setPending(false);
+            }
+          }}
+          className="ml-auto text-xs text-red-600 hover:underline disabled:opacity-50"
+        >
+          снять с должности
+        </button>
       </div>
     </form>
   );

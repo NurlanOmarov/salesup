@@ -493,6 +493,94 @@ export const createOrgAdminAction = safeAction(
 );
 
 /**
+ * Поправить данные уже назначенного представителя: e-mail (он же логин) и имя.
+ * Нужно чаще, чем кажется: адрес диктуют по телефону и ошибаются в нём, а
+ * «сменить ответственного» у клиента обычно означает передать кабинет другому
+ * человеку, а не завести второго. Пароль при этом не меняется — если новый
+ * человек его не знает, рядом есть «сбросить пароль».
+ */
+export const updateOrgAdminAction = safeAction(
+  {
+    schema: z.object({
+      orgId: z.string().min(1),
+      userId: z.string().min(1),
+      email: z.string().trim().email("Введите корректный e-mail"),
+      name: z.string().trim().optional(),
+    }),
+    auth: "owner",
+  },
+  async (input, { session }) => {
+    const membership = await db.orgMembership.findUnique({
+      where: { orgId_userId: { orgId: input.orgId, userId: input.userId } },
+      select: { role: true, user: { select: { email: true } } },
+    });
+    if (!membership || membership.role !== "ORG_ADMIN") {
+      throw new Error("Этот пользователь не назначен ответственным в организации");
+    }
+
+    const email = input.email.toLowerCase();
+    if (email !== membership.user.email) {
+      const taken = await db.user.findUnique({ where: { email }, select: { id: true } });
+      if (taken && taken.id !== input.userId) {
+        throw new Error(
+          "Этот e-mail уже занят другой учётной записью. Назначьте её ответственной отдельно или укажите другой адрес.",
+        );
+      }
+    }
+
+    await db.user.update({
+      where: { id: input.userId },
+      data: { email, name: input.name?.trim() || null },
+    });
+
+    await writeAdminLog({
+      actorId: session!.user.id,
+      action: "org.admin.update",
+      targetUserId: input.userId,
+      meta: { orgId: input.orgId, emailChanged: email !== membership.user.email },
+    });
+
+    revalidatePath(`/admin/orgs/${input.orgId}`);
+    return { email };
+  },
+);
+
+/**
+ * Снять человека с роли ответственного: учётка остаётся, доступ в кабинет
+ * организации пропадает. Так выглядит увольнение и передача кабинета другому —
+ * иначе у клиента копятся представители, которых уже нет в компании.
+ */
+export const removeOrgAdminAction = safeAction(
+  {
+    schema: z.object({ orgId: z.string().min(1), userId: z.string().min(1) }),
+    auth: "owner",
+  },
+  async (input, { session }) => {
+    const membership = await db.orgMembership.findUnique({
+      where: { orgId_userId: { orgId: input.orgId, userId: input.userId } },
+      select: { role: true },
+    });
+    if (!membership || membership.role !== "ORG_ADMIN") {
+      throw new Error("Этот пользователь не назначен ответственным в организации");
+    }
+
+    await db.orgMembership.delete({
+      where: { orgId_userId: { orgId: input.orgId, userId: input.userId } },
+    });
+
+    await writeAdminLog({
+      actorId: session!.user.id,
+      action: "org.admin.remove",
+      targetUserId: input.userId,
+      meta: { orgId: input.orgId },
+    });
+
+    revalidatePath(`/admin/orgs/${input.orgId}`);
+    return { ok: true };
+  },
+);
+
+/**
  * Выдать ответственному новый временный пароль. Первый пароль показывается один
  * раз при назначении, и если он потерян, восстановить его неоткуда — учётка
  * ORG_ADMIN заводится владельцем, а не самозаписью, и почтовой рассылки в MVP

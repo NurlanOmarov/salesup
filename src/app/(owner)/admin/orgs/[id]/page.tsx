@@ -10,9 +10,10 @@ import { ACCESS_DURATION_LABELS } from "@/lib/admin/enrollment";
 import { SetupChecklist } from "@/components/setup-checklist";
 import { OrgStatusBadge, ProgressBar, relativeDays, SeatsBar } from "../org-ui";
 import {
+  AddOrgAdminPanel,
   DeleteOrgAction,
+  EditOrgAdmin,
   LicenseForm,
-  OrgAdminForm,
   OrgDetailsForm,
   OrgStatusActions,
   ResetOrgAdminPassword,
@@ -275,6 +276,12 @@ export default async function OrgPage({
                         отключён
                       </span>
                     ) : null}
+                    <EditOrgAdmin
+                      orgId={org.id}
+                      userId={a.user.id}
+                      email={a.user.email ?? ""}
+                      name={a.user.name ?? null}
+                    />
                     <ResetOrgAdminPassword
                       orgId={org.id}
                       userId={a.user.id}
@@ -289,11 +296,13 @@ export default async function OrgPage({
           )}
         </div>
 
-        <div className="mt-4 rounded-xl border border-foreground/10 bg-background p-4">
-          <h3 className="text-sm font-semibold">Назначить ответственного</h3>
-          <div className="mt-3">
-            <OrgAdminForm orgId={org.id} orgName={org.name} siteUrl={siteUrl} />
-          </div>
+        <div className="mt-4">
+          <AddOrgAdminPanel
+            orgId={org.id}
+            orgName={org.name}
+            siteUrl={siteUrl}
+            hasAdmins={admins.length > 0}
+          />
         </div>
 
         {/* Забытый ПИН — тупик для клиента: имена не показать и новые не завести.
