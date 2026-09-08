@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { env } from "@/env";
 import { requireOrgAdmin } from "@/lib/org/guards";
 import { getOrgLicenses, getOrgMembers } from "@/lib/org/reports";
 import { db } from "@/lib/db";
@@ -63,6 +64,8 @@ export default async function EmployeesPage({
     seatsByUser.set(e.userId, list);
   }
 
+  const siteUrl = env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "");
+
   const licenseOptions = licenses.map((l) => ({
     id: l.id,
     courseTitle: l.courseTitle,
@@ -96,6 +99,7 @@ export default async function EmployeesPage({
             orgSlug={ctx.orgSlug}
             licenses={licenseOptions}
             groups={groups}
+            siteUrl={siteUrl}
           />
           <Link
             href={`/org/${ctx.orgId}/invites`}
@@ -194,6 +198,7 @@ export default async function EmployeesPage({
                       }}
                       licenses={licenseOptions}
                       groups={groups}
+                      siteUrl={siteUrl}
                     />
                   </td>
                 </tr>

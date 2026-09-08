@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Copy, Printer, UserPlus } from "lucide-react";
 import { createMembersAction } from "../../actions";
+import { orgWorkerWelcomeMessage } from "@/lib/messages/templates";
+import { ShareMessage } from "@/components/share-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,18 +30,23 @@ export function CreateMembers({
   orgSlug,
   licenses,
   groups,
+  siteUrl,
 }: {
   orgId: string;
   orgSlug: string;
   licenses: LicenseOption[];
   groups: { id: string; name: string }[];
+  /** Адрес входа — попадает в сообщение сотруднику вместе с логином. */
+  siteUrl: string;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<{ login: string; password: string }[]>([]);
-  const [copied, setCopied] = useState(false);
+  // Что именно скопировано последним кликом: список, все сообщения или строка
+  // конкретного сотрудника — чтобы галочка загоралась ровно на своей кнопке.
+  const [copied, setCopied] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(
     new Set(licenses.map((l) => l.id)),
   );
@@ -84,7 +91,18 @@ export function CreateMembers({
   }
 
   if (created.length > 0) {
+    // Курсы, которые открылись этой пачке: сотруднику важнее названия, чем id.
+    const courseTitles = licenses.filter((l) => selected.has(l.id)).map((l) => l.courseTitle);
+    const messageFor = (m: { login: string; password: string }) =>
+      orgWorkerWelcomeMessage({
+        login: m.login,
+        tempPassword: m.password,
+        siteUrl,
+        courses: courseTitles,
+      });
+    // Табличный список — для тех, кто раздаёт доступы по своей ведомости.
     const plain = created.map((m) => `${m.login}\t${m.password}`).join("\n");
+
     return (
       <div className="rounded-xl border border-emerald-600/30 bg-emerald-500/5 p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -92,16 +110,39 @@ export function CreateMembers({
             Создано учётных записей: {created.length}
           </p>
           <div className="flex gap-2">
+            {created.length > 1 ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  void navigator.clipboard.writeText(
+                    created.map((m) => messageFor(m)).join("\n\n———\n\n"),
+                  );
+                  setCopied("messages");
+                }}
+              >
+                {copied === "messages" ? (
+                  <Check className="mr-1.5 size-4" />
+                ) : (
+                  <Copy className="mr-1.5 size-4" />
+                )}
+                Все сообщения
+              </Button>
+            ) : null}
             <Button
               variant="outline"
               size="sm"
               onClick={() => {
                 void navigator.clipboard.writeText(plain);
-                setCopied(true);
+                setCopied("plain");
               }}
             >
-              {copied ? <Check className="mr-1.5 size-4" /> : <Copy className="mr-1.5 size-4" />}
-              Скопировать
+              {copied === "plain" ? (
+                <Check className="mr-1.5 size-4" />
+              ) : (
+                <Copy className="mr-1.5 size-4" />
+              )}
+              Только логины и пароли
             </Button>
             <Button variant="outline" size="sm" onClick={() => window.print()}>
               <Printer className="mr-1.5 size-4" />
@@ -113,24 +154,58 @@ export function CreateMembers({
         <p className="mt-2 text-sm text-foreground/70">
           Пароли показываются <strong>один раз</strong> — сохраните список сейчас.
           При первом входе каждый сотрудник сменит пароль на свой.
+          {created.length > 1
+            ? " «Все сообщения» копирует готовые письма — по одному на человека, каждое со своим логином и адресом входа."
+            : ""}
         </p>
 
-        <table className="mt-3 w-full text-sm">
-          <thead className="text-left text-xs uppercase tracking-wide text-foreground/50">
-            <tr>
-              <th className="py-1.5 font-medium">Логин</th>
-              <th className="py-1.5 font-medium">Временный пароль</th>
-            </tr>
-          </thead>
-          <tbody className="font-mono">
-            {created.map((m) => (
-              <tr key={m.login} className="border-t border-foreground/5">
-                <td className="py-1.5">{m.login}</td>
-                <td className="py-1.5">{m.password}</td>
+        {created.length === 1 ? (
+          <div className="mt-3">
+            <ShareMessage
+              text={messageFor(created[0]!)}
+              title="Сообщение сотруднику"
+              hint="Скопируйте и отправьте — в тексте есть адрес входа"
+              rows={9}
+              printable
+            />
+          </div>
+        ) : (
+          <table className="mt-3 w-full text-sm">
+            <thead className="text-left text-xs uppercase tracking-wide text-foreground/50">
+              <tr>
+                <th className="py-1.5 font-medium">Логин</th>
+                <th className="py-1.5 font-medium">Временный пароль</th>
+                <th className="py-1.5 font-medium" />
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="font-mono">
+              {created.map((m) => (
+                <tr key={m.login} className="border-t border-foreground/5">
+                  <td className="py-1.5">{m.login}</td>
+                  <td className="py-1.5">{m.password}</td>
+                  <td className="py-1.5 text-right">
+                    <button
+                      type="button"
+                      title="Скопировать сообщение для этого сотрудника"
+                      onClick={() => {
+                        void navigator.clipboard.writeText(messageFor(m));
+                        setCopied(m.login);
+                      }}
+                      className="text-foreground/45 hover:text-foreground"
+                    >
+                      {copied === m.login ? (
+                        <Check className="size-4 text-emerald-600" />
+                      ) : (
+                        <Copy className="size-4" />
+                      )}
+                      <span className="sr-only">Скопировать сообщение</span>
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
 
         <Button
           size="sm"

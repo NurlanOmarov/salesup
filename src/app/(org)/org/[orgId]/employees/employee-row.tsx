@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Copy, KeyRound, MoreHorizontal } from "lucide-react";
+import { KeyRound, MoreHorizontal } from "lucide-react";
 import {
   grantSeatAction,
   resetMemberPasswordAction,
@@ -10,6 +10,8 @@ import {
   setMemberActiveAction,
   setMemberGroupAction,
 } from "../../actions";
+import { orgWorkerPasswordMessage } from "@/lib/messages/templates";
+import { ShareMessage } from "@/components/share-message";
 import { Button } from "@/components/ui/button";
 
 export interface SeatInfo {
@@ -43,11 +45,14 @@ export function EmployeeActions({
   data,
   licenses,
   groups,
+  siteUrl,
 }: {
   orgId: string;
   data: EmployeeRowData;
   licenses: LicenseOption[];
   groups: { id: string; name: string }[];
+  /** Адрес входа — без него сотрудник получает логин и пароль без двери. */
+  siteUrl: string;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -56,7 +61,6 @@ export function EmployeeActions({
   const [reset, setReset] = useState<{ login: string; tempPassword: string } | null>(
     null,
   );
-  const [copied, setCopied] = useState(false);
 
   const openSeats = new Set(data.seats.map((s) => s.licenseId));
   const available = licenses.filter((l) => !openSeats.has(l.id));
@@ -238,28 +242,16 @@ export function EmployeeActions({
           </div>
 
           {reset ? (
-            <div className="rounded-lg border border-emerald-600/30 bg-emerald-500/5 p-3">
-              <p className="text-xs text-foreground/70">
-                Передайте сотруднику. Пароль показывается один раз, при входе он
-                сменит его.
-              </p>
-              <p className="mt-1.5 font-mono text-sm">
-                {reset.login} · {reset.tempPassword}
-                <button
-                  type="button"
-                  onClick={() => {
-                    void navigator.clipboard.writeText(
-                      `${reset.login} / ${reset.tempPassword}`,
-                    );
-                    setCopied(true);
-                  }}
-                  className="ml-2 align-middle text-foreground/50 hover:text-foreground"
-                  aria-label="Скопировать"
-                >
-                  {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-                </button>
-              </p>
-            </div>
+            <ShareMessage
+              text={orgWorkerPasswordMessage({
+                login: reset.login,
+                tempPassword: reset.tempPassword,
+                siteUrl,
+              })}
+              title="Сообщение сотруднику"
+              hint="Пароль показывается один раз — скопируйте и отправьте"
+              rows={7}
+            />
           ) : null}
 
           {error ? <p className="text-sm text-red-600">{error}</p> : null}
