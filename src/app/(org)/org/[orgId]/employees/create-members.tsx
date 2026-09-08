@@ -2,13 +2,16 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Copy, Printer, UserPlus } from "lucide-react";
+import { Check, Copy, Pencil, Printer, UserPlus } from "lucide-react";
 import { createMembersAction } from "../../actions";
 import { orgWorkerWelcomeMessage } from "@/lib/messages/templates";
+import { encryptLabel } from "@/lib/org/crypto";
 import { ShareMessage } from "@/components/share-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useOrgKey } from "../org-key-provider";
+import { InlinePin } from "./inline-pin";
 import { LoginPreview } from "./login-preview";
 
 interface LicenseOption {
@@ -24,6 +27,12 @@ interface LicenseOption {
  * Основной путь всё же коды: одноразовый код бесполезен после активации, а
  * временный пароль, пройдя цепочку до сотрудника, может осесть в переписке.
  * Поэтому пароли показываются один раз и меняются при первом входе.
+ *
+ * Имена можно проставить прямо здесь — а можно не проставлять вовсе: раздавая
+ * десять логинов, ответственный иначе не помнит, кому какой отдал, и всё равно
+ * заводит свою табличку сбоку. На сервер имя уходит уже зашифрованным ключом
+ * организации; тот же ключ и тот же ПИН-код, что у имён в таблице
+ * (docs/B2B-PLAN.md §5.2).
  */
 export function CreateMembers({
   orgId,
@@ -42,6 +51,7 @@ export function CreateMembers({
   orgName: string;
 }) {
   const router = useRouter();
+  const { status, orgKey } = useOrgKey();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,6 +63,15 @@ export function CreateMembers({
     new Set(licenses.map((l) => l.id)),
   );
   const [groupId, setGroupId] = useState("");
+  const [count, setCount] = useState(5);
+  // Имена по порядку создания. Живут только здесь: на сервер уходит шифротекст,
+  // а расшифровать его снова можно лишь ПИН-кодом.
+  const [names, setNames] = useState<string[]>([]);
+  // Имена уже созданной пачки: без них в списке логинов не видно, кому какое
+  // сообщение отправлять.
+  const [createdNames, setCreatedNames] = useState<string[]>([]);
+  const [askPin, setAskPin] = useState(false);
+  const [naming, setNaming] = useState(false);
 
   // Больше, чем свободных мест по самому дефицитному из выбранных курсов, создать
   // нельзя — иначе получились бы учётки, которым нечего открыть.
@@ -69,18 +88,46 @@ export function CreateMembers({
     });
   }
 
-  async function onSubmit(formData: FormData) {
+  function setName(index: number, value: string) {
+    setNames((prev) => {
+      const next = [...prev];
+      while (next.length <= index) next.push("");
+      next[index] = value;
+      return next;
+    });
+  }
+
+  async function onSubmit() {
     setPending(true);
     setError(null);
     try {
+      // Шифруем до отправки: сервер не должен увидеть имя даже на мгновение.
+      // Ни одного заполненного поля — метки не отправляем вообще, и работники
+      // создаются ровно так же, как до появления имён.
+      let labels: (string | null)[] | undefined;
+      if (orgKey && naming) {
+        labels = await Promise.all(
+          Array.from({ length: count }, async (_, i) => {
+            const value = (names[i] ?? "").trim();
+            return value ? await encryptLabel(orgKey, value) : null;
+          }),
+        );
+        if (labels.every((l) => l === null)) labels = undefined;
+      }
+
       const res = await createMembersAction({
         orgId,
-        count: formData.get("count"),
+        count,
         licenseIds: [...selected],
         groupId: groupId || undefined,
+        labels,
       });
       if (res.ok) {
         setCreated(res.data.members);
+        setCreatedNames(
+          labels ? Array.from({ length: count }, (_, i) => (names[i] ?? "").trim()) : [],
+        );
+        setNames([]);
         router.refresh();
       } else {
         setError(res.error);
@@ -95,6 +142,7 @@ export function CreateMembers({
   if (created.length > 0) {
     // Курсы, которые открылись этой пачке: сотруднику важнее названия, чем id.
     const courseTitles = licenses.filter((l) => selected.has(l.id)).map((l) => l.courseTitle);
+    const nameOf = (index: number) => createdNames[index]?.trim() || null;
     const messageFor = (m: { login: string; password: string }) =>
       orgWorkerWelcomeMessage({
         login: m.login,
@@ -103,8 +151,14 @@ export function CreateMembers({
         orgName,
         courses: courseTitles,
       });
+    const named = created.some((_, i) => nameOf(i) !== null);
     // Табличный список — для тех, кто раздаёт доступы по своей ведомости.
-    const plain = created.map((m) => `${m.login}\t${m.password}`).join("\n");
+    const plain = created
+      .map((m, i) => {
+        const name = nameOf(i);
+        return name ? `${name}\t${m.login}\t${m.password}` : `${m.login}\t${m.password}`;
+      })
+      .join("\n");
 
     return (
       <div className="rounded-xl border border-emerald-600/30 bg-emerald-500/5 p-4">
@@ -145,7 +199,7 @@ export function CreateMembers({
               ) : (
                 <Copy className="mr-1.5 size-4" />
               )}
-              Только логины и пароли
+              {named ? "Список с именами" : "Только логины и пароли"}
             </Button>
             <Button variant="outline" size="sm" onClick={() => window.print()}>
               <Printer className="mr-1.5 size-4" />
@@ -162,11 +216,19 @@ export function CreateMembers({
             : ""}
         </p>
 
+        {named ? (
+          <p className="mt-1 text-sm text-foreground/70">
+            Имена сохранены зашифрованными и видны в таблице работников, пока в
+            этой вкладке введён ПИН-код. Сотруднику они не отправляются — в
+            сообщении только логин, пароль и адрес входа.
+          </p>
+        ) : null}
+
         {created.length === 1 ? (
           <div className="mt-3">
             <ShareMessage
               text={messageFor(created[0]!)}
-              title="Сообщение сотруднику"
+              title={nameOf(0) ? `Сообщение для: ${nameOf(0)}` : "Сообщение сотруднику"}
               hint="Скопируйте и отправьте — в тексте есть адрес входа"
               rows={9}
               printable
@@ -176,14 +238,16 @@ export function CreateMembers({
           <table className="mt-3 w-full text-sm">
             <thead className="text-left text-xs uppercase tracking-wide text-foreground/50">
               <tr>
+                {named ? <th className="py-1.5 font-medium">Имя</th> : null}
                 <th className="py-1.5 font-medium">Логин</th>
                 <th className="py-1.5 font-medium">Временный пароль</th>
                 <th className="py-1.5 font-medium" />
               </tr>
             </thead>
             <tbody className="font-mono">
-              {created.map((m) => (
+              {created.map((m, i) => (
                 <tr key={m.login} className="border-t border-foreground/5">
+                  {named ? <td className="py-1.5 font-sans">{nameOf(i) ?? "—"}</td> : null}
                   <td className="py-1.5">{m.login}</td>
                   <td className="py-1.5">{m.password}</td>
                   <td className="py-1.5 text-right">
@@ -215,6 +279,8 @@ export function CreateMembers({
           className="mt-4"
           onClick={() => {
             setCreated([]);
+            setCreatedNames([]);
+            setNaming(false);
             setOpen(false);
           }}
         >
@@ -234,7 +300,13 @@ export function CreateMembers({
   }
 
   return (
-    <form action={onSubmit} className="rounded-xl border border-foreground/10 bg-background p-4">
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        void onSubmit();
+      }}
+      className="rounded-xl border border-foreground/10 bg-background p-4"
+    >
       <p className="text-sm font-semibold">Создать работников сразу</p>
       <p className="mt-1 text-sm text-foreground/60">
         Платформа выдаст логины и временные пароли — раздадите их списком. Если
@@ -281,7 +353,11 @@ export function CreateMembers({
             type="number"
             min={1}
             max={100}
-            defaultValue={5}
+            value={count}
+            onChange={(e) => {
+              const next = Number(e.target.value);
+              setCount(Number.isFinite(next) ? Math.min(100, Math.max(1, next)) : 1);
+            }}
           />
           {Number.isFinite(maxBySeats) ? (
             <p className="text-xs text-foreground/50">
@@ -309,6 +385,71 @@ export function CreateMembers({
           </div>
         ) : null}
       </div>
+
+      {/* Имена — необязательная часть формы, по умолчанию свёрнутая: работники
+          прекрасно создаются и без них, под кодами. Владельцу платформы блок не
+          показываем вовсе — расшифровать он имена всё равно не может, а кнопка
+          намекала бы на обратное. */}
+      {status === "owner-view" ? null : (
+        <div className="mt-4 space-y-2">
+          {!naming ? (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  setNaming(true);
+                  if (status !== "unlocked") setAskPin(true);
+                }}
+                className="flex items-center gap-1.5 rounded-lg border border-dashed border-amber-500/50 bg-amber-500/[0.07] px-3 py-1.5 text-sm text-amber-700 transition-colors hover:bg-amber-500/15 hover:text-amber-800"
+              >
+                <Pencil className="size-3.5" />
+                {status === "locked" ? "Ввести ПИН-код и подписать именами" : "Подписать именами"}
+              </button>
+              <p className="text-xs text-foreground/50">
+                Необязательно. Раздавая логины, легко перепутать, кому какой
+                достался; имена хранятся зашифрованными, платформа их не видит.
+              </p>
+            </>
+          ) : (
+            <>
+              <Label>Кто это — имена работников</Label>
+              {askPin || status !== "unlocked" ? (
+                <InlinePin
+                  onDone={() => setAskPin(false)}
+                  onCancel={() => {
+                    setAskPin(false);
+                    setNaming(false);
+                  }}
+                />
+              ) : (
+                <>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {Array.from({ length: count }, (_, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <span className="w-6 shrink-0 text-right font-mono text-xs text-foreground/40">
+                          {i + 1}.
+                        </span>
+                        <Input
+                          value={names[i] ?? ""}
+                          onChange={(e) => setName(i, e.target.value)}
+                          maxLength={120}
+                          placeholder="Например, Александр"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-foreground/50">
+                    Имена шифруются в вашем браузере: платформе они видны набором
+                    символов, работник остаётся под кодом{" "}
+                    <span className="font-mono">{orgSlug}-0001</span>. Любое поле
+                    можно оставить пустым и заполнить позже прямо в таблице.
+                  </p>
+                </>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
       {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
 
