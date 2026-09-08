@@ -13,6 +13,7 @@ import { ACCESS_DURATIONS, ACCESS_DURATION_LABELS } from "@/lib/admin/enrollment
 import { SITE_HOSTS } from "@/lib/seo/site-hosts";
 import { studentPasswordMessage } from "@/lib/messages/templates";
 import { ShareMessage } from "@/components/share-message";
+import { ActionResult, useActionResult } from "@/components/action-result";
 import { Button } from "@/components/ui/button";
 
 /** Селект периода доступа. Пустое значение = по тарифу курса. */
@@ -97,6 +98,9 @@ export function EnrollmentManager({
   const [selected, setSelected] = useState("");
   const [duration, setDuration] = useState("");
   const [site, setSite] = useState(defaultSite);
+  // Раньше результат этих действий не проверялся вовсе: отказ (курс уже выдан,
+  // истёкшая сессия) выглядел точно так же, как успех, — молча.
+  const feedback = useActionResult();
 
   return (
     <section className="rounded-2xl border border-foreground/10 bg-background p-5">
@@ -108,6 +112,7 @@ export function EnrollmentManager({
         <ul className="mt-3 divide-y divide-foreground/5">
           {enrollments.map((e) => (
             <EnrollmentRow
+              feedback={feedback}
               key={e.courseId}
               userId={userId}
               enrollment={e}
@@ -141,14 +146,22 @@ export function EnrollmentManager({
             disabled={pending || !selected}
             onClick={() =>
               start(async () => {
-                await grantEnrollmentAction({
+                const title =
+                  grantable.find((c) => c.id === selected)?.title ?? "курс";
+                feedback.clear();
+                const res = await grantEnrollmentAction({
                   userId,
                   courseId: selected,
                   accessDuration: duration || undefined,
                   site,
                 });
-                setSelected("");
-                setDuration("");
+                if (res.ok) {
+                  feedback.ok(`Доступ к «${title}» выдан.`);
+                  setSelected("");
+                  setDuration("");
+                } else {
+                  feedback.fail(res.error);
+                }
               })
             }
           >
@@ -156,6 +169,8 @@ export function EnrollmentManager({
           </Button>
         </div>
       ) : null}
+
+      <ActionResult result={feedback.result} className="mt-3" />
     </section>
   );
 }
@@ -167,12 +182,15 @@ function EnrollmentRow({
   pending,
   start,
   defaultSite,
+  feedback,
 }: {
   userId: string;
   enrollment: EnrollmentView;
   pending: boolean;
   start: (cb: () => Promise<void>) => void;
   defaultSite: string;
+  /** Индикатор один на всю секцию: строк много, сообщение должно быть одно. */
+  feedback: ReturnType<typeof useActionResult>;
 }) {
   const [duration, setDuration] = useState("");
   const [site, setSite] = useState(defaultSite);
@@ -194,7 +212,13 @@ function EnrollmentRow({
           disabled={pending}
           onClick={() =>
             start(async () => {
-              await revokeEnrollmentAction({ userId, courseId: e.courseId });
+              feedback.clear();
+              const res = await revokeEnrollmentAction({
+                userId,
+                courseId: e.courseId,
+              });
+              if (res.ok) feedback.ok(`Доступ к «${e.title}» отозван.`);
+              else feedback.fail(res.error);
             })
           }
         >
@@ -210,12 +234,15 @@ function EnrollmentRow({
             disabled={pending}
             onClick={() =>
               start(async () => {
-                await grantEnrollmentAction({
+                feedback.clear();
+                const res = await grantEnrollmentAction({
                   userId,
                   courseId: e.courseId,
                   accessDuration: duration || undefined,
                   site,
                 });
+                if (res.ok) feedback.ok(`Доступ к «${e.title}» выдан снова.`);
+                else feedback.fail(res.error);
               })
             }
           >
@@ -339,6 +366,7 @@ export function DangerZone({
 }) {
   const [pending, start] = useTransition();
   const [newPassword, setNewPassword] = useState<string | null>(null);
+  const feedback = useActionResult();
 
   return (
     <section className="rounded-2xl border border-foreground/10 bg-background p-5">
@@ -351,8 +379,11 @@ export function DangerZone({
           disabled={pending}
           onClick={() =>
             start(async () => {
+              feedback.clear();
               const res = await resetPasswordAction({ userId });
+              // Успех показывает сам блок с новым паролем ниже.
               if (res.ok) setNewPassword(res.data.tempPassword);
+              else feedback.fail(res.error);
             })
           }
         >
@@ -365,13 +396,25 @@ export function DangerZone({
           disabled={pending}
           onClick={() =>
             start(async () => {
-              await toggleBlockAction({ userId, blocked: !blocked });
+              feedback.clear();
+              const res = await toggleBlockAction({ userId, blocked: !blocked });
+              if (res.ok) {
+                feedback.ok(
+                  blocked
+                    ? "Вход разблокирован — ученик снова может войти."
+                    : "Вход заблокирован — ученик больше не войдёт.",
+                );
+              } else {
+                feedback.fail(res.error);
+              }
             })
           }
         >
           {blocked ? "Разблокировать вход" : "Заблокировать вход"}
         </Button>
       </div>
+
+      <ActionResult result={feedback.result} className="mt-3" />
 
       {newPassword ? (
         <div className="mt-4">

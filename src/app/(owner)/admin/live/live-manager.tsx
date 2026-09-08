@@ -13,6 +13,7 @@ import {
 import { LIVE_TIMEZONES, utcToZonedInput } from "@/lib/live/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ActionResult, useActionResult } from "@/components/action-result";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
@@ -65,12 +66,14 @@ export function PlanSessionForm({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
+  const [saved, setSaved] = useState<string | null>(null);
   const [kind, setKind] = useState<SessionRow["kind"]>("INTRO");
 
   async function submit(formData: FormData) {
     setPending(true);
     setError(null);
     setWarning(null);
+    setSaved(null);
     const res = await planSessionAction({
       orgId: formData.get("orgId"),
       kind,
@@ -93,6 +96,11 @@ export function PlanSessionForm({
       setWarning(
         "Встреча сохранена, но в SABAK не создана — сервис недоступен. Нажмите «Повторить» в списке.",
       );
+    }
+    // Встреча создана — форма остаётся на месте, и без строки об этом владелец
+    // не понимает, ушла ли она в список ниже.
+    if (res.data.remote) {
+      setSaved("Встреча создана и заведена в SABAK — она уже в списке ниже.");
     }
     router.refresh();
   }
@@ -219,6 +227,11 @@ export function PlanSessionForm({
 
       {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
       {warning ? <p className="mt-3 text-sm text-amber-700">{warning}</p> : null}
+      {saved ? (
+        <p role="status" className="mt-3 text-sm text-emerald-700">
+          {saved}
+        </p>
+      ) : null}
 
       <Button type="submit" disabled={pending} className="mt-4">
         {pending ? "Назначаем…" : "Назначить встречу"}
@@ -230,27 +243,38 @@ export function PlanSessionForm({
 export function SessionActions({ session }: { session: SessionRow }) {
   const router = useRouter();
   const [pending, setPending] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const feedback = useActionResult();
   const [copied, setCopied] = useState(false);
   const [editing, setEditing] = useState(false);
 
-  async function run(name: string, fn: () => Promise<{ ok: boolean; error?: string }>) {
+  async function run(
+    name: string,
+    fn: () => Promise<{ ok: boolean; error?: string }>,
+    done?: string,
+  ) {
     setPending(name);
-    setError(null);
+    feedback.clear();
     const res = await fn();
     setPending(null);
-    if (!res.ok) setError(res.error ?? "Не получилось");
-    else router.refresh();
+    if (!res.ok) {
+      feedback.fail(res.error ?? "Не получилось");
+      return;
+    }
+    if (done) feedback.ok(done);
+    router.refresh();
   }
 
   async function saveMove(formData: FormData) {
-    await run("move", () =>
-      rescheduleSessionAction({
-        id: session.id,
-        localAt: formData.get("localAt"),
-        timezone: session.timezone,
-        durationMin: formData.get("durationMin"),
-      }),
+    await run(
+      "move",
+      () =>
+        rescheduleSessionAction({
+          id: session.id,
+          localAt: formData.get("localAt"),
+          timezone: session.timezone,
+          durationMin: formData.get("durationMin"),
+        }),
+      "Встреча перенесена — клиент увидит новую дату в своём кабинете.",
     );
     setEditing(false);
   }
@@ -277,7 +301,13 @@ export function SessionActions({ session }: { session: SessionRow }) {
           <button
             type="button"
             disabled={pending === "retry"}
-            onClick={() => run("retry", () => retryRemoteAction({ id: session.id }))}
+            onClick={() =>
+              run(
+                "retry",
+                () => retryRemoteAction({ id: session.id }),
+                "Встреча заведена в SABAK — ссылка появилась в строке.",
+              )
+            }
             className="flex items-center gap-1 rounded-lg border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-xs text-amber-800 hover:bg-amber-500/20"
           >
             <RotateCcw className="size-3.5" />
@@ -289,7 +319,13 @@ export function SessionActions({ session }: { session: SessionRow }) {
           <button
             type="button"
             disabled={pending === "sync"}
-            onClick={() => run("sync", () => syncResultAction({ id: session.id }))}
+            onClick={() =>
+              run(
+                "sync",
+                () => syncResultAction({ id: session.id }),
+                "Итоги встречи получены из SABAK.",
+              )
+            }
             className="flex items-center gap-1 rounded-lg border border-foreground/15 px-2 py-1 text-xs hover:bg-foreground/5"
           >
             <RefreshCw className="size-3.5" />
@@ -312,7 +348,11 @@ export function SessionActions({ session }: { session: SessionRow }) {
           disabled={pending === "cancel"}
           onClick={() => {
             if (!window.confirm("Отменить встречу? Клиент увидит, что её больше нет.")) return;
-            void run("cancel", () => cancelSessionAction({ id: session.id }));
+            void run(
+              "cancel",
+              () => cancelSessionAction({ id: session.id }),
+              "Встреча отменена — в кабинете клиента её больше нет.",
+            );
           }}
           className="flex items-center gap-1 rounded-lg border border-foreground/15 px-2 py-1 text-xs text-red-600 hover:bg-red-500/5"
         >
@@ -344,7 +384,7 @@ export function SessionActions({ session }: { session: SessionRow }) {
         </form>
       ) : null}
 
-      {error ? <p className="text-xs text-red-600">{error}</p> : null}
+      <ActionResult result={feedback.result} className="text-xs" />
     </div>
   );
 }

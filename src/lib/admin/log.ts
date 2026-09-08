@@ -43,6 +43,7 @@ export type AdminAction =
   | "org.delete"
   | "org.license.grant"
   | "org.license.update"
+  | "org.license.delete"
   | "org.admin.create"
   | "org.admin.update"
   | "org.admin.remove"

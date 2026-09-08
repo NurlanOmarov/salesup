@@ -19,6 +19,8 @@ export interface OrgContext {
   orgId: string;
   orgSlug: string;
   orgName: string;
+  /** Рынок клиента (BY/KZ/RU/UZ): домен в готовых сообщениях работникам. */
+  orgSite: string | null;
   status: OrgStatus;
   /** Владелец платформы, вошедший в кабинет клиента из своей консоли. */
   isOwner: boolean;
@@ -40,7 +42,7 @@ export async function requireOrgAdmin(orgId?: string): Promise<OrgContext> {
     if (!orgId) redirect("/admin/orgs");
     const org = await db.organization.findUnique({
       where: { id: orgId },
-      select: { id: true, slug: true, name: true, status: true },
+      select: { id: true, slug: true, name: true, site: true, status: true },
     });
     if (!org) redirect("/admin/orgs");
     return {
@@ -48,6 +50,7 @@ export async function requireOrgAdmin(orgId?: string): Promise<OrgContext> {
       orgId: org.id,
       orgSlug: org.slug,
       orgName: org.name,
+      orgSite: org.site,
       status: org.status,
       isOwner: true,
     };
@@ -56,7 +59,7 @@ export async function requireOrgAdmin(orgId?: string): Promise<OrgContext> {
   const membership = await db.orgMembership.findFirst({
     where: { userId, role: "ORG_ADMIN", isActive: true },
     select: {
-      org: { select: { id: true, slug: true, name: true, status: true } },
+      org: { select: { id: true, slug: true, name: true, site: true, status: true } },
     },
   });
   if (!membership) redirect("/app");
@@ -78,6 +81,7 @@ export async function requireOrgAdmin(orgId?: string): Promise<OrgContext> {
     orgId: membership.org.id,
     orgSlug: membership.org.slug,
     orgName: membership.org.name,
+    orgSite: membership.org.site,
     status: membership.org.status,
     isOwner: false,
   };

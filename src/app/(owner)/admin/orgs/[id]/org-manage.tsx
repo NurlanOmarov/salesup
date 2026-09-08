@@ -10,6 +10,7 @@ import {
   resetOrgAdminPasswordAction,
   resetOrgKeyAction,
   deleteOrgAction,
+  deleteLicenseAction,
   grantLibraryAction,
   grantLicenseAction,
   setOrgStatusAction,
@@ -22,6 +23,9 @@ import {
   orgAdminPasswordMessage,
   orgAdminWelcomeMessage,
 } from "@/lib/messages/templates";
+import { SITE_HOSTS } from "@/lib/seo/site-hosts";
+import { pluralRu } from "@/lib/courses/plural";
+import { ActionResult, useActionResult } from "@/components/action-result";
 import { ShareMessage } from "@/components/share-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,7 +56,7 @@ export function OrgStatusActions({
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const feedback = useActionResult();
 
   async function change(next: "ACTIVE" | "SUSPENDED" | "ARCHIVED") {
     const confirmText =
@@ -64,13 +68,25 @@ export function OrgStatusActions({
     if (!window.confirm(confirmText)) return;
 
     setPending(true);
-    setError(null);
+    feedback.clear();
     try {
       const res = await setOrgStatusAction({ orgId, status: next });
-      if (res.ok) router.refresh();
-      else setError(res.error);
+      if (res.ok) {
+        feedback.ok(
+          next === "SUSPENDED"
+            ? "Доступ приостановлен — работники не откроют уроки до возобновления."
+            : next === "ARCHIVED"
+              ? "Организация в архиве, доступ работников прекращён."
+              : "Доступ возобновлён — работники снова могут заниматься.",
+        );
+        router.refresh();
+      } else {
+        feedback.fail(res.error);
+      }
     } catch {
-      setError("Не удалось отправить форму — обновите страницу и попробуйте ещё раз.");
+      feedback.fail(
+        "Не удалось отправить форму — обновите страницу и попробуйте ещё раз.",
+      );
     } finally {
       setPending(false);
     }
@@ -104,7 +120,7 @@ export function OrgStatusActions({
           В архив
         </Button>
       ) : null}
-      {error ? <span className="text-xs text-red-600">{error}</span> : null}
+      <ActionResult result={feedback.result} />
     </div>
   );
 }
@@ -289,16 +305,21 @@ export function LicenseForm({
   orgId,
   courses,
   existing,
+  hasAdmins,
 }: {
   orgId: string;
   courses: CourseOption[];
   existing: LicenseValue[];
+  /** Назначен ли уже ответственный: если нет — после выдачи ведём к этому шагу. */
+  hasAdmins: boolean;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const feedback = useActionResult();
   const [mode, setMode] = useState<"course" | "library">("course");
-  const [courseId, setCourseId] = useState(courses[0]?.id ?? "");
+  // Пусто по умолчанию: предвыбранный первый курс утверждается не глядя — так
+  // клиенту и уехала лицензия на чужой курс.
+  const [courseId, setCourseId] = useState("");
   const [accessDuration, setAccessDuration] = useState("MONTHS_12");
   const [seats, setSeats] = useState("10");
 
@@ -317,9 +338,15 @@ export function LicenseForm({
 
   async function onSubmit(formData: FormData) {
     setPending(true);
-    setError(null);
+    feedback.clear();
     const priceByn = formData.get("priceByn");
     const priceTiyn = priceByn ? Math.round(Number(priceByn) * 100) : undefined;
+    // Считаем ДО отправки: после router.refresh() форма получит новые данные,
+    // и «выдана» уже не отличить от «изменена».
+    const seatsSent = Number(formData.get("seatsTotal")) || 0;
+    const seatsWord = pluralRu(seatsSent, "место", "места", "мест");
+    const courseTitle = courses.find((c) => c.id === courseId)?.title ?? "";
+    const wasExisting = Boolean(current);
 
     try {
       const res =
@@ -340,12 +367,39 @@ export function LicenseForm({
               note: formData.get("note") || undefined,
             });
       if (res.ok) {
+        const durationLabel =
+          ACCESS_DURATION_LABELS[
+            accessDuration as keyof typeof ACCESS_DURATION_LABELS
+          ];
+        const what =
+          mode === "library"
+            ? `Выданы лицензии на все ${courses.length} курсов — по ${seatsSent} ${seatsWord}, доступ ${durationLabel}.`
+            : wasExisting
+              ? `Лицензия обновлена: «${courseTitle}» — ${seatsSent} ${seatsWord}, доступ ${durationLabel}.`
+              : `Лицензия выдана: «${courseTitle}» — ${seatsSent} ${seatsWord}, доступ ${durationLabel}.`;
+        // Объясняем прыжок страницы: иначе смена экрана выглядит сбоем.
+        feedback.ok(
+          hasAdmins ? what : `${what} Дальше — назначьте ответственного, форма ниже.`,
+        );
         router.refresh();
+        // Лицензия есть — следующий шаг запуска: ответственный. Пока его нет,
+        // форма выдачи остаётся последним, что видел человек, и шаг теряется
+        // под таблицей лицензий. Ждём перерисовку после refresh, иначе якорь
+        // ещё на старом месте.
+        if (!hasAdmins) {
+          window.setTimeout(() => {
+            document
+              .getElementById("admins")
+              ?.scrollIntoView({ behavior: "smooth", block: "start" });
+          }, 400);
+        }
       } else {
-        setError(res.error);
+        feedback.fail(res.error);
       }
     } catch {
-      setError("Не удалось отправить форму — обновите страницу и попробуйте ещё раз.");
+      feedback.fail(
+        "Не удалось отправить форму — обновите страницу и попробуйте ещё раз.",
+      );
     } finally {
       setPending(false);
     }
@@ -395,13 +449,19 @@ export function LicenseForm({
             onChange={(e) => setCourseId(e.target.value)}
             className="h-10 w-full rounded-lg border border-foreground/15 bg-background px-3 text-sm"
           >
+            <option value="">— выберите курс —</option>
             {courses.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.title} — {c.priceTiyn / 100} бел. руб.
               </option>
             ))}
           </select>
-          {current ? (
+          {!courseId ? (
+            <p className="text-xs text-foreground/55">
+              Выберите курс — лицензия выдаётся на конкретный курс, и поменять его
+              потом можно только удалением лишней лицензии.
+            </p>
+          ) : current ? (
             <p className="text-xs text-amber-700">
               Лицензия на этот курс уже есть ({current.seatsTotal} мест) — форма изменит
               её, а не создаст вторую. Дата начала срока сохранится.
@@ -497,12 +557,11 @@ export function LicenseForm({
         </div>
       ) : null}
 
-      {error ? (
-        <p className="text-sm text-red-600 sm:col-span-2">{error}</p>
-      ) : null}
-
-      <div className="sm:col-span-2">
-        <Button type="submit" disabled={pending}>
+      <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
+        <Button
+          type="submit"
+          disabled={pending || (mode === "course" && !courseId)}
+        >
           {pending
             ? "Сохраняем…"
             : mode === "library"
@@ -511,8 +570,79 @@ export function LicenseForm({
                 ? "Изменить лицензию"
                 : "Выдать лицензию"}
         </Button>
+        <ActionResult result={feedback.result} />
       </div>
     </form>
+  );
+}
+
+/**
+ * Удаление лицензии — исправление ошибочной выдачи (не тот курс, не тому
+ * клиенту). Занятая лицензия не удаляется: сервер откажет, и кнопка об этом
+ * предупреждает заранее, а не после клика.
+ */
+export function DeleteLicenseButton({
+  orgId,
+  licenseId,
+  courseTitle,
+  used,
+}: {
+  orgId: string;
+  licenseId: string;
+  courseTitle: string;
+  /** Открытых мест по этой лицензии. Больше нуля — удалять нельзя. */
+  used: number;
+}) {
+  const router = useRouter();
+  const [pending, setPending] = useState(false);
+  const feedback = useActionResult();
+
+  if (used > 0) {
+    return (
+      <span
+        className="text-xs text-foreground/40"
+        title="Сначала закройте доступы работников в кабинете клиента — тогда лицензию можно будет удалить."
+      >
+        занята
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center gap-2">
+      <button
+        type="button"
+        disabled={pending}
+        onClick={async () => {
+          if (
+            !window.confirm(
+              `Удалить лицензию на «${courseTitle}»? Мест по ней никто не занимает — курс просто пропадёт из списка клиента.`,
+            )
+          ) {
+            return;
+          }
+          setPending(true);
+          feedback.clear();
+          try {
+            const res = await deleteLicenseAction({ orgId, licenseId });
+            if (res.ok) {
+              feedback.ok(`Лицензия на «${courseTitle}» удалена.`);
+              router.refresh();
+            } else {
+              feedback.fail(res.error);
+            }
+          } catch {
+            feedback.fail("Не удалось удалить — попробуйте ещё раз.");
+          } finally {
+            setPending(false);
+          }
+        }}
+        className="text-xs text-red-600 hover:underline disabled:opacity-50"
+      >
+        {pending ? "Удаляем…" : "удалить"}
+      </button>
+      <ActionResult result={feedback.result} className="text-xs" />
+    </span>
   );
 }
 
@@ -844,11 +974,13 @@ export function OrgDetailsForm({
     contactEmail: string | null;
     contactNote: string | null;
     note: string | null;
+    site: string | null;
   };
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [site, setSite] = useState(org.site ?? SITE_HOSTS[0].code);
   const [error, setError] = useState<string | null>(null);
 
   async function onSubmit(formData: FormData) {
@@ -863,6 +995,7 @@ export function OrgDetailsForm({
         contactEmail: formData.get("contactEmail") || undefined,
         contactNote: formData.get("contactNote") || undefined,
         note: formData.get("note") || undefined,
+        site,
       });
       if (res.ok) {
         setSaved(true);
@@ -899,6 +1032,26 @@ export function OrgDetailsForm({
       <div className="space-y-1.5">
         <Label htmlFor="org-contact">Другой контакт</Label>
         <Input id="org-contact" name="contactNote" defaultValue={org.contactNote ?? ""} />
+      </div>
+      <div className="space-y-1.5 sm:col-span-2">
+        <Label htmlFor="org-site">Домен / рынок</Label>
+        <select
+          id="org-site"
+          value={site}
+          onChange={(e) => setSite(e.target.value)}
+          className="h-10 w-full rounded-lg border border-foreground/15 bg-background px-3 text-sm"
+        >
+          {SITE_HOSTS.map((h) => (
+            <option key={h.code} value={h.code}>
+              {h.country.ru} — {h.host}
+            </option>
+          ))}
+        </select>
+        <p className="text-xs text-foreground/55">
+          Домен в готовых сообщениях — и вашим, и тем, что рассылает ответственный
+          работникам. На уже выданные доступы не влияет: учётка работает на любом
+          нашем домене.
+        </p>
       </div>
       <div className="space-y-1.5 sm:col-span-2">
         <Label htmlFor="org-note">Заметка</Label>

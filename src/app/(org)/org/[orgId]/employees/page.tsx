@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { env } from "@/env";
+import { siteOriginByCode } from "@/lib/seo/site-hosts";
 import { requireOrgAdmin } from "@/lib/org/guards";
 import { getOrgLicenses, getOrgMembers } from "@/lib/org/reports";
 import { db } from "@/lib/db";
@@ -63,7 +63,9 @@ export default async function EmployeesPage({
     seatsByUser.set(e.userId, list);
   }
 
-  const siteUrl = env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "");
+  // Домен рынка клиента: казахстанской компании сообщения должны вести на
+  // study.activesales.kz, даже если кабинет открыт с другого домена.
+  const siteUrl = siteOriginByCode(ctx.orgSite);
 
   const licenseOptions = licenses.map((l) => ({
     id: l.id,

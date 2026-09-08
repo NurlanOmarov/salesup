@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { currentSite, DEFAULT_SITE } from "@/lib/seo/site";
 import { CreateOrgForm } from "./create-org-form";
 
 export const metadata: Metadata = {
@@ -24,6 +25,9 @@ export default async function NewOrgPage({
   }>;
 }) {
   const prefill = await searchParams;
+  // Рынок по умолчанию — домен, с которого владелец сейчас работает: чаще всего
+  // клиента заводят там же, где его и продали.
+  const site = await currentSite();
 
   return (
     <main>
@@ -46,6 +50,7 @@ export default async function NewOrgPage({
           defaultContactEmail={prefill.email}
           defaultContactNote={prefill.contact}
           defaultNote={prefill.note}
+          defaultSite={(site ?? DEFAULT_SITE).code}
         />
       </div>
     </main>

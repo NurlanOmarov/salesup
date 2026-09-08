@@ -146,8 +146,8 @@ test("владелец заводит организацию, лицензию �
   const org = await db.organization.findUniqueOrThrow({ where: { slug: ORG_SLUG } });
   orgId = org.id;
 
-  // Лицензия: 2 места на тестовый курс. Курс выбираем явно — по умолчанию форма
-  // подставляет первый опубликованный, и лицензия ушла бы не на тот курс.
+  // Лицензия: 2 места на тестовый курс. Курс форма не подставляет — пока он не
+  // выбран, кнопка выдачи заблокирована (иначе лицензия уезжает не на тот курс).
   await page.getByLabel("Курс").selectOption(courseId);
   await page.getByLabel("Мест", { exact: true }).fill("2");
   await page.getByRole("button", { name: /Выдать лицензию/ }).click();

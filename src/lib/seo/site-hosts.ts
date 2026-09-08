@@ -88,6 +88,18 @@ export function matchSiteHost(host: string | null | undefined): SiteHost | null 
  * locale — язык текущей страницы: от него зависит canonical (казахская версия
  * канонизируется на /kk-адрес, а не на русский).
  */
+/**
+ * Origin домена по коду страны: `KZ` → `https://study.activesales.kz`.
+ *
+ * Нужен там, где домен берётся не из запроса, а из данных: письма и готовые
+ * сообщения корпоративному клиенту собираются в админке на `.by`, а вести
+ * должны на домен его рынка. Неизвестный или пустой код — домен по умолчанию.
+ */
+export function siteOriginByCode(code: string | null | undefined): string {
+  const site = SITE_HOSTS.find((s) => s.code === code) ?? DEFAULT_SITE;
+  return `https://${site.host}`;
+}
+
 export function alternatesFor(
   path: string,
   locale: Locale = DEFAULT_LOCALE,

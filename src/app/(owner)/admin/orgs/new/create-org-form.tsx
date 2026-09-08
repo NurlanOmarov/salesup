@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createOrgAction } from "../actions";
 import { slugifyOrgName } from "@/lib/org/seats";
+import { SITE_HOSTS } from "@/lib/seo/site-hosts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,11 +19,14 @@ export function CreateOrgForm({
   defaultContactEmail,
   defaultContactNote,
   defaultNote,
+  defaultSite,
 }: {
   defaultName?: string;
   defaultContactEmail?: string;
   defaultContactNote?: string;
   defaultNote?: string;
+  /** Рынок по домену, с которого владелец открыл админку. */
+  defaultSite?: string;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
@@ -30,6 +34,7 @@ export function CreateOrgForm({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [name, setName] = useState(defaultName ?? "");
   const [slug, setSlug] = useState("");
+  const [site, setSite] = useState(defaultSite ?? SITE_HOSTS[0].code);
 
   // Код организации задаёт вид логинов работников — показываем это сразу,
   // потому что менять его после выдачи логинов уже нельзя.
@@ -47,6 +52,7 @@ export function CreateOrgForm({
         contactEmail: formData.get("contactEmail") || undefined,
         contactNote: formData.get("contactNote") || undefined,
         note: formData.get("note") || undefined,
+        site,
       });
       if (res.ok) {
         router.push(`/admin/orgs/${res.data.orgId}`);
@@ -103,6 +109,27 @@ export function CreateOrgForm({
       </div>
 
       <div className="space-y-1.5">
+        <Label htmlFor="site">Домен / рынок</Label>
+        <select
+          id="site"
+          value={site}
+          onChange={(e) => setSite(e.target.value)}
+          className="h-10 w-full rounded-lg border border-foreground/15 bg-background px-3 text-sm"
+        >
+          {SITE_HOSTS.map((s) => (
+            <option key={s.code} value={s.code}>
+              {s.country.ru} — {s.host}
+            </option>
+          ))}
+        </select>
+        <p className="text-xs text-foreground/55">
+          На этот домен будут вести ссылки в готовых сообщениях — и
+          ответственному, и работникам. Доступ он не ограничивает: учётка
+          работает на любом нашем домене. Позже меняется в реквизитах.
+        </p>
+      </div>
+
+      <div className="space-y-1.5">
         <Label htmlFor="unp">УНП</Label>
         <Input id="unp" name="unp" placeholder="191234567" />
       </div>
@@ -152,8 +179,9 @@ export function CreateOrgForm({
       </Button>
 
       <p className="text-xs text-foreground/50">
-        Персональные данные работников на платформе не хранятся: они регистрируются
-        сами по кодам, под условными обозначениями (оферта для организаций, п. 10).
+        Персональные данные работников на платформе не хранятся: их заводит
+        ответственный представитель под условными обозначениями (оферта для
+        организаций, п. 10).
       </p>
     </form>
   );

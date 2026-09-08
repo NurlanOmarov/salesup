@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ExternalLink, ShieldCheck } from "lucide-react";
-import { env } from "@/env";
+import { siteOriginByCode } from "@/lib/seo/site-hosts";
 import { db } from "@/lib/db";
 import { getOrgMembers, getOrgOverview } from "@/lib/org/reports";
 import { getOrgSetupState, ownerSetupSteps } from "@/lib/org/setup";
@@ -14,6 +14,7 @@ import {
   DeleteOrgAction,
   EditOrgAdmin,
   LicenseForm,
+  DeleteLicenseButton,
   OrgDetailsForm,
   OrgStatusActions,
   ResetOrgAdminPassword,
@@ -53,6 +54,7 @@ export default async function OrgPage({
       contactEmail: true,
       contactNote: true,
       note: true,
+      site: true,
       createdAt: true,
       loginSeq: true,
     },
@@ -88,7 +90,9 @@ export default async function OrgPage({
     ]);
 
   const learners = members.filter((m) => m.role === "ORG_LEARNER");
-  const siteUrl = env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "");
+  // Ссылки в готовых сообщениях ведут на домен рынка клиента, а не на тот, с
+  // которого владелец открыл админку (docs/MULTI-DOMAIN-PLAN.md).
+  const siteUrl = siteOriginByCode(org.site);
 
   return (
     <main>
@@ -199,6 +203,7 @@ export default async function OrgPage({
                   <th className="px-4 py-3 font-medium">Места</th>
                   <th className="px-4 py-3 font-medium">Срок места</th>
                   <th className="px-4 py-3 font-medium">Лицензия до</th>
+                  <th className="px-4 py-3" />
                 </tr>
               </thead>
               <tbody>
@@ -216,6 +221,14 @@ export default async function OrgPage({
                     <td className="px-4 py-3 text-foreground/70">
                       {l.expiresAt ? l.expiresAt.toLocaleDateString("ru-RU") : "бессрочно"}
                     </td>
+                    <td className="px-4 py-3 text-right">
+                      <DeleteLicenseButton
+                        orgId={org.id}
+                        licenseId={l.id}
+                        courseTitle={l.courseTitle}
+                        used={l.seats.used}
+                      />
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -229,6 +242,7 @@ export default async function OrgPage({
             <LicenseForm
               orgId={org.id}
               courses={courses}
+              hasAdmins={admins.length > 0}
               existing={overview.licenses.map((l) => ({
                 courseId: l.courseId,
                 seatsTotal: l.seats.total,

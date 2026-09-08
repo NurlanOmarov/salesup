@@ -4,6 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { safeAction } from "@/lib/safe-action";
 import { db } from "@/lib/db";
+import { SITE_HOSTS } from "@/lib/seo/site-hosts";
 import { writeAdminLog } from "@/lib/admin/log";
 import { ACCESS_DURATIONS, computeExpiry } from "@/lib/admin/enrollment";
 import { createOrgAdmin } from "@/lib/org/service";
@@ -38,6 +39,14 @@ async function uniqueSlug(base: string): Promise<string> {
 }
 
 /** Создать организацию. Лицензии и ответственного добавляют следующим шагом. */
+/**
+ * Рынок клиента: определяет домен в готовых сообщениях (docs/MULTI-DOMAIN-PLAN.md).
+ * Доступ он не ограничивает — учётка работает на любом из наших доменов.
+ */
+const siteSchema = z
+  .enum(SITE_HOSTS.map((s) => s.code) as [string, ...string[]])
+  .optional();
+
 export const createOrgAction = safeAction(
   {
     schema: z.object({
@@ -51,6 +60,7 @@ export const createOrgAction = safeAction(
       contactEmail: z.string().trim().email("Некорректный e-mail").optional().or(z.literal("")),
       contactNote: z.string().trim().optional(),
       note: z.string().trim().optional(),
+      site: siteSchema,
     }),
     auth: "owner",
   },
@@ -65,6 +75,7 @@ export const createOrgAction = safeAction(
         contactEmail: input.contactEmail || null,
         contactNote: input.contactNote || null,
         note: input.note || null,
+        site: input.site ?? null,
       },
       select: { id: true, slug: true },
     });
@@ -90,6 +101,7 @@ export const updateOrgAction = safeAction(
       contactEmail: z.string().trim().email("Некорректный e-mail").optional().or(z.literal("")),
       contactNote: z.string().trim().optional(),
       note: z.string().trim().optional(),
+      site: siteSchema,
     }),
     auth: "owner",
   },
@@ -102,6 +114,7 @@ export const updateOrgAction = safeAction(
         contactEmail: input.contactEmail || null,
         contactNote: input.contactNote || null,
         note: input.note || null,
+        site: input.site ?? null,
       },
     });
 
@@ -390,6 +403,66 @@ export const grantLibraryAction = safeAction(
  * Единица лицензии — курс×человек, поэтому на курс в организации она одна:
  * повторная выдача того же курса меняет число мест, а не создаёт вторую запись.
  */
+/**
+ * Удалить лицензию — исправление ошибки выдачи, а не «отзыв доступа».
+ *
+ * Пока по лицензии открыт хоть один доступ, удаление запрещено: вместе с ней
+ * оборвался бы доступ живого работника, и понять, почему у него исчез курс,
+ * было бы неоткуда. Сначала закрыть места в кабинете, потом удалять лицензию.
+ */
+export const deleteLicenseAction = safeAction(
+  {
+    schema: z.object({
+      orgId: z.string().min(1),
+      licenseId: z.string().min(1),
+    }),
+    auth: "owner",
+  },
+  async (input, { session }) => {
+    const license = await db.orgLicense.findUnique({
+      where: { id: input.licenseId },
+      select: {
+        id: true,
+        orgId: true,
+        courseId: true,
+        seatsTotal: true,
+        course: { select: { title: true } },
+      },
+    });
+    if (!license || license.orgId !== input.orgId) {
+      throw new Error("Лицензия не найдена");
+    }
+
+    const used = await db.enrollment.count({
+      where: { licenseId: license.id, revokedAt: null },
+    });
+    if (used > 0) {
+      throw new Error(
+        `По лицензии открыто мест: ${used}. Сначала закройте доступы работников — тогда лицензию можно будет удалить.`,
+      );
+    }
+
+    // Отозванные места ссылались на лицензию: обнуляем ссылку, чтобы история
+    // выдач у работника не исчезла вместе с ней (Enrollment.licenseId — SetNull).
+    await db.orgLicense.delete({ where: { id: license.id } });
+
+    await writeAdminLog({
+      actorId: session!.user.id,
+      action: "org.license.delete",
+      meta: {
+        orgId: input.orgId,
+        licenseId: license.id,
+        courseId: license.courseId,
+        courseTitle: license.course.title,
+        seatsTotal: license.seatsTotal,
+      },
+    });
+
+    revalidatePath(`/admin/orgs/${input.orgId}`);
+    return { courseTitle: license.course.title };
+  },
+);
+
 export const grantLicenseAction = safeAction(
   {
     schema: z.object({

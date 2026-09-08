@@ -1,6 +1,27 @@
 import { describe, it, expect } from "vitest";
-import { SITE_HOSTS, DEFAULT_SITE, matchSiteHost, alternatesFor } from "./site-hosts.js";
+import {
+  SITE_HOSTS,
+  DEFAULT_SITE,
+  matchSiteHost,
+  alternatesFor,
+  siteOriginByCode,
+} from "./site-hosts.js";
 import { TRANSLATED_PATHS } from "@/i18n/routing";
+
+describe("siteOriginByCode", () => {
+  it("даёт домен рынка: сообщение казахстанскому клиенту ведёт на .kz", () => {
+    expect(siteOriginByCode("KZ")).toBe("https://study.activesales.kz");
+    expect(siteOriginByCode("RU")).toBe("https://study.sales-active.ru");
+    expect(siteOriginByCode("UZ")).toBe("https://study.activesales.uz");
+  });
+
+  it("пустой и неизвестный код — канонический домен, а не пустая ссылка", () => {
+    // Организации, заведённые до появления поля, живут с site = null.
+    expect(siteOriginByCode(null)).toBe(`https://${DEFAULT_SITE.host}`);
+    expect(siteOriginByCode(undefined)).toBe(`https://${DEFAULT_SITE.host}`);
+    expect(siteOriginByCode("XX")).toBe(`https://${DEFAULT_SITE.host}`);
+  });
+});
 
 describe("matchSiteHost", () => {
   it("узнаёт свои домены с портом, регистром и списком через запятую", () => {

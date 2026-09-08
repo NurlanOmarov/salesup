@@ -13,6 +13,7 @@ import {
 } from "../../actions";
 import { orgWorkerPasswordMessage } from "@/lib/messages/templates";
 import { ShareMessage } from "@/components/share-message";
+import { ActionResult, useActionResult } from "@/components/action-result";
 import { Button } from "@/components/ui/button";
 
 export interface SeatInfo {
@@ -60,7 +61,7 @@ export function EmployeeActions({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const feedback = useActionResult();
   const [reset, setReset] = useState<{ login: string; tempPassword: string } | null>(
     null,
   );
@@ -68,13 +69,25 @@ export function EmployeeActions({
   const openSeats = new Set(data.seats.map((s) => s.licenseId));
   const available = licenses.filter((l) => !openSeats.has(l.id));
 
-  async function run(fn: () => Promise<{ ok: boolean; error?: string }>) {
+  /**
+   * Общая обёртка действий строки. `done` — что показать после успеха; без
+   * него сообщения нет (например, человек отменил подтверждение и ничего не
+   * произошло — рапортовать не о чем).
+   */
+  async function run(
+    fn: () => Promise<{ ok: boolean; error?: string }>,
+    done?: string,
+  ) {
     setPending(true);
-    setError(null);
+    feedback.clear();
     const res = await fn();
     setPending(false);
-    if (!res.ok) setError(res.error ?? "Не получилось");
-    else router.refresh();
+    if (!res.ok) {
+      feedback.fail(res.error ?? "Не получилось");
+      return;
+    }
+    if (done) feedback.ok(done);
+    router.refresh();
   }
 
   return (
@@ -110,21 +123,20 @@ export function EmployeeActions({
                     <button
                       type="button"
                       disabled={pending}
-                      onClick={() =>
-                        run(async () => {
-                          if (
-                            !window.confirm(
-                              "Закрыть доступ к курсу? Место вернётся в общий пул и его можно будет отдать другому сотруднику.",
-                            )
-                          ) {
-                            return { ok: true };
-                          }
-                          return revokeSeatAction({
-                            orgId,
-                            enrollmentId: s.enrollmentId,
-                          });
-                        })
-                      }
+                      onClick={() => {
+                        if (
+                          !window.confirm(
+                            "Закрыть доступ к курсу? Место вернётся в общий пул и его можно будет отдать другому сотруднику.",
+                          )
+                        ) {
+                          return;
+                        }
+                        void run(
+                          () =>
+                            revokeSeatAction({ orgId, enrollmentId: s.enrollmentId }),
+                          `Доступ к «${s.courseTitle}» закрыт, место вернулось в пул.`,
+                        );
+                      }}
                       className="text-xs text-red-600 hover:underline"
                     >
                       закрыть
@@ -148,12 +160,14 @@ export function EmployeeActions({
                     type="button"
                     disabled={pending || l.free <= 0}
                     onClick={() =>
-                      run(() =>
-                        grantSeatAction({
-                          orgId,
-                          membershipId: data.membershipId,
-                          licenseId: l.id,
-                        }),
+                      run(
+                        () =>
+                          grantSeatAction({
+                            orgId,
+                            membershipId: data.membershipId,
+                            licenseId: l.id,
+                          }),
+                        `Курс «${l.courseTitle}» открыт работнику ${data.login}.`,
                       )
                     }
                     className="rounded-lg border border-foreground/15 px-2.5 py-1 text-xs transition-colors hover:bg-foreground/5 disabled:opacity-40"
@@ -177,12 +191,18 @@ export function EmployeeActions({
                 defaultValue={data.groupId ?? ""}
                 disabled={pending}
                 onChange={(e) =>
-                  run(() =>
-                    setMemberGroupAction({
-                      orgId,
-                      membershipId: data.membershipId,
-                      groupId: e.target.value || null,
-                    }),
+                  run(
+                    () =>
+                      setMemberGroupAction({
+                        orgId,
+                        membershipId: data.membershipId,
+                        groupId: e.target.value || null,
+                      }),
+                    e.target.value
+                      ? `Подразделение изменено: ${
+                          groups.find((g) => g.id === e.target.value)?.name ?? ""
+                        }.`
+                      : "Подразделение убрано.",
                   )
                 }
                 className="mt-1 h-9 w-full rounded-lg border border-foreground/15 bg-background px-2 text-sm"
@@ -205,14 +225,16 @@ export function EmployeeActions({
               disabled={pending}
               onClick={async () => {
                 setPending(true);
-                setError(null);
+                feedback.clear();
                 const res = await resetMemberPasswordAction({
                   orgId,
                   membershipId: data.membershipId,
                 });
                 setPending(false);
+                // Успех виден сам: ниже разворачивается готовое сообщение с
+                // новым паролем — дублировать его строкой незачем.
                 if (res.ok) setReset(res.data);
-                else setError(res.error);
+                else feedback.fail(res.error);
               }}
             >
               <KeyRound className="mr-1.5 size-4" />
@@ -222,23 +244,27 @@ export function EmployeeActions({
               variant="ghost"
               size="sm"
               disabled={pending}
-              onClick={() =>
-                run(async () => {
-                  if (
-                    data.isActive &&
-                    !window.confirm(
-                      "Отключить работника? Он потеряет доступ, а его места вернутся в пул.",
-                    )
-                  ) {
-                    return { ok: true };
-                  }
-                  return setMemberActiveAction({
-                    orgId,
-                    membershipId: data.membershipId,
-                    isActive: !data.isActive,
-                  });
-                })
-              }
+              onClick={() => {
+                if (
+                  data.isActive &&
+                  !window.confirm(
+                    "Отключить работника? Он потеряет доступ, а его места вернутся в пул.",
+                  )
+                ) {
+                  return;
+                }
+                void run(
+                  () =>
+                    setMemberActiveAction({
+                      orgId,
+                      membershipId: data.membershipId,
+                      isActive: !data.isActive,
+                    }),
+                  data.isActive
+                    ? `Работник ${data.login} отключён, его места вернулись в пул.`
+                    : `Работник ${data.login} снова активен.`,
+                );
+              }}
             >
               {data.isActive ? "Отключить" : "Включить"}
             </Button>
@@ -248,18 +274,19 @@ export function EmployeeActions({
               variant="ghost"
               size="sm"
               disabled={pending}
-              onClick={() =>
-                run(async () => {
-                  if (
-                    !window.confirm(
-                      `Удалить учётную запись ${data.login}? Она и её результаты будут стёрты безвозвратно, место вернётся в пул. Если сотрудник просто уходит — лучше «Отключить»: тогда его прогресс останется в отчётах.`,
-                    )
-                  ) {
-                    return { ok: true };
-                  }
-                  return deleteMemberAction({ orgId, membershipId: data.membershipId });
-                })
-              }
+              onClick={() => {
+                if (
+                  !window.confirm(
+                    `Удалить учётную запись ${data.login}? Она и её результаты будут стёрты безвозвратно, место вернётся в пул. Если сотрудник просто уходит — лучше «Отключить»: тогда его прогресс останется в отчётах.`,
+                  )
+                ) {
+                  return;
+                }
+                void run(
+                  () => deleteMemberAction({ orgId, membershipId: data.membershipId }),
+                  `Учётная запись ${data.login} удалена, место вернулось в пул.`,
+                );
+              }}
               className="text-red-600 hover:bg-red-600/5 hover:text-red-700"
             >
               <Trash2 className="mr-1.5 size-4" />
@@ -281,7 +308,7 @@ export function EmployeeActions({
             />
           ) : null}
 
-          {error ? <p className="text-sm text-red-600">{error}</p> : null}
+          <ActionResult result={feedback.result} />
         </div>
       ) : null}
     </div>
