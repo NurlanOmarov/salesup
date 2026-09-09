@@ -2,6 +2,15 @@ import type { EmailMessage } from "@/lib/email/send";
 import { PLAN_LABELS, type LeadQuote } from "@/lib/leads/quote";
 import { formatCurrency } from "@/lib/currency/format";
 import { escapeHtml } from "@/lib/notify/escape";
+import {
+  CONTACT_LABELS,
+  displayContact,
+  webContactLink,
+  type ContactType,
+} from "@/lib/leads/contact";
+import { countryTitle } from "@/lib/phone";
+import { countryFlag } from "@/lib/analytics/format";
+import { SITE_HOSTS } from "@/lib/seo/site-hosts";
 
 /**
  * Уведомления по новой заявке с публичной формы. Основной канал — сообщение
@@ -26,7 +35,17 @@ export interface LeadNotification {
   /** Офлайн — заявка на живой тренинг: без тарифа и расчёта. */
   format?: "ONLINE" | "OFFLINE";
   name?: string | null;
+  /** Уже нормализованный контакт: E.164, `@username` или адрес почты. */
   contact: string;
+  /** Куда писать. null — заявка до выбора канала (старые записи). */
+  contactType?: ContactType | null;
+  /** Страна номера (ISO) — может не совпадать с доменом заявки. */
+  contactCountry?: string | null;
+  /** Домен, с которого пришла заявка (SiteHost.code). */
+  site?: string | null;
+  siteHost?: string | null;
+  /** Язык страницы заявки; русский не показываем — он и так по умолчанию. */
+  locale?: "ru" | "kk" | "uz" | null;
   message?: string | null;
   company?: string | null;
   seatsWanted?: number | null;
@@ -34,6 +53,34 @@ export interface LeadNotification {
   /** Выбранный тариф и его цена — то, что человек видел на экране. */
   quote?: LeadQuote | null;
   createdAt: Date;
+}
+
+/**
+ * Откуда пришла заявка: «🇧🇾 study.activesales.by». Домен и страна номера — разные
+ * вещи: на белорусскую витрину заходят с казахстанским номером, и владельцу
+ * важно видеть оба, чтобы не звонить среди ночи и не начинать не на том языке.
+ */
+function siteTitle(code: string | null | undefined, host?: string | null): string | null {
+  if (!code) return null;
+  const known = host ?? SITE_HOSTS.find((s) => s.code === code)?.host;
+  return `${countryFlag(code)} ${known ?? code}`;
+}
+
+/** Страна номера с пометкой, если она расходится с доменом заявки. */
+function phoneCountryLine(lead: LeadNotification): string | null {
+  const title = countryTitle(lead.contactCountry);
+  if (!title) return null;
+  const mismatch =
+    lead.site && lead.contactCountry && lead.site !== lead.contactCountry
+      ? " ⚠️ другая страна, чем домен заявки"
+      : "";
+  return title + mismatch;
+}
+
+/** Язык страницы — только если он не русский: иначе это строка-шум в каждом уведомлении. */
+const LOCALE_NAMES: Record<string, string> = { kk: "қазақша", uz: "o‘zbekcha" };
+function localeLine(locale: string | null | undefined): string | null {
+  return locale ? (LOCALE_NAMES[locale] ?? null) : null;
 }
 
 function line(label: string, value: string | number | null | undefined): string | null {
@@ -91,10 +138,27 @@ export function leadTelegramText(lead: LeadNotification, siteUrl?: string): stri
         ? `🏢 <b>Новая B2B-заявка</b>${company}`
         : `🎓 <b>Новая заявка на курс</b>${lead.courseTitle ? ` — ${escapeHtml(lead.courseTitle)}` : ""}`;
 
+  // Канал связи в подписи: владелец сразу знает, где отвечать, и не пишет в
+  // WhatsApp тому, кто оставил Telegram. Ссылка открывает диалог одним тапом
+  // (у Viber схема не http — там остаётся только номер).
+  const channel = lead.contactType ? CONTACT_LABELS[lead.contactType] : "Контакт";
+  const channelIcon = lead.contactType === "EMAIL" ? "✉️" : "📞";
+  const contactShown = lead.contactType
+    ? displayContact(lead.contactType, lead.contact)
+    : lead.contact;
+  const writeLink = lead.contactType ? webContactLink(lead.contactType, lead.contact) : null;
+
   const rows = [
     line("👤 Имя", lead.name ? escapeHtml(lead.name) : null),
     // Контакт в <code> — удобно скопировать одним тапом.
-    line("📞 Контакт", `<code>${escapeHtml(lead.contact)}</code>`),
+    line(
+      `${channelIcon} ${channel}`,
+      `<code>${escapeHtml(contactShown)}</code>` +
+        (writeLink ? ` — <a href="${writeLink}">написать</a>` : ""),
+    ),
+    line("🌍 Страна номера", phoneCountryLine(lead)),
+    line("🌐 Заявка с домена", siteTitle(lead.site, lead.siteHost)),
+    line("🗣 Язык страницы", localeLine(lead.locale)),
     line("🏢 Организация", lead.company ? escapeHtml(lead.company) : null),
     line(lead.format === "OFFLINE" ? "👥 Участников" : "💺 Мест", lead.seatsWanted),
     line("📚 Курс", lead.courseTitle ? escapeHtml(lead.courseTitle) : null),
@@ -127,7 +191,13 @@ export function ownerLeadEmail(to: string, lead: LeadNotification): EmailMessage
           : "Розница (B2C)",
     ),
     line("Имя", lead.name),
-    line("Контакт", lead.contact),
+    line(
+      lead.contactType ? CONTACT_LABELS[lead.contactType] : "Контакт",
+      lead.contactType ? displayContact(lead.contactType, lead.contact) : lead.contact,
+    ),
+    line("Страна номера", phoneCountryLine(lead)),
+    line("Заявка с домена", siteTitle(lead.site, lead.siteHost)),
+    line("Язык страницы", localeLine(lead.locale)),
     line("Организация", lead.company),
     line("Мест", lead.seatsWanted),
     line("Курс", lead.courseTitle),
@@ -144,7 +214,9 @@ export function ownerLeadEmail(to: string, lead: LeadNotification): EmailMessage
   // Ответить заявителю можно прямо из почты — если он оставил e-mail.
   // Ключ добавляем только при наличии адреса: payload задачи хранится как JSON,
   // где значения undefined недопустимы.
-  const replyTo = contactEmail(lead.contact);
+  // Канал известен явно — на старых заявках его нет, поэтому остаётся разбор строки.
+  const replyTo =
+    lead.contactType === "EMAIL" ? lead.contact : lead.contactType ? null : contactEmail(lead.contact);
   return { to, subject, text, ...(replyTo ? { replyTo } : {}) };
 }
 

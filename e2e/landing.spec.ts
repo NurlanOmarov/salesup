@@ -3,13 +3,23 @@ import { PrismaClient } from "@prisma/client";
 
 const db = new PrismaClient();
 
+/** Контакты, созданные тестами: номера обязаны быть настоящими, поэтому чистим по списку. */
+const usedContacts: string[] = [];
+
+/** Валидный белорусский мобильный — форма принимает только разбираемый номер. */
+function belarusPhone(): { typed: string; stored: string } {
+  const digits = String(Math.floor(1_000_000 + Math.random() * 8_999_999));
+  usedContacts.push(`+37529${digits}`);
+  return { typed: `+375 29 ${digits}`, stored: `+37529${digits}` };
+}
+
 test.afterAll(async () => {
-  await db.lead.deleteMany({ where: { contact: { contains: "e2e-lead" } } });
+  await db.lead.deleteMany({ where: { contact: { in: usedContacts } } });
   await db.$disconnect();
 });
 
 test("заявка с формы создаёт Lead в БД", async ({ page }) => {
-  const contact = `+7 700 e2e-lead-${Date.now()}`;
+  const phone = belarusPhone();
 
   await page.goto("/");
   await page
@@ -18,7 +28,12 @@ test("заявка с формы создаёт Lead в БД", async ({ page }) 
 
   // форма заявки в секции #zayavka
   await page.getByLabel("Имя").fill("E2E Заявка");
-  await page.getByLabel(/Телефон, WhatsApp или e-mail/).fill(contact);
+  // Канал по умолчанию — мессенджер: на письма владелец отвечает дольше.
+  await expect(page.getByRole("button", { name: "WhatsApp" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await page.getByLabel(/Как с вами связаться/).fill(phone.typed);
   await page.getByLabel("Комментарий").fill("Интересует курс по туризму");
   // согласие на обработку ПДн — обязательная отметка (Закон РБ № 99-З)
   await page.getByRole("checkbox", { name: /Я согласен/ }).check();
@@ -28,27 +43,42 @@ test("заявка с формы создаёт Lead в БД", async ({ page }) 
 
   // проверяем, что запись появилась в БД (AC: «заявка появляется в админке»)
   await expect
-    .poll(async () => db.lead.count({ where: { contact } }))
+    .poll(async () => db.lead.count({ where: { contact: phone.stored } }))
     .toBe(1);
 
+  const lead = await db.lead.findFirst({ where: { contact: phone.stored } });
+  // Номер сохранён в E.164 с кодом страны — иначе мессенджер его не найдёт,
+  // а страна номера нужна владельцу до звонка.
+  expect(lead?.contactType).toBe("WHATSAPP");
+  expect(lead?.contactCountry).toBe("BY");
   // и что зафиксирован факт согласия с версией редакции документов
-  const lead = await db.lead.findFirst({ where: { contact } });
   expect(lead?.consentAt).not.toBeNull();
   expect(lead?.consentVersion).toBeTruthy();
+});
+
+test("номер без кода страны в заявку не попадает", async ({ page }) => {
+  // Локальный «0291234567» WhatsApp не находит — такую заявку принимать нельзя.
+  await page.goto("/#zayavka");
+  await page.getByLabel(/Как с вами связаться/).fill("12345");
+  await page.getByRole("checkbox", { name: /Я согласен/ }).check();
+  await page.getByRole("button", { name: "Оставить заявку" }).click();
+
+  await expect(page.getByText("Заявка отправлена!")).toBeHidden();
+  await expect(page.getByText(/Укажите номер WhatsApp с кодом страны/)).toBeVisible();
 });
 
 test("заявка без согласия на обработку ПДн не отправляется", async ({
   page,
 }) => {
-  const contact = `+7 700 e2e-lead-noconsent-${Date.now()}`;
+  const phone = belarusPhone();
 
   await page.goto("/#zayavka");
-  await page.getByLabel(/Телефон, WhatsApp или e-mail/).fill(contact);
+  await page.getByLabel(/Как с вами связаться/).fill(phone.typed);
   await page.getByRole("button", { name: "Оставить заявку" }).click();
 
   // браузер не даёт отправить форму с непроставленной обязательной отметкой
   await expect(page.getByText("Заявка отправлена!")).toBeHidden();
-  expect(await db.lead.count({ where: { contact } })).toBe(0);
+  expect(await db.lead.count({ where: { contact: phone.stored } })).toBe(0);
 });
 
 test("заявка на офлайн-тренинг: без тарифа и расчёта", async ({ page }) => {
@@ -65,7 +95,9 @@ test("заявка на офлайн-тренинг: без тарифа и ра
 
   await page.getByLabel("Организация").first().fill("E2E Офлайн Компания");
   await page.getByLabel("Сколько участников").first().fill("14");
-  await page.getByLabel(/Телефон, WhatsApp или e-mail/).first().fill(contact);
+  // Почта — не канал по умолчанию: чтобы её оставить, вкладку выбирают явно.
+  await page.getByRole("button", { name: "E-mail" }).first().click();
+  await page.getByLabel(/Как с вами связаться/).first().fill(contact);
   await page.getByRole("checkbox").first().check();
   await page.getByRole("button", { name: "Отправить запрос" }).first().click();
   await expect(page.getByText(/Заявка отправлена/).first()).toBeVisible();

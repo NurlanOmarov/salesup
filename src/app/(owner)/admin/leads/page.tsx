@@ -18,6 +18,8 @@ export default async function LeadsPage() {
       id: true,
       name: true,
       contact: true,
+      contactType: true,
+      contactCountry: true,
       courseId: true,
       message: true,
       status: true,
@@ -55,6 +57,8 @@ export default async function LeadsPage() {
     seatsWanted: l.seatsWanted,
     name: l.name,
     contact: l.contact,
+    contactType: l.contactType,
+    contactCountry: l.contactCountry,
     courseTitle: l.courseId ? (titleById.get(l.courseId) ?? null) : null,
     // Тариф и цена на момент подачи: с тех пор прайс мог измениться, поэтому
     // показываем зафиксированное, а не пересчитываем.

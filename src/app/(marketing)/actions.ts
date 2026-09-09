@@ -6,19 +6,28 @@ import { env } from "@/env";
 import { log } from "@/lib/log";
 import { enqueue } from "@/lib/jobs/enqueue";
 import { leadTelegramText, ownerLeadEmail } from "@/lib/leads/notify";
+import {
+  CONTACT_ERRORS,
+  CONTACT_TYPES,
+  DEFAULT_CONTACT_TYPE,
+  normalizeContact,
+} from "@/lib/leads/contact";
 import { leadQuote } from "@/lib/leads/quote";
 import { acceptedLegalVersion } from "@/lib/legal/version";
 import { currentSite } from "@/lib/seo/site";
+import { getLocale } from "@/i18n/server";
 import { currency, usdToTiyn } from "@/lib/currency";
 import { TRAINER_PACK_USD } from "@/lib/pricing";
 
 const schema = z.object({
   name: z.string().trim().max(120).optional().or(z.literal("")),
-  contact: z
-    .string()
-    .trim()
-    .min(3, "Укажите телефон, e-mail или @username")
-    .max(160),
+  // Канал связи выбирается в форме явно; по умолчанию — мессенджер, потому что
+  // на письма владелец отвечает дольше, чем на сообщение.
+  contactType: z.enum(CONTACT_TYPES).default(DEFAULT_CONTACT_TYPE),
+  // Пустое значение приходит и тогда, когда номер не разобрался в браузере:
+  // подсказку в этом случае даёт сам канал (CONTACT_ERRORS), а не общее
+  // «проверьте поля» — человеку нужно знать, что не хватает кода страны.
+  contact: z.string().trim().max(160),
   message: z.string().trim().max(2000).optional().or(z.literal("")),
   courseId: z.string().trim().max(40).optional().or(z.literal("")),
   // B2B-заявка со страницы /business: сколько сотрудников и какая организация.
@@ -63,6 +72,7 @@ export async function createLeadAction(
   const parsed = schema.safeParse({
     name: formData.get("name") ?? "",
     contact: formData.get("contact") ?? "",
+    contactType: formData.get("contactType") || DEFAULT_CONTACT_TYPE,
     message: formData.get("message") ?? "",
     courseId: formData.get("courseId") ?? "",
     kind: formData.get("kind") ?? "B2C",
@@ -80,6 +90,7 @@ export async function createLeadAction(
   const {
     name,
     contact,
+    contactType,
     message,
     courseId,
     kind,
@@ -92,6 +103,13 @@ export async function createLeadAction(
   // Офлайн-тренинг платформа не продаёт: тариф и расчёт к нему неприменимы,
   // поэтому обнуляем их даже если что-то пришло из формы.
   const isOffline = format === "OFFLINE";
+
+  // Контакт разбираем на сервере заново: браузер мог не выполнить проверку
+  // вовсе. Номер сохраняем только в E.164 — без кода страны мессенджер его не
+  // найдёт, а страна номера нужна владельцу до звонка (он может не совпасть с
+  // доменом заявки).
+  const normalized = normalizeContact(contactType, contact);
+  if (!normalized) return { error: CONTACT_ERRORS[contactType] };
 
   // courseId привязываем только если такой курс существует (форма на странице курса)
   let validCourseId: string | undefined;
@@ -144,11 +162,16 @@ export async function createLeadAction(
       });
 
   const site = await currentSite();
+  // Язык страницы: витрина многоязычна, и заявка с казахской или узбекской
+  // версии — повод перезвонить на этом языке, а не на русском.
+  const locale = await getLocale();
 
   const lead = await db.lead.create({
     data: {
       name: name || null,
-      contact,
+      contact: normalized.value,
+      contactType,
+      contactCountry: normalized.country,
       message: message || null,
       courseId: validCourseId ?? null,
       kind,
@@ -174,7 +197,14 @@ export async function createLeadAction(
     kind,
     format,
     name: name || null,
-    contact,
+    contact: normalized.value,
+    contactType,
+    contactCountry: normalized.country,
+    // Домен заявки: с какой страновой витрины пришёл человек. Вместе со страной
+    // номера это сразу отвечает на вопрос «на каком языке и в какое время звонить».
+    site: site?.code ?? null,
+    siteHost: site?.host ?? null,
+    locale,
     message: message || null,
     company: kind === "B2B" ? company || null : null,
     seatsWanted: kind === "B2B" ? (seatsWanted ?? null) : null,
@@ -202,6 +232,11 @@ export async function createLeadAction(
     log.error({ err: e, leadId: lead.id }, "lead.notify: не удалось поставить уведомление в очередь");
   }
 
-  log.info({ courseId: validCourseId ?? null, kind, format }, "lead.created");
+  log.info(
+    // ПДн не логируем (правило 9): только канал и страны — этого хватает, чтобы
+    // видеть, откуда идут заявки.
+    { courseId: validCourseId ?? null, kind, format, contactType, site: site?.code ?? null },
+    "lead.created",
+  );
   return { ok: true };
 }

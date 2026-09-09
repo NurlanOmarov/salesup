@@ -4,8 +4,14 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { Trash2 } from "lucide-react";
 import { updateLeadAction, deleteLeadAction } from "./actions";
-import { countryFlag } from "@/lib/analytics/format";
+import { countryFlag, countryName } from "@/lib/analytics/format";
 import { SITE_HOSTS } from "@/lib/seo/site-hosts";
+import {
+  CONTACT_LABELS,
+  contactLink,
+  displayContact,
+  type ContactType,
+} from "@/lib/leads/contact";
 
 const STATUS_OPTIONS = [
   { value: "NEW", label: "Новая" },
@@ -27,6 +33,10 @@ export interface LeadView {
   seatsWanted: number | null;
   name: string | null;
   contact: string;
+  /** Канал связи; null — заявка до того, как канал стали спрашивать. */
+  contactType: ContactType | null;
+  /** Страна номера (ISO) — может отличаться от домена заявки. */
+  contactCountry: string | null;
   courseTitle: string | null;
   message: string | null;
   status: Status;
@@ -40,6 +50,7 @@ export interface LeadView {
   site: string | null;
 }
 
+/** Старые заявки канала не знают — там остаётся разбор строки. */
 function looksLikeEmail(s: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim());
 }
@@ -79,12 +90,19 @@ export function LeadRow({ lead }: { lead: LeadView }) {
   };
 
   const site = lead.site ? SITE_HOSTS.find((s) => s.code === lead.site) : null;
+  // Номер и домен — разные страны сплошь и рядом: человек заходит на белорусскую
+  // витрину с казахстанского номера. Владельцу это видно до звонка.
+  const foreignNumber = Boolean(
+    lead.contactCountry && lead.site && lead.contactCountry !== lead.site,
+  );
 
   if (deleted) return null;
 
   const isB2b = lead.kind === "B2B";
   const isOffline = lead.format === "OFFLINE";
-  const contactIsEmail = looksLikeEmail(lead.contact);
+  const contactIsEmail = lead.contactType
+    ? lead.contactType === "EMAIL"
+    : looksLikeEmail(lead.contact);
 
   // Куда ведёт кнопка, зависит от типа заявки: по корпоративной заводится
   // организация, а не ученик. Раньше кнопка всегда вела в розничную форму, и по
@@ -131,7 +149,42 @@ export function LeadRow({ lead }: { lead: LeadView }) {
               </span>
             ) : null}
           </p>
-          <p className="text-sm text-foreground/70">{lead.contact}</p>
+          <p className="mt-0.5 flex flex-wrap items-center gap-2 text-sm text-foreground/70">
+            {lead.contactType ? (
+              <span className="rounded-full bg-foreground/[0.06] px-2 py-0.5 text-xs font-semibold text-foreground/70">
+                {CONTACT_LABELS[lead.contactType]}
+              </span>
+            ) : null}
+            {lead.contactType ? (
+              <a
+                href={contactLink(lead.contactType, lead.contact)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium underline decoration-foreground/20 underline-offset-2 hover:text-brand"
+              >
+                {displayContact(lead.contactType, lead.contact)}
+              </a>
+            ) : (
+              lead.contact
+            )}
+            {lead.contactCountry ? (
+              <span
+                className={
+                  foreignNumber
+                    ? "text-xs font-medium text-amber-700"
+                    : "text-xs text-foreground/50"
+                }
+                title={
+                  foreignNumber
+                    ? "Номер другой страны, чем домен заявки"
+                    : "Страна номера"
+                }
+              >
+                {countryFlag(lead.contactCountry)} {countryName(lead.contactCountry)}
+                {foreignNumber ? " ⚠️" : ""}
+              </span>
+            ) : null}
+          </p>
           {lead.kind === "B2B" ? (
             <p className="mt-0.5 text-xs text-foreground/60">
               {lead.company ?? "организация не указана"}

@@ -10,6 +10,7 @@ import { trackEvent } from "@/lib/analytics/track";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ContactChannel } from "@/components/landing/contact-channel";
 
 const initialState: LeadFormState = {};
 
@@ -123,12 +124,7 @@ export function LeadForm({
       ) : null}
       <div className="mt-3 space-y-1.5">
         <Label htmlFor="lead-contact">{t.lead.contact}</Label>
-        <Input
-          id="lead-contact"
-          name="contact"
-          required
-          placeholder="+7 700 000 00 00"
-        />
+        <ContactChannel />
       </div>
       <div className="mt-3 space-y-1.5">
         <Label htmlFor="lead-message">{t.lead.comment}</Label>

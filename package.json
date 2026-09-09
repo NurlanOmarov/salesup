@@ -68,6 +68,7 @@
     "framer-motion": "^12.40.0",
     "geoip-lite": "^2.0.3",
     "hls.js": "^1.6.16",
+    "libphonenumber-js": "^1.13.12",
     "lucide-react": "^0.469.0",
     "next": "^15.1.6",
     "next-auth": "5.0.0-beta.31",

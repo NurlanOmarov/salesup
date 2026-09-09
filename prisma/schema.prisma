@@ -1219,10 +1219,25 @@ enum LeadPlan {
 }
 
 // Заявка с лендинга/страницы курса (в MVP заменяет онлайн-чекаут)
+/// Канал связи, выбранный в форме заявки. По одному лишь адресу почты владелец
+/// отвечает долго — форма просит мессенджер и по умолчанию его же и предлагает.
+enum LeadContactType {
+  WHATSAPP
+  TELEGRAM
+  VIBER
+  EMAIL
+}
+
 model Lead {
   id                String     @id @default(cuid())
   name              String?
-  contact           String // телефон / e-mail / @username — как оставил человек
+  contact           String // E.164 (`+375291234567`), `@username` или e-mail — уже нормализованный
+  /// Куда писать: WhatsApp / Telegram / Viber / почта. null — заявки до выбора канала.
+  contactType       LeadContactType?
+  /// Страна самого номера (ISO, `KZ`) — она не обязана совпадать с доменом:
+  /// человек заходит на белорусскую витрину и оставляет казахстанский номер.
+  /// null — контакт не телефонный (ник, почта) или страну определить не удалось.
+  contactCountry    String?
   courseId          String?
   message           String?    @db.Text
   kind              LeadKind   @default(B2C)

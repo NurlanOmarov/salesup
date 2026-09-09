@@ -48,6 +48,47 @@ describe("leadTelegramText", () => {
     expect(text).toContain("Мест: 25");
   });
 
+  it("называет канал связи и даёт ссылку «написать»", () => {
+    const text = leadTelegramText({
+      ...base,
+      contact: "+375296053032",
+      contactType: "WHATSAPP",
+      contactCountry: "BY",
+      site: "BY",
+      siteHost: "study.activesales.by",
+    });
+    expect(text).toContain("📞 WhatsApp: <code>+375 29 605 30 32</code>");
+    expect(text).toContain('<a href="https://wa.me/375296053032">написать</a>');
+    expect(text).toContain("🇧🇾 Беларусь");
+    expect(text).toContain("🌐 Заявка с домена: 🇧🇾 study.activesales.by");
+  });
+
+  it("предупреждает, когда номер не из страны домена", () => {
+    // Заход с белорусской витрины с казахстанского номера — обычное дело, но
+    // владельцу нужно знать это до звонка (язык, часовой пояс, роуминг).
+    const text = leadTelegramText({
+      ...base,
+      contact: "+77058306028",
+      contactType: "WHATSAPP",
+      contactCountry: "KZ",
+      site: "BY",
+      siteHost: "study.activesales.by",
+    });
+    expect(text).toContain("🌍 Страна номера: 🇰🇿 Казахстан ⚠️ другая страна, чем домен заявки");
+    expect(text).toContain("study.activesales.by");
+  });
+
+  it("у Viber ссылки не ставит — Telegram принимает только http", () => {
+    const text = leadTelegramText({
+      ...base,
+      contact: "+375296053032",
+      contactType: "VIBER",
+      contactCountry: "BY",
+    });
+    expect(text).toContain("📞 Viber:");
+    expect(text).not.toContain("viber://");
+  });
+
   it("экранирует ввод, чтобы не сломать HTML-разметку Telegram", () => {
     const text = leadTelegramText({ ...base, name: "<b>Иван</b> & Co" });
     expect(text).toContain("&lt;b&gt;Иван&lt;/b&gt; &amp; Co");
@@ -138,6 +179,33 @@ describe("ownerLeadEmail", () => {
     const mail = ownerLeadEmail("owner@example.com", { ...base, name: null, message: null });
     expect(mail.text).not.toContain("Имя:");
     expect(mail.text).not.toContain("Сообщение:");
+  });
+});
+
+describe("ownerLeadEmail", () => {
+  it("пишет канал, страну номера и домен заявки", () => {
+    const mail = ownerLeadEmail("owner@example.by", {
+      ...base,
+      contact: "+77058306028",
+      contactType: "WHATSAPP",
+      contactCountry: "KZ",
+      site: "BY",
+      siteHost: "study.activesales.by",
+    });
+    expect(mail.text).toContain("WhatsApp: +7 705 830 6028");
+    expect(mail.text).toContain("Страна номера: 🇰🇿 Казахстан ⚠️");
+    expect(mail.text).toContain("Заявка с домена: 🇧🇾 study.activesales.by");
+    // Отвечать письмом некуда: контакт — мессенджер, а не почта.
+    expect(mail.replyTo).toBeUndefined();
+  });
+
+  it("подставляет replyTo, когда контакт — почта", () => {
+    const mail = ownerLeadEmail("owner@example.by", {
+      ...base,
+      contactType: "EMAIL",
+      contact: "student@example.com",
+    });
+    expect(mail.replyTo).toBe("student@example.com");
   });
 });
 
