@@ -41,6 +41,7 @@ interface LessonContent {
   id: string;
   title: string;
   courseSlug: string;
+  courseTitle: string;
   podcastKey: string | null;
   sourceText: string;
 }
@@ -53,7 +54,7 @@ async function loadLessonContent(lessonId: string): Promise<LessonContent | null
       id: true,
       title: true,
       podcastKey: true,
-      module: { select: { course: { select: { slug: true } } } },
+      module: { select: { course: { select: { slug: true, title: true } } } },
       aiArtifacts: {
         where: { type: "SUMMARY", validation: "VALIDATED" },
         select: { content: true },
@@ -76,6 +77,7 @@ async function loadLessonContent(lessonId: string): Promise<LessonContent | null
     id: lesson.id,
     title: lesson.title,
     courseSlug: lesson.module.course.slug,
+    courseTitle: lesson.module.course.title,
     podcastKey: lesson.podcastKey,
     sourceText,
   };
@@ -98,12 +100,13 @@ function extractId(stdout: string): string {
   return id;
 }
 
-/** Инструкция ведущим подкаста — задаёт тон и фокус под курс продаж. */
-function buildPrompt(title: string): string {
+/** Инструкция ведущим подкаста — задаёт тон и фокус под конкретный курс. */
+function buildPrompt(lesson: LessonContent): string {
   return (
-    `Это обучающий подкаст по продажам для курса медицинских представителей. ` +
-    `Тема урока: «${title}». Объясните материал живо и по делу, как разбор для новичка: ` +
-    `ключевые приёмы, типичные ошибки и короткие примеры реплик из диалога с врачом. ` +
+    `Это обучающий подкаст курса «${lesson.courseTitle}». ` +
+    `Тема урока: «${lesson.title}». Объясните материал живо и по делу, как разбор для новичка: ` +
+    `ключевые приёмы, типичные ошибки и короткие примеры реплик из диалога с клиентом. ` +
+    `Опирайтесь только на источник, не добавляйте фактов из других сфер. ` +
     `Говорите на русском, по-деловому, без воды.`
   );
 }
@@ -136,7 +139,7 @@ async function generatePodcast(
     // 3. Генерация подкаста (ждём завершения; до 30 мин).
     log.step(`NotebookLM: генерирую подкаст (${opts.format}, ${opts.length}, ${LANGUAGE}) — это несколько минут`);
     const gen = await run("notebooklm", [
-      "generate", "audio", buildPrompt(lesson.title),
+      "generate", "audio", buildPrompt(lesson),
       "-n", notebookId,
       "--format", opts.format,
       "--length", opts.length,
