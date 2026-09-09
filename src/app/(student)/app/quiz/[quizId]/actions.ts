@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { safeAction } from "@/lib/safe-action";
 import { db } from "@/lib/db";
-import { canAccessCourse } from "@/lib/access";
+import { canAccessCourse, canAccessLesson, hasDemoLimit } from "@/lib/access";
 import { scoreAttempt, type QuestionLike, type GradableType } from "@/lib/quiz/scoring";
 import { markCertificateReadyIfEligible } from "@/lib/certificates/issue";
 import { awardXp, awardBadge } from "@/lib/gamification/award";
@@ -32,6 +32,7 @@ export const submitQuizAttempt = safeAction(
         id: true,
         kind: true,
         courseId: true,
+        lessonId: true,
         passScore: true,
         maxAttempts: true,
         status: true,
@@ -55,8 +56,16 @@ export const submitQuizAttempt = safeAction(
     const courseSlug = quiz.course?.slug ?? quiz.lesson?.module.course.slug;
     if (!courseSlug) throw new Error("Тест не привязан к курсу");
 
-    const access = await canAccessCourse(userId, courseSlug);
+    // Как и на странице теста: задание урока проверяется по доступу к уроку
+    // (демо-лимит режет закрытые уроки), итоговый экзамен при демо недоступен.
+    const lessonId = quiz.kind === "LESSON_QUIZ" ? quiz.lessonId : null;
+    const access = lessonId
+      ? await canAccessLesson(userId, lessonId)
+      : await canAccessCourse(userId, courseSlug);
     if (!access.ok) throw new Error("Нет доступа к курсу");
+    if (!lessonId && quiz.courseId && (await hasDemoLimit(userId, quiz.courseId))) {
+      throw new Error("Итоговый экзамен доступен после оплаты полного курса");
+    }
 
     // Лимит пересдач
     if (quiz.maxAttempts != null) {

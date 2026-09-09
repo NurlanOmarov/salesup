@@ -11,6 +11,7 @@ export type AdminAction =
   | "enrollment.grant"
   | "enrollment.revoke"
   | "enrollment.extend"
+  | "enrollment.demo" // демо-доступ ученика: открыт процент уроков курса
   | "password.reset"
   | "student.block"
   | "student.unblock"
@@ -44,6 +45,8 @@ export type AdminAction =
   | "org.license.grant"
   | "org.license.update"
   | "org.license.delete"
+  | "org.license.demo" // демо-доступ по лицензии: процент уроков курса
+  | "org.demo" // демо-доступ разом по всем лицензиям организации
   | "org.admin.create"
   | "org.admin.update"
   | "org.admin.remove"

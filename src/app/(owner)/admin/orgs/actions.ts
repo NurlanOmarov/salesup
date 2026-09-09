@@ -694,3 +694,80 @@ export const resetOrgAdminPasswordAction = safeAction(
     return { tempPassword, email: membership.user.email ?? "" };
   },
 );
+
+/** Процент демо-доступа: 0–100 либо null — «полный доступ». */
+const demoPercentSchema = z.coerce.number().int().min(0).max(100).nullable();
+
+/**
+ * Демо-доступ по лицензии: клиент видит первые N% уроков курса, дальше — пейволл
+ * (lib/access.demoLessonCount). Одна ручка на всю компанию: лимит наследуют и уже
+ * выданные места, и те, что работники займут сами позже. Оплатили — ставим null,
+ * курс открывается у всех разом, переоформлять места не нужно.
+ */
+export const setLicenseDemoAction = safeAction(
+  {
+    schema: z.object({
+      orgId: z.string().min(1),
+      licenseId: z.string().min(1),
+      percent: demoPercentSchema,
+    }),
+    auth: "owner",
+  },
+  async (input, { session }) => {
+    const license = await db.orgLicense.findUnique({
+      where: { id: input.licenseId },
+      select: { id: true, orgId: true, demoPercent: true, course: { select: { title: true } } },
+    });
+    if (!license || license.orgId !== input.orgId) throw new Error("Лицензия не найдена");
+
+    await db.orgLicense.update({
+      where: { id: license.id },
+      data: { demoPercent: input.percent },
+    });
+
+    await writeAdminLog({
+      actorId: session!.user.id,
+      action: "org.license.demo",
+      meta: {
+        orgId: input.orgId,
+        licenseId: license.id,
+        percentBefore: license.demoPercent,
+        percent: input.percent,
+      },
+    });
+
+    revalidatePath(`/admin/orgs/${input.orgId}`);
+    return { courseTitle: license.course.title, percent: input.percent };
+  },
+);
+
+/** То же самое сразу по всем лицензиям организации — «бесплатный клиент» одним движением. */
+export const setOrgDemoAction = safeAction(
+  {
+    schema: z.object({ orgId: z.string().min(1), percent: demoPercentSchema }),
+    auth: "owner",
+  },
+  async (input, { session }) => {
+    const updated = await db.orgLicense.updateMany({
+      where: { orgId: input.orgId },
+      data: { demoPercent: input.percent },
+    });
+
+    // Индивидуальные переопределения на местах перекрывали бы лицензию и делали
+    // бы массовое действие наполовину рабочим: снимаем их, лицензия остаётся
+    // единственным источником правды по демо для этой компании.
+    await db.enrollment.updateMany({
+      where: { license: { orgId: input.orgId }, demoPercent: { not: null } },
+      data: { demoPercent: null },
+    });
+
+    await writeAdminLog({
+      actorId: session!.user.id,
+      action: "org.demo",
+      meta: { orgId: input.orgId, percent: input.percent, licenses: updated.count },
+    });
+
+    revalidatePath(`/admin/orgs/${input.orgId}`);
+    return { licenses: updated.count, percent: input.percent };
+  },
+);

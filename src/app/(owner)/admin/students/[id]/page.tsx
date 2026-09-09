@@ -47,6 +47,7 @@ export default async function StudentPage({
           startsAt: true,
           expiresAt: true,
           revokedAt: true,
+          demoPercent: true,
           course: { select: { title: true } },
         },
       },
@@ -72,6 +73,22 @@ export default async function StudentPage({
   const enrolledIds = new Set(student.enrollments.map((e) => e.courseId));
   const grantable = allCourses.filter((c) => !enrolledIds.has(c.id));
 
+  // Длина курсов ученика — для подписи демо-ползунка («30% = 9 из 33 уроков»).
+  const enrolledCourseIds = student.enrollments.map((e) => e.courseId);
+  const lessonsByCourse = new Map<string, number>();
+  if (enrolledCourseIds.length > 0) {
+    const modules = await db.module.findMany({
+      where: { courseId: { in: enrolledCourseIds } },
+      select: {
+        courseId: true,
+        _count: { select: { lessons: { where: { status: "PUBLISHED" } } } },
+      },
+    });
+    for (const m of modules) {
+      lessonsByCourse.set(m.courseId, (lessonsByCourse.get(m.courseId) ?? 0) + m._count.lessons);
+    }
+  }
+
   const enrollments = student.enrollments.map((e) => {
     let status: "active" | "revoked" | "expired" = "active";
     if (e.revokedAt) status = "revoked";
@@ -82,6 +99,8 @@ export default async function StudentPage({
       title: e.course.title,
       status,
       expiresAt: fmtDate(e.expiresAt),
+      demoPercent: e.demoPercent,
+      lessonsTotal: lessonsByCourse.get(e.courseId) ?? 0,
     };
   });
 
@@ -90,6 +109,7 @@ export default async function StudentPage({
     "enrollment.grant": "Выдан доступ",
     "enrollment.revoke": "Отозван доступ",
     "enrollment.extend": "Продлён доступ",
+    "enrollment.demo": "Изменён демо-доступ",
     "password.reset": "Сброшен пароль",
     "student.block": "Заблокирован вход",
     "student.unblock": "Разблокирован вход",

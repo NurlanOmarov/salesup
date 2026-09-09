@@ -8,6 +8,9 @@ export interface SidebarLesson {
   completed: boolean;
   /** Опубликован, но закрыт: не сдано задание одного из предыдущих уроков. */
   locked?: boolean;
+  /** Закрыт границей демо-доступа — в отличие от `locked`, кликабелен: ведёт на
+   *  пейволл. Видимый платный урок продаёт, спрятанный — нет. */
+  demoLocked?: boolean;
 }
 
 export interface SidebarModule {
@@ -73,8 +76,12 @@ export function LessonSidebar({
                 );
                 return (
                   <li key={l.id}>
-                    {l.available ? (
-                      <Link href={`/app/learn/${courseSlug}/${l.id}`} aria-current={isCurrent ? "page" : undefined}>
+                    {l.available || l.demoLocked ? (
+                      <Link
+                        href={`/app/learn/${courseSlug}/${l.id}`}
+                        aria-current={isCurrent ? "page" : undefined}
+                        title={l.demoLocked ? "Доступен после оплаты полного курса" : undefined}
+                      >
                         {inner}
                       </Link>
                     ) : (

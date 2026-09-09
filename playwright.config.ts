@@ -25,6 +25,7 @@ export default defineConfig({
       testIgnore: [
         "**/auth.spec.ts",
         "**/video-access.spec.ts",
+        "**/demo-access.spec.ts",
         "**/admin-students.spec.ts",
         "**/quiz.spec.ts",
         "**/certificate.spec.ts",

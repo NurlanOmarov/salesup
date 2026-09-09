@@ -4,6 +4,9 @@ import {
   evaluateCourseAccess,
   evaluateLessonAccess,
   evaluateLessonUnlock,
+  demoLessonCount,
+  effectiveDemoPercent,
+  evaluateDemoAccess,
   httpStatusForDeny,
   AccessDeniedError,
   type EnrollmentLike,
@@ -367,6 +370,7 @@ describe("httpStatusForDeny", () => {
     ["ENROLLMENT_EXPIRED", 403],
     ["ENROLLMENT_NOT_STARTED", 403],
     ["PREREQUISITE_NOT_MET", 403],
+    ["DEMO_LIMIT", 403],
   ])("%s → %i", (reason, status) => {
     expect(httpStatusForDeny(reason)).toBe(status);
   });
@@ -383,5 +387,95 @@ describe("AccessDeniedError", () => {
 
   it("для «не найдено» отдаёт 404", () => {
     expect(new AccessDeniedError("LESSON_NOT_PUBLISHED").status).toBe(404);
+  });
+});
+
+
+// ─────────────────────────── Демо-доступ ───────────────────────────
+
+describe("demoLessonCount", () => {
+  it("округляет вниз: демо не даёт больше обещанного", () => {
+    expect(demoLessonCount(33, 30)).toBe(9); // 9.9 → 9
+    expect(demoLessonCount(10, 25)).toBe(2); // 2.5 → 2
+  });
+
+  it("при percent > 0 открывает хотя бы один урок", () => {
+    expect(demoLessonCount(3, 30)).toBe(1); // 0.9 → 1, а не пустой кабинет
+    expect(demoLessonCount(100, 1)).toBe(1);
+  });
+
+  it("0 закрывает курс целиком, 100 открывает весь", () => {
+    expect(demoLessonCount(33, 0)).toBe(0);
+    expect(demoLessonCount(33, 100)).toBe(33);
+  });
+
+  it("значения за границами диапазона зажимаются", () => {
+    expect(demoLessonCount(20, -10)).toBe(0);
+    expect(demoLessonCount(20, 150)).toBe(20);
+  });
+
+  it("курс без опубликованных уроков — открывать нечего", () => {
+    expect(demoLessonCount(0, 50)).toBe(0);
+  });
+
+  it("состав демо пересчитывается при доборе уроков курса", () => {
+    expect(demoLessonCount(10, 30)).toBe(3);
+    expect(demoLessonCount(20, 30)).toBe(6); // фабрика добавила уроки — граница сдвинулась
+  });
+});
+
+describe("effectiveDemoPercent", () => {
+  it("без значений — полный доступ", () => {
+    expect(
+      effectiveDemoPercent({ enrollmentPercent: null, licensePercent: null }),
+    ).toBeNull();
+  });
+
+  it("лицензия задаёт лимит всем местам", () => {
+    expect(
+      effectiveDemoPercent({ enrollmentPercent: null, licensePercent: 30 }),
+    ).toBe(30);
+  });
+
+  it("значение места перекрывает лицензионное", () => {
+    expect(effectiveDemoPercent({ enrollmentPercent: 50, licensePercent: 30 })).toBe(50);
+  });
+
+  it("ноль на месте — это лимит, а не «не задано»", () => {
+    expect(effectiveDemoPercent({ enrollmentPercent: 0, licensePercent: 30 })).toBe(0);
+  });
+});
+
+describe("evaluateDemoAccess", () => {
+  const ids = ["l1", "l2", "l3", "l4", "l5", "l6", "l7", "l8", "l9", "l10"];
+
+  it("без процента доступ полный", () => {
+    expect(
+      evaluateDemoAccess({ orderedLessonIds: ids, targetLessonId: "l10", percent: null }),
+    ).toEqual({ ok: true });
+  });
+
+  it("открывает первые N% уроков в порядке прохождения", () => {
+    expect(
+      evaluateDemoAccess({ orderedLessonIds: ids, targetLessonId: "l3", percent: 30 }),
+    ).toEqual({ ok: true });
+  });
+
+  it("следующий за границей урок закрыт с DEMO_LIMIT", () => {
+    expect(
+      evaluateDemoAccess({ orderedLessonIds: ids, targetLessonId: "l4", percent: 30 }),
+    ).toEqual({ ok: false, reason: "DEMO_LIMIT" });
+  });
+
+  it("percent = 0 закрывает даже первый урок", () => {
+    expect(
+      evaluateDemoAccess({ orderedLessonIds: ids, targetLessonId: "l1", percent: 0 }),
+    ).toEqual({ ok: false, reason: "DEMO_LIMIT" });
+  });
+
+  it("урока нет среди опубликованных — решает не демо-логика", () => {
+    expect(
+      evaluateDemoAccess({ orderedLessonIds: ids, targetLessonId: "ghost", percent: 10 }),
+    ).toEqual({ ok: true });
   });
 });

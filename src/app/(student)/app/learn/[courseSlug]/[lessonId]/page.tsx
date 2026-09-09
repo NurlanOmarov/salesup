@@ -6,7 +6,10 @@ import { requireUser } from "@/lib/auth/guards";
 import { env } from "@/env";
 import { buttonVariants } from "@/components/ui/button";
 import { db } from "@/lib/db";
-import { canAccessLesson, evaluateLessonUnlock } from "@/lib/access";
+import { canAccessLesson, evaluateLessonUnlock, getCourseDemoState } from "@/lib/access";
+import { DemoPaywall } from "@/components/learn/demo-paywall";
+import { recordPaywallView } from "@/lib/analytics/paywall";
+import { getSupportContacts } from "@/lib/seo/settings";
 import { LessonTabs } from "@/components/learn/lesson-tabs";
 import { type SidebarModule } from "@/components/learn/lesson-sidebar";
 import { CourseOutline } from "@/components/learn/course-outline";
@@ -53,7 +56,44 @@ export default async function LearnPage({
   const userId = session.user.id;
 
   const access = await canAccessLesson(userId, lessonId);
-  if (!access.ok) notFound();
+  // DEMO_LIMIT — не «нет доступа», а «дальше платно»: показываем пейволл, а не
+  // 404. Остальные отказы по-прежнему неотличимы от несуществующего урока.
+  if (!access.ok && access.reason !== "DEMO_LIMIT") notFound();
+
+  if (!access.ok) {
+    const demoCourse = await db.course.findUnique({
+      where: { slug: courseSlug },
+      select: { id: true, title: true },
+    });
+    if (!demoCourse) notFound();
+    const state = await getCourseDemoState(userId, demoCourse.id);
+    if (!state) notFound();
+
+    const [membership, contacts] = await Promise.all([
+      db.orgMembership.findFirst({ where: { userId }, select: { orgId: true } }),
+      getSupportContacts(),
+    ]);
+    await recordPaywallView({
+      userId,
+      courseId: demoCourse.id,
+      courseSlug,
+      lessonId,
+      percent: state.percent,
+      orgId: membership?.orgId ?? null,
+    });
+
+    return (
+      <DemoPaywall
+        courseSlug={courseSlug}
+        courseTitle={demoCourse.title}
+        openCount={state.openCount}
+        totalLessons={state.totalLessons}
+        percent={state.percent}
+        isOrgLearner={membership !== null}
+        contactHref={contacts.whatsapp ?? contacts.telegram}
+      />
+    );
+  }
 
   const course = await db.course.findUnique({
     where: { slug: courseSlug },
@@ -292,13 +332,19 @@ export default async function LearnPage({
       targetLessonId: id,
     }).ok;
 
+  // Демо-доступ: уроки за границей видны в оглавлении, но ведут на пейволл.
+  const demoState = isOwner ? null : await getCourseDemoState(userId, course.id);
+  const demoOpenIds = demoState ? new Set(demoState.openLessonIds) : null;
+  const isDemoOpen = (id: string) => !demoOpenIds || demoOpenIds.has(id);
+
   // Оглавление + плоский порядок доступных уроков для prev/next.
   const flat: { id: string; title: string }[] = [];
   const modules: SidebarModule[] = course.modules.map((m) => ({
     title: m.title,
     lessons: m.lessons.map((l) => {
       const published = l.status === "PUBLISHED";
-      const available = published && isUnlocked(l.id);
+      const demoLocked = published && !isDemoOpen(l.id);
+      const available = published && !demoLocked && isUnlocked(l.id);
       if (published) flat.push({ id: l.id, title: l.title });
       return {
         id: l.id,
@@ -306,6 +352,7 @@ export default async function LearnPage({
         available,
         completed: completedSet.has(l.id),
         locked: published && !available,
+        demoLocked,
       };
     }),
   }));
@@ -358,6 +405,8 @@ export default async function LearnPage({
   // Задание текущего урока открывает следующий: пока не сдано — «Следующий урок»
   // недоступен, вместо кнопки показываем понятное объяснение.
   const nextLocked = !!next && !isUnlocked(next.id);
+  // Следующий урок за границей демо: кнопка ведёт на пейволл, а не в тупик.
+  const nextDemoLocked = !!next && !isDemoOpen(next.id);
 
   return (
     <div className="mx-auto grid max-w-6xl gap-8 px-4 py-6 lg:grid-cols-[260px_1fr]">
@@ -485,7 +534,15 @@ export default async function LearnPage({
           ) : (
             <span />
           )}
-          {next && !nextLocked ? (
+          {next && nextDemoLocked ? (
+            <Link
+              href={`/app/learn/${courseSlug}/${next.id}`}
+              className={buttonVariants({ variant: "accent", size: "sm" })}
+            >
+              <Lock className="size-4" />
+              Дальше — после оплаты
+            </Link>
+          ) : next && !nextLocked ? (
             <Link
               href={`/app/learn/${courseSlug}/${next.id}`}
               className={buttonVariants({ variant: "accent", size: "sm" })}

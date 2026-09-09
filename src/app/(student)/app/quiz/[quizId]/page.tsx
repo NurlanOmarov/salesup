@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { requireUser } from "@/lib/auth/guards";
 import { db } from "@/lib/db";
-import { canAccessCourse } from "@/lib/access";
+import { canAccessCourse, canAccessLesson, hasDemoLimit } from "@/lib/access";
 import { ExamRunner } from "./exam-runner";
 import type { RunnerQuestion } from "@/components/quiz/types";
 
@@ -58,8 +58,20 @@ export default async function QuizPage({
   const courseInfo = quiz.course ?? quiz.lesson?.module.course;
   if (!courseInfo) notFound();
 
-  const access = await canAccessCourse(userId, courseInfo.slug);
+  // Доступ к тесту — по доступу к его уроку, а не к курсу: при демо-доступе
+  // (Enrollment.demoPercent) тест закрытого урока иначе открывался бы прямой
+  // ссылкой. Итоговый экзамен при демо не сдаётся вовсе — он ведёт к сертификату.
+  const access = quiz.lesson
+    ? await canAccessLesson(userId, quiz.lesson.id)
+    : await canAccessCourse(userId, courseInfo.slug);
   if (!access.ok) notFound();
+  if (!quiz.lesson) {
+    const courseRow = await db.course.findUnique({
+      where: { slug: courseInfo.slug },
+      select: { id: true },
+    });
+    if (courseRow && (await hasDemoLimit(userId, courseRow.id))) notFound();
+  }
 
   // «Назад» — в кабинет (для итогового экзамена) или к уроку (для задания урока),
   // НЕ на публичную страницу курса.

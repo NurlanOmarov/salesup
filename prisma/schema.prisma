@@ -537,6 +537,14 @@ model Enrollment {
   /// автоматически снятые доступы и не воскресило отозванные вручную.
   /// lib/access.ts это поле НЕ читает — доступ по-прежнему решает revokedAt.
   revokedReason String?
+  /// Демо-доступ: сколько ПРОЦЕНТОВ уроков курса открыто ученику (0–100).
+  /// null — полный доступ (обычная оплаченная запись). Число открытых уроков —
+  /// производная от процента и текущего состава курса (lib/access.demoLessonCount):
+  /// добор уроков фабрикой автоматически меняет и границу демо.
+  /// Заполнено — ученик упирается в пейволл, экзамен и сертификат недоступны.
+  /// Для места из B2B-лицензии пусто означает «как у лицензии» (OrgLicense.demoPercent),
+  /// заполнено — индивидуальное переопределение поверх неё.
+  demoPercent   Int?
   /// Домен/рынок (SiteHost.code: "BY"|"KZ"|"RU"), к которому относится доступ —
   /// выбирает админ явно при выдаче (см. lib/seo/site-hosts.ts). Взять из сессии
   /// нельзя: сессия админа не привязана к рынку студента. null — доступ выдан
@@ -729,26 +737,26 @@ model ExternalReview {
 /// ведёт на профильный курс и не дублирует его текст: карточка курса продаёт
 /// программу, посадочная отвечает на вопрос запроса.
 model SeoLanding {
-  id          String  @id @default(cuid())
-  slug        String  @unique
+  id          String   @id @default(cuid())
+  slug        String   @unique
   /// Метка кластера для отчётности владельца («Возражения», «РОП»).
   cluster     String?
   title       String
   description String
   h1          String
   /// Вводный абзац под H1 — ответ на запрос до всякой продажи.
-  intro       String  @db.Text
+  intro       String   @db.Text
   /// Основной текст, markdown (рендерится StaticPageBody).
-  body        String  @db.Text
+  body        String   @db.Text
   /// Куда ведём: профильный курс. Пусто — CTA на каталог.
   courseId    String?
   /// Ядро кластера: ключи с частотностями, чтобы владелец видел, за что страница.
   keywords    String[]
   /// FAQ страницы: [{ q, a }] — идёт и в разметку FAQPage.
   faq         Json?
-  published   Boolean @default(false)
-  noindex     Boolean @default(false)
-  sortOrder   Int     @default(0)
+  published   Boolean  @default(false)
+  noindex     Boolean  @default(false)
+  sortOrder   Int      @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1172,6 +1180,11 @@ model OrgLicense {
   /// Общий дедлайн лицензии: если задан, доступ места не может пережить его
   /// (оферта, п. 4.5 — по истечении срока доступ прекращается автоматически).
   expiresAt      DateTime?
+  /// Демо-лицензия: процент уроков курса (0–100), открытый ВСЕМ местам лицензии.
+  /// null — полный доступ. Наследуется в реальном времени: работник, записавшийся
+  /// сам уже после выдачи лицензии, попадает под тот же лимит, а оплата снимается
+  /// одним изменением здесь — без переоформления мест (Enrollment.demoPercent).
+  demoPercent    Int?
   priceTiyn      Int? // цена места по счёту — для аналитики выручки
   note           String? // номер счёта/договорённость
   createdAt      DateTime       @default(now())
@@ -1229,7 +1242,7 @@ enum LeadContactType {
 }
 
 model Lead {
-  id                String     @id @default(cuid())
+  id                String           @id @default(cuid())
   name              String?
   contact           String // E.164 (`+375291234567`), `@username` или e-mail — уже нормализованный
   /// Куда писать: WhatsApp / Telegram / Viber / почта. null — заявки до выбора канала.
@@ -1239,9 +1252,9 @@ model Lead {
   /// null — контакт не телефонный (ник, почта) или страну определить не удалось.
   contactCountry    String?
   courseId          String?
-  message           String?    @db.Text
-  kind              LeadKind   @default(B2C)
-  format            LeadFormat @default(ONLINE)
+  message           String?          @db.Text
+  kind              LeadKind         @default(B2C)
+  format            LeadFormat       @default(ONLINE)
   /// Сколько сотрудников хочет обучать — только для B2B: по нему сразу видно
   /// уровень корпоративной сетки скидок (docs/PRICING-PLAN.md §8).
   seatsWanted       Int?
@@ -1255,9 +1268,9 @@ model Lead {
   /// Выбран ли пакет с живыми сессиями тренера (две онлайн-встречи + группа
   /// сопровождения, lib/pricing TRAINER_PACK). Надбавка уже включена в
   /// quotedTotalTiyn, но менеджеру нужно видеть состав, а не только сумму.
-  withTrainer       Boolean    @default(false)
-  status            LeadStatus @default(NEW)
-  comment           String?    @db.Text // заметки владельца
+  withTrainer       Boolean          @default(false)
+  status            LeadStatus       @default(NEW)
+  comment           String?          @db.Text // заметки владельца
   // Отметка о согласии на обработку ПДн в форме заявки (Закон № 99-З, ст. 5):
   // момент и версия редакции политики. IP/user-agent не храним (правило 9).
   consentAt         DateTime?
@@ -1266,8 +1279,8 @@ model Lead {
   /// определяется автоматически по Host запроса (lib/seo/site.ts currentSite()).
   /// null — заявка до внедрения разметки по доменам.
   site              String?
-  createdAt         DateTime   @default(now())
-  updatedAt         DateTime   @updatedAt
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
 
   @@index([status, createdAt])
   @@index([site, createdAt])

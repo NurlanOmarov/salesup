@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { hasDemoLimit } from "@/lib/access";
 import { checkEligibility } from "./eligibility.js";
 
 /**
@@ -24,6 +25,11 @@ export async function markCertificateReadyIfEligible(
     select: { id: true },
   });
   if (existing) return { ready: true, certificateId: existing.id };
+
+  // Демо-доступ (Enrollment/OrgLicense.demoPercent) сертификата не даёт: часть
+  // курса не пройдена по определению, а экзамен при демо закрыт. Проверка явная,
+  // чтобы готовность не появилась от старых попыток, сданных до включения демо.
+  if (await hasDemoLimit(userId, courseId)) return { ready: false };
 
   const course = await db.course.findUnique({
     where: { id: courseId },

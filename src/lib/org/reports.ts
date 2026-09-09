@@ -21,6 +21,10 @@ export interface LicenseSummary {
   expiresAt: Date | null;
   accessDuration: string;
   priceTiyn: number | null;
+  /** Демо-лицензия: процент уроков, открытый всем местам (null — полный доступ). */
+  demoPercent: number | null;
+  /** Опубликованных уроков в курсе — чтобы показать «30% = 9 из 33». */
+  lessonsTotal: number;
 }
 
 /** Лицензии организации с реальной занятостью мест. */
@@ -36,10 +40,27 @@ export async function getOrgLicenses(orgId: string): Promise<LicenseSummary[]> {
       expiresAt: true,
       accessDuration: true,
       priceTiyn: true,
+      demoPercent: true,
       course: { select: { title: true, slug: true } },
       _count: { select: { enrollments: { where: { revokedAt: null } } } },
     },
   });
+
+  // Длина курсов одним запросом: демо-процент показывается в уроках («9 из 33»),
+  // иначе владелец крутит ползунок вслепую.
+  const lessonsByCourse = new Map<string, number>();
+  if (licenses.length > 0) {
+    const modules = await db.module.findMany({
+      where: { courseId: { in: licenses.map((l) => l.courseId) } },
+      select: {
+        courseId: true,
+        _count: { select: { lessons: { where: { status: "PUBLISHED" } } } },
+      },
+    });
+    for (const m of modules) {
+      lessonsByCourse.set(m.courseId, (lessonsByCourse.get(m.courseId) ?? 0) + m._count.lessons);
+    }
+  }
 
   return licenses.map((l) => ({
     id: l.id,
@@ -54,6 +75,8 @@ export async function getOrgLicenses(orgId: string): Promise<LicenseSummary[]> {
     expiresAt: l.expiresAt,
     accessDuration: l.accessDuration,
     priceTiyn: l.priceTiyn,
+    demoPercent: l.demoPercent,
+    lessonsTotal: lessonsByCourse.get(l.courseId) ?? 0,
   }));
 }
 

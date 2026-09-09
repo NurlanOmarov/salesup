@@ -24,7 +24,8 @@ export type AccessDenyReason =
   | "ENROLLMENT_REVOKED"
   | "ENROLLMENT_EXPIRED"
   | "ENROLLMENT_NOT_STARTED"
-  | "PREREQUISITE_NOT_MET";
+  | "PREREQUISITE_NOT_MET"
+  | "DEMO_LIMIT";
 
 export type AccessResult =
   | { ok: true }
@@ -170,17 +171,160 @@ export function evaluateLessonUnlock(input: {
   return deny("LESSON_NOT_FOUND");
 }
 
+// ─────────────────────────── Демо-доступ (процент курса) ───────────────────────────
+
+/**
+ * Сколько уроков открыто при демо-доступе в `percent` процентов.
+ *
+ * Хранится процент, а не число уроков: одна ручка в админке одинаково работает
+ * для курсов разной длины, а состав демо пересчитывается от ТЕКУЩЕГО числа
+ * опубликованных уроков — курс дособрали фабрикой, граница демо сдвинулась сама.
+ *
+ * Округление вниз: демо не должно давать больше обещанного. Но не меньше одного
+ * урока при percent > 0 — иначе 30% на курсе из трёх уроков не открыли бы ничего
+ * и «демо» превратилось бы в пустой кабинет. percent = 0 закрывает курс целиком.
+ */
+export function demoLessonCount(totalLessons: number, percent: number): number {
+  if (totalLessons <= 0) return 0;
+  const p = Math.min(100, Math.max(0, percent));
+  if (p <= 0) return 0;
+  if (p >= 100) return totalLessons;
+  return Math.max(1, Math.floor((totalLessons * p) / 100));
+}
+
+/**
+ * Эффективный процент демо для места: индивидуальное значение перекрывает
+ * лицензионное, отсутствие обоих = полный доступ.
+ *
+ * Наследование от лицензии вычисляется на лету, а не копируется при выдаче
+ * места: работник, записавшийся сам уже после выдачи лицензии, попадает под тот
+ * же лимит, а оплата снимается одним изменением лицензии — сразу у всех.
+ */
+export function effectiveDemoPercent(input: {
+  enrollmentPercent: number | null | undefined;
+  licensePercent: number | null | undefined;
+}): number | null {
+  if (input.enrollmentPercent != null) return input.enrollmentPercent;
+  if (input.licensePercent != null) return input.licensePercent;
+  return null;
+}
+
+/**
+ * Попадает ли урок в открытую часть демо. Порядок уроков — тот же, что видит
+ * ученик в кабинете (module.sortOrder → lesson.sortOrder, только PUBLISHED),
+ * поэтому граница демо всегда совпадает с визуальным «до сих пор открыто».
+ */
+export function evaluateDemoAccess(input: {
+  orderedLessonIds: readonly string[];
+  targetLessonId: string;
+  percent: number | null | undefined;
+}): AccessResult {
+  const { orderedLessonIds, targetLessonId, percent } = input;
+  if (percent == null) return ALLOW;
+
+  const open = demoLessonCount(orderedLessonIds.length, percent);
+  const index = orderedLessonIds.indexOf(targetLessonId);
+  // Урока нет среди опубликованных уроков курса — решает не демо-логика.
+  if (index < 0) return ALLOW;
+  return index < open ? ALLOW : deny("DEMO_LIMIT");
+}
+
 // ─────────────────────────── БД-обёртки ───────────────────────────
+
+/** Запись на курс вместе с демо-лимитом (своим и унаследованным от лицензии). */
+export interface EnrollmentAccess extends EnrollmentLike {
+  demoPercent: number | null;
+  license: { demoPercent: number | null } | null;
+}
 
 /** Запись пользователя на курс (или null). Тонкая обёртка над unique-индексом. */
 export async function getEnrollment(
   userId: string,
   courseId: string,
-): Promise<EnrollmentLike | null> {
+): Promise<EnrollmentAccess | null> {
   return db.enrollment.findUnique({
     where: { userId_courseId: { userId, courseId } },
-    select: { startsAt: true, expiresAt: true, revokedAt: true },
+    select: {
+      startsAt: true,
+      expiresAt: true,
+      revokedAt: true,
+      demoPercent: true,
+      license: { select: { demoPercent: true } },
+    },
   });
+}
+
+/** Демо-процент места: своё значение или унаследованное от лицензии. */
+function demoPercentOf(enrollment: EnrollmentAccess | null | undefined): number | null {
+  if (!enrollment) return null;
+  return effectiveDemoPercent({
+    enrollmentPercent: enrollment.demoPercent,
+    licensePercent: enrollment.license?.demoPercent ?? null,
+  });
+}
+
+/**
+ * Опубликованные уроки курса в порядке прохождения — ровно та последовательность,
+ * которую ученик видит в кабинете. Один запрос; вызывается только когда у места
+ * есть демо-лимит, поэтому оплаченный доступ не платит за него ничем.
+ */
+export async function getOrderedLessonIds(courseId: string): Promise<string[]> {
+  const modules = await db.module.findMany({
+    where: { courseId },
+    orderBy: { sortOrder: "asc" },
+    select: {
+      lessons: {
+        where: { status: "PUBLISHED" },
+        orderBy: { sortOrder: "asc" },
+        select: { id: true },
+      },
+    },
+  });
+  return modules.flatMap((m) => m.lessons.map((l) => l.id));
+}
+
+/** Состав демо для курса: что показывать в списках уроков и на пейволле. */
+export interface CourseDemoState {
+  percent: number;
+  /** Сколько уроков открыто сейчас. */
+  openCount: number;
+  /** Всего опубликованных уроков в курсе. */
+  totalLessons: number;
+  /** ID открытых уроков — для замков в сайдбаре и аутлайне курса. */
+  openLessonIds: string[];
+}
+
+/**
+ * Демо-состояние курса для ученика: `null` — полный доступ (или доступа нет
+ * вовсе, это решает canAccessCourse). Нужен спискам уроков, чтобы закрытые уроки
+ * были ВИДНЫ под замком: невидимый контент ничего не продаёт.
+ */
+export async function getCourseDemoState(
+  userId: string,
+  courseId: string,
+): Promise<CourseDemoState | null> {
+  const enrollment = await getEnrollment(userId, courseId);
+  const percent = demoPercentOf(enrollment);
+  if (percent == null) return null;
+
+  const orderedLessonIds = await getOrderedLessonIds(courseId);
+  const openCount = demoLessonCount(orderedLessonIds.length, percent);
+  return {
+    percent,
+    openCount,
+    totalLessons: orderedLessonIds.length,
+    openLessonIds: orderedLessonIds.slice(0, openCount),
+  };
+}
+
+/**
+ * Действует ли на ученике демо-лимит по курсу. Точка отказа для того, что нельзя
+ * выдать «частично»: итоговый экзамен и сертификат (lib/certificates/issue.ts).
+ */
+export async function hasDemoLimit(userId: string, courseId: string): Promise<boolean> {
+  const user = await db.user.findUnique({ where: { id: userId }, select: { role: true } });
+  if (user?.role === "OWNER") return false;
+  return demoPercentOf(await getEnrollment(userId, courseId)) != null;
 }
 
 /** Доступ к курсу по slug. Грузит статус курса + роль пользователя + enrollment. */
@@ -204,6 +348,8 @@ export async function canAccessCourse(
   // Курс опубликован — но для контентного доступа всё равно нужна запись.
   const enrollment = course ? await getEnrollment(userId, course.id) : null;
   return evaluateEnrollment(enrollment, now);
+  // Демо-лимит здесь НЕ проверяется: курс с демо-доступом открыт (хотя бы один
+  // урок), режется он поурочно — canAccessLesson.
 }
 
 /**
@@ -241,7 +387,17 @@ export async function canAccessLesson(
   }
 
   const enrollment = await getEnrollment(userId, course.id);
-  return evaluateLessonAccess({ course, lesson, enrollment, role, now });
+  const base = evaluateLessonAccess({ course, lesson, enrollment, role, now });
+  if (!base.ok) return base;
+
+  // Демо-доступ: открыты только первые N% уроков курса, остальное — пейволл.
+  // Проверяется последней, уже после enrollment: причина отказа должна быть
+  // именно DEMO_LIMIT (403 + экран «дальше после оплаты»), а не «нет доступа».
+  const percent = demoPercentOf(enrollment);
+  if (percent == null) return ALLOW;
+
+  const orderedLessonIds = await getOrderedLessonIds(course.id);
+  return evaluateDemoAccess({ orderedLessonIds, targetLessonId: lessonId, percent });
 }
 
 /** Бросается при отказе в доступе. `status` — готовый HTTP-код для video-API. */

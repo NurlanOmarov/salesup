@@ -250,3 +250,42 @@ export const setDeviceLimitAction = safeAction(
     return { deviceLimit: value };
   },
 );
+
+/**
+ * Демо-доступ розничного ученика к курсу: открыты первые N% уроков, дальше —
+ * пейволл (lib/access.demoLessonCount). null снимает ограничение — обычная
+ * оплаченная запись. Процент, а не число уроков: курс дособрали — граница демо
+ * сдвинулась сама, руками ничего править не нужно.
+ */
+export const setEnrollmentDemoAction = safeAction(
+  {
+    schema: z.object({
+      userId: z.string().min(1),
+      courseId: z.string().min(1),
+      percent: z.coerce.number().int().min(0).max(100).nullable(),
+    }),
+    auth: "owner",
+  },
+  async ({ userId, courseId, percent }, { session }) => {
+    const enrollment = await db.enrollment.findUnique({
+      where: { userId_courseId: { userId, courseId } },
+      select: { id: true, demoPercent: true, course: { select: { title: true } } },
+    });
+    if (!enrollment) throw new Error("Доступ не найден");
+
+    await db.enrollment.update({
+      where: { id: enrollment.id },
+      data: { demoPercent: percent },
+    });
+
+    await writeAdminLog({
+      actorId: session!.user.id,
+      action: "enrollment.demo",
+      targetUserId: userId,
+      meta: { courseId, percentBefore: enrollment.demoPercent, percent },
+    });
+
+    revalidatePath(`/admin/students/${userId}`);
+    return { courseTitle: enrollment.course.title, percent };
+  },
+);

@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
-import { BookOpen, PlayCircle, GraduationCap, Trophy, CalendarCheck, Layers, StickyNote, Info } from "lucide-react";
+import { BookOpen, PlayCircle, GraduationCap, Trophy, CalendarCheck, Layers, StickyNote, Info, Lock } from "lucide-react";
 import { requireUser } from "@/lib/auth/guards";
 import { db } from "@/lib/db";
-import { isEnrollmentActive } from "@/lib/access";
+import { demoLessonCount, effectiveDemoPercent, isEnrollmentActive } from "@/lib/access";
 import { coverPublicUrl } from "@/lib/utils";
 import { courseProgress, nextLesson } from "@/lib/learn/progress";
 import { ProgressPanel, type BadgeView } from "@/components/gamification/progress-panel";
@@ -63,11 +63,13 @@ export default async function DashboardPage() {
   // Список курсов кабинета: у ученика — активные записи, у владельца — все
   // опубликованные (OWNER имеет доступ к любому контенту по роли, lib/access).
   const accessibleCourses = isOwner
-    ? await db.course.findMany({
-        where: { status: "PUBLISHED" },
-        orderBy: [{ sortOrder: "asc" }, { publishedAt: "desc" }],
-        select: courseSelect,
-      })
+    ? (
+        await db.course.findMany({
+          where: { status: "PUBLISHED" },
+          orderBy: [{ sortOrder: "asc" }, { publishedAt: "desc" }],
+          select: courseSelect,
+        })
+      ).map((course) => ({ ...course, demoPercent: null as number | null }))
     : (
         await db.enrollment.findMany({
           where: { userId },
@@ -75,6 +77,8 @@ export default async function DashboardPage() {
             startsAt: true,
             expiresAt: true,
             revokedAt: true,
+            demoPercent: true,
+            license: { select: { demoPercent: true } },
             course: { select: courseSelect },
           },
         })
@@ -85,7 +89,15 @@ export default async function DashboardPage() {
             now,
           ),
         )
-        .map((e) => e.course);
+        // Демо-доступ переносим на карточку курса: ученику видно, сколько из
+        // курса ему открыто, а «Продолжить» за границей ведёт на пейволл.
+        .map((e) => ({
+          ...e.course,
+          demoPercent: effectiveDemoPercent({
+            enrollmentPercent: e.demoPercent,
+            licensePercent: e.license?.demoPercent ?? null,
+          }),
+        }));
 
   // Прогресс по всем урокам пользователя одним запросом.
   const completed = await db.lessonProgress.findMany({
@@ -132,12 +144,17 @@ export default async function DashboardPage() {
       candidate != null &&
       ordered.findIndex((l) => l.id === candidate.id) > blockerIdx;
     const next = blocked ? (ordered[blockerIdx] ?? candidate) : candidate;
+    const demoPercent = course.demoPercent;
+    const demoOpen =
+      demoPercent == null ? null : demoLessonCount(ordered.length, demoPercent);
     return {
       ...course,
       progress,
       nextLessonId: next?.id ?? null,
       nextLessonTitle: next?.title ?? null,
       examId: course.quizzes[0]?.id ?? null,
+      demoPercent,
+      demoOpen,
     };
   });
 
@@ -327,6 +344,12 @@ export default async function DashboardPage() {
               </div>
               <div className="p-5">
                 <h2 className="font-semibold">{c.title}</h2>
+                {c.demoOpen != null ? (
+                  <p className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-medium text-amber-700">
+                    <Lock className="size-3.5" />
+                    Ознакомительный доступ: {c.demoOpen} из {c.progress.total} уроков
+                  </p>
+                ) : null}
 
                 {/* Прогресс-бар */}
                 <div className="mt-3">

@@ -5,6 +5,7 @@ import { Check } from "lucide-react";
 import {
   grantEnrollmentAction,
   revokeEnrollmentAction,
+  setEnrollmentDemoAction,
   resetPasswordAction,
   toggleBlockAction,
   setDeviceLimitAction,
@@ -15,6 +16,7 @@ import { studentPasswordMessage } from "@/lib/messages/templates";
 import { ShareMessage } from "@/components/share-message";
 import { DEVICE_FLAG_FROM, DEVICE_LIMIT } from "@/lib/antishare/limits";
 import { ActionResult, useActionResult } from "@/components/action-result";
+import { DemoAccessSlider } from "@/components/admin/demo-access-slider";
 import { Button } from "@/components/ui/button";
 
 /** Селект периода доступа. Пустое значение = по тарифу курса. */
@@ -77,6 +79,10 @@ interface EnrollmentView {
   title: string;
   status: "active" | "revoked" | "expired";
   expiresAt: string | null;
+  /** Демо-доступ: процент открытых уроков курса (null — курс открыт целиком). */
+  demoPercent: number | null;
+  /** Опубликованных уроков в курсе — подпись «30% = 9 из 33». */
+  lessonsTotal: number;
 }
 
 interface CourseOption {
@@ -197,7 +203,8 @@ function EnrollmentRow({
   const [site, setSite] = useState(defaultSite);
 
   return (
-    <li className="flex flex-wrap items-center justify-between gap-3 py-2.5">
+    <li className="py-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
       <div>
         <p className="text-sm font-medium">{e.title}</p>
         <p className="text-xs text-foreground/50">
@@ -251,6 +258,26 @@ function EnrollmentRow({
           </Button>
         </div>
       )}
+      </div>
+
+      {/* Демо-доступ: часть курса открыта, дальше — экран «после оплаты».
+          Показываем только на действующем доступе — на отозванном нечего резать. */}
+      {e.status === "active" ? (
+        <div className="mt-2 max-w-md">
+          <DemoAccessSlider
+            percent={e.demoPercent}
+            lessonsTotal={e.lessonsTotal}
+            save={async (next) => {
+              const res = await setEnrollmentDemoAction({
+                userId,
+                courseId: e.courseId,
+                percent: next,
+              });
+              return res.ok ? { ok: true } : { ok: false, error: res.error };
+            }}
+          />
+        </div>
+      ) : null}
     </li>
   );
 }

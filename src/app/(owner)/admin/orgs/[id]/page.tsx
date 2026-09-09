@@ -14,6 +14,8 @@ import {
   DeleteOrgAction,
   EditOrgAdmin,
   LicenseForm,
+  LicenseDemoControl,
+  OrgDemoControl,
   DeleteLicenseButton,
   OrgDetailsForm,
   OrgStatusActions,
@@ -90,6 +92,20 @@ export default async function OrgPage({
     ]);
 
   const learners = members.filter((m) => m.role === "ORG_LEARNER");
+
+  // Демо-доступ компании: общий процент показываем только если он одинаков у всех
+  // лицензий — иначе ползунок врал бы, показывая настройку одной из них.
+  const demoValues = overview.licenses.map((l) => l.demoPercent);
+  const demoMixed = new Set(demoValues.map((v) => String(v))).size > 1;
+  const commonDemoPercent = demoMixed ? null : (demoValues[0] ?? null);
+  // Средняя длина курсов — чтобы подпись «≈ N уроков» была осмысленной, когда
+  // лицензий несколько и уроков в курсах разное количество.
+  const avgLessons = overview.licenses.length
+    ? Math.round(
+        overview.licenses.reduce((sum, l) => sum + l.lessonsTotal, 0) /
+          overview.licenses.length,
+      )
+    : 0;
   // Ссылки в готовых сообщениях ведут на домен рынка клиента, а не на тот, с
   // которого владелец открыл админку (docs/MULTI-DOMAIN-PLAN.md).
   const siteUrl = siteOriginByCode(org.site);
@@ -203,6 +219,7 @@ export default async function OrgPage({
                   <th className="px-4 py-3 font-medium">Места</th>
                   <th className="px-4 py-3 font-medium">Срок места</th>
                   <th className="px-4 py-3 font-medium">Лицензия до</th>
+                  <th className="px-4 py-3 font-medium">Демо-доступ</th>
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
@@ -221,7 +238,17 @@ export default async function OrgPage({
                     <td className="px-4 py-3 text-foreground/70">
                       {l.expiresAt ? l.expiresAt.toLocaleDateString("ru-RU") : "бессрочно"}
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 align-top">
+                      <div className="min-w-[220px]">
+                        <LicenseDemoControl
+                          orgId={org.id}
+                          licenseId={l.id}
+                          percent={l.demoPercent}
+                          lessonsTotal={l.lessonsTotal}
+                        />
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-right align-top">
                       <DeleteLicenseButton
                         orgId={org.id}
                         licenseId={l.id}
@@ -235,6 +262,25 @@ export default async function OrgPage({
             </table>
           )}
         </div>
+
+        {overview.licenses.length > 0 ? (
+          <div className="mt-4 rounded-xl border border-foreground/10 bg-background p-4">
+            <h3 className="text-sm font-semibold">Демо-доступ для всей компании</h3>
+            <p className="mt-1 text-sm text-foreground/55">
+              Пока клиент не оплатил, ему открыта только часть каждого курса —
+              дальше работник видит экран «дальше после оплаты». Оплатили —
+              «Открыть полностью», и материал появляется у всех сразу.
+            </p>
+            <div className="mt-3 max-w-md">
+              <OrgDemoControl
+                orgId={org.id}
+                percent={commonDemoPercent}
+                lessonsTotal={avgLessons}
+                mixed={demoMixed}
+              />
+            </div>
+          </div>
+        ) : null}
 
         <div className="mt-4 rounded-xl border border-foreground/10 bg-background p-4">
           <h3 className="text-sm font-semibold">Выдать или изменить лицензию</h3>

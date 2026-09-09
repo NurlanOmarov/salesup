@@ -14,6 +14,8 @@ import {
   grantLibraryAction,
   grantLicenseAction,
   setOrgStatusAction,
+  setLicenseDemoAction,
+  setOrgDemoAction,
   updateOrgAction,
 } from "../actions";
 import { ACCESS_DURATIONS, ACCESS_DURATION_LABELS } from "@/lib/admin/enrollment";
@@ -26,6 +28,7 @@ import {
 import { SITE_HOSTS } from "@/lib/seo/site-hosts";
 import { pluralRu } from "@/lib/courses/plural";
 import { ActionResult, useActionResult } from "@/components/action-result";
+import { DemoAccessSlider } from "@/components/admin/demo-access-slider";
 import { ShareMessage } from "@/components/share-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1138,5 +1141,67 @@ export function ResetOrgAdminPassword({
       </button>
       {error ? <span className="text-xs text-red-600">{error}</span> : null}
     </span>
+  );
+}
+
+
+// ─────────────────────────── Демо-доступ ───────────────────────────
+
+/**
+ * Демо по одной лицензии. Лимит наследуют все места этой лицензии — и те, что
+ * работники займут сами позже: оплата снимается одним «Открыть полностью».
+ */
+export function LicenseDemoControl({
+  orgId,
+  licenseId,
+  percent,
+  lessonsTotal,
+}: {
+  orgId: string;
+  licenseId: string;
+  percent: number | null;
+  lessonsTotal: number;
+}) {
+  return (
+    <DemoAccessSlider
+      percent={percent}
+      lessonsTotal={lessonsTotal}
+      save={async (next) => {
+        const res = await setLicenseDemoAction({ orgId, licenseId, percent: next });
+        return res.ok ? { ok: true } : { ok: false, error: res.error };
+      }}
+    />
+  );
+}
+
+/** Демо разом по всем лицензиям компании — «бесплатный клиент» одной ручкой. */
+export function OrgDemoControl({
+  orgId,
+  percent,
+  lessonsTotal,
+  mixed,
+}: {
+  orgId: string;
+  /** Общее значение, если оно одинаково у всех лицензий; иначе null. */
+  percent: number | null;
+  /** Средняя длина курсов компании — для подписи «≈ N уроков». */
+  lessonsTotal: number;
+  /** У лицензий разные значения: подпись предупреждает, что действие их уравняет. */
+  mixed: boolean;
+}) {
+  return (
+    <DemoAccessSlider
+      percent={percent}
+      lessonsTotal={lessonsTotal}
+      hint={
+        mixed
+          ? "Сейчас у лицензий разные настройки — сохранение уравняет их все."
+          : "Применяется ко всем лицензиям компании и снимает индивидуальные настройки мест."
+      }
+      save={async (next) => {
+        const res = await setOrgDemoAction({ orgId, percent: next });
+        return res.ok ? { ok: true } : { ok: false, error: res.error };
+      }}
+    />
   );
 }
