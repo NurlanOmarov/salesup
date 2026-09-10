@@ -16,6 +16,7 @@ export type AdminAction =
   | "student.block"
   | "student.unblock"
   | "student.device_limit"
+  | "student.devices_reset" // владелец забыл устройства ученика: счёт лимита с нуля
   | "lead.update"
   | "lead.delete"
   | "course.update"
@@ -47,6 +48,8 @@ export type AdminAction =
   | "org.license.delete"
   | "org.license.demo" // демо-доступ по лицензии: процент уроков курса
   | "org.demo" // демо-доступ разом по всем лицензиям организации
+  | "org.device_limit" // лимит устройств для всех работников клиента
+  | "org.devices_reset" // забыть устройства всех работников клиента
   | "org.admin.create"
   | "org.admin.update"
   | "org.admin.remove"

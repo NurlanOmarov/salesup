@@ -1095,6 +1095,10 @@ model Organization {
   /// сообщения вели на «свой» домен клиента, а не на канонический .by.
   site         String?
   status       OrgStatus @default(ACTIVE)
+  /// Лимит устройств для работников клиента: null = стандартный (DEVICE_LIMIT),
+  /// 0 = безлимит, N = N устройств. Персональный лимит работника (User.deviceLimit)
+  /// перекрывает этот; см. lib/antishare/heuristics.resolveDeviceLimit.
+  deviceLimit  Int?
   /// Счётчик выданных логинов: acme-0001, acme-0002… Инкрементируется в транзакции
   /// самозаписи — гарантирует уникальность без гонок.
   loginSeq     Int       @default(0)

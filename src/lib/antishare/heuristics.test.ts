@@ -5,6 +5,7 @@ import {
   tooManyCities,
   evaluateFlags,
   effectiveDeviceLimit,
+  resolveDeviceLimit,
   DEVICE_LIMIT,
   DEVICE_FLAG_FROM,
 } from "./heuristics.js";
@@ -104,5 +105,23 @@ describe("effectiveDeviceLimit", () => {
   });
   it("N>0 → N", () => {
     expect(effectiveDeviceLimit(3)).toBe(3);
+  });
+});
+
+describe("resolveDeviceLimit", () => {
+  it("без настроек — стандартный лимит платформы", () => {
+    expect(resolveDeviceLimit(null, null)).toBe(DEVICE_LIMIT);
+    expect(resolveDeviceLimit(undefined)).toBe(DEVICE_LIMIT);
+  });
+
+  it("работник наследует лимит своей организации", () => {
+    expect(resolveDeviceLimit(null, 4)).toBe(4);
+    expect(resolveDeviceLimit(null, 0)).toBeNull(); // безлимит на всю компанию
+  });
+
+  it("личная настройка сильнее настройки организации", () => {
+    expect(resolveDeviceLimit(1, 5)).toBe(1);
+    // Личный безлимит остаётся безлимитом даже при строгой настройке компании.
+    expect(resolveDeviceLimit(0, 2)).toBeNull();
   });
 });

@@ -9,6 +9,7 @@ import { writeAdminLog } from "@/lib/admin/log";
 import { ACCESS_DURATIONS, computeExpiry } from "@/lib/admin/enrollment";
 import { createOrgAdmin } from "@/lib/org/service";
 import { getOrgProgressSnapshot } from "@/lib/org/reports";
+import { DEVICE_LIMIT } from "@/lib/antishare/limits";
 import { generateTempPassword } from "@/lib/auth/temp-password";
 import { hashPassword } from "@/lib/auth/password";
 import { slugifyOrgName } from "@/lib/org/seats";
@@ -783,5 +784,62 @@ export const orgProgressAction = safeAction(
     const snapshot = await getOrgProgressSnapshot(input.orgId);
     if (!snapshot) throw new Error("Организация не найдена");
     return snapshot;
+  },
+);
+
+/**
+ * Лимит устройств для работников клиента: default → как на платформе (null),
+ * unlimited → без ограничения (0), custom → ровно N. Персональная настройка
+ * работника (User.deviceLimit) сильнее этой — см. antishare/resolveDeviceLimit.
+ */
+export const setOrgDeviceLimitAction = safeAction(
+  {
+    schema: z.object({
+      orgId: z.string().min(1),
+      mode: z.enum(["default", "unlimited", "custom"]),
+      limit: z.coerce.number().int().min(1).max(50).optional(),
+    }),
+    auth: "owner",
+  },
+  async ({ orgId, mode, limit }, { session }) => {
+    const value = mode === "default" ? null : mode === "unlimited" ? 0 : (limit ?? DEVICE_LIMIT);
+    await db.organization.update({ where: { id: orgId }, data: { deviceLimit: value } });
+
+    await writeAdminLog({
+      actorId: session!.user.id,
+      action: "org.device_limit",
+      meta: { orgId, deviceLimit: value },
+    });
+
+    revalidatePath(`/admin/orgs/${orgId}`);
+    return { deviceLimit: value };
+  },
+);
+
+/**
+ * Забыть устройства всех работников клиента: у каждого счёт начинается заново,
+ * как будто никто ещё не входил. Пригодится после смены парка техники или
+ * когда компания разбирается, кто чем пользуется. Доступы это не трогает.
+ */
+export const resetOrgDevicesAction = safeAction(
+  { schema: z.object({ orgId: z.string().min(1) }), auth: "owner" },
+  async ({ orgId }, { session }) => {
+    const memberships = await db.orgMembership.findMany({
+      where: { orgId },
+      select: { userId: true },
+    });
+    const userIds = memberships.map((m) => m.userId);
+    const { count } = userIds.length
+      ? await db.device.deleteMany({ where: { userId: { in: userIds } } })
+      : { count: 0 };
+
+    await writeAdminLog({
+      actorId: session!.user.id,
+      action: "org.devices_reset",
+      meta: { orgId, cleared: count, members: userIds.length },
+    });
+
+    revalidatePath(`/admin/orgs/${orgId}`);
+    return { cleared: count };
   },
 );

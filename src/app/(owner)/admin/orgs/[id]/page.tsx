@@ -18,6 +18,7 @@ import {
   OrgDemoControl,
   DeleteLicenseButton,
   OrgDetailsForm,
+  OrgDeviceLimitControl,
   OrgStatusActions,
   ResetOrgAdminPassword,
   ResetOrgKeyAction,
@@ -57,6 +58,7 @@ export default async function OrgPage({
       contactNote: true,
       note: true,
       site: true,
+      deviceLimit: true,
       createdAt: true,
       loginSeq: true,
     },
@@ -446,6 +448,15 @@ export default async function OrgPage({
             </table>
           )}
         </div>
+      </section>
+
+      {/* ── Устройства ───────────────────────────────────────────────── */}
+      <section id="devices" className="mt-8 scroll-mt-20">
+        <OrgDeviceLimitControl
+          orgId={org.id}
+          deviceLimit={org.deviceLimit}
+          members={members.length}
+        />
       </section>
 
       {/* ── Реквизиты ────────────────────────────────────────────────── */}

@@ -40,6 +40,13 @@ export default async function StudentPage({
       deletedAt: true,
       mustChangePassword: true,
       deviceLimit: true,
+      // Работник корпоративного клиента наследует лимит устройств своей
+      // организации — показываем владельцу, что действует сейчас.
+      orgMemberships: {
+        where: { isActive: true },
+        select: { org: { select: { name: true, deviceLimit: true } } },
+        take: 1,
+      },
       createdAt: true,
       enrollments: {
         select: {
@@ -169,7 +176,12 @@ export default async function StudentPage({
           login={student.email ?? student.login ?? ""}
           siteUrl={`https://${(site ?? DEFAULT_SITE).host}`}
         />
-        <DeviceLimitForm userId={student.id} deviceLimit={student.deviceLimit} />
+        <DeviceLimitForm
+          userId={student.id}
+          deviceLimit={student.deviceLimit}
+          orgLimit={student.orgMemberships[0]?.org.deviceLimit ?? null}
+          orgName={student.orgMemberships[0]?.org.name ?? null}
+        />
       </div>
 
       {/* Журнал действий по этому ученику */}

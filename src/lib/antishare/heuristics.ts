@@ -34,6 +34,26 @@ export function effectiveDeviceLimit(deviceLimit: number | null | undefined): nu
 }
 
 /**
+ * Лимит устройств для конкретного человека с учётом его организации.
+ *
+ * Порядок: персональная настройка сильнее настройки клиента, настройка клиента
+ * сильнее стандарта платформы. У работников персонального лимита обычно нет —
+ * договорённость о числе устройств заключается разом на всю компанию, — но если
+ * владелец завёл её отдельному человеку, она и действует.
+ *
+ * Обе настройки читаются одинаково: null = «наследовать», 0 = безлимит, N = N.
+ * На выходе null означает «без ограничения».
+ */
+export function resolveDeviceLimit(
+  userLimit: number | null | undefined,
+  orgLimit?: number | null,
+): number | null {
+  if (userLimit !== null && userLimit !== undefined) return effectiveDeviceLimit(userLimit);
+  if (orgLimit !== null && orgLimit !== undefined) return effectiveDeviceLimit(orgLimit);
+  return DEVICE_LIMIT;
+}
+
+/**
  * Аномально много просмотра: суммарно просмотрено заметно больше, чем длится
  * урок (признак параллельного просмотра с нескольких устройств/аккаунт-шеринга).
  * Возвращает true, если watchedSec > factor × durationSec (при известной длительности).

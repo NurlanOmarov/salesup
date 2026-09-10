@@ -252,6 +252,31 @@ export const setDeviceLimitAction = safeAction(
 );
 
 /**
+ * Забыть все устройства ученика: счётчик лимита начинается заново, как будто
+ * с этой учётки ещё никто не входил.
+ *
+ * Нужно, когда человек сменил телефон или ноутбук: старый отпечаток занимает
+ * место в лимите ещё неделю, и до истечения этого срока новое устройство не
+ * пускается. Доступ к курсам сброс не трогает — стираются только отпечатки.
+ */
+export const resetDevicesAction = safeAction(
+  { schema: z.object({ userId: z.string().min(1) }), auth: "owner" },
+  async ({ userId }, { session }) => {
+    const { count } = await db.device.deleteMany({ where: { userId } });
+
+    await writeAdminLog({
+      actorId: session!.user.id,
+      action: "student.devices_reset",
+      targetUserId: userId,
+      meta: { cleared: count },
+    });
+
+    revalidatePath(`/admin/students/${userId}`);
+    return { cleared: count };
+  },
+);
+
+/**
  * Демо-доступ розничного ученика к курсу: открыты первые N% уроков, дальше —
  * пейволл (lib/access.demoLessonCount). null снимает ограничение — обычная
  * оплаченная запись. Процент, а не число уроков: курс дособрали — граница демо

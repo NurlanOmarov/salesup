@@ -2,8 +2,8 @@ import { db } from "@/lib/db";
 import {
   deviceFingerprint,
   DEVICE_LIMIT,
-  effectiveDeviceLimit,
   evaluateFlags,
+  resolveDeviceLimit,
   type FlagReason,
 } from "./heuristics.js";
 
@@ -35,9 +35,21 @@ export async function registerDevice(
   const fingerprint = deviceFingerprint(userAgent || "unknown");
   const user = await db.user.findUnique({
     where: { id: userId },
-    select: { role: true, deviceLimit: true },
+    select: {
+      role: true,
+      deviceLimit: true,
+      // Работник корпоративного клиента наследует лимит своей организации, если
+      // персонального ему не задавали.
+      orgMemberships: {
+        where: { isActive: true },
+        select: { org: { select: { deviceLimit: true } } },
+        take: 1,
+      },
+    },
   });
-  const limit = user?.role === "OWNER" ? null : effectiveDeviceLimit(user?.deviceLimit ?? null);
+  const orgLimit = user?.orgMemberships[0]?.org.deviceLimit ?? null;
+  const limit =
+    user?.role === "OWNER" ? null : resolveDeviceLimit(user?.deviceLimit ?? null, orgLimit);
 
   const existing = await db.device.findUnique({
     where: { userId_fingerprint: { userId, fingerprint } },
@@ -137,6 +149,11 @@ export async function getFlaggedStudents(): Promise<FlaggedStudent[]> {
       login: true,
       deletedAt: true,
       deviceLimit: true,
+      orgMemberships: {
+        where: { isActive: true },
+        select: { org: { select: { deviceLimit: true } } },
+        take: 1,
+      },
     },
   });
 
@@ -149,7 +166,8 @@ export async function getFlaggedStudents(): Promise<FlaggedStudent[]> {
       maxWatchedSec: watch.watched,
       maxLessonDurationSec: watch.duration,
       distinctCities: dev.ips.size, // в MVP город ≈ IP (геолокации нет)
-      deviceLimit: effectiveDeviceLimit(u.deviceLimit), // персональный лимит ученика
+      // Лимит этого человека: свой, иначе — его организации, иначе стандарт.
+      deviceLimit: resolveDeviceLimit(u.deviceLimit, u.orgMemberships[0]?.org.deviceLimit ?? null),
     });
     if (reasons.length === 0) continue;
     result.push({

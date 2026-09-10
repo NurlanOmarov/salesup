@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Check } from "lucide-react";
 import {
   grantEnrollmentAction,
   revokeEnrollmentAction,
@@ -9,12 +8,17 @@ import {
   resetPasswordAction,
   toggleBlockAction,
   setDeviceLimitAction,
+  resetDevicesAction,
 } from "../actions";
 import { ACCESS_DURATIONS, ACCESS_DURATION_LABELS } from "@/lib/admin/enrollment";
 import { SITE_HOSTS } from "@/lib/seo/site-hosts";
 import { studentPasswordMessage } from "@/lib/messages/templates";
 import { ShareMessage } from "@/components/share-message";
-import { DEVICE_FLAG_FROM, DEVICE_LIMIT } from "@/lib/antishare/limits";
+import {
+  DEVICE_FLAG_NOTE,
+  DeviceLimitForm as DeviceLimitFormUI,
+} from "@/components/admin/device-limit-form";
+import { pluralRu } from "@/lib/courses/plural";
 import { ActionResult, useActionResult } from "@/components/action-result";
 import { DemoAccessSlider } from "@/components/admin/demo-access-slider";
 import { Button } from "@/components/ui/button";
@@ -282,105 +286,51 @@ function EnrollmentRow({
   );
 }
 
-/** Лимит одновременных устройств ученика: стандарт / безлимит / своё число. */
+/**
+ * Лимит устройств ученика: стандарт / безлимит / своё число, плюс сброс
+ * запомненных устройств. Вёрстка общая с карточкой организации — здесь только
+ * тексты и вызовы Server Actions.
+ */
 export function DeviceLimitForm({
   userId,
   deviceLimit,
+  orgLimit,
+  orgName,
 }: {
   userId: string;
   deviceLimit: number | null;
+  /** Настройка организации работника — действует, пока своей у него нет. */
+  orgLimit?: number | null;
+  orgName?: string | null;
 }) {
-  const initialMode: "default" | "unlimited" | "custom" =
-    deviceLimit === null ? "default" : deviceLimit <= 0 ? "unlimited" : "custom";
-  const [mode, setMode] = useState<"default" | "unlimited" | "custom">(initialMode);
-  const [limit, setLimit] = useState<number>(deviceLimit && deviceLimit > 0 ? deviceLimit : 2);
-  const [pending, start] = useTransition();
-  const [saved, setSaved] = useState(false);
-
-  const options: { value: typeof mode; label: string; hint: string }[] = [
-    { value: "default", label: `Стандарт (${DEVICE_LIMIT})`, hint: "Лимит по умолчанию" },
-    { value: "custom", label: "Своё число", hint: "Точное число устройств" },
-    { value: "unlimited", label: "Безлимит", hint: "Без ограничения" },
-  ];
+  const inherited =
+    orgLimit === null || orgLimit === undefined
+      ? null
+      : orgLimit <= 0
+        ? `Сейчас действует настройка организации${orgName ? ` «${orgName}»` : ""}: без ограничения.`
+        : `Сейчас действует настройка организации${orgName ? ` «${orgName}»` : ""}: ${orgLimit} ${pluralRu(orgLimit, "устройство", "устройства", "устройств")}.`;
 
   return (
-    <section className="rounded-2xl border border-foreground/10 bg-background p-5">
-      <h2 className="font-semibold">Лимит устройств</h2>
-      <p className="mt-0.5 text-sm text-foreground/55">
-        Сколько устройств может одновременно пользоваться аккаунтом. Вход с
-        лишнего устройства просто не состоится — учётную запись это не блокирует
-        и на привычных устройствах ничего не меняет. Неиспользуемое устройство
-        освобождает место через неделю. Если лимит поднят вручную, с
-        {DEVICE_FLAG_FROM} устройств учётка появляется в «Сигналах».
-      </p>
-
-      <div className="mt-3 grid grid-cols-3 gap-2">
-        {options.map((o) => (
-          <button
-            key={o.value}
-            type="button"
-            onClick={() => {
-              setMode(o.value);
-              setSaved(false);
-            }}
-            className={[
-              "rounded-xl border p-3 text-left transition-colors",
-              mode === o.value
-                ? "border-amber-500/50 bg-amber-500/[0.07]"
-                : "border-foreground/15 hover:bg-foreground/[0.03]",
-            ].join(" ")}
-          >
-            <span className="block text-sm font-medium">{o.label}</span>
-            <span className="mt-0.5 block text-xs text-foreground/50">{o.hint}</span>
-          </button>
-        ))}
-      </div>
-
-      {mode === "custom" ? (
-        <div className="mt-3 flex items-center gap-2">
-          <label htmlFor="device-limit" className="text-sm text-foreground/60">
-            Устройств:
-          </label>
-          <input
-            id="device-limit"
-            type="number"
-            min={1}
-            max={50}
-            value={limit}
-            onChange={(e) => {
-              setLimit(Math.max(1, Math.min(50, Number(e.target.value) || 1)));
-              setSaved(false);
-            }}
-            className="h-10 w-24 rounded-lg border border-foreground/20 bg-background px-3 text-sm"
-          />
-        </div>
-      ) : null}
-
-      <div className="mt-4 flex items-center gap-3">
-        <Button
-          variant="accent"
-          size="sm"
-          disabled={pending}
-          onClick={() =>
-            start(async () => {
-              const res = await setDeviceLimitAction({
-                userId,
-                mode,
-                ...(mode === "custom" ? { limit } : {}),
-              });
-              if (res.ok) setSaved(true);
-            })
-          }
-        >
-          {pending ? "Сохраняем…" : "Сохранить"}
-        </Button>
-        {saved ? (
-          <span className="flex items-center gap-1 text-sm text-emerald-600">
-            <Check className="size-4" /> Сохранено
-          </span>
-        ) : null}
-      </div>
-    </section>
+    <DeviceLimitFormUI
+      value={deviceLimit}
+      inheritedNote={inherited}
+      description={
+        <>
+          Сколько устройств может одновременно пользоваться аккаунтом. Вход с
+          лишнего устройства просто не состоится — учётную запись это не блокирует
+          и на привычных устройствах ничего не меняет. Неиспользуемое устройство
+          освобождает место через неделю. {DEVICE_FLAG_NOTE}
+        </>
+      }
+      resetDescription="Стереть запомненные отпечатки устройств: счёт начнётся заново, как будто с этой учётки ещё никто не входил. Нужно после смены телефона или ноутбука — старое устройство иначе занимает место в лимите ещё неделю. Доступ к курсам сброс не трогает."
+      onSave={(mode, limit) =>
+        setDeviceLimitAction({ userId, mode, ...(mode === "custom" ? { limit } : {}) })
+      }
+      onReset={async () => {
+        const res = await resetDevicesAction({ userId });
+        return res.ok ? { ok: true, cleared: res.data.cleared } : res;
+      }}
+    />
   );
 }
 

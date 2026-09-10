@@ -16,6 +16,8 @@ import {
   setOrgStatusAction,
   setLicenseDemoAction,
   setOrgDemoAction,
+  setOrgDeviceLimitAction,
+  resetOrgDevicesAction,
   updateOrgAction,
 } from "../actions";
 import { ACCESS_DURATIONS, ACCESS_DURATION_LABELS } from "@/lib/admin/enrollment";
@@ -29,6 +31,11 @@ import { SITE_HOSTS } from "@/lib/seo/site-hosts";
 import { pluralRu } from "@/lib/courses/plural";
 import { ActionResult, useActionResult } from "@/components/action-result";
 import { DemoAccessSlider } from "@/components/admin/demo-access-slider";
+import {
+  DEVICE_FLAG_NOTE,
+  DeviceLimitForm as DeviceLimitFormUI,
+} from "@/components/admin/device-limit-form";
+import { DEVICE_LIMIT } from "@/lib/antishare/limits";
 import { ShareMessage } from "@/components/share-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1201,6 +1208,52 @@ export function OrgDemoControl({
       save={async (next) => {
         const res = await setOrgDemoAction({ orgId, percent: next });
         return res.ok ? { ok: true } : { ok: false, error: res.error };
+      }}
+    />
+  );
+}
+
+/**
+ * Лимит устройств клиента: действует на всех его работников сразу. Персональная
+ * настройка работника (карточка ученика) сильнее и здесь не сбрасывается.
+ */
+export function OrgDeviceLimitControl({
+  orgId,
+  deviceLimit,
+  members,
+}: {
+  orgId: string;
+  deviceLimit: number | null;
+  /** Сколько работников заведено — чтобы сброс говорил, кого он касается. */
+  members: number;
+}) {
+  return (
+    <DeviceLimitFormUI
+      value={deviceLimit}
+      defaultLabel={`Как на платформе (${DEVICE_LIMIT})`}
+      defaultHint="Стандартный лимит"
+      description={
+        <>
+          Сколько устройств может одновременно пользоваться учётной записью
+          работника. Действует на всех работников компании; если кому-то задан
+          личный лимит в его карточке, у него остаётся личный. Вход с лишнего
+          устройства просто не состоится, учётную запись это не блокирует, а
+          неиспользуемое устройство освобождает место через неделю. {DEVICE_FLAG_NOTE}
+        </>
+      }
+      resetTitle="Забыть устройства работников"
+      resetDescription={
+        members === 0
+          ? "Работников пока нет — стирать нечего."
+          : `Стереть запомненные устройства у всех работников (${members}): счёт начнётся заново, как будто никто ещё не входил. Пригодится после смены парка техники. Доступы к курсам сброс не трогает.`
+      }
+      resetLabel="Сбросить устройства всем"
+      onSave={(mode, limit) =>
+        setOrgDeviceLimitAction({ orgId, mode, ...(mode === "custom" ? { limit } : {}) })
+      }
+      onReset={async () => {
+        const res = await resetOrgDevicesAction({ orgId });
+        return res.ok ? { ok: true, cleared: res.data.cleared } : res;
       }}
     />
   );
