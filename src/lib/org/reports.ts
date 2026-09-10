@@ -93,6 +93,10 @@ export interface OrgListRow {
   licenses: number;
   /** Ближайшее окончание лицензии — по нему видно, кому пора продлевать. */
   nextExpiryAt: Date | null;
+  /** Демо-доступ компании: процент, общий для всех её лицензий (null — полный). */
+  demoPercent: number | null;
+  /** У лицензий разные проценты — одно число показать нельзя. */
+  demoMixed: boolean;
   createdAt: Date;
 }
 
@@ -111,7 +115,7 @@ export async function getOrgsList(): Promise<OrgListRow[]> {
       contactEmail: true,
       createdAt: true,
       memberships: { select: { role: true, isActive: true } },
-      licenses: { select: { id: true, seatsTotal: true, expiresAt: true } },
+      licenses: { select: { id: true, seatsTotal: true, expiresAt: true, demoPercent: true } },
     },
   });
   if (orgs.length === 0) return [];
@@ -130,6 +134,7 @@ export async function getOrgsList(): Promise<OrgListRow[]> {
   }
 
   return orgs.map((o) => {
+    const demoValues = new Set(o.licenses.map((l) => String(l.demoPercent)));
     const expiries = o.licenses
       .map((l) => l.expiresAt)
       .filter((d): d is Date => d !== null)
@@ -147,6 +152,10 @@ export async function getOrgsList(): Promise<OrgListRow[]> {
       seatsUsed: o.licenses.reduce((s, l) => s + (usedByLicense.get(l.id) ?? 0), 0),
       licenses: o.licenses.length,
       nextExpiryAt: expiries[0] ?? null,
+      // Демо показываем одним значением, только если оно одинаково у всех
+      // лицензий: иначе бейдж врал бы, показывая настройку одной из них.
+      demoPercent: demoValues.size === 1 ? (o.licenses[0]?.demoPercent ?? null) : null,
+      demoMixed: demoValues.size > 1,
       createdAt: o.createdAt,
     };
   });

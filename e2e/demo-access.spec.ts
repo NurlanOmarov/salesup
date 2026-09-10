@@ -161,3 +161,62 @@ test("снятие демо открывает курс целиком", async (
     data: { demoPercent: 30 },
   });
 });
+
+/**
+ * Управляющий путь владельца: демо-доступ виден и меняется прямо в реестре
+ * клиентов (/admin/orgs) — без захода в карточку каждой компании. Значение
+ * применяется ко всем лицензиям клиента сразу.
+ */
+test("владелец переключает демо клиента прямо в списке организаций", async ({ page }) => {
+  // Прошлый прогон мог упасть до очистки — фикстура должна пересоздаваться.
+  await db.orgLicense.deleteMany({ where: { org: { slug: "e2e-demo-org" } } });
+  await db.organization.deleteMany({ where: { slug: "e2e-demo-org" } });
+  await db.user.deleteMany({ where: { email: "e2e-demo-owner@test.local" } });
+
+  const owner = await db.user.create({
+    data: {
+      email: "e2e-demo-owner@test.local",
+      name: "E2E Владелец",
+      role: "OWNER",
+      passwordHash: await hashPassword("demo-owner-pass-123"),
+      mustChangePassword: false,
+    },
+    select: { id: true },
+  });
+  const org = await db.organization.create({
+    data: { slug: "e2e-demo-org", name: "ООО Демо-реестр" },
+    select: { id: true },
+  });
+  await db.orgLicense.create({
+    data: { orgId: org.id, courseId, seatsTotal: 1, demoPercent: 30 },
+  });
+
+  await page.goto("/login");
+  await page.getByLabel("Логин или e-mail").fill("e2e-demo-owner@test.local");
+  await page.getByLabel("Пароль").fill("demo-owner-pass-123");
+  await page.getByRole("button", { name: "Войти" }).click();
+  await expect(page).toHaveURL(/\/(app|admin)/);
+  await page.goto("/admin/orgs");
+  await expect(page.getByRole("heading", { name: "Организации" })).toBeVisible();
+
+  const row = page.getByRole("row").filter({ hasText: "ООО Демо-реестр" });
+  const select = row.getByLabel("Демо-доступ компании");
+  await expect(select).toHaveValue("30");
+
+  // Оплатили — открываем полностью одним выбором.
+  await select.selectOption("");
+  await expect
+    .poll(async () => {
+      const license = await db.orgLicense.findFirstOrThrow({
+        where: { orgId: org.id },
+        select: { demoPercent: true },
+      });
+      return license.demoPercent;
+    })
+    .toBeNull();
+
+  await db.orgLicense.deleteMany({ where: { orgId: org.id } });
+  await db.organization.deleteMany({ where: { id: org.id } });
+  await db.adminLog.deleteMany({ where: { actorId: owner.id } });
+  await db.user.deleteMany({ where: { id: owner.id } });
+});

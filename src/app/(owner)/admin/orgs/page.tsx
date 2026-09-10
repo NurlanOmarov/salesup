@@ -4,6 +4,8 @@ import { Building2, ExternalLink } from "lucide-react";
 import { getOrgsList } from "@/lib/org/reports";
 import { nextOrgStepHint } from "@/lib/org/setup";
 import { OrgStatusBadge, SeatsBar } from "./org-ui";
+import { DemoQuickSelect } from "./demo-quick-select";
+import { pluralRu } from "@/lib/courses/plural";
 
 export const metadata: Metadata = {
   title: "Организации",
@@ -24,8 +26,9 @@ export default async function OrgsPage() {
       seatsTotal: acc.seatsTotal + o.seatsTotal,
       seatsUsed: acc.seatsUsed + o.seatsUsed,
       members: acc.members + o.members,
+      onDemo: acc.onDemo + (o.demoMixed || o.demoPercent != null ? 1 : 0),
     }),
-    { seatsTotal: 0, seatsUsed: 0, members: 0 },
+    { seatsTotal: 0, seatsUsed: 0, members: 0, onDemo: 0 },
   );
 
   return (
@@ -53,7 +56,15 @@ export default async function OrgsPage() {
             value={String(totals.seatsTotal)}
             hint={`занято ${totals.seatsUsed}`}
           />
-          <Stat label="Работников учится" value={String(totals.members)} />
+          <Stat
+            label="Работников учится"
+            value={String(totals.members)}
+            hint={
+              totals.onDemo > 0
+                ? `${totals.onDemo} ${pluralRu(totals.onDemo, "клиент", "клиента", "клиентов")} на демо-доступе`
+                : undefined
+            }
+          />
         </div>
       ) : null}
 
@@ -81,6 +92,7 @@ export default async function OrgsPage() {
                 <th className="px-4 py-3 font-medium">Места</th>
                 <th className="px-4 py-3 font-medium">Работники</th>
                 <th className="px-4 py-3 font-medium">Лицензии до</th>
+                <th className="px-4 py-3 font-medium">Доступ</th>
                 <th className="px-4 py-3 font-medium">Статус</th>
               </tr>
             </thead>
@@ -120,6 +132,14 @@ export default async function OrgsPage() {
                       : o.licenses === 0
                         ? "нет лицензий"
                         : "бессрочно"}
+                  </td>
+                  <td className="px-4 py-3">
+                    <DemoQuickSelect
+                      orgId={o.id}
+                      percent={o.demoPercent}
+                      mixed={o.demoMixed}
+                      disabled={o.licenses === 0}
+                    />
                   </td>
                   <td className="px-4 py-3">
                     <OrgStatusBadge status={o.status} />
