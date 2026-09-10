@@ -5,6 +5,7 @@ import { getOrgsList } from "@/lib/org/reports";
 import { nextOrgStepHint } from "@/lib/org/setup";
 import { OrgStatusBadge, SeatsBar } from "./org-ui";
 import { DemoQuickSelect } from "./demo-quick-select";
+import { OrgProgressButton } from "./org-progress-dialog";
 import { pluralRu } from "@/lib/courses/plural";
 
 export const metadata: Metadata = {
@@ -68,7 +69,8 @@ export default async function OrgsPage() {
         </div>
       ) : null}
 
-      <div className="mt-5 overflow-hidden rounded-xl border border-foreground/10 bg-background">
+      {/* Колонок стало больше — на узком экране таблица прокручивается, а не жмётся. */}
+      <div className="mt-5 overflow-x-auto rounded-xl border border-foreground/10 bg-background">
         {orgs.length === 0 ? (
           <div className="p-10 text-center">
             <Building2 className="mx-auto size-8 text-foreground/25" />
@@ -91,6 +93,7 @@ export default async function OrgsPage() {
                 <th className="px-4 py-3 font-medium">Организация</th>
                 <th className="px-4 py-3 font-medium">Места</th>
                 <th className="px-4 py-3 font-medium">Работники</th>
+                <th className="px-4 py-3 font-medium">Обучение</th>
                 <th className="px-4 py-3 font-medium">Лицензии до</th>
                 <th className="px-4 py-3 font-medium">Доступ</th>
                 <th className="px-4 py-3 font-medium">Статус</th>
@@ -125,6 +128,15 @@ export default async function OrgsPage() {
                         нет ответственного
                       </span>
                     )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {/* Прогресс — в окне поверх реестра: пройтись по клиентам
+                        подряд, не теряя место в списке. */}
+                    <OrgProgressButton
+                      orgId={o.id}
+                      orgName={o.name}
+                      disabled={o.licenses === 0}
+                    />
                   </td>
                   <td className="px-4 py-3 text-foreground/70">
                     {o.nextExpiryAt

@@ -301,6 +301,32 @@ test("ответственный заводит работника, тот вх�
   expect(res).toBe(200);
 });
 
+test("владелец видит обучение компании из реестра, не заходя в карточку", async ({
+  page,
+}) => {
+  // Реестр отвечает на вопрос «кто как учится» на месте: раньше ради этого
+  // приходилось открывать карточку каждого клиента и возвращаться назад.
+  await page.context().clearCookies();
+  await login(page, OWNER_EMAIL, OWNER_PASS);
+  await page.goto("/admin/orgs");
+
+  // Ищем строку по ссылке на саму организацию: одноимённые компании в базе —
+  // обычное дело, и поиск по названию цеплял бы сразу несколько строк.
+  const row = page.locator(`tr:has(a[href="/admin/orgs/${orgId}"])`);
+  await row.getByRole("button", { name: "Обучение" }).click();
+
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByText("Как учится компания")).toBeVisible();
+  // Отчёт грузится по клику — ждём цифры, а не каркас.
+  await expect(dialog.getByRole("table").first()).toBeVisible({ timeout: 15_000 });
+  await expect(dialog.getByText("По курсам")).toBeVisible();
+  // Работник опознаётся только логином: ФИО платформа не получает (правило 9).
+  await expect(dialog.getByText(`${ORG_SLUG}-0001`)).toBeVisible();
+
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+});
+
 test("ответственный удаляет лишнюю учётку: место возвращается в пул", async ({
   page,
 }) => {

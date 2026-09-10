@@ -501,3 +501,118 @@ export async function getOrgOverview(orgId: string): Promise<OrgOverview> {
     seatsUsed: licenses.reduce((s, l) => s + l.seats.used, 0),
   };
 }
+
+export interface OrgProgressMember {
+  membershipId: string;
+  userId: string;
+  login: string;
+  groupName: string | null;
+  isActive: boolean;
+  courses: number;
+  progress: number;
+  lessonsDone: number;
+  lessonsTotal: number;
+  avgScore: number | null;
+  certificates: number;
+  lastActiveAt: Date | null;
+  notStarted: boolean;
+}
+
+export interface OrgProgressCourse extends CourseProgressRow {
+  seatsUsed: number;
+  seatsTotal: number;
+  expiresAt: Date | null;
+  /** Демо-лицензия: открыт лишь процент уроков — прогресс выше него не вырастет. */
+  demoPercent: number | null;
+}
+
+export interface OrgProgressSnapshot {
+  orgId: string;
+  orgName: string;
+  orgSlug: string;
+  status: string;
+  /** Учащиеся (ORG_LEARNER) — ответственные представители в счёт не идут. */
+  learners: number;
+  /** Из них ни разу не открывали урок. */
+  notStarted: number;
+  /** Заходили за последние 7 дней. */
+  activeLast7d: number;
+  avgProgress: number;
+  certificates: number;
+  courses: OrgProgressCourse[];
+  members: OrgProgressMember[];
+}
+
+/**
+ * Как учится компания — одним объектом для модального окна в реестре клиентов.
+ * Собирается из тех же отчётов, что видит и сам клиент в своём кабинете
+ * (оферта /offer-b2b, п. 8), поэтому цифры у владельца и у клиента сходятся.
+ *
+ * Считается по запросу (клик по кнопке в строке), а не для всего списка сразу:
+ * иначе открытие реестра стоило бы полного отчёта по каждой организации.
+ */
+export async function getOrgProgressSnapshot(
+  orgId: string,
+): Promise<OrgProgressSnapshot | null> {
+  const org = await db.organization.findUnique({
+    where: { id: orgId },
+    select: { id: true, name: true, slug: true, status: true },
+  });
+  if (!org) return null;
+
+  const [members, byCourse, licenses] = await Promise.all([
+    getOrgMembers(orgId),
+    getOrgCourseProgress(orgId),
+    getOrgLicenses(orgId),
+  ]);
+
+  const licenseByCourse = new Map(licenses.map((l) => [l.courseId, l]));
+  const learners = members.filter((m) => m.role === "ORG_LEARNER");
+  const withProgress = learners.filter((m) => m.lessonsTotal > 0);
+  const weekAgo = Date.now() - 7 * 86_400_000;
+
+  return {
+    orgId: org.id,
+    orgName: org.name,
+    orgSlug: org.slug,
+    status: org.status,
+    learners: learners.length,
+    notStarted: learners.filter((m) => m.notStarted).length,
+    activeLast7d: learners.filter((m) => m.lastActiveAt && m.lastActiveAt.getTime() >= weekAgo)
+      .length,
+    avgProgress:
+      withProgress.length === 0
+        ? 0
+        : withProgress.reduce((s, m) => s + m.progress, 0) / withProgress.length,
+    certificates: learners.reduce((s, m) => s + m.certificates, 0),
+    courses: byCourse.map((c) => {
+      const license = licenseByCourse.get(c.courseId);
+      return {
+        ...c,
+        seatsUsed: license?.seats.used ?? 0,
+        seatsTotal: license?.seats.total ?? 0,
+        expiresAt: license?.expiresAt ?? null,
+        demoPercent: license?.demoPercent ?? null,
+      };
+    }),
+    // Отстающие вперёд: владелец открывает окно, чтобы увидеть, кто буксует,
+    // а не чтобы полюбоваться отличниками.
+    members: learners
+      .map((m) => ({
+        membershipId: m.membershipId,
+        userId: m.userId,
+        login: m.login,
+        groupName: m.groupName,
+        isActive: m.isActive,
+        courses: m.courses,
+        progress: m.progress,
+        lessonsDone: m.lessonsDone,
+        lessonsTotal: m.lessonsTotal,
+        avgScore: m.avgScore,
+        certificates: m.certificates,
+        lastActiveAt: m.lastActiveAt,
+        notStarted: m.notStarted,
+      }))
+      .sort((a, b) => a.progress - b.progress || a.login.localeCompare(b.login)),
+  };
+}

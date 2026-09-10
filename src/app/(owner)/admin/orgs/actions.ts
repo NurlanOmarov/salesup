@@ -8,6 +8,7 @@ import { SITE_HOSTS } from "@/lib/seo/site-hosts";
 import { writeAdminLog } from "@/lib/admin/log";
 import { ACCESS_DURATIONS, computeExpiry } from "@/lib/admin/enrollment";
 import { createOrgAdmin } from "@/lib/org/service";
+import { getOrgProgressSnapshot } from "@/lib/org/reports";
 import { generateTempPassword } from "@/lib/auth/temp-password";
 import { hashPassword } from "@/lib/auth/password";
 import { slugifyOrgName } from "@/lib/org/seats";
@@ -769,5 +770,18 @@ export const setOrgDemoAction = safeAction(
 
     revalidatePath(`/admin/orgs/${input.orgId}`);
     return { licenses: updated.count, percent: input.percent };
+  },
+);
+
+/**
+ * Как учится компания — для модального окна в реестре клиентов. Чтение, а не
+ * мутация: журнал действий не пишем, иначе он забьётся просмотрами.
+ */
+export const orgProgressAction = safeAction(
+  { schema: z.object({ orgId: z.string().min(1) }), auth: "owner" },
+  async (input) => {
+    const snapshot = await getOrgProgressSnapshot(input.orgId);
+    if (!snapshot) throw new Error("Организация не найдена");
+    return snapshot;
   },
 );
