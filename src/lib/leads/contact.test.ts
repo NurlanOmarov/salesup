@@ -82,10 +82,19 @@ describe("contactLink", () => {
   });
 
   it("для сообщения бота отдаёт только http-ссылки", () => {
-    // Telegram не принимает в разметке схемы вроде viber:// и mailto:.
-    expect(webContactLink("WHATSAPP", "+375296053032")).toContain("https://");
-    expect(webContactLink("VIBER", "+375296053032")).toBeNull();
+    // Telegram не принимает схемы вроде viber:// и mailto: — ни в разметке, ни в кнопках.
+    expect(webContactLink("WHATSAPP", "+375296053032")).toBe("https://wa.me/375296053032");
+    expect(webContactLink("VIBER", "+375296053032")).toBe("https://viber.click/375296053032");
+    expect(webContactLink("TELEGRAM", "@nurlan")).toBe("https://t.me/nurlan");
     expect(webContactLink("EMAIL", "a@b.by")).toBeNull();
+  });
+
+  it("подставляет заготовку первого сообщения там, где канал её принимает", () => {
+    expect(webContactLink("WHATSAPP", "+375296053032", "Здравствуйте!")).toBe(
+      "https://wa.me/375296053032?text=%D0%97%D0%B4%D1%80%D0%B0%D0%B2%D1%81%D1%82%D0%B2%D1%83%D0%B9%D1%82%D0%B5!",
+    );
+    // У Telegram параметра text нет — ссылка остаётся чистой.
+    expect(webContactLink("TELEGRAM", "@nurlan", "Здравствуйте!")).toBe("https://t.me/nurlan");
   });
 });
 

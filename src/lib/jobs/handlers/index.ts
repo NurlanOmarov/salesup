@@ -49,14 +49,19 @@ export const handlers: Record<string, JobHandler> = {
   // Уведомление владельцу в Telegram (новая заявка с сайта). Без настроенного
   // бота просто логируем — заявка в любом случае уже сохранена в БД и админке.
   "telegram.send": async (payload) => {
-    const { text, chatId } = payload as { text?: string; chatId?: string };
+    // buttons — кнопки-ссылки под сообщением (переход в мессенджер клиента).
+    const { text, chatId, buttons } = payload as {
+      text?: string;
+      chatId?: string;
+      buttons?: { text: string; url: string }[][];
+    };
     if (!text) throw new Error("telegram.send: нет text");
     const { sendTelegramMessage, telegramConfigured } = await import("@/lib/notify/telegram.js");
     if (!telegramConfigured() && !chatId) {
       log.info("telegram.send пропущен: бот не настроен");
       return;
     }
-    await sendTelegramMessage(text, chatId);
+    await sendTelegramMessage(text, chatId, buttons);
   },
 
   // Еженедельный дайджест владельцу (S6.2): собираем сводку, при EMAIL_ENABLED

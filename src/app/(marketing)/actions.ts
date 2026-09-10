@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { env } from "@/env";
 import { log } from "@/lib/log";
 import { enqueue } from "@/lib/jobs/enqueue";
-import { leadTelegramText, ownerLeadEmail } from "@/lib/leads/notify";
+import { leadTelegramButtons, leadTelegramText, ownerLeadEmail } from "@/lib/leads/notify";
 import {
   CONTACT_ERRORS,
   CONTACT_TYPES,
@@ -215,7 +215,9 @@ export async function createLeadAction(
 
   try {
     await enqueue("telegram.send", {
-      text: leadTelegramText(notification, env.NEXT_PUBLIC_SITE_URL),
+      text: leadTelegramText(notification),
+      // Кнопки: переход в мессенджер клиента одним тапом и заявки в админке.
+      buttons: leadTelegramButtons(notification, env.NEXT_PUBLIC_SITE_URL),
       kind: "lead-owner",
       leadId: lead.id,
     });

@@ -102,12 +102,25 @@ export function contactLink(type: ContactType, value: string): string {
 }
 
 /**
- * Ссылка, которую можно поставить в сообщение Telegram-бота: там разрешены
- * только http(s), поэтому у Viber ссылки не будет — останется сам номер.
+ * Ссылка для сообщения и кнопок Telegram-бота: там разрешены только http(s),
+ * поэтому у Viber берём веб-редирект `viber.click`, а не схему `viber://`.
+ * У почты http-варианта нет — вернётся null, адрес останется текстом.
+ *
+ * `text` — заготовка первого сообщения: владелец жмёт кнопку и сразу отправляет,
+ * ничего не набирая. WhatsApp и Viber её принимают, Telegram — нет.
  */
-export function webContactLink(type: ContactType, value: string): string | null {
-  const link = contactLink(type, value);
-  return link.startsWith("http") ? link : null;
+export function webContactLink(
+  type: ContactType,
+  value: string,
+  text?: string | null,
+): string | null {
+  const digits = value.trim().replace(/\D/g, "");
+  const query = text ? `?text=${encodeURIComponent(text)}` : "";
+
+  if (type === "WHATSAPP") return `https://wa.me/${digits}${query}`;
+  if (type === "VIBER") return digits ? `https://viber.click/${digits}${query}` : null;
+  if (type === "TELEGRAM") return contactLink(type, value);
+  return null;
 }
 
 /** Как показать контакт человеку: номер — разбитым на группы, ник и почту — как есть. */

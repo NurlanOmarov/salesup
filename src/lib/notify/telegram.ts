@@ -19,8 +19,24 @@ export function telegramConfigured(): boolean {
   return Boolean(env.TELEGRAM_BOT_TOKEN) && parseChatIds(env.TELEGRAM_CHAT_ID).length > 0;
 }
 
+/**
+ * Кнопка-ссылка под сообщением. Telegram принимает в них только http(s) и
+ * tg://, поэтому ссылки готовит вызывающая сторона (`webContactLink`).
+ */
+// Тип-алиас, а не interface: так структура совместима с Prisma.InputJsonValue —
+// кнопки уезжают в payload задачи `telegram.send` как обычный JSON.
+export type TelegramButton = {
+  text: string;
+  url: string;
+};
+
 /** Отправка одному чату; бросает с причиной отказа Telegram-а. */
-async function sendToChat(token: string, chatId: string, text: string): Promise<void> {
+async function sendToChat(
+  token: string,
+  chatId: string,
+  text: string,
+  buttons?: TelegramButton[][],
+): Promise<void> {
   const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -29,6 +45,7 @@ async function sendToChat(token: string, chatId: string, text: string): Promise<
       text,
       parse_mode: "HTML",
       disable_web_page_preview: true,
+      ...(buttons?.length ? { reply_markup: { inline_keyboard: buttons } } : {}),
     }),
     signal: AbortSignal.timeout(15_000),
   });
@@ -45,7 +62,11 @@ async function sendToChat(token: string, chatId: string, text: string): Promise<
  * кого — иначе один заблокировавший бота сотрудник заставлял бы Job-runner
  * повторять задачу и слал дубли остальным.
  */
-export async function sendTelegramMessage(text: string, chatId?: string): Promise<void> {
+export async function sendTelegramMessage(
+  text: string,
+  chatId?: string,
+  buttons?: TelegramButton[][],
+): Promise<void> {
   const token = env.TELEGRAM_BOT_TOKEN;
   const chats = chatId ? parseChatIds(chatId) : parseChatIds(env.TELEGRAM_CHAT_ID);
   if (!token || chats.length === 0) {
@@ -55,7 +76,7 @@ export async function sendTelegramMessage(text: string, chatId?: string): Promis
   const errors: string[] = [];
   for (const chat of chats) {
     try {
-      await sendToChat(token, chat, text);
+      await sendToChat(token, chat, text, buttons);
     } catch (e) {
       errors.push(`${chat}: ${e instanceof Error ? e.message : String(e)}`);
     }

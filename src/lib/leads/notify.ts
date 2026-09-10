@@ -1,4 +1,5 @@
 import type { EmailMessage } from "@/lib/email/send";
+import type { TelegramButton } from "@/lib/notify/telegram";
 import { PLAN_LABELS, type LeadQuote } from "@/lib/leads/quote";
 import { formatCurrency } from "@/lib/currency/format";
 import { escapeHtml } from "@/lib/notify/escape";
@@ -129,7 +130,7 @@ export function quoteLine(quote: LeadQuote | null | undefined): string | null {
  * экране, без похода в админку. Пользовательский ввод экранируем, иначе
  * «<директор>» в имени сломает разметку и Telegram отклонит сообщение.
  */
-export function leadTelegramText(lead: LeadNotification, siteUrl?: string): string {
+export function leadTelegramText(lead: LeadNotification): string {
   const company = lead.company ? ` — ${escapeHtml(lead.company)}` : "";
   const title =
     lead.format === "OFFLINE"
@@ -139,23 +140,18 @@ export function leadTelegramText(lead: LeadNotification, siteUrl?: string): stri
         : `🎓 <b>Новая заявка на курс</b>${lead.courseTitle ? ` — ${escapeHtml(lead.courseTitle)}` : ""}`;
 
   // Канал связи в подписи: владелец сразу знает, где отвечать, и не пишет в
-  // WhatsApp тому, кто оставил Telegram. Ссылка открывает диалог одним тапом
-  // (у Viber схема не http — там остаётся только номер).
+  // WhatsApp тому, кто оставил Telegram. Сам переход — кнопкой под сообщением
+  // (leadTelegramButtons), поэтому в тексте остаётся только значение контакта.
   const channel = lead.contactType ? CONTACT_LABELS[lead.contactType] : "Контакт";
   const channelIcon = lead.contactType === "EMAIL" ? "✉️" : "📞";
   const contactShown = lead.contactType
     ? displayContact(lead.contactType, lead.contact)
     : lead.contact;
-  const writeLink = lead.contactType ? webContactLink(lead.contactType, lead.contact) : null;
 
   const rows = [
     line("👤 Имя", lead.name ? escapeHtml(lead.name) : null),
-    // Контакт в <code> — удобно скопировать одним тапом.
-    line(
-      `${channelIcon} ${channel}`,
-      `<code>${escapeHtml(contactShown)}</code>` +
-        (writeLink ? ` — <a href="${writeLink}">написать</a>` : ""),
-    ),
+    // Контакт в <code>: тап — и он в буфере, если писать решили не кнопкой ниже.
+    line(`${channelIcon} ${channel}`, `<code>${escapeHtml(contactShown)}</code>`),
     line("🌍 Страна номера", phoneCountryLine(lead)),
     line("🌐 Заявка с домена", siteTitle(lead.site, lead.siteHost)),
     line("🗣 Язык страницы", localeLine(lead.locale)),
@@ -166,8 +162,44 @@ export function leadTelegramText(lead: LeadNotification, siteUrl?: string): stri
     line("💬 Сообщение", lead.message ? escapeHtml(lead.message) : null),
   ].filter((l): l is string => l !== null);
 
-  const footer = siteUrl ? `\n\n${siteUrl.replace(/\/$/, "")}/admin/leads` : "";
-  return `${title}\n\n${rows.join("\n")}${footer}`;
+  // Ссылки на админку в тексте нет: она вынесена в кнопку (leadTelegramButtons).
+  return `${title}\n\n${rows.join("\n")}`;
+}
+
+/**
+ * Заготовка первого сообщения клиенту. Владельцу остаётся нажать кнопку и
+ * отправить: WhatsApp и Viber подставляют текст в поле ввода сами.
+ */
+export function leadGreeting(lead: LeadNotification): string {
+  const hello = lead.name ? `Здравствуйте, ${lead.name}!` : "Здравствуйте!";
+  const about =
+    lead.format === "OFFLINE"
+      ? "заявку на офлайн-тренинг"
+      : lead.kind === "B2B"
+        ? "заявку на корпоративное обучение"
+        : lead.courseTitle
+          ? `заявку на курс «${lead.courseTitle}»`
+          : "заявку на обучение";
+  return `${hello} Это ACTIVE SALES — вы оставили ${about} на нашем сайте. Подскажите, удобно ли сейчас обсудить детали?`;
+}
+
+/**
+ * Кнопки под уведомлением: переход в диалог нужного мессенджера одним тапом —
+ * без копирования номера и поиска контакта — и ссылка на заявку в админке.
+ * У почты кнопки нет: `mailto:` Telegram не принимает ни в кнопках, ни в
+ * разметке — адрес остаётся текстом, который копируется тапом.
+ */
+export function leadTelegramButtons(lead: LeadNotification, siteUrl?: string): TelegramButton[][] {
+  const rows: TelegramButton[][] = [];
+
+  if (lead.contactType) {
+    const url = webContactLink(lead.contactType, lead.contact, leadGreeting(lead));
+    if (url) rows.push([{ text: `💬 Написать в ${CONTACT_LABELS[lead.contactType]}`, url }]);
+  }
+
+  if (siteUrl) rows.push([{ text: "🗂 Заявки в админке", url: `${siteUrl.replace(/\/$/, "")}/admin/leads` }]);
+
+  return rows;
 }
 
 /** Письмо владельцу: всё, что нужно для звонка, прямо в теле — без похода в админку. */

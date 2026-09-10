@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { salePrice } from "@/lib/pricing/promo";
-import { applicantLeadEmail, contactEmail, leadTelegramText, ownerLeadEmail } from "./notify.js";
+import {
+  applicantLeadEmail,
+  contactEmail,
+  leadGreeting,
+  leadTelegramButtons,
+  leadTelegramText,
+  ownerLeadEmail,
+} from "./notify.js";
 import { byn } from "@/lib/pricing";
 import { leadQuote } from "./quote.js";
 
@@ -23,16 +30,17 @@ describe("contactEmail", () => {
 });
 
 describe("leadTelegramText", () => {
-  it("собирает карточку заявки со ссылкой на админку", () => {
-    const text = leadTelegramText(
-      { ...base, name: "Иван", courseTitle: "Продажи в аптеке", message: "перезвоните вечером" },
-      "https://example.by/",
-    );
+  it("собирает карточку заявки", () => {
+    const text = leadTelegramText({
+      ...base,
+      name: "Иван",
+      courseTitle: "Продажи в аптеке",
+      message: "перезвоните вечером",
+    });
     expect(text).toContain("Новая заявка на курс");
     expect(text).toContain("Продажи в аптеке");
     expect(text).toContain("<code>student@example.com</code>");
     expect(text).toContain("перезвоните вечером");
-    expect(text).toContain("https://example.by/admin/leads");
   });
 
   it("для B2B показывает организацию и число мест", () => {
@@ -48,7 +56,7 @@ describe("leadTelegramText", () => {
     expect(text).toContain("Мест: 25");
   });
 
-  it("называет канал связи и даёт ссылку «написать»", () => {
+  it("называет канал связи, а переход в него оставляет кнопке", () => {
     const text = leadTelegramText({
       ...base,
       contact: "+375296053032",
@@ -58,7 +66,7 @@ describe("leadTelegramText", () => {
       siteHost: "study.activesales.by",
     });
     expect(text).toContain("📞 WhatsApp: <code>+375 29 605 30 32</code>");
-    expect(text).toContain('<a href="https://wa.me/375296053032">написать</a>');
+    expect(text).not.toContain("<a href");
     expect(text).toContain("🇧🇾 Беларусь");
     expect(text).toContain("🌐 Заявка с домена: 🇧🇾 study.activesales.by");
   });
@@ -78,7 +86,7 @@ describe("leadTelegramText", () => {
     expect(text).toContain("study.activesales.by");
   });
 
-  it("у Viber ссылки не ставит — Telegram принимает только http", () => {
+  it("у Viber схему viber:// в текст не пускает — Telegram принимает только http", () => {
     const text = leadTelegramText({
       ...base,
       contact: "+375296053032",
@@ -87,6 +95,49 @@ describe("leadTelegramText", () => {
     });
     expect(text).toContain("📞 Viber:");
     expect(text).not.toContain("viber://");
+  });
+});
+
+describe("leadTelegramButtons", () => {
+  it("даёт кнопку в мессенджер клиента с готовым первым сообщением", () => {
+    const [chat, admin] = leadTelegramButtons(
+      {
+        ...base,
+        name: "Иван",
+        contact: "+375296053032",
+        contactType: "WHATSAPP",
+        courseTitle: "Продажи в аптеке",
+      },
+      "https://example.by/",
+    );
+    expect(chat?.[0]?.text).toBe("💬 Написать в WhatsApp");
+    expect(chat?.[0]?.url).toContain("https://wa.me/375296053032?text=");
+    expect(decodeURIComponent(chat?.[0]?.url ?? "")).toContain(
+      "Здравствуйте, Иван! Это ACTIVE SALES — вы оставили заявку на курс «Продажи в аптеке»",
+    );
+    expect(admin?.[0]?.url).toBe("https://example.by/admin/leads");
+  });
+
+  it("Viber открывает через веб-редирект, у Telegram — прямой диалог", () => {
+    const viber = leadTelegramButtons({ ...base, contact: "+375296053032", contactType: "VIBER" });
+    expect(viber[0]?.[0]?.url).toContain("https://viber.click/375296053032?text=");
+
+    const tg = leadTelegramButtons({ ...base, contact: "@nurlan", contactType: "TELEGRAM" });
+    expect(tg[0]?.[0]?.url).toBe("https://t.me/nurlan");
+  });
+
+  it("у почты кнопки чата нет — остаётся только админка", () => {
+    const rows = leadTelegramButtons({ ...base, contactType: "EMAIL" }, "https://example.by");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.[0]?.text).toBe("🗂 Заявки в админке");
+  });
+});
+
+describe("leadGreeting", () => {
+  it("подстраивается под тип заявки", () => {
+    expect(leadGreeting({ ...base, kind: "B2B" })).toContain("корпоративное обучение");
+    expect(leadGreeting({ ...base, format: "OFFLINE" })).toContain("офлайн-тренинг");
+    expect(leadGreeting(base)).toContain("Здравствуйте! ");
   });
 
   it("экранирует ввод, чтобы не сломать HTML-разметку Telegram", () => {
