@@ -20,6 +20,21 @@ say() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOG"; }
 
 cd "$PROJECT" || exit 0
 
+# ── Один прогон за раз ───────────────────────────────────────────────────────
+# Агент ходит дважды в сутки, а прогон может длиться часами: без замка второй
+# запуск полез бы в тот же NotebookLM и ту же базу.
+LOCK="$PROJECT/logs/.daily-podcasts.lock"
+mkdir "$LOCK" 2>/dev/null || {
+  if [ -f "$LOCK/pid" ] && kill -0 "$(cat "$LOCK/pid")" 2>/dev/null; then
+    say "Прогон уже идёт (pid $(cat "$LOCK/pid")) — пропуск"
+    exit 0
+  fi
+  say "Замок остался от упавшего прогона — снимаю"
+  rm -rf "$LOCK"; mkdir "$LOCK" || exit 0
+}
+echo $$ > "$LOCK/pid"
+trap 'rm -rf "$LOCK"' EXIT
+
 # ── Предусловия ──────────────────────────────────────────────────────────────
 docker info >/dev/null 2>&1 || { say "Docker не запущен — пропуск"; exit 0; }
 docker ps --format '{{.Names}}' | grep -qx salesup-devdb || { say "Контейнер salesup-devdb не поднят — пропуск"; exit 0; }
