@@ -97,6 +97,11 @@ export interface OrgListRow {
   demoPercent: number | null;
   /** У лицензий разные проценты — одно число показать нельзя. */
   demoMixed: boolean;
+  /**
+   * Средний прогресс учащихся 0..1 — та же цифра, что в окне «Как учится компания».
+   * null — учиться некому: нет работников с открытыми курсами.
+   */
+  avgProgress: number | null;
   createdAt: Date;
 }
 
@@ -121,6 +126,7 @@ export async function getOrgsList(): Promise<OrgListRow[]> {
   if (orgs.length === 0) return [];
 
   const licenseIds = orgs.flatMap((o) => o.licenses.map((l) => l.id));
+  const progressByOrg = await getOrgsAvgProgress(orgs.map((o) => o.id));
   const usedByLicense = new Map<string, number>();
   if (licenseIds.length > 0) {
     const grouped = await db.enrollment.groupBy({
@@ -156,9 +162,89 @@ export async function getOrgsList(): Promise<OrgListRow[]> {
       // лицензий: иначе бейдж врал бы, показывая настройку одной из них.
       demoPercent: demoValues.size === 1 ? (o.licenses[0]?.demoPercent ?? null) : null,
       demoMixed: demoValues.size > 1,
+      avgProgress: progressByOrg.get(o.id) ?? null,
       createdAt: o.createdAt,
     };
   });
+}
+
+/**
+ * Средний прогресс учащихся по каждой организации — для колонки реестра.
+ *
+ * Считается по тем же правилам, что getOrgMembers + getOrgProgressSnapshot
+ * (только ORG_LEARNER, знаменатель — опубликованные уроки неотозванных курсов,
+ * работники без курсов в среднее не входят), но для всех организаций сразу:
+ * четыре плоских запроса на весь реестр, а не отчёт на каждую строку.
+ */
+async function getOrgsAvgProgress(orgIds: string[]): Promise<Map<string, number>> {
+  const result = new Map<string, number>();
+  if (orgIds.length === 0) return result;
+
+  const memberships = await db.orgMembership.findMany({
+    where: { orgId: { in: orgIds }, role: "ORG_LEARNER" },
+    select: { orgId: true, userId: true },
+  });
+  if (memberships.length === 0) return result;
+
+  const userIds = [...new Set(memberships.map((m) => m.userId))];
+  const enrollments = await db.enrollment.findMany({
+    where: { userId: { in: userIds }, revokedAt: null },
+    select: { userId: true, courseId: true },
+  });
+  const courseIds = [...new Set(enrollments.map((e) => e.courseId))];
+  if (courseIds.length === 0) return result;
+
+  const lessons = await db.lesson.findMany({
+    where: { status: "PUBLISHED", module: { courseId: { in: courseIds } } },
+    select: { id: true, module: { select: { courseId: true } } },
+  });
+  const courseByLesson = new Map(lessons.map((l) => [l.id, l.module.courseId]));
+  const lessonsPerCourse = new Map<string, number>();
+  for (const l of lessons) {
+    lessonsPerCourse.set(l.module.courseId, (lessonsPerCourse.get(l.module.courseId) ?? 0) + 1);
+  }
+
+  const done = lessons.length
+    ? await db.lessonProgress.findMany({
+        where: {
+          userId: { in: userIds },
+          lessonId: { in: lessons.map((l) => l.id) },
+          completedAt: { not: null },
+        },
+        select: { userId: true, lessonId: true },
+      })
+    : [];
+
+  const coursesByUser = new Map<string, Set<string>>();
+  for (const e of enrollments) {
+    const set = coursesByUser.get(e.userId) ?? new Set<string>();
+    set.add(e.courseId);
+    coursesByUser.set(e.userId, set);
+  }
+
+  // Прогресс по отозванному курсу остаётся в базе — считаем только открытые.
+  const doneByUser = new Map<string, number>();
+  for (const p of done) {
+    const courseId = courseByLesson.get(p.lessonId);
+    if (courseId && coursesByUser.get(p.userId)?.has(courseId)) {
+      doneByUser.set(p.userId, (doneByUser.get(p.userId) ?? 0) + 1);
+    }
+  }
+
+  const sums = new Map<string, { sum: number; count: number }>();
+  for (const m of memberships) {
+    const total = [...(coursesByUser.get(m.userId) ?? [])].reduce(
+      (s, courseId) => s + (lessonsPerCourse.get(courseId) ?? 0),
+      0,
+    );
+    if (total === 0) continue;
+    const acc = sums.get(m.orgId) ?? { sum: 0, count: 0 };
+    acc.sum += (doneByUser.get(m.userId) ?? 0) / total;
+    acc.count += 1;
+    sums.set(m.orgId, acc);
+  }
+  for (const [orgId, { sum, count }] of sums) result.set(orgId, sum / count);
+  return result;
 }
 
 export interface MemberRow {

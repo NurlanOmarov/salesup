@@ -130,11 +130,12 @@ export default async function OrgsPage() {
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    {/* Прогресс — в окне поверх реестра: пройтись по клиентам
-                        подряд, не теряя место в списке. */}
+                    {/* Средний прогресс виден сразу, без захода в карточку;
+                        подробности — в окне по клику, не теряя место в списке. */}
                     <OrgProgressButton
                       orgId={o.id}
                       orgName={o.name}
+                      progress={o.avgProgress}
                       disabled={o.licenses === 0}
                     />
                   </td>

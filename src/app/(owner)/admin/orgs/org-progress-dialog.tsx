@@ -4,18 +4,18 @@ import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { BarChart3, Lock, ShieldCheck, X } from "lucide-react";
+import { Lock, ShieldCheck, X } from "lucide-react";
 import type { OrgProgressSnapshot } from "@/lib/org/reports";
 import { orgProgressAction } from "./actions";
 import { OrgStatusBadge, ProgressBar, relativeDays } from "./org-ui";
 
 /**
- * «Как учится компания» прямо из реестра клиентов: раньше ответ на этот вопрос
- * стоил перехода в карточку и обратно по каждому клиенту подряд. Кнопка в
- * строке открывает окно со сводкой, разрезом по курсам и списком работников —
- * теми же цифрами, что клиент видит в своём кабинете.
+ * «Как учится компания» прямо из реестра клиентов. В строке — только средний
+ * прогресс (он приходит вместе со списком), чтобы пробежать глазами всех
+ * клиентов подряд. Клик по нему открывает окно со сводкой, разрезом по курсам
+ * и списком работников — теми же цифрами, что клиент видит в своём кабинете.
  *
- * Данные тянем по клику (orgProgressAction), а не вместе со списком: полный
+ * Подробности тянем по клику (orgProgressAction), а не вместе со списком: полный
  * отчёт по каждой организации при открытии реестра — лишняя работа для базы.
  *
  * ФИО здесь нет и быть не может: работник опознаётся только логином вида
@@ -24,10 +24,13 @@ import { OrgStatusBadge, ProgressBar, relativeDays } from "./org-ui";
 export function OrgProgressButton({
   orgId,
   orgName,
+  progress,
   disabled,
 }: {
   orgId: string;
   orgName: string;
+  /** Средний прогресс учащихся 0..1; null — работников с курсами пока нет. */
+  progress: number | null;
   /** Лицензий нет — учиться нечему, показывать нечего. */
   disabled?: boolean;
 }) {
@@ -42,10 +45,15 @@ export function OrgProgressButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 rounded-md border border-foreground/15 px-2 py-1 text-xs font-medium text-foreground/70 transition-colors hover:bg-foreground/5 hover:text-foreground"
+        aria-label={`Обучение: ${progress == null ? "нет учащихся" : `${Math.round(progress * 100)}%`}`}
+        title="Подробнее по курсам и работникам"
+        className="-mx-1.5 -my-1 block rounded-md px-1.5 py-1 text-left transition-colors hover:bg-foreground/5"
       >
-        <BarChart3 className="size-3.5" />
-        Обучение
+        {progress == null ? (
+          <span className="text-xs text-foreground/40">нет учащихся</span>
+        ) : (
+          <ProgressBar value={progress} />
+        )}
       </button>
       {open ? (
         <OrgProgressDialog

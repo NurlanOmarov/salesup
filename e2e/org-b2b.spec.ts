@@ -313,7 +313,10 @@ test("владелец видит обучение компании из рее�
   // Ищем строку по ссылке на саму организацию: одноимённые компании в базе —
   // обычное дело, и поиск по названию цеплял бы сразу несколько строк.
   const row = page.locator(`tr:has(a[href="/admin/orgs/${orgId}"])`);
-  await row.getByRole("button", { name: "Обучение" }).click();
+  // Средний прогресс виден в самой строке — без клика.
+  const progress = row.getByRole("button", { name: /^Обучение: (\d+%|нет учащихся)$/ });
+  await expect(progress).toBeVisible();
+  await progress.click();
 
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByText("Как учится компания")).toBeVisible();
