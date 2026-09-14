@@ -334,6 +334,7 @@ model Lesson {
   contentGaps         ContentGap[]
   aiArtifacts         AiArtifact[]
   subtitles           SubtitleTrack[]
+  podcastStatus       PodcastLessonStatus?
 
   @@index([moduleId, sortOrder])
 }
@@ -1038,6 +1039,62 @@ enum JobStatus {
   RUNNING
   DONE
   FAILED
+}
+
+// ─────────────────────────── ФАБРИКА ПОДКАСТОВ ───────────────────────────
+// Подкасты генерит автопрогон на Mac mini (scripts/factory/podcast.ts --queue --ship,
+// deploy/mac/): до прода мини достучаться не может — он за CGNAT, — поэтому о своём
+// ходе он сам пишет сюда через ssh-туннель. Админка (/admin/podcasts) только читает.
+// Факт «подкаст есть» — Lesson.podcastKey; здесь то, чего прод иначе не узнает.
+
+enum PodcastState {
+  /// Ноутбук создан, NotebookLM генерирует аудио.
+  GENERATING
+  /// Аудио сгенерировано прошлым прогоном, но не скачалось: ноутбук оставлен,
+  /// следующий прогон докачает без траты квоты.
+  AUDIO_READY
+  /// Аудио прошлого прогона ещё генерируется у Google — ждём.
+  WAITING
+  /// Файл уже скачан и едет в медиа-том прода.
+  SHIPPING
+  /// Последняя попытка сорвалась, причина — в message.
+  FAILED
+}
+
+/// Ход работы над подкастом урока. Строка удаляется, как только подкаст на проде.
+model PodcastLessonStatus {
+  lessonId  String       @id
+  state     PodcastState
+  /// Причина сбоя или пропуска — текст ошибки CLI, без ПДн.
+  message   String?      @db.Text
+  attempts  Int          @default(0)
+  updatedAt DateTime     @updatedAt
+
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+}
+
+enum PodcastRunOutcome {
+  RUNNING
+  /// Упёрся в дневную квоту NotebookLM — штатный конец прогона.
+  QUOTA
+  /// Прошёл всю очередь.
+  DONE
+  FAILED
+}
+
+/// Один прогон автопрогона — по ним админка видит, жив ли мини и какой темп.
+model PodcastRun {
+  id         String            @id @default(cuid())
+  /// Машина, откуда шёл прогон (hostname).
+  host       String
+  startedAt  DateTime          @default(now())
+  finishedAt DateTime?
+  outcome    PodcastRunOutcome @default(RUNNING)
+  generated  Int               @default(0)
+  failed     Int               @default(0)
+  message    String?           @db.Text
+
+  @@index([startedAt])
 }
 
 // Лёгкие фоновые задачи (письма, PDF-сертификат, регенерация вопроса, авто-модерация отзыва,

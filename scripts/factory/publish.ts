@@ -211,6 +211,7 @@ async function main() {
   console.log("");
 
   let totalSynced = 0;
+  const failed: string[] = [];
 
   for (const [i, lesson] of lessons.entries()) {
     console.log(`${c.bold(`[${i + 1}/${lessons.length}]`)} ${lesson.title}`);
@@ -219,6 +220,7 @@ async function main() {
       totalSynced += synced;
     } catch (e) {
       log.err(`Урок ${lesson.id}: ${e instanceof Error ? e.message : String(e)}`);
+      failed.push(lesson.id);
     }
     console.log("");
   }
@@ -233,6 +235,13 @@ async function main() {
   }
 
   await db.$disconnect();
+
+  // Сбойный урок — ненулевой код: автопрогон по нему решает, можно ли удалять
+  // локальный m4a. С нулём он удалил бы файл, который до прода не доехал.
+  if (failed.length) {
+    log.warn(`Не опубликовано уроков: ${failed.length} — ${failed.join(" ")}`);
+    process.exitCode = 1;
+  }
 }
 
 main().catch(async (e) => {

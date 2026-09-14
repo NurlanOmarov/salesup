@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>kz.salesup.notebooklm</string>
+
+  <!-- Держит сессию Google для NotebookLM живой: без обращений cookie
+       __Secure-1PSIDTS протухает, и прогон подкастов встал бы на входе.
+       Интервал — рекомендация самого notebooklm-py (15–20 минут). -->
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/mac/.local/bin/notebooklm</string>
+    <string>auth</string>
+    <string>refresh</string>
+  </array>
+
+  <key>StartInterval</key>
+  <integer>900</integer>
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>StandardOutPath</key>
+  <string>/Users/mac/Library/Logs/salesup-notebooklm.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/mac/Library/Logs/salesup-notebooklm.log</string>
+</dict>
+</plist>

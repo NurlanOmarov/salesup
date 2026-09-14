@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>kz.salesup.podcasts</string>
+
+  <!-- Очередь AI-подкастов: ssh-туннель к прод-БД + podcast.ts --queue --ship. -->
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/Users/mac/projects/salesup/deploy/mac/bin/podcasts.sh</string>
+  </array>
+
+  <!-- Дважды в сутки: квота NotebookLM сбрасывается по скользящему окну, с одного
+       захода попадаем не всегда. Пустой прогон стоит секунды. -->
+  <key>StartCalendarInterval</key>
+  <array>
+    <dict>
+      <key>Hour</key><integer>9</integer>
+      <key>Minute</key><integer>17</integer>
+    </dict>
+    <dict>
+      <key>Hour</key><integer>21</integer>
+      <key>Minute</key><integer>17</integer>
+    </dict>
+  </array>
+
+  <key>StandardOutPath</key>
+  <string>/Users/mac/Library/Logs/salesup-podcasts.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/mac/Library/Logs/salesup-podcasts.log</string>
+</dict>
+</plist>

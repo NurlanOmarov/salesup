@@ -39,6 +39,7 @@ const GROUPS: { label: string; items: NavItem[] }[] = [
         label: "Отзывы",
         hint: "Отзывы учеников, с карт и из соцсетей",
       },
+      { href: "/admin/podcasts", label: "Подкасты", hint: "Очередь генерации на Mac mini" },
       { href: "/admin/certificates", label: "Сертификаты", hint: "Выдача и проверка" },
       { href: "/admin/seo", label: "SEO", hint: "Метаданные по доменам и языкам" },
       {
