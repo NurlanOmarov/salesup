@@ -134,7 +134,10 @@ export function dockerCpToContainer(remoteTmpPath: string, mediaKey: string, dry
   // docker cp не поддерживает --chown, но контейнер запущен от root и том принадлежит node (1000)
   // После cp делаем chown внутри контейнера
   sshExec(`docker cp '${remoteTmpPath}' ${DEPLOY_MEDIA_CONTAINER}:${containerDest}`, false);
-  sshExec(`docker exec ${DEPLOY_MEDIA_CONTAINER} chown 1000:1000 '${containerDest}'`, true);
+  // Права — явно: rsync -a переносит их с исходника, а файл, скачанный во временный
+  // каталог (фабрика подкастов на мини), приходит с 600. Раздаёт медиа nginx от
+  // своего пользователя (uid 101) — с 600 ученик получил бы ошибку вместо подкаста.
+  sshExec(`docker exec ${DEPLOY_MEDIA_CONTAINER} sh -c "chown 1000:1000 '${containerDest}' && chmod 644 '${containerDest}'"`, true);
   log.ok(`Скопировано в контейнер: ${c.dim(containerDest)}`);
 }
 
