@@ -26,8 +26,9 @@ export interface LeadView {
   id: string;
   /** B2C — розничный ученик, B2B — заявка со страницы /business. */
   kind: "B2C" | "B2B";
-  /** OFFLINE — запрос на живой тренинг: в платформе по нему действий нет. */
-  format: "ONLINE" | "OFFLINE";
+  /** OFFLINE — живой тренинг, CUSTOM — заказ курса под бизнес: в платформе
+   *  по ним сразу ничего не создаётся. */
+  format: "ONLINE" | "OFFLINE" | "CUSTOM";
   company: string | null;
   /** Сколько сотрудников хотят обучать: сразу виден уровень корпоративной сетки. */
   seatsWanted: number | null;
@@ -100,6 +101,7 @@ export function LeadRow({ lead }: { lead: LeadView }) {
 
   const isB2b = lead.kind === "B2B";
   const isOffline = lead.format === "OFFLINE";
+  const isCustom = lead.format === "CUSTOM";
   const contactIsEmail = lead.contactType
     ? lead.contactType === "EMAIL"
     : looksLikeEmail(lead.contact);
@@ -142,6 +144,11 @@ export function LeadRow({ lead }: { lead: LeadView }) {
               // платформе, это разговор про выездной тренинг с преподавателем.
               <span className="rounded-full bg-violet-500/15 px-2 py-0.5 text-xs font-semibold text-violet-700">
                 Офлайн-тренинг
+              </span>
+            ) : isCustom ? (
+              // Заказ курса: сначала съёмка и сборка, доступы — потом.
+              <span className="rounded-full bg-sky-500/15 px-2 py-0.5 text-xs font-semibold text-sky-700">
+                Курс под заказ
               </span>
             ) : lead.kind === "B2B" ? (
               <span className="rounded-full bg-brand/10 px-2 py-0.5 text-xs font-semibold text-brand">
@@ -251,6 +258,10 @@ export function LeadRow({ lead }: { lead: LeadView }) {
         {isOffline ? (
           <span className="text-xs text-foreground/50">
             Тренинг ведётся вне платформы — договоритесь и отметьте статус
+          </span>
+        ) : isCustom ? (
+          <span className="text-xs text-foreground/50">
+            Обсудите тему и объём съёмок; доступы — когда курс будет готов
           </span>
         ) : (
           <Link

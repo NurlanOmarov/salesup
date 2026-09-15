@@ -137,6 +137,8 @@ describe("leadGreeting", () => {
   it("подстраивается под тип заявки", () => {
     expect(leadGreeting({ ...base, kind: "B2B" })).toContain("корпоративное обучение");
     expect(leadGreeting({ ...base, format: "OFFLINE" })).toContain("офлайн-тренинг");
+    expect(leadGreeting({ ...base, kind: "B2B", format: "CUSTOM" })).toContain("курс под ваш бизнес");
+    expect(leadTelegramText({ ...base, kind: "B2B", format: "CUSTOM" })).toContain("Заказ курса под бизнес");
     expect(leadGreeting(base)).toContain("Здравствуйте! ");
   });
 

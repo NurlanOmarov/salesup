@@ -34,8 +34,9 @@ export function LeadForm({
   courseId?: string;
   className?: string;
   kind?: "B2C" | "B2B";
-  /** Офлайн — заявка на живой тренинг: без тарифов и расчёта. */
-  format?: "ONLINE" | "OFFLINE";
+  /** Офлайн — заявка на живой тренинг, CUSTOM — заказ курса под бизнес:
+   *  оба без тарифов и расчёта. */
+  format?: "ONLINE" | "OFFLINE" | "CUSTOM";
   defaultSeats?: number;
   /** Предзаполненный комментарий: например, курсы, выбранные в калькуляторе. */
   defaultMessage?: string;
@@ -47,6 +48,7 @@ export function LeadForm({
 }) {
   const isB2b = kind === "B2B";
   const isOffline = format === "OFFLINE";
+  const isCustom = format === "CUSTOM";
   // Форма показывается и на казахской версии витрины (i18n/messages.ts).
   const t = messagesFor(useLocale());
   const [state, formAction, isPending] = useActionState(
@@ -74,7 +76,9 @@ export function LeadForm({
           <p className="mt-1 text-sm text-foreground/70">
             {isOffline
               ? t.lead.sentOffline
-              : isB2b
+              : isCustom
+                ? t.lead.sentCustom
+                : isB2b
                 ? t.lead.sentB2b
                 : t.lead.sentB2c}
           </p>
@@ -136,7 +140,9 @@ export function LeadForm({
           placeholder={
             isOffline
               ? t.lead.commentOffline
-              : isB2b
+              : isCustom
+                ? t.lead.commentCustom
+                : isB2b
                 ? t.lead.commentB2b
                 : t.lead.commentB2c
           }
@@ -186,7 +192,9 @@ export function LeadForm({
           ? t.lead.submitting
           : isOffline
             ? t.lead.submitOffline
-            : isB2b
+            : isCustom
+              ? t.lead.submitCustom
+              : isB2b
               ? t.lead.submitB2b
               : t.lead.submitB2c}
       </Button>

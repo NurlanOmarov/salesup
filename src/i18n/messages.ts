@@ -40,6 +40,13 @@ const ru = {
     emptyTitle: "В этом направлении пока нет курсов",
     emptyText: "Скоро добавим — загляните в другие категории.",
     filterLabel: "Фильтр курсов по направлению",
+    customTitle: "Не нашли своей темы?",
+    customText:
+      "Снимем видеоуроки и соберём тесты под ваш бизнес: ваш продукт, ваши клиенты, ваши возражения.",
+    customCta: "Заказать курс",
+    customDialogText:
+      "Расскажите, что продаёте и чему нужно научить команду, — свяжемся и обсудим программу.",
+    close: "Закрыть",
   },
   language: {
     label: "Тіл / Язык",
@@ -192,6 +199,7 @@ const ru = {
   lead: {
     sent: "Заявка отправлена!",
     sentOffline: "Свяжемся, обсудим программу, даты и стоимость тренинга.",
+    sentCustom: "Свяжемся, обсудим тему, объём съёмок и стоимость курса.",
     sentB2b: "Свяжемся в ближайшее время, посчитаем стоимость и выставим счёт.",
     sentB2c: "Мы свяжемся с вами в ближайшее время и расскажем, как начать обучение.",
     name: "Имя",
@@ -214,6 +222,7 @@ const ru = {
     emailPlaceholder: "you@example.com",
     comment: "Комментарий",
     commentOffline: "Город, желаемые даты, задачи тренинга",
+    commentCustom: "Что продаёте, кому и где буксуют продажи",
     commentB2b: "Отрасль, задачи обучения",
     commentB2c: "Какой курс интересует",
     consentBefore: "Я согласен(-на) на обработку моих персональных данных на условиях",
@@ -223,6 +232,7 @@ const ru = {
     consentOffer: "публичной оферты",
     submitting: "Отправляем…",
     submitOffline: "Отправить запрос",
+    submitCustom: "Заказать курс",
     submitB2b: "Получить расчёт",
     submitB2c: "Оставить заявку",
   },
@@ -292,6 +302,13 @@ const kk = {
     emptyTitle: "Бұл бағытта әзірге курстар жоқ",
     emptyText: "Жақында қосамыз — басқа санаттарды қараңыз.",
     filterLabel: "Курстарды бағыт бойынша сүзу",
+    customTitle: "Өз тақырыбыңызды таппадыңыз ба?",
+    customText:
+      "Бизнесіңізге арнап бейнесабақтар түсіріп, тесттер жинаймыз: сіздің өнім, сіздің клиенттер, сіздің қарсылықтар.",
+    customCta: "Курсқа тапсырыс беру",
+    customDialogText:
+      "Не сататыныңызды және командаға нені үйрету керегін айтыңыз — хабарласып, бағдарламаны талқылаймыз.",
+    close: "Жабу",
   },
   language: {
     label: "Тіл / Язык",
@@ -435,6 +452,7 @@ const kk = {
   lead: {
     sent: "Өтінім жіберілді!",
     sentOffline: "Хабарласып, бағдарламаны, күндерді және тренинг құнын талқылаймыз.",
+    sentCustom: "Хабарласып, тақырыпты, түсірілім көлемін және курс құнын талқылаймыз.",
     sentB2b: "Жақын арада хабарласып, құнын есептеп, шот ұсынамыз.",
     sentB2c: "Жақын арада хабарласып, оқуды қалай бастау керегін айтамыз.",
     name: "Аты-жөні",
@@ -456,6 +474,7 @@ const kk = {
     emailPlaceholder: "you@example.com",
     comment: "Пікір",
     commentOffline: "Қала, қалаған күндер, тренинг міндеттері",
+    commentCustom: "Не сатасыз, кімге және сату қай жерде тоқтап қалады",
     commentB2b: "Сала, оқыту міндеттері",
     commentB2c: "Қай курс қызықтырады",
     consentBefore: "Дербес деректерімнің өңделуіне келесі шарттармен келісемін:",
@@ -465,6 +484,7 @@ const kk = {
     consentOffer: "жария оферта",
     submitting: "Жіберілуде…",
     submitOffline: "Сұраныс жіберу",
+    submitCustom: "Курсқа тапсырыс беру",
     submitB2b: "Есеп алу",
     submitB2c: "Өтінім қалдыру",
   },
@@ -517,6 +537,13 @@ const uz = {
     emptyTitle: "Bu yo'nalishda hozircha kurslar yo'q",
     emptyText: "Tez orada qo'shamiz — boshqa turkumlarni ko'ring.",
     filterLabel: "Kurslarni yo'nalish bo'yicha saralash",
+    customTitle: "O'z mavzuingizni topmadingizmi?",
+    customText:
+      "Biznesingiz uchun videodarslar suratga olamiz va testlar tuzamiz: sizning mahsulot, sizning mijozlar, sizning e'tirozlar.",
+    customCta: "Kurs buyurtma qilish",
+    customDialogText:
+      "Nima sotayotganingizni va jamoaga nimani o'rgatish kerakligini yozing — bog'lanib, dasturni muhokama qilamiz.",
+    close: "Yopish",
   },
   language: {
     label: "Til / Язык",
@@ -660,6 +687,7 @@ const uz = {
   lead: {
     sent: "Ariza yuborildi!",
     sentOffline: "Bog'lanamiz, dastur, sanalar va trening narxini muhokama qilamiz.",
+    sentCustom: "Bog'lanib, mavzu, suratga olish hajmi va kurs narxini muhokama qilamiz.",
     sentB2b: "Yaqin orada bog'lanamiz, narxni hisoblab, hisob-faktura yuboramiz.",
     sentB2c: "Yaqin orada bog'lanamiz va o'qishni qanday boshlashni aytamiz.",
     name: "Ism",
@@ -681,6 +709,7 @@ const uz = {
     emailPlaceholder: "you@example.com",
     comment: "Izoh",
     commentOffline: "Shahar, kerakli sanalar, trening vazifalari",
+    commentCustom: "Nima sotasiz, kimga va savdo qayerda to'xtab qoladi",
     commentB2b: "Soha, o'quv vazifalari",
     commentB2c: "Qaysi kurs qiziqtiradi",
     consentBefore: "Shaxsiy ma'lumotlarim qayta ishlanishiga quyidagi shartlar asosida roziman:",
@@ -690,6 +719,7 @@ const uz = {
     consentOffer: "ommaviy oferta",
     submitting: "Yuborilmoqda…",
     submitOffline: "So'rov yuborish",
+    submitCustom: "Kurs buyurtma qilish",
     submitB2b: "Hisob-kitob olish",
     submitB2c: "Ariza qoldirish",
   },

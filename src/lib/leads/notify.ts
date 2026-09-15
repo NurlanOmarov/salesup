@@ -33,8 +33,8 @@ export function contactEmail(contact: string): string | null {
 
 export interface LeadNotification {
   kind: "B2C" | "B2B";
-  /** Офлайн — заявка на живой тренинг: без тарифа и расчёта. */
-  format?: "ONLINE" | "OFFLINE";
+  /** Офлайн — живой тренинг, CUSTOM — заказ курса под бизнес: оба без расчёта. */
+  format?: "ONLINE" | "OFFLINE" | "CUSTOM";
   name?: string | null;
   /** Уже нормализованный контакт: E.164, `@username` или адрес почты. */
   contact: string;
@@ -135,6 +135,8 @@ export function leadTelegramText(lead: LeadNotification): string {
   const title =
     lead.format === "OFFLINE"
       ? `🤝 <b>Заявка на офлайн-тренинг</b>${company}`
+      : lead.format === "CUSTOM"
+        ? `🎬 <b>Заказ курса под бизнес</b>${company}`
       : lead.kind === "B2B"
         ? `🏢 <b>Новая B2B-заявка</b>${company}`
         : `🎓 <b>Новая заявка на курс</b>${lead.courseTitle ? ` — ${escapeHtml(lead.courseTitle)}` : ""}`;
@@ -156,7 +158,7 @@ export function leadTelegramText(lead: LeadNotification): string {
     line("🌐 Заявка с домена", siteTitle(lead.site, lead.siteHost)),
     line("🗣 Язык страницы", localeLine(lead.locale)),
     line("🏢 Организация", lead.company ? escapeHtml(lead.company) : null),
-    line(lead.format === "OFFLINE" ? "👥 Участников" : "💺 Мест", lead.seatsWanted),
+    line(lead.format === "ONLINE" || !lead.format ? "💺 Мест" : "👥 Участников", lead.seatsWanted),
     line("📚 Курс", lead.courseTitle ? escapeHtml(lead.courseTitle) : null),
     quoteLine(lead.quote),
     line("💬 Сообщение", lead.message ? escapeHtml(lead.message) : null),
@@ -175,6 +177,8 @@ export function leadGreeting(lead: LeadNotification): string {
   const about =
     lead.format === "OFFLINE"
       ? "заявку на офлайн-тренинг"
+      : lead.format === "CUSTOM"
+        ? "заявку на курс под ваш бизнес"
       : lead.kind === "B2B"
         ? "заявку на корпоративное обучение"
         : lead.courseTitle
@@ -207,6 +211,8 @@ export function ownerLeadEmail(to: string, lead: LeadNotification): EmailMessage
   const subject =
     lead.format === "OFFLINE"
       ? `Заявка на офлайн-тренинг${lead.company ? `: ${lead.company}` : ""}`
+      : lead.format === "CUSTOM"
+        ? `Заказ курса под бизнес${lead.company ? `: ${lead.company}` : ""}`
       : lead.kind === "B2B"
         ? `Новая B2B-заявка${lead.company ? `: ${lead.company}` : ""}`
         : `Новая заявка на курс${lead.courseTitle ? `: ${lead.courseTitle}` : ""}`;
@@ -218,6 +224,8 @@ export function ownerLeadEmail(to: string, lead: LeadNotification): EmailMessage
       "Тип",
       lead.format === "OFFLINE"
         ? "Офлайн-тренинг (корпоративный)"
+        : lead.format === "CUSTOM"
+          ? "Курс под заказ (съёмка под бизнес клиента)"
         : lead.kind === "B2B"
           ? "Корпоративная (B2B)"
           : "Розница (B2C)",

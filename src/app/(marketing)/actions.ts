@@ -35,7 +35,9 @@ const schema = z.object({
   kind: z.enum(["B2C", "B2B"]).default("B2C"),
   // Офлайн — живой корпоративный тренинг: платформа его не продаёт, поэтому
   // тариф и расчёт к такой заявке не применяются (см. ниже).
-  format: z.enum(["ONLINE", "OFFLINE"]).default("ONLINE"),
+  // Заказ курса под бизнес (плитка «Не нашли своей темы?» в каталоге) — тоже
+  // без расчёта: объём съёмок и цену обсуждают в разговоре.
+  format: z.enum(["ONLINE", "OFFLINE", "CUSTOM"]).default("ONLINE"),
   company: z.string().trim().max(160).optional().or(z.literal("")),
   seatsWanted: z.coerce.number().int().min(1).max(100000).optional(),
   // Выбранные в калькуляторе курсы. Присылается только выбор — цену считает
@@ -100,9 +102,9 @@ export async function createLeadAction(
     format,
     withTrainer,
   } = parsed.data;
-  // Офлайн-тренинг платформа не продаёт: тариф и расчёт к нему неприменимы,
-  // поэтому обнуляем их даже если что-то пришло из формы.
-  const isOffline = format === "OFFLINE";
+  // Офлайн-тренинг и курс под заказ витрина не считает: тариф и расчёт к ним
+  // неприменимы, поэтому обнуляем их даже если что-то пришло из формы.
+  const noQuote = format !== "ONLINE";
 
   // Контакт разбираем на сервере заново: браузер мог не выполнить проверку
   // вовсе. Номер сохраняем только в E.164 — без кода страны мессенджер его не
@@ -146,11 +148,11 @@ export async function createLeadAction(
   // Тренерский пакет задан в долларах — в BYN переводим по тому же курсу, что
   // и витрина, иначе сумма в заявке разойдётся с калькулятором.
   const trainerTiyn =
-    kind === "B2B" && withTrainer && !isOffline
+    kind === "B2B" && withTrainer && !noQuote
       ? usdToTiyn(TRAINER_PACK_USD, (await currency.getRates()).rates)
       : 0;
 
-  const quote = isOffline
+  const quote = noQuote
     ? null
     : leadQuote({
         kind,

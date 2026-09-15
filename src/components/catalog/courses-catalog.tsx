@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { BookOpen } from "lucide-react";
 import { Reveal } from "@/components/landing/reveal";
 import { CourseCard, type CourseCardData } from "@/components/catalog/course-card";
+import { CustomCourseOffer } from "@/components/catalog/custom-course-offer";
 import { useLocale } from "@/i18n/client";
 import type { Locale } from "@/i18n/routing";
 import { localizedIndustry } from "@/content/industries";
@@ -144,15 +145,20 @@ export function CoursesCatalog({ courses }: { courses: CourseCardData[] }) {
             <p className="mt-1 text-sm">{t.catalog.emptyText}</p>
           </div>
         </Reveal>
-      ) : (
-        <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {visible.map((c, i) => (
-            <Reveal key={c.slug} delay={i * 0.04}>
-              <CourseCard course={c} />
-            </Reveal>
-          ))}
-        </div>
-      )}
+      ) : null}
+
+      {/* Плитка «Не нашли своей темы?» — всегда последней в сетке: и в полном
+          каталоге, и в отфильтрованном, где отрасли человека может не оказаться. */}
+      <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {visible.map((c, i) => (
+          <Reveal key={c.slug} delay={i * 0.04}>
+            <CourseCard course={c} />
+          </Reveal>
+        ))}
+        <Reveal delay={visible.length * 0.04} className="h-full">
+          <CustomCourseOffer />
+        </Reveal>
+      </div>
     </>
   );
 }
