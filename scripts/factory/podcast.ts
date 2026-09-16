@@ -510,7 +510,10 @@ async function main() {
   let total = 0;
   let processed = 0;
   let rateLimited = false;
+  // Сбои и «до чего не дошли» — разные вещи: первое чинят, второе просто ждёт
+  // следующего прогона. В сводке прогона считается только первое.
   const failed: string[] = [];
+  const pending: string[] = [];
 
   const count = (id: string, r: Attempt): void => {
     if (r.kind === "done") {
@@ -530,7 +533,7 @@ async function main() {
       const r = await attemptLesson(id, opts);
       count(id, r);
       if (r.kind === "quota") {
-        failed.push(...ids.slice(i));
+        pending.push(...ids.slice(i));
         return false;
       }
     }
@@ -594,6 +597,9 @@ async function main() {
 
   if (failed.length) {
     log.warn(`Не удалось: ${failed.length} — повторите для них (готовые пропустятся): ${failed.join(" ")}`);
+  }
+  if (pending.length) {
+    log.info(`Осталось на следующий прогон: ${pending.length}`);
   }
   log.ok(`Готово: ${processed} подкастов, суммарно ${humanSize(total)}`);
   await db.$disconnect();
