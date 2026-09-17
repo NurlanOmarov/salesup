@@ -1560,8 +1560,9 @@ const COURSES: CourseSpec[] = [
       },
     ],
     modules: KITCHEN_BASICS_MODULES,
-    // Промо — авторское демо фильма «1–16», как и остальные промо, живёт на YouTube.
-    promoVideos: [{ id: "kmjZXRPMfHo", vertical: false }],
+    // Промо — рекламный ролик тренинга (не дублирует уроки курса). Демо фильма
+    // «1–16» не подошло: у него на YouTube нет обложки, отдаётся серая заглушка.
+    promoVideos: [{ id: "PPldpQy4Oks", vertical: false }],
   },
   {
     slug: "sales-shoes",
