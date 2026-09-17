@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" width="640" height="400" role="img" aria-label="Воронка продаж кухни: входящий поток, визит в салон, дизайн-проект, замер и продажа, с потерями на каждом переходе">
+  <defs>
+    <style>
+      .step-1 { fill: #e0f2fe; stroke: #0284c7; stroke-width: 2.5; stroke-linejoin: round; }
+      .step-2 { fill: #dbeafe; stroke: #4f46e5; stroke-width: 2.5; stroke-linejoin: round; }
+      .step-3 { fill: #ede9fe; stroke: #6366f1; stroke-width: 2.5; stroke-linejoin: round; }
+      .step-4 { fill: #fef3c7; stroke: #d97706; stroke-width: 2.5; stroke-linejoin: round; }
+      .step-5 { fill: #d1fae5; stroke: #059669; stroke-width: 2.5; stroke-linejoin: round; }
+      .cap { font: 800 15px/1.2 system-ui, -apple-system, "Segoe UI", sans-serif; fill: #0f172a; text-anchor: middle; }
+      .sub { font: 500 11.5px/1.3 system-ui, -apple-system, "Segoe UI", sans-serif; fill: #475569; text-anchor: middle; }
+      .note { font: 600 12px/1.3 system-ui, -apple-system, "Segoe UI", sans-serif; fill: #b45309; text-anchor: start; }
+      .leak { font: 500 11.5px/1.3 system-ui, -apple-system, "Segoe UI", sans-serif; fill: #94a3b8; text-anchor: end; }
+      .title { font: 700 15px/1.2 system-ui, -apple-system, "Segoe UI", sans-serif; fill: #94a3b8; text-anchor: middle; letter-spacing: 1.5px; }
+      .arrow { stroke: #cbd5e1; stroke-width: 2; stroke-dasharray: 5 4; }
+    </style>
+  </defs>
+
+  <!-- Светлая подложка: схема живёт и в тёмном кабинете, и на белой раздатке. -->
+  <rect x="0" y="0" width="640" height="400" rx="14" fill="#ffffff" />
+
+  <text class="title" x="320" y="28">ВОРОНКА ПРОДАЖ КУХНИ</text>
+
+  <rect class="step-1" x="120" y="44" width="400" height="52" rx="10" />
+  <text class="cap" x="320" y="66">Входящий поток</text>
+  <text class="sub" x="320" y="84">сайт, звонки, люди в салоне</text>
+
+  <rect class="step-2" x="152" y="110" width="336" height="52" rx="10" />
+  <text class="cap" x="320" y="132">Визит в салон</text>
+  <text class="sub" x="320" y="150">встретили и выяснили потребность</text>
+
+  <rect class="step-3" x="184" y="176" width="272" height="52" rx="10" />
+  <text class="cap" x="320" y="198">Дизайн-проект</text>
+  <text class="sub" x="320" y="216">рисуем каждому зашедшему</text>
+
+  <rect class="step-4" x="216" y="242" width="208" height="52" rx="10" />
+  <text class="cap" x="320" y="264">Замер</text>
+  <text class="sub" x="320" y="282">ключевой шаг воронки</text>
+
+  <rect class="step-5" x="248" y="308" width="144" height="52" rx="10" />
+  <text class="cap" x="320" y="330">Продажа</text>
+  <text class="sub" x="320" y="348">≈ 3% от потока</text>
+
+  <line class="arrow" x1="320" y1="96" x2="320" y2="110" />
+  <line class="arrow" x1="320" y1="162" x2="320" y2="176" />
+  <line class="arrow" x1="320" y1="228" x2="320" y2="242" />
+  <line class="arrow" x1="320" y1="294" x2="320" y2="308" />
+
+  <text class="note" x="436" y="272">80 из 100 замеров</text>
+  <text class="note" x="436" y="288">доходят до продажи</text>
+
+  <text class="leak" x="140" y="126">теряем лид</text>
+  <text class="leak" x="172" y="192">нет проекта</text>
+  <text class="leak" x="204" y="258">нет замера</text>
+  <text class="leak" x="236" y="324">не дожали</text>
+
+  <text class="sub" x="320" y="382" style="font-style: italic">Не продавайте кухню — продавайте замер</text>
+</svg>

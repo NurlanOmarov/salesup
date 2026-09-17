@@ -43,6 +43,24 @@ import {
   KITCHEN_EXAM_PASS_SCORE,
 } from "./seed-data/kitchen-content.js";
 import {
+  KITCHEN_BASICS_SUMMARIES,
+  KITCHEN_BASICS_LESSON_QUIZZES,
+  KITCHEN_BASICS_FLASHCARDS,
+  KITCHEN_BASICS_OBJECTIONS,
+  KITCHEN_BASICS_CHECKLISTS,
+  KITCHEN_BASICS_SCRIPTS,
+  KITCHEN_BASICS_AUDITS,
+  KITCHEN_BASICS_BRANCHING,
+  KITCHEN_BASICS_HOTSPOTS,
+  KITCHEN_BASICS_CLIENT_TYPES,
+  KITCHEN_BASICS_LADDER,
+  KITCHEN_BASICS_NEEDS_CART,
+  KITCHEN_BASICS_OBJECTION_SCALE,
+  KITCHEN_BASICS_SCENARIOS,
+  KITCHEN_BASICS_EXAM,
+  KITCHEN_BASICS_EXAM_PASS_SCORE,
+} from "./seed-data/kitchen-basics-content.js";
+import {
   SPIN_SUMMARIES,
   SPIN_SLIDES,
   SPIN_LESSON_QUIZZES,
@@ -410,6 +428,125 @@ const KITCHEN_MODULES: ModuleSpec[] = [
         title: "Дополнительные продукты и инструменты для продаж кухонь",
         yt: "https://www.youtube.com/watch?v=j4RyZG1rTpE",
         durationSec: 308,
+      },
+    ],
+  },
+];
+
+// ── Курс «Кухни — основа продаж» (реальный YouTube-плейлист) ─────────────────
+// Источник: https://www.youtube.com/playlist?list=PLbPgy5BEZoQUJlBivaIevbc6ZkjHdoXvV
+// Тренер: Виталий Дубовик (activesales.by). Запись живого двухдневного тренинга,
+// разрезанная автором на пронумерованные части «видео-фильма». Из 21 ролика
+// плейлиста взяты 15 частей фильма и один отдельный материал про обоснование цены;
+// остальное — перемонтаж уже взятых частей (воронка, «можно/осторожно») и реклама.
+// Уникальные куски из перемонтажа (тайный покупатель Bosch/Siemens, платный замер)
+// перенесены в конспекты уроков 1 и 4, чтобы не плодить дубли уроков.
+// Порядок — педагогический, а не авторская нумерация: сначала кто продаёт и кому,
+// потом воронка и контакт, потребности, этапы и закрытие, возражения.
+const KITCHEN_BASICS_MODULES: ModuleSpec[] = [
+  {
+    title: "Кто продаёт и кто покупает",
+    lessons: [
+      {
+        title: "Что покупает клиент: продукт, компания и дизайнер",
+        yt: "https://www.youtube.com/watch?v=k9MlGSSOgQ0",
+        durationSec: 784,
+        publish: true,
+      },
+      {
+        title: "Четыре типа продавца: шоумен, словарь, киллер, партнёр",
+        yt: "https://www.youtube.com/watch?v=0u5EP418EKQ",
+        durationSec: 384,
+      },
+      {
+        title: "Типы клиентов: зелёный, синий, красный",
+        yt: "https://www.youtube.com/watch?v=5IOpHy7ph_E",
+        durationSec: 973,
+      },
+    ],
+  },
+  {
+    title: "Воронка и первый контакт",
+    lessons: [
+      {
+        title: "Воронка продаж: не продавайте кухню — продавайте замер",
+        yt: "https://www.youtube.com/watch?v=e4xIf56wHhU",
+        durationSec: 1095,
+      },
+      {
+        title: "Одиннадцать ошибок, из-за которых салон теряет клиента",
+        yt: "https://www.youtube.com/watch?v=kh3P9UxHDs0",
+        durationSec: 1041,
+      },
+      {
+        title: "Первые минуты в салоне: встретить и не спугнуть",
+        yt: "https://www.youtube.com/watch?v=5ZtwSQEMg18",
+        durationSec: 207,
+      },
+    ],
+  },
+  {
+    title: "Потребности клиента",
+    lessons: [
+      {
+        title: "Воронка вопросов: открытые, альтернативные, закрытые",
+        yt: "https://www.youtube.com/watch?v=4K20LXF7NVI",
+        durationSec: 309,
+      },
+      {
+        title: "Айсберг потребностей: где спрятан средний чек",
+        yt: "https://www.youtube.com/watch?v=ijRSLHwwyVU",
+        durationSec: 193,
+      },
+      {
+        title: "Как сформировать потребность: от характеристик к выгодам",
+        yt: "https://www.youtube.com/watch?v=2tdlLBdMuq4",
+        durationSec: 208,
+      },
+      {
+        title: "Как покупатель принимает решение: три этапа покупки",
+        yt: "https://www.youtube.com/watch?v=_Ucspr1iZJI",
+        durationSec: 419,
+      },
+    ],
+  },
+  {
+    title: "Этапы продажи и закрытие сделки",
+    lessons: [
+      {
+        title: "Схема продажи: от потребности компании до дожима",
+        yt: "https://www.youtube.com/watch?v=LSUmz12xs50",
+        durationSec: 204,
+      },
+      {
+        title: "Золотые правила: метод слона, замерщик и допродажа",
+        yt: "https://www.youtube.com/watch?v=rpwbQLislec",
+        durationSec: 396,
+      },
+      {
+        title: "Шесть способов закрыть сделку",
+        yt: "https://www.youtube.com/watch?v=ySIoKHiqJYs",
+        durationSec: 512,
+      },
+    ],
+  },
+  {
+    title: "Возражения и сложные клиенты",
+    lessons: [
+      {
+        title: "Агрессия и претензия: прослойка вместо спора",
+        yt: "https://www.youtube.com/watch?v=_ZZf7odrAqY",
+        durationSec: 380,
+      },
+      {
+        title: "Дорого, долго, «я подумаю»: ответы на главные возражения",
+        yt: "https://www.youtube.com/watch?v=7KfEQndv6Ro",
+        durationSec: 681,
+      },
+      {
+        title: "Чем обосновать цену: семь аргументов вместо скидки",
+        yt: "https://www.youtube.com/watch?v=60ZHLgdDQkE",
+        durationSec: 340,
       },
     ],
   },
@@ -1365,6 +1502,66 @@ const COURSES: CourseSpec[] = [
     // Промо-ролик тренера «Содержание видео курса для продавцов кухонь» —
     // остаётся на YouTube, у нас только ID.
     promoVideos: [{ id: "W2EIMlXSmQs", vertical: false }],
+  },
+  {
+    slug: "sales-kitchens-basics",
+    title: "Кухни — основа продаж",
+    subtitle: "Быстрый ввод в должность продавца кухонь: запись живого тренинга за два с небольшим часа",
+    description:
+      "Запись живого тренинга бизнес-тренера Виталия Дубовика (activesales.by) для продавцов и дизайнеров кухонь. Шестнадцать коротких уроков — весь цикл работы с покупателем, от первой минуты в салоне до закрытия сделки.\n" +
+      "\n" +
+      "Что внутри:\n" +
+      "— что на самом деле покупает клиент и почему 87% голосов достаётся дизайнеру, а не бренду\n" +
+      "— четыре типа продавца и три психотипа покупателя со скрытым вопросом у каждого\n" +
+      "— воронка продаж и правило «не продавайте кухню — продавайте замер»\n" +
+      "— одиннадцать ошибок, из-за которых салон теряет клиента прямо в торговом зале\n" +
+      "— воронка вопросов и айсберг потребностей: как вырастить средний чек\n" +
+      "— шесть способов закрыть сделку и четыре приёма закрепить договорённость\n" +
+      "— ответы на «дорого», «долго» и «я подумаю» плюс семь аргументов вместо скидки\n" +
+      "\n" +
+      "Курс младше и короче «Эффективных продаж кухонь 2.0»: он собран под быстрый ввод в должность нового сотрудника. После каждого урока — тест и тренажёр, в конце — итоговый экзамен и именной сертификат с проверкой подлинности.",
+    industry: "Мебель и кухни",
+    hoursLabel: "~2 часа 15 минут",
+    // Бюджетная ступень линейки: матрица дала бы 490 (отраслевой × стандарт), но курс
+    // намеренно дешевле премиальных «Кухонь 2.0» (590) — это вход для новичка.
+    priceTiyn: 35000,
+    learnPoints: [
+      "Понимать, что клиент покупает дизайнера, а не только кухню, и продавать себя как эксперта",
+      "Определять психотип покупателя по одной реплике и подбирать под него аргументы",
+      "Вести клиента по воронке: проект → замер → договор, а не пытаться продать кухню с порога",
+      "Не допускать одиннадцати типичных ошибок продавца в торговом зале",
+      "Снимать потребности воронкой вопросов: открытые, альтернативные, закрытые",
+      "Поднимать средний чек через айсберг потребностей, апселл, даунселл и кросс-селл",
+      "Закрывать сделку шестью способами и закреплять договорённость о следующем шаге",
+      "Отвечать на «дорого», «долго» и «я подумаю» и обосновывать цену без скидки",
+    ],
+    targetAudience: [
+      "Новые продавцы-консультанты и дизайнеры мебельных салонов — как программа онбординга",
+      "Продавцы кухонь, которым нужна система вместо разрозненного опыта",
+      "Руководители салонов, которым надо быстро вводить сотрудников в должность",
+      "Мебельные компании с текучкой в торговом зале",
+    ],
+    faq: [
+      {
+        q: "Чем этот курс отличается от «Эффективных продаж кухонь 2.0»?",
+        a: "Объёмом и задачей. Здесь запись живого тренинга на два с небольшим часа — быстрый ввод в должность нового продавца. «Кухни 2.0» — большой курс на шесть часов с разбором рынка, мессенджеров, скриптов звонков и договора. Начать можно с этого курса, а дальше углубиться.",
+      },
+      {
+        q: "Нужен ли опыт в мебельных продажах?",
+        a: "Нет. Курс начинается с базы: что покупает клиент, как встретить его в салоне и какие ошибки убивают продажу. По нему можно работать с первого дня в салоне.",
+      },
+      {
+        q: "Это только про кухни?",
+        a: "Примеры и кейсы — из практики кухонных салонов, но приёмы работают в любой сложной проектной продаже мебели: типы клиентов, воронка вопросов, закрытие сделки и работа с возражениями универсальны.",
+      },
+      {
+        q: "Сколько времени займёт прохождение?",
+        a: "Около двух с четвертью часов видео плюс тесты и тренажёры. Уроки короткие — от трёх до восемнадцати минут, удобно проходить по одному в день или всё за выходные.",
+      },
+    ],
+    modules: KITCHEN_BASICS_MODULES,
+    // Промо — авторское демо фильма «1–16», как и остальные промо, живёт на YouTube.
+    promoVideos: [{ id: "kmjZXRPMfHo", vertical: false }],
   },
   {
     slug: "sales-shoes",
@@ -2675,6 +2872,39 @@ async function main() {
   // ── Курс «Продажи в DIY-магазине» ────────────────────────────────────────
   // Контент по видео Виталия Дубовика (транскрипты в «Презентации/Продажи DIY»),
   // см. prisma/seed-data/diy-content.ts. Раздатки уроков — PDF (factory:handout).
+  // ── Курс «Кухни — основа продаж» ──────────────────────────────────────────
+  // Контент по записи живого тренинга Виталия Дубовика (транскрипты в
+  // «Презентации/Кухни — основа продаж»), см. prisma/seed-data/kitchen-basics-content.ts.
+  // Схемы айсберга и воронки — public/images/kitchens-basics, они же идут в раздатки.
+  const kitchenBasicsCourse = courses.find((c) => c.slug === "sales-kitchens-basics");
+  if (kitchenBasicsCourse) {
+    await seedSummaries(kitchenBasicsCourse.id, KITCHEN_BASICS_SUMMARIES);
+    await seedLessonQuizzes(kitchenBasicsCourse.id, KITCHEN_BASICS_LESSON_QUIZZES);
+    await seedFlashcards(kitchenBasicsCourse.id, KITCHEN_BASICS_FLASHCARDS);
+    await seedObjections(kitchenBasicsCourse.id, KITCHEN_BASICS_OBJECTIONS);
+    await seedArtifacts(kitchenBasicsCourse.id, "CHECKLIST", KITCHEN_BASICS_CHECKLISTS);
+    await seedArtifacts(kitchenBasicsCourse.id, "SCRIPT_BUILDER", KITCHEN_BASICS_SCRIPTS);
+    await seedArtifacts(kitchenBasicsCourse.id, "DIALOGUE_AUDIT", KITCHEN_BASICS_AUDITS);
+    await seedArtifacts(kitchenBasicsCourse.id, "BRANCHING", KITCHEN_BASICS_BRANCHING);
+    await seedArtifacts(kitchenBasicsCourse.id, "HOTSPOT", KITCHEN_BASICS_HOTSPOTS);
+    await seedArtifacts(kitchenBasicsCourse.id, "CLIENT_TYPES", KITCHEN_BASICS_CLIENT_TYPES);
+    await seedArtifacts(kitchenBasicsCourse.id, "STAGE_LADDER", KITCHEN_BASICS_LADDER);
+    await seedArtifacts(kitchenBasicsCourse.id, "NEEDS_CART", KITCHEN_BASICS_NEEDS_CART);
+    await seedArtifacts(kitchenBasicsCourse.id, "OBJECTION_SCALE", KITCHEN_BASICS_OBJECTION_SCALE);
+    await seedScenarios(kitchenBasicsCourse.id, KITCHEN_BASICS_SCENARIOS);
+    await seedFinalExam(kitchenBasicsCourse.id, {
+      questions: KITCHEN_BASICS_EXAM,
+      description:
+        "Проверка знаний по курсу: что покупает клиент, типы продавцов и психотипы покупателей, воронка продаж и замер, потребности, этапы продажи, закрытие сделки и работа с возражениями.",
+      passScore: KITCHEN_BASICS_EXAM_PASS_SCORE,
+    });
+    // Уроки с готовым HLS публикуем: поурочный контент к ним собран.
+    await db.lesson.updateMany({
+      where: { module: { courseId: kitchenBasicsCourse.id }, videoStatus: "READY" },
+      data: { status: "PUBLISHED" },
+    });
+  }
+
   const diyCourse = courses.find((c) => c.slug === "sales-diy");
   if (diyCourse) {
     await seedSummaries(diyCourse.id, DIY_SUMMARIES);
