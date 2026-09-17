@@ -1668,6 +1668,7 @@ const COURSES: CourseSpec[] = [
       },
     ],
     coverUrl: "/images/courses/sales-b2b.png",
+    promoVideos: [{ id: "1KRI6JCGv00", vertical: true }],
   },
 ];
 
