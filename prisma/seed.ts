@@ -61,6 +61,18 @@ import {
   KITCHEN_BASICS_EXAM_PASS_SCORE,
 } from "./seed-data/kitchen-basics-content.js";
 import {
+  MATTRESS_SUMMARIES,
+  MATTRESS_LESSON_QUIZZES,
+  MATTRESS_FLASHCARDS,
+  MATTRESS_OBJECTIONS,
+  MATTRESS_BRANCHING,
+  MATTRESS_SCRIPTS,
+  MATTRESS_SCALE,
+  MATTRESS_SCENARIOS,
+  MATTRESS_EXAM,
+  MATTRESS_EXAM_PASS_SCORE,
+} from "./seed-data/mattress-content.js";
+import {
   SPIN_SUMMARIES,
   SPIN_SLIDES,
   SPIN_LESSON_QUIZZES,
@@ -547,6 +559,42 @@ const KITCHEN_BASICS_MODULES: ModuleSpec[] = [
         title: "Чем обосновать цену: семь аргументов вместо скидки",
         yt: "https://www.youtube.com/watch?v=60ZHLgdDQkE",
         durationSec: 340,
+      },
+    ],
+  },
+];
+
+// ── Курс «Продажи матрасов в рознице» (реальный YouTube-плейлист) ───────────
+// Источник: https://www.youtube.com/playlist?list=PLbPgy5BEZoQVcVCf0wvSfrWYZBddP38j3
+// Тренер: Виталий Дубовик (activesales.by). Четыре вертикальных ролика-нарезки
+// с корпоративного тренинга для сети матрасов, ~9 минут. Мини-курс: порядок —
+// от установки продавца к вопросам, чеку и удержанию. Во втором ролике пример
+// направляющего вопроса обрывается, в конце четвёртого — рекламный хвост
+// другого тренинга: контент опирается только на то, что успели сказать.
+const MATTRESS_MODULES: ModuleSpec[] = [
+  {
+    title: "Продажа матраса в торговом зале",
+    lessons: [
+      {
+        title: "Проактивный продавец: собрать то, что рынок мог бы дать",
+        yt: "https://www.youtube.com/watch?v=SkQK2GJamDc",
+        durationSec: 137,
+        publish: true,
+      },
+      {
+        title: "СПИН в магазине матрасов: четыре блока вопросов",
+        yt: "https://www.youtube.com/watch?v=zUTNMRRxx7c",
+        durationSec: 180,
+      },
+      {
+        title: "Средний чек тактично: наматрасник как забота",
+        yt: "https://www.youtube.com/watch?v=Yy5fgY7ApoE",
+        durationSec: 78,
+      },
+      {
+        title: "Как удержать покупателя: конкуренты, «я подумаю» и дешевле",
+        yt: "https://www.youtube.com/watch?v=o-fsf2HNRY4",
+        durationSec: 157,
       },
     ],
   },
@@ -1563,6 +1611,54 @@ const COURSES: CourseSpec[] = [
     // Промо — рекламный ролик тренинга (не дублирует уроки курса). Демо фильма
     // «1–16» не подошло: у него на YouTube нет обложки, отдаётся серая заглушка.
     promoVideos: [{ id: "PPldpQy4Oks", vertical: false }],
+  },
+  {
+    slug: "sales-mattresses",
+    title: "Продажи матрасов в рознице",
+    subtitle: "Мини-курс за девять минут: вопросы, средний чек и удержание покупателя в зале",
+    description:
+      "Четыре коротких урока бизнес-тренера Виталия Дубовика (activesales.by) — нарезки с корпоративного тренинга для сети матрасов. Всё, что говорится, сразу применимо в торговом зале.\n" +
+      "\n" +
+      "Что внутри:\n" +
+      "— чем проактивный продавец отличается от того, кто просто оформляет покупку\n" +
+      "— СПИН в магазине матрасов: ситуационные, проблемные, извлекающие и направляющие вопросы с готовыми формулировками\n" +
+      "— как предлагать наматрасник, чтобы это было заботой, а не «впихиванием»\n" +
+      "— три стратегии удержать покупателя: когда он уходит к конкурентам, говорит «я подумаю» или выбирает дешевле\n" +
+      "\n" +
+      "После каждого урока — короткий тест и тренажёр, в конце — итоговый тест и сертификат с проверкой подлинности.",
+    industry: "Мебель и кухни",
+    hoursLabel: "~9 минут",
+    // Мини-курс из четырёх Shorts: матрица дала бы 350 (отраслевой × экспресс),
+    // но за девять минут это нечестная цена. Решение владельца — 99 BYN.
+    priceTiyn: 9900,
+    learnPoints: [
+      "Выходить из «зоны комфорта» и задавать пару вопросов вместо того, чтобы просто оформить покупку",
+      "Формировать потребность по СПИН: от «на каком матрасе вы спите?» до ценности нового",
+      "Предлагать наматрасник как логичное продолжение заботы, а не как допродажу",
+      "Удерживать покупателя, который уходит к конкурентам, говорит «я подумаю» или ищет дешевле",
+    ],
+    targetAudience: [
+      "Продавцы-консультанты магазинов матрасов и товаров для сна",
+      "Продавцы мебельных салонов, где продаются матрасы",
+      "Руководители розничных точек, которым нужен короткий инструмент для планёрки",
+    ],
+    faq: [
+      {
+        q: "Почему курс такой короткий?",
+        a: "Это нарезки с корпоративного тренинга: четыре ролика по одной-три минуты, в каждом — один приём, который можно применить в тот же день. Поэтому и цена мини-курса, а не полноценной программы.",
+      },
+      {
+        q: "Подойдёт, если я продаю не матрасы?",
+        a: "Примеры — из магазина матрасов, но приёмы универсальны для любой розницы: СПИН-вопросы, допродажа сопутствующего товара и удержание покупателя, который сомневается.",
+      },
+      {
+        q: "Есть ли более полный курс?",
+        a: "Да. Для глубины по методике вопросов есть курс «СПИН-продажи», а для мебельной розницы — «Кухни — основа продаж» и «Эффективные продажи кухонь 2.0».",
+      },
+    ],
+    modules: MATTRESS_MODULES,
+    // Промо — сам ролик про СПИН: у него на YouTube брендированная вертикальная обложка.
+    promoVideos: [{ id: "zUTNMRRxx7c", vertical: true }],
   },
   {
     slug: "sales-shoes",
@@ -2902,6 +2998,31 @@ async function main() {
     // Уроки с готовым HLS публикуем: поурочный контент к ним собран.
     await db.lesson.updateMany({
       where: { module: { courseId: kitchenBasicsCourse.id }, videoStatus: "READY" },
+      data: { status: "PUBLISHED" },
+    });
+  }
+
+  // ── Мини-курс «Продажи матрасов в рознице» ────────────────────────────────
+  // Контент по четырём роликам Виталия Дубовика (транскрипты в
+  // «Презентации/Продажи матрасов»), см. prisma/seed-data/mattress-content.ts.
+  const mattressCourse = courses.find((c) => c.slug === "sales-mattresses");
+  if (mattressCourse) {
+    await seedSummaries(mattressCourse.id, MATTRESS_SUMMARIES);
+    await seedLessonQuizzes(mattressCourse.id, MATTRESS_LESSON_QUIZZES);
+    await seedFlashcards(mattressCourse.id, MATTRESS_FLASHCARDS);
+    await seedObjections(mattressCourse.id, MATTRESS_OBJECTIONS);
+    await seedArtifacts(mattressCourse.id, "BRANCHING", MATTRESS_BRANCHING);
+    await seedArtifacts(mattressCourse.id, "SCRIPT_BUILDER", MATTRESS_SCRIPTS);
+    await seedArtifacts(mattressCourse.id, "OBJECTION_SCALE", MATTRESS_SCALE);
+    await seedScenarios(mattressCourse.id, MATTRESS_SCENARIOS);
+    await seedFinalExam(mattressCourse.id, {
+      questions: MATTRESS_EXAM,
+      description:
+        "Проверка знаний по курсу: проактивный подход, СПИН-вопросы в магазине матрасов, допродажа наматрасника и три стратегии удержания покупателя.",
+      passScore: MATTRESS_EXAM_PASS_SCORE,
+    });
+    await db.lesson.updateMany({
+      where: { module: { courseId: mattressCourse.id }, videoStatus: "READY" },
       data: { status: "PUBLISHED" },
     });
   }
