@@ -1,10 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { requireOrgAdmin } from "@/lib/org/guards";
-import { db } from "@/lib/db";
 import { LogoutButton } from "@/components/logout-button";
 import { OrgNav } from "./org-nav";
-import { OrgKeyProvider, type StoredWrap } from "./org-key-provider";
 
 /**
  * Каркас кабинета организации. Единая проверка прав (членство в БД, не токен) —
@@ -19,30 +17,6 @@ export default async function OrgLayout({
 }) {
   const { orgId } = await params;
   const ctx = await requireOrgAdmin(orgId);
-
-  // Обёртки ключа организации (L2): наружу отдаём только blob и параметры KDF —
-  // расшифровка возможна лишь в браузере после ввода кода. Отдаём обёртку
-  // текущего ответственного и recovery: чужие admin-обёртки ему не нужны.
-  //
-  // Владельцу платформы не отдаём ничего: имена — данные клиента, и то, что
-  // мы не можем их прочитать, держит на себе всю позицию оферты /offer-b2b
-  // (п. 10: оператор персональных данных работников — клиент, не платформа).
-  const wraps: StoredWrap[] = ctx.isOwner
-    ? []
-    : (
-        await db.orgKeyWrap.findMany({
-          where: {
-            orgId: ctx.orgId,
-            OR: [{ userId: ctx.userId }, { kind: "recovery" }],
-          },
-          select: { kind: true, wrappedKey: true, kdfSalt: true, kdfParams: true },
-        })
-      ).map((w) => ({
-        kind: w.kind === "recovery" ? "recovery" : "admin",
-        wrappedKey: w.wrappedKey,
-        kdfSalt: w.kdfSalt,
-        kdfParams: w.kdfParams as unknown as StoredWrap["kdfParams"],
-      }));
 
   return (
     <div className="min-h-screen bg-foreground/[0.015]">
@@ -90,9 +64,7 @@ export default async function OrgLayout({
         </div>
       ) : null}
 
-      <OrgKeyProvider orgId={ctx.orgId} wraps={wraps} viewerIsOwner={ctx.isOwner}>
-        <div className="mx-auto max-w-6xl px-4 py-8">{children}</div>
-      </OrgKeyProvider>
+      <div className="mx-auto max-w-6xl px-4 py-8">{children}</div>
     </div>
   );
 }

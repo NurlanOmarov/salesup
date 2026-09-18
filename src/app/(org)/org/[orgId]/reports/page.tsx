@@ -52,7 +52,7 @@ export default async function ReportsPage({
 
   const exportMembers = learners.map((m) => ({
     login: m.login,
-    labelEnc: m.labelEnc,
+    label: m.label,
     group: m.groupName,
     courses: m.courses,
     lessonsDone: m.lessonsDone,
@@ -197,10 +197,6 @@ export default async function ReportsPage({
       {/* ── Сотрудники ────────────────────────────────────────────── */}
       <section className="mt-8">
         <h2 className="text-lg font-semibold">Сотрудники</h2>
-        <p className="mt-1 text-sm text-foreground/55">
-          Подписи видны на вкладке «Работники» после ввода ПИН-кода; здесь —
-          сводка по кодам.
-        </p>
         <div className="mt-3 overflow-x-auto rounded-xl border border-foreground/10 bg-background">
           {learners.length === 0 ? (
             <p className="p-6 text-center text-sm text-foreground/55">
@@ -221,7 +217,12 @@ export default async function ReportsPage({
               <tbody>
                 {learners.map((m) => (
                   <tr key={m.membershipId} className="border-b border-foreground/5 last:border-0">
-                    <td className="px-4 py-3 font-mono">{m.login}</td>
+                    <td className="px-4 py-3">
+                      <span className="font-mono">{m.login}</span>
+                      {m.label ? (
+                        <span className="block text-xs text-foreground/60">{m.label}</span>
+                      ) : null}
+                    </td>
                     <td className="px-4 py-3 text-foreground/70">{m.groupName ?? "—"}</td>
                     <td className="px-4 py-3">
                       <ProgressBar value={m.progress} />

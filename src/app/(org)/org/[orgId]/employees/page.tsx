@@ -7,7 +7,6 @@ import { ProgressBar, relativeDays } from "@/app/(owner)/admin/orgs/org-ui";
 import { EmployeeActions, type SeatInfo } from "./employee-row";
 import { MemberLabel } from "./member-label";
 import { CreateMembers } from "./create-members";
-import { OrgKeyBar } from "../org-key-bar";
 
 export const metadata: Metadata = {
   title: "Работники",
@@ -102,14 +101,9 @@ export default async function EmployeesPage({
             groups={groups}
             siteUrl={siteUrl}
             orgName={ctx.orgName}
+            canLabel={!ctx.isOwner}
           />
         </div>
-      </div>
-
-      {/* Управление именами сотрудников: включение шифрования / ввод ПИН-кода.
-          Стоит здесь, а не в настройках, — имена нужны именно в этой таблице. */}
-      <div className="mt-5">
-        <OrgKeyBar />
       </div>
 
       <div className="mt-5 overflow-hidden rounded-xl border border-foreground/10 bg-background">
@@ -160,7 +154,8 @@ export default async function EmployeesPage({
                     <MemberLabel
                       orgId={ctx.orgId}
                       membershipId={m.membershipId}
-                      labelEnc={m.labelEnc}
+                      label={m.label}
+                      readOnly={ctx.isOwner}
                     />
                   </td>
                   <td className="px-4 py-3 text-foreground/70">{m.groupName ?? "—"}</td>

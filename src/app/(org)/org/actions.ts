@@ -36,11 +36,10 @@ async function writableCtx(orgId?: string) {
 }
 
 /**
- * Действия вокруг имён закрыты для владельца платформы. Он ведёт клиента
- * (лицензии, коды, отчёты), но кто стоит за кодом — знать не должен: способность
- * платформы прочитать имя сделала бы её оператором персональных данных
- * работников, чего оферта /offer-b2b (п. 10) прямо не предполагает. Проверка
- * стоит на сервере, а не только в UI: auth «orgAdmin» пропускает и OWNER.
+ * Подписи и подразделения работников ведёт ответственный клиента, не владелец
+ * платформы: что вписать напротив логина, решает клиент (оферта /offer-b2b,
+ * п. 10.1 — без ФИО). Проверка стоит на сервере, а не только в UI: auth
+ * «orgAdmin» пропускает и OWNER.
  */
 function assertNotOwnerView(ctx: { isOwner: boolean }): void {
   if (ctx.isOwner) {
@@ -49,6 +48,17 @@ function assertNotOwnerView(ctx: { isOwner: boolean }): void {
     );
   }
 }
+
+/**
+ * Подпись работника: любой короткий текст, который ответственному удобен —
+ * имя, кличка, должность. Пробелы по краям срезаем, пустое — это «без подписи».
+ */
+const labelSchema = z
+  .string()
+  .trim()
+  .max(60, "Подпись — не длиннее 60 знаков")
+  .nullable()
+  .transform((v) => (v ? v : null));
 
 /**
  * Создать работников пачкой: логины и временные пароли генерирует платформа.
@@ -62,24 +72,21 @@ export const createMembersAction = safeAction(
       count: z.coerce.number().int().min(1).max(100),
       licenseIds: z.array(z.string()).min(1, "Выберите хотя бы один курс"),
       groupId: z.string().optional(),
-      // Метки работников — уже зашифрованные в браузере blob'ы (base64 AES-GCM),
-      // по одной на создаваемого. Открытым текстом имени здесь быть не может:
-      // поля name/email/phone в B2B-действиях запрещены схемой, а не только
-      // спрятаны в UI (CLAUDE.md, правило 9).
-      labels: z.array(z.string().max(2048).nullable()).max(100).optional(),
+      // Подписи работников — произвольный текст ответственного (кличка,
+      // должность, «Кассир-2»), по одной на создаваемого. Отдельных полей
+      // name/email/phone в B2B-действиях нет и быть не должно (CLAUDE.md, правило 9).
+      labels: z.array(labelSchema).max(100).optional(),
     }),
     auth: "orgAdmin",
   },
   async (input) => {
     const ctx = await writableCtx(input.orgId);
 
-    // Метки и число работников считаются по одному индексу — рассинхрон означал
-    // бы имя, приклеенное к чужому логину.
+    // Подписи и число работников считаются по одному индексу — рассинхрон
+    // означал бы подпись, приклеенную к чужому логину.
     if (input.labels && input.labels.length !== input.count) {
-      throw new Error("Имена не совпали с числом работников — обновите страницу");
+      throw new Error("Подписи не совпали с числом работников — обновите страницу");
     }
-    // Владелец платформы метки не пишет: как только он способен положить туда
-    // имя, он становится оператором ПДн работников (оферта /offer-b2b, п. 10).
     if (input.labels?.some((l) => l !== null)) assertNotOwnerView(ctx);
 
     const licenses = await db.orgLicense.findMany({
@@ -188,15 +195,13 @@ export const revokeSeatAction = safeAction(
 
 // ─────────────────────────── Работники ───────────────────────────
 
-/** Сохранить зашифрованную метку работника. Сервер её не расшифровывает. */
+/** Сохранить подпись работника. Пустая строка стирает подпись. */
 export const setMemberLabelAction = safeAction(
   {
     schema: z.object({
       orgId: z.string().optional(),
       membershipId: z.string().min(1),
-      // base64 blob AES-GCM; ограничение длины — защита от использования поля
-      // как «блокнота» с открытым текстом.
-      labelEnc: z.string().max(2048).nullable(),
+      label: labelSchema,
     }),
     auth: "orgAdmin",
   },
@@ -211,7 +216,7 @@ export const setMemberLabelAction = safeAction(
 
     await db.orgMembership.update({
       where: { id: input.membershipId },
-      data: { labelEnc: input.labelEnc },
+      data: { label: input.label },
     });
 
     revalidatePath("/org/employees");
@@ -366,160 +371,6 @@ export const resetMemberPasswordAction = safeAction(
     });
 
     return { login: membership.user.login ?? "", tempPassword };
-  },
-);
-
-// ─────────────────────────── Ключ организации (L2) ───────────────────────────
-
-/**
- * Схема одной обёртки. Сервер принимает только непрозрачные строки: ни ключа,
- * ни ПИН-кода, ни recovery-кода он не видит и видеть не должен.
- */
-const wrapSchema = z.object({
-  wrappedKey: z.string().min(16).max(512),
-  kdfSalt: z.string().min(8).max(128),
-  kdfParams: z.object({
-    alg: z.literal("PBKDF2"),
-    hash: z.literal("SHA-256"),
-    iterations: z.number().int().min(100_000).max(5_000_000),
-  }),
-});
-
-/**
- * Первичная настройка шифрования имён: сохраняем обёртку под ПИН-код
- * ответственного и обёртку под recovery-код. Повторный вызов при уже настроенном
- * ключе запрещён — иначе новый ключ сделал бы нечитаемыми все прежние имена.
- */
-export const setupOrgKeyAction = safeAction(
-  {
-    schema: z.object({
-      orgId: z.string().optional(),
-      admin: wrapSchema,
-      recovery: wrapSchema,
-    }),
-    auth: "orgAdmin",
-  },
-  async (input) => {
-    const ctx = await writableCtx(input.orgId);
-    assertNotOwnerView(ctx);
-
-    const existing = await db.orgKeyWrap.count({ where: { orgId: ctx.orgId } });
-    if (existing > 0) {
-      throw new Error(
-        "Шифрование уже настроено. Чтобы сменить код, войдите с текущей и используйте смену кода.",
-      );
-    }
-
-    await db.$transaction([
-      db.orgKeyWrap.create({
-        data: {
-          orgId: ctx.orgId,
-          userId: ctx.userId,
-          kind: "admin",
-          wrappedKey: input.admin.wrappedKey,
-          kdfSalt: input.admin.kdfSalt,
-          kdfParams: input.admin.kdfParams,
-        },
-      }),
-      db.orgKeyWrap.create({
-        data: {
-          orgId: ctx.orgId,
-          userId: null,
-          kind: "recovery",
-          wrappedKey: input.recovery.wrappedKey,
-          kdfSalt: input.recovery.kdfSalt,
-          kdfParams: input.recovery.kdfParams,
-        },
-      }),
-    ]);
-
-    await writeAdminLog({
-      actorId: ctx.userId,
-      action: "org.key.setup",
-      meta: { orgId: ctx.orgId, kind: "setup" },
-    });
-
-    revalidatePath(`/org/${ctx.orgId}`);
-    return { ok: true };
-  },
-);
-
-/**
- * Сменить свою ПИН-код или выдать доступ к меткам другому ответственному.
- * Клиент уже развернул ключ и заново обернул его под новый код — сервер лишь
- * заменяет blob.
- */
-export const saveOrgKeyWrapAction = safeAction(
-  {
-    schema: z.object({
-      orgId: z.string().optional(),
-      /** Кому принадлежит обёртка: сам вызывающий или другой ORG_ADMIN. */
-      targetUserId: z.string().optional(),
-      kind: z.enum(["admin", "recovery"]),
-      wrap: wrapSchema,
-    }),
-    auth: "orgAdmin",
-  },
-  async (input) => {
-    const ctx = await writableCtx(input.orgId);
-    assertNotOwnerView(ctx);
-
-    const userId = input.kind === "recovery" ? null : (input.targetUserId ?? ctx.userId);
-
-    if (userId && userId !== ctx.userId) {
-      // Обёртку можно выдать только действующему ответственному этой организации.
-      const membership = await db.orgMembership.findFirst({
-        where: { orgId: ctx.orgId, userId, role: "ORG_ADMIN", isActive: true },
-        select: { orgId: true },
-      });
-      assertOrgScope(membership, ctx);
-    }
-
-    // Recovery-обёртка одна на организацию: unique-индекс с NULL в Postgres
-    // не помогает (NULL ≠ NULL), поэтому чистим прежнюю явно.
-    if (input.kind === "recovery") {
-      await db.orgKeyWrap.deleteMany({
-        where: { orgId: ctx.orgId, kind: "recovery" },
-      });
-      await db.orgKeyWrap.create({
-        data: {
-          orgId: ctx.orgId,
-          userId: null,
-          kind: "recovery",
-          wrappedKey: input.wrap.wrappedKey,
-          kdfSalt: input.wrap.kdfSalt,
-          kdfParams: input.wrap.kdfParams,
-        },
-      });
-    } else {
-      await db.orgKeyWrap.upsert({
-        where: {
-          orgId_userId_kind: { orgId: ctx.orgId, userId: userId!, kind: "admin" },
-        },
-        create: {
-          orgId: ctx.orgId,
-          userId,
-          kind: "admin",
-          wrappedKey: input.wrap.wrappedKey,
-          kdfSalt: input.wrap.kdfSalt,
-          kdfParams: input.wrap.kdfParams,
-        },
-        update: {
-          wrappedKey: input.wrap.wrappedKey,
-          kdfSalt: input.wrap.kdfSalt,
-          kdfParams: input.wrap.kdfParams,
-        },
-      });
-    }
-
-    await writeAdminLog({
-      actorId: ctx.userId,
-      action: "org.key.setup",
-      meta: { orgId: ctx.orgId, kind: input.kind, targetUserId: userId },
-    });
-
-    revalidatePath(`/org/${ctx.orgId}`);
-    return { ok: true };
   },
 );
 

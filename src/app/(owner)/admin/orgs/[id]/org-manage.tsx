@@ -8,7 +8,6 @@ import {
   removeOrgAdminAction,
   updateOrgAdminAction,
   resetOrgAdminPasswordAction,
-  resetOrgKeyAction,
   deleteOrgAction,
   deleteLicenseAction,
   grantLibraryAction,
@@ -195,7 +194,7 @@ export function DeleteOrgAction({
     <div className="max-w-sm rounded-xl border border-red-500/40 bg-red-500/[0.04] p-3 text-left">
       <p className="text-sm font-medium text-red-700">Удалить организацию целиком?</p>
       <p className="mt-1 text-xs text-foreground/70">
-        Уйдут лицензии, коды, ПИН-код имён и доступы. Учётки работников
+        Уйдут лицензии, коды, подписи и доступы. Учётки работников
         {learners > 0 ? ` (${learners})` : ""} удаляются вместе с прогрессом — кроме
         тех, кому уже выдан сертификат: такие сохраняются заблокированными, чтобы
         публичная проверка сертификата продолжала работать. Отменить нельзя.
@@ -224,87 +223,6 @@ export function DeleteOrgAction({
           Отмена
         </Button>
       </div>
-    </div>
-  );
-}
-
-/**
- * Сброс ПИН-кода имён. Именно сброс, а не «посмотреть»: владелец имён не видит
- * и после этой операции — они стираются, потому что без ключа расшифровать их
- * всё равно невозможно. Нужно, когда клиент потерял и ПИН, и код восстановления
- * и не может ни увидеть старые имена, ни завести новые.
- */
-export function ResetOrgKeyAction({
-  orgId,
-  configured,
-  named,
-}: {
-  orgId: string;
-  configured: boolean;
-  named: number;
-}) {
-  const router = useRouter();
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState<number | null>(null);
-
-  // Результат показываем раньше состояния: router.refresh() уже принёс
-  // configured=false, и без этого порядка ответ подменялся бы сухим «не задан».
-  if (done !== null) {
-    return (
-      <p className="text-sm text-emerald-700">
-        ПИН-код сброшен{done > 0 ? `, стёрто имён: ${done}` : ""}. Ответственный
-        задаст новый код при следующем входе в кабинет.
-      </p>
-    );
-  }
-
-  if (!configured) {
-    return (
-      <p className="text-sm text-foreground/55">
-        ПИН-код имён не задан — работники видны по кодам у всех.
-      </p>
-    );
-  }
-
-  return (
-    <div className="flex flex-col items-start gap-1.5">
-      <p className="text-sm text-foreground/70">
-        Имена заданы у {named} из работников организации. Прочитать их мы не можем —
-        только сбросить код целиком, и тогда имена будут стёрты безвозвратно.
-      </p>
-      <Button
-        variant="outline"
-        size="sm"
-        disabled={pending}
-        onClick={async () => {
-          if (
-            !window.confirm(
-              "Сбросить ПИН-код? Имена работников будут стёрты без возможности восстановления. Прогресс, доступы и коды не пострадают.",
-            )
-          )
-            return;
-          setPending(true);
-          setError(null);
-          try {
-            const res = await resetOrgKeyAction({ orgId });
-            if (res.ok) {
-              setDone(res.data.namesErased);
-              router.refresh();
-            } else {
-              setError(res.error);
-            }
-          } catch {
-            setError("Не удалось сбросить — попробуйте ещё раз.");
-          } finally {
-            setPending(false);
-          }
-        }}
-      >
-        <KeyRound className="mr-1.5 size-4" />
-        {pending ? "Сбрасываем…" : "Сбросить ПИН-код имён"}
-      </Button>
-      {error ? <span className="text-xs text-red-600">{error}</span> : null}
     </div>
   );
 }

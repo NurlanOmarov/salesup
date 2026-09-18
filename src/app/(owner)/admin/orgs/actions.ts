@@ -278,46 +278,6 @@ export const deleteOrgAction = safeAction(
 );
 
 /**
- * Сбросить ПИН-код имён работников. Владелец не получает доступа к именам —
- * он их уничтожает: обёртки ключа удаляются, а сами имена (labelEnc) стираются,
- * потому что без ключа это нечитаемый мусор, который уже никто не расшифрует.
- *
- * Нужно на случай «клиент забыл и ПИН, и код восстановления»: без сброса он не
- * может ни увидеть прежние имена, ни завести новые — setupOrgKeyAction
- * отказывает, пока обёртки существуют.
- */
-export const resetOrgKeyAction = safeAction(
-  {
-    schema: z.object({ orgId: z.string().min(1) }),
-    auth: "owner",
-  },
-  async ({ orgId }, { session }) => {
-    const [wraps, labelled] = await Promise.all([
-      db.orgKeyWrap.count({ where: { orgId } }),
-      db.orgMembership.count({ where: { orgId, labelEnc: { not: null } } }),
-    ]);
-    if (wraps === 0) throw new Error("У организации не задан ПИН-код имён");
-
-    await db.$transaction([
-      db.orgKeyWrap.deleteMany({ where: { orgId } }),
-      db.orgMembership.updateMany({
-        where: { orgId, labelEnc: { not: null } },
-        data: { labelEnc: null },
-      }),
-    ]);
-
-    await writeAdminLog({
-      actorId: session!.user.id,
-      action: "org.key.reset",
-      meta: { orgId, namesErased: labelled },
-    });
-
-    revalidatePath(`/admin/orgs/${orgId}`);
-    return { namesErased: labelled };
-  },
-);
-
-/**
  * Выдать лицензии сразу на все опубликованные курсы — модель «место в библиотеке»
  * (docs/PRICING-PLAN.md §8). Клиент покупает годовой доступ ко всей библиотеке, а
  * технически это набор лицензий: заводить их по одной руками бессмысленно.

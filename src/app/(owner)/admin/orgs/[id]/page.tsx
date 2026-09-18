@@ -21,7 +21,6 @@ import {
   OrgDeviceLimitControl,
   OrgStatusActions,
   ResetOrgAdminPassword,
-  ResetOrgKeyAction,
 } from "./org-manage";
 
 export const metadata: Metadata = {
@@ -36,8 +35,8 @@ export const dynamic = "force-dynamic";
  *
  * Порядок блоков = порядок работы: сначала видно состояние (места, активность),
  * потом продающие действия (лицензии), потом разовая настройка (ответственный),
- * потом наблюдение (работники, журнал). Персональных данных работников здесь нет
- * и быть не может: только условные обозначения вида acme-0042.
+ * потом наблюдение (работники, журнал). Работники — под кодами вида acme-0042 и
+ * подписями, которые им дал ответственный клиента (без ФИО, оферта п. 10.1).
  */
 export default async function OrgPage({
   params,
@@ -65,7 +64,7 @@ export default async function OrgPage({
   });
   if (!org) notFound();
 
-  const [overview, setup, members, courses, admins, keyWraps, namedMembers, logs] =
+  const [overview, setup, members, courses, admins, logs] =
     await Promise.all([
       getOrgOverview(org.id),
       getOrgSetupState(org.id),
@@ -83,8 +82,6 @@ export default async function OrgPage({
           user: { select: { id: true, email: true, name: true, mustChangePassword: true } },
         },
       }),
-      db.orgKeyWrap.count({ where: { orgId: org.id } }),
-      db.orgMembership.count({ where: { orgId: org.id, labelEnc: { not: null } } }),
       db.adminLog.findMany({
         where: { meta: { path: ["orgId"], equals: org.id } },
         orderBy: { createdAt: "desc" },
@@ -366,19 +363,6 @@ export default async function OrgPage({
             hasAdmins={admins.length > 0}
           />
         </div>
-
-        {/* Забытый ПИН — тупик для клиента: имена не показать и новые не завести.
-            Сбросить может только владелец, и это именно стирание, не просмотр. */}
-        <div className="mt-4 rounded-xl border border-foreground/10 bg-background p-4">
-          <h3 className="text-sm font-semibold">ПИН-код имён работников</h3>
-          <div className="mt-2">
-            <ResetOrgKeyAction
-              orgId={org.id}
-              configured={keyWraps > 0}
-              named={namedMembers}
-            />
-          </div>
-        </div>
       </section>
 
       {/* ── Работники ────────────────────────────────────────────────── */}
@@ -387,7 +371,7 @@ export default async function OrgPage({
           <h2 className="text-lg font-semibold">Работники</h2>
           <p className="inline-flex items-center gap-1.5 text-xs text-foreground/50">
             <ShieldCheck className="size-3.5" />
-            только условные обозначения — ФИО платформа не получает
+            коды и подписи, которые дал ответственный, — ФИО платформа не получает
           </p>
         </div>
 
@@ -422,6 +406,9 @@ export default async function OrgPage({
                       >
                         {m.login}
                       </Link>
+                      {m.label ? (
+                        <span className="block text-xs text-foreground/60">{m.label}</span>
+                      ) : null}
                       {!m.isActive ? (
                         <span className="ml-2 rounded bg-foreground/10 px-1.5 py-0.5 text-xs text-foreground/60">
                           отключён

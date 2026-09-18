@@ -210,9 +210,8 @@ export async function createMembers(input: {
   licenseIds: string[];
   groupId?: string | null;
   /**
-   * Зашифрованные в браузере метки работников — по одной на создаваемого,
-   * порядок совпадает с порядком выдачи логинов. Сервер видит только blob:
-   * имя шифруется ключом организации до отправки (docs/B2B-PLAN.md §5.2).
+   * Подписи работников (кличка, должность — что удобно ответственному) — по
+   * одной на создаваемого, порядок совпадает с порядком выдачи логинов.
    */
   labels?: (string | null)[];
   now?: Date;
@@ -264,7 +263,7 @@ export async function createMembers(input: {
           userId: user.id,
           role: "ORG_LEARNER",
           groupId: input.groupId ?? null,
-          labelEnc: input.labels?.[i] ?? null,
+          label: input.labels?.[i] ?? null,
         },
       });
 

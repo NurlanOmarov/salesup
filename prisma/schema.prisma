@@ -80,7 +80,6 @@ model User {
   llmUsage        LlmUsage[]
   cardReviews     CardReview[]
   orgMemberships  OrgMembership[]
-  orgKeyWraps     OrgKeyWrap[]
 }
 
 // Auth.js v5
@@ -1165,7 +1164,6 @@ model Organization {
   memberships  OrgMembership[]
   licenses     OrgLicense[]
   groups       OrgGroup[]
-  keyWraps     OrgKeyWrap[]
   liveSessions LiveSession[]
 
   @@index([status])
@@ -1184,18 +1182,18 @@ model OrgGroup {
   @@unique([orgId, name])
 }
 
-/// Членство в организации. Открытым текстом хранится только платформенный код
-/// (User.login). Кто за ним стоит — знает клиент; на платформе это лежит лишь
-/// в labelEnc, зашифрованном в браузере ключом организации (docs/B2B-PLAN.md §5.2).
+/// Членство в организации. Идентификатор работника — платформенный код
+/// (User.login); кто за ним стоит, знает клиент.
 model OrgMembership {
   id       String  @id @default(cuid())
   orgId    String
   userId   String
   role     OrgRole @default(ORG_LEARNER)
   groupId  String?
-  /// Условное обозначение работника, зашифрованное на клиенте (AES-GCM под ключом
-  /// организации). Сервер хранит непрозрачный blob и не может его прочитать.
-  labelEnc String?
+  /// Подпись, которую дал работнику ответственный клиента: кличка, должность,
+  /// «Кассир-2». Свободный текст до 60 знаков; ФИО сюда не вписывают (оферта
+  /// /offer-b2b, п. 10.1). Видна ответственному и владельцу платформы.
+  label    String?
   isActive Boolean @default(true)
 
   joinedAt      DateTime  @default(now())
@@ -1207,26 +1205,6 @@ model OrgMembership {
 
   @@unique([orgId, userId])
   @@index([orgId, isActive])
-}
-
-/// Обёртка ключа организации (L2). Случайный AES-256 ключ существует только в
-/// браузере; на сервере лежат его копии, зашифрованные под парольной фразой каждого
-/// ORG_ADMIN и под recovery-кодом. Ни ключ, ни фраза на сервер не передаются.
-model OrgKeyWrap {
-  id         String   @id @default(cuid())
-  orgId      String
-  userId     String? // владелец обёртки; null — обёртка под recovery-код
-  kind       String // 'admin' | 'recovery'
-  wrappedKey String // base64(AES-GCM(orgKey)) — iv включён в blob
-  kdfSalt    String // base64
-  kdfParams  Json // { alg: 'PBKDF2-SHA256', hash: 'SHA-256', iterations: 600000 }
-  createdAt  DateTime @default(now())
-
-  org  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  user User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([orgId, userId, kind])
-  @@index([orgId])
 }
 
 /// Лицензия = ОДИН курс × N мест × срок (единица лицензии — курс×человек).

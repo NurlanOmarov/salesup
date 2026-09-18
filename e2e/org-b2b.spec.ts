@@ -258,8 +258,8 @@ test("ответственный заводит работника, тот вх�
   expect(membership.user.login).toBe(`${ORG_SLUG}-0001`);
   // Пароль временный: при первом входе платформа заставит его сменить.
   expect(membership.user.mustChangePassword).toBe(true);
-  // Имён никто не вводил — метка пуста, а не «пустая строка под шифром».
-  expect(membership.labelEnc).toBeNull();
+  // Подписей никто не вводил — поле пустое, а не «пустая строка».
+  expect(membership.label).toBeNull();
 
   // Место выдано из лицензии — доступ обычным Enrollment (правило 1).
   const enrollment = await db.enrollment.findFirstOrThrow({
@@ -397,39 +397,28 @@ test("ответственный удаляет лишнюю учётку: ме�
   expect(org.loginSeq).toBe(maxSeq);
 });
 
-test("имена ведёт клиент: владелец платформы их не видит и ключ не заводит", async ({
+test("подписи ведёт ответственный: владелец видит их, но не правит", async ({
   page,
 }) => {
-  // Ключевая гарантия B2B-контура (оферта /offer-b2b п. 10): платформа не
-  // сопоставляет код с человеком. Если владелец сумеет завести ключ или
-  // прочитать имя, обещание перестаёт быть правдой — проверяем обе стороны.
   await login(page, ADMIN_EMAIL, ADMIN_PASS);
   await page.goto(`/org/${orgId}/employees`);
-  // Основной путь — прямо из строки работника: там же заводится ПИН, там же
-  // вводится имя. Полоска сверху остаётся, но начинать с неё не обязательно.
-  await page.getByRole("button", { name: "Добавить имя" }).first().click();
-  await page.getByPlaceholder("ПИН-код", { exact: true }).fill("2468");
-  await page.getByPlaceholder("Повторите").fill("2468");
-  await page.getByRole("button", { name: "Включить", exact: true }).click();
-  await page.getByRole("checkbox").check(); // код восстановления записан
-  await page.getByRole("button", { name: "Дальше" }).click();
-  await page.getByPlaceholder("Например, Александр").fill("Александр");
-  await page.getByRole("button", { name: "Сохранить имя" }).click();
-  await expect(page.getByText("Александр", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Подписать" }).first().click();
+  await page.getByPlaceholder("Например, Кассир-2").fill("Шустрый");
+  await page.getByRole("button", { name: "Сохранить подпись" }).click();
+  await expect(page.getByText("Шустрый", { exact: true })).toBeVisible();
 
-  // Сервер хранит только шифротекст.
   const stored = await db.orgMembership.findFirstOrThrow({
-    where: { orgId, labelEnc: { not: null } },
-    select: { labelEnc: true },
+    where: { orgId, label: { not: null } },
+    select: { label: true },
   });
-  expect(stored.labelEnc).not.toContain("Александр");
+  expect(stored.label).toBe("Шустрый");
 
   await login(page, OWNER_EMAIL, OWNER_PASS);
   await page.goto(`/org/${orgId}/employees`);
-  await expect(page.getByText("Работники показаны кодами")).toBeVisible();
-  await expect(page.getByText("Александр", { exact: true })).toBeHidden();
-  await expect(page.getByRole("button", { name: "Присвоить имена" })).toBeHidden();
-  await expect(page.getByRole("button", { name: /имя/ })).toBeHidden();
+  await expect(page.getByText("Шустрый", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Подписать" })).toBeHidden();
+  await page.goto(`/admin/orgs/${orgId}`);
+  await expect(page.getByText("Шустрый", { exact: true })).toBeVisible();
 });
 
 test("ответственный не может открыть кабинет чужой организации", async ({ page }) => {
@@ -463,30 +452,6 @@ test("заморозка организации закрывает доступ,
 
   const restored = await pageFetchStatus(page, `/api/video/key/${paidLessonId}`);
   expect(restored).toBe(200);
-});
-
-test("владелец сбрасывает ПИН-код имён: имена стираются, доступы целы", async ({
-  page,
-}) => {
-  // Клиент забыл и ПИН, и код восстановления. Единственный выход — сброс, и это
-  // именно стирание: прочитать имена владелец не может ни до, ни после.
-  const before = await db.orgMembership.count({
-    where: { orgId, labelEnc: { not: null } },
-  });
-  expect(before).toBeGreaterThan(0);
-
-  await login(page, OWNER_EMAIL, OWNER_PASS);
-  await page.goto(`/admin/orgs/${orgId}`);
-  page.once("dialog", (d) => void d.accept());
-  await page.getByRole("button", { name: "Сбросить ПИН-код имён" }).click();
-  await expect(page.getByText(/ПИН-код сброшен/)).toBeVisible();
-
-  expect(await db.orgKeyWrap.count({ where: { orgId } })).toBe(0);
-  expect(await db.orgMembership.count({ where: { orgId, labelEnc: { not: null } } })).toBe(0);
-  // Доступы к курсам сброс не трогает.
-  expect(
-    await db.enrollment.count({ where: { licenseId, revokedAt: null } }),
-  ).toBeGreaterThan(0);
 });
 
 test("отзыв места освобождает его в пуле лицензии", async ({ page }) => {

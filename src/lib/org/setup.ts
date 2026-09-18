@@ -26,12 +26,12 @@ export interface OrgSetupState {
   learners: number;
   /** Сколько работников уже вошли и сменили временный пароль. */
   learnersSignedIn: number;
-  /** Настроен ли ПИН-код имён работников (необязательный шаг). */
+  /** Подписан ли хоть один работник (необязательный шаг). */
   namesConfigured: boolean;
 }
 
 export async function getOrgSetupState(orgId: string): Promise<OrgSetupState> {
-  const [licenses, admins, adminsSignedIn, learners, learnersSignedIn, keyWraps] =
+  const [licenses, admins, adminsSignedIn, learners, learnersSignedIn, labelled] =
     await Promise.all([
       db.orgLicense.aggregate({
         where: { orgId },
@@ -56,7 +56,7 @@ export async function getOrgSetupState(orgId: string): Promise<OrgSetupState> {
           user: { mustChangePassword: false },
         },
       }),
-      db.orgKeyWrap.count({ where: { orgId } }),
+      db.orgMembership.count({ where: { orgId, label: { not: null } } }),
     ]);
 
   return {
@@ -66,7 +66,7 @@ export async function getOrgSetupState(orgId: string): Promise<OrgSetupState> {
     adminSignedIn: adminsSignedIn > 0,
     learners,
     learnersSignedIn,
-    namesConfigured: keyWraps > 0,
+    namesConfigured: labelled > 0,
   };
 }
 
@@ -166,7 +166,7 @@ export function orgAdminSetupSteps(state: OrgSetupState, orgId: string): SetupSt
     {
       key: "members",
       title: "Заведите работников",
-      body: "Укажите, сколько человек подключаете и какие курсы им открыть. Платформа выдаст логины вида org-0001 и временные пароли — по одному на сотрудника. При желании тут же подпишите учётки именами, чтобы не перепутать, кому какой логин достался.",
+      body: "Укажите, сколько человек подключаете и какие курсы им открыть. Платформа выдаст логины вида org-0001 и временные пароли — по одному на сотрудника. При желании тут же подпишите учётки, чтобы не перепутать, кому какой логин достался.",
       done: state.learners > 0,
       href: `${base}/employees`,
       linkLabel: "Завести работников",
@@ -181,8 +181,8 @@ export function orgAdminSetupSteps(state: OrgSetupState, orgId: string): SetupSt
     },
     {
       key: "names",
-      title: "Подпишите работников именами",
-      body: "По желанию. Платформа знает сотрудников только по логинам вида org-0001. Вы можете присвоить им имена: они шифруются в вашем браузере ПИН-кодом, которого у нас нет.",
+      title: "Подпишите работников",
+      body: "По желанию. Платформа знает сотрудников только по логинам вида org-0001. Чтобы не путать, кто есть кто, подпишите их как вам удобно — кличкой, должностью, «Кассир-2». ФИО не вписывайте.",
       done: state.namesConfigured,
       href: `${base}/employees`,
       linkLabel: "К работникам",

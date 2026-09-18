@@ -252,8 +252,8 @@ export interface MemberRow {
   userId: string;
   /** Условное обозначение работника: acme-0042. Единственный открытый идентификатор. */
   login: string;
-  /** Метка клиента, зашифрованная в браузере. Сервер её не читает. */
-  labelEnc: string | null;
+  /** Подпись, которую дал работнику ответственный клиента (кличка, должность). */
+  label: string | null;
   role: OrgRole;
   groupName: string | null;
   isActive: boolean;
@@ -288,7 +288,7 @@ export async function getOrgMembers(orgId: string): Promise<MemberRow[]> {
       id: true,
       userId: true,
       role: true,
-      labelEnc: true,
+      label: true,
       isActive: true,
       joinedAt: true,
       group: { select: { name: true } },
@@ -397,7 +397,7 @@ export async function getOrgMembers(orgId: string): Promise<MemberRow[]> {
       membershipId: m.id,
       userId: m.userId,
       login: m.user.login ?? m.user.email ?? "—",
-      labelEnc: m.labelEnc,
+      label: m.label,
       role: m.role,
       groupName: m.group?.name ?? null,
       isActive: m.isActive,
