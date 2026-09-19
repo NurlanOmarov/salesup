@@ -112,6 +112,41 @@ export const handlers: Record<string, JobHandler> = {
     log.info({ orgId: orgId ?? "all", ...result }, "org.sync-access выполнена");
   },
 
+  // B2B: письмо клиенту-организации со всеми доступами (ответственный + работники).
+  // Пароли генерируются здесь и нигде не хранятся, поэтому в payload только адреса и
+  // идентификаторы. Повторы отключены (maxAttempts=1): отправка идёт по кнопке
+  // владельца, и при сбое он видит красный статус и жмёт ещё раз; о провале
+  // сообщаем в Telegram, чтобы не зависеть от того, откроет ли он карточку.
+  "org.send-credentials": async (payload) => {
+    const { orgId, to, actorId } = payload as { orgId?: string; to?: string; actorId?: string };
+    if (!orgId || !to || !actorId) throw new Error("org.send-credentials: нет orgId/to/actorId");
+    const { sendOrgCredentials, notifyCredentialsFailed } = await import("@/lib/org/credentials.js");
+    try {
+      await sendOrgCredentials({ orgId, to, actorId });
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      await notifyCredentialsFailed(orgId, reason);
+      throw error;
+    }
+  },
+
+  // Самообслуживание: письмо со ссылкой сброса пароля. Токен создаётся в обработчике
+  // и в payload не попадает — в очереди только адрес и домен витрины.
+  "auth.send-reset": async (payload) => {
+    const { email, siteUrl } = (payload ?? {}) as { email?: string; siteUrl?: string };
+    if (!email) throw new Error("auth.send-reset: нет email");
+    const { sendPasswordResetEmail } = await import("@/lib/auth/send-reset.js");
+    await sendPasswordResetEmail({ email, siteUrl });
+  },
+
+  // Уведомление «пароль изменён» после сброса по ссылке.
+  "auth.password-changed": async (payload) => {
+    const { email } = (payload ?? {}) as { email?: string };
+    if (!email) throw new Error("auth.password-changed: нет email");
+    const { sendPasswordChangedEmail } = await import("@/lib/auth/send-reset.js");
+    await sendPasswordChangedEmail(email);
+  },
+
   // Пустая задача — для проверки воркера/тестов.
   noop: async () => {},
 };

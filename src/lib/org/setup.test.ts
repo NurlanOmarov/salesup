@@ -45,6 +45,16 @@ describe("шаги запуска клиента", () => {
     expect(signedIn.find((s) => s.key === "handover")?.done).toBe(true);
   });
 
+  it("шаг «отправить доступы» закрывается отправкой письма, даже если ответственный ещё не входил", () => {
+    const state = { ...EMPTY, licenses: 1, admins: 1, learners: 2 };
+    const before = ownerSetupSteps(state, "org1", { hasRequisites: false });
+    expect(before.find((s) => s.key === "handover")?.done).toBe(false);
+
+    const after = ownerSetupSteps(state, "org1", { hasRequisites: false, credentialsDelivered: true });
+    expect(after.find((s) => s.key === "handover")?.done).toBe(true);
+    expect(after.find((s) => s.key === "handover")?.href).toBe("#delivery");
+  });
+
   it("у запущенного клиента все обязательные шаги владельца закрыты", () => {
     const steps = ownerSetupSteps(READY, "org1", { hasRequisites: true });
     expect(steps.filter((s) => !s.optional).every((s) => s.done)).toBe(true);

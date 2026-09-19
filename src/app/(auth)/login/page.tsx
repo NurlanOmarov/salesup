@@ -10,14 +10,18 @@ export const metadata: Metadata = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ callbackUrl?: string }>;
+  searchParams: Promise<{ callbackUrl?: string; reset?: string }>;
 }) {
-  const { callbackUrl } = await searchParams;
+  const { callbackUrl, reset } = await searchParams;
   // «Забыли пароль» → контакт владельца из SeoSettings (правится в /admin/seo).
   const contacts = await getSupportContacts();
   const supportContact = contacts.whatsapp || contacts.telegram || undefined;
 
   return (
-    <LoginForm callbackUrl={callbackUrl} supportContact={supportContact} />
+    <LoginForm
+      callbackUrl={callbackUrl}
+      supportContact={supportContact}
+      passwordChanged={reset === "1"}
+    />
   );
 }

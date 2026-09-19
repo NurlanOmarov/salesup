@@ -251,6 +251,7 @@ model Course {
   orgLicenses  OrgLicense[]
   liveSessions LiveSession[]
   seoLandings  SeoLanding[]
+  incomes      Income[]
 
   @@index([status, type])
 }
@@ -1151,6 +1152,10 @@ model Organization {
   /// сообщения вели на «свой» домен клиента, а не на канонический .by.
   site         String?
   status       OrgStatus @default(ACTIVE)
+  /// Платный клиент или пилот (пригласили потестить). Доступом не управляет —
+  /// это пометка для владельца и статистики; запись поступления от организации
+  /// переводит её в PAID автоматически (lib/finance).
+  billing      OrgBilling @default(PILOT)
   /// Лимит устройств для работников клиента: null = стандартный (DEVICE_LIMIT),
   /// 0 = безлимит, N = N устройств. Персональный лимит работника (User.deviceLimit)
   /// перекрывает этот; см. lib/antishare/heuristics.resolveDeviceLimit.
@@ -1158,6 +1163,12 @@ model Organization {
   /// Счётчик выданных логинов: acme-0001, acme-0002… Инкрементируется в транзакции
   /// самозаписи — гарантирует уникальность без гонок.
   loginSeq     Int       @default(0)
+  /// Когда владелец последний раз отправил клиенту письмо с доступами (учётка
+  /// ответственного + учётки работников) и на какой адрес. Нужно, чтобы владелец
+  /// видел, что клиенту доступы ушли, а не полагался на память. Адрес — контакт
+  /// ответственного (реквизит клиента, оферта п. 10.7), пароли здесь не хранятся.
+  credentialsSentAt DateTime?
+  credentialsSentTo String?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
@@ -1165,8 +1176,14 @@ model Organization {
   licenses     OrgLicense[]
   groups       OrgGroup[]
   liveSessions LiveSession[]
+  incomes      Income[]
 
   @@index([status])
+}
+
+enum OrgBilling {
+  PAID // оплатил лицензии
+  PILOT // пригласили потестить бесплатно
 }
 
 /// Подразделение/филиал — ось группировки отчётности (оферта, п. 8.1). Название
@@ -1235,6 +1252,89 @@ model OrgLicense {
 
   @@unique([orgId, courseId])
   @@index([orgId])
+}
+
+// ─────────────────────────── ДОХОДЫ И ГОНОРАРЫ ───────────────────────────
+//
+// Учёт фактически полученных денег (B2B и B2C) — ведёт владелец вручную,
+// с платёжными модулями не связан. Раскладка одного поступления:
+//   сумма − налоги и сборы (по ставке страны покупателя) = чистая прибыль;
+//   каждый совладелец получает свой процент от чистой; автор курса — остаток.
+// Все суммы — в минорных единицах валюты поступления (как priceTiyn: 1 ед. = 100).
+// Получатели записаны инициалами («Н.», «В.») — полные имена не храним.
+
+enum SaleChannel {
+  B2B
+  B2C
+}
+
+enum PayeeRole {
+  CO_OWNER // процент от чистой прибыли
+  AUTHOR // остаток чистой прибыли после совладельцев
+}
+
+/// Получатель гонорара.
+model Payee {
+  id        String    @id @default(cuid())
+  label     String    @unique // инициал: «Н.», «В.»
+  role      PayeeRole
+  /// Доля от чистой прибыли в сотых процента (2000 = 20%). Только для CO_OWNER.
+  shareBp   Int?
+  isActive  Boolean   @default(true)
+  sortOrder Int       @default(0)
+  createdAt DateTime  @default(now())
+
+  shares IncomeShare[]
+}
+
+/// Ставка налогов и сборов по стране покупателя (KZ/BY/RU/UZ, как Organization.site).
+model TaxRate {
+  country   String   @id
+  /// Процент × 1000: 11364 = 11,364%, 25000 = 25%.
+  rateMilli Int
+  updatedAt DateTime @updatedAt
+}
+
+/// Поступление денег. Ставка и доли фиксируются на момент записи — правка
+/// ставок потом не переписывает прошлые выплаты.
+model Income {
+  id          String      @id @default(cuid())
+  receivedAt  DateTime    @db.Date // дата получения оплаты
+  channel     SaleChannel
+  country     String // страна покупателя — от неё ставка налогов
+  currency    String // KZT / BYN / RUB / UZS
+  grossTiyn   Int // получено
+  rateMilli   Int // ставка на момент записи
+  taxTiyn     Int // налоги и сборы (по ставке или поправленные вручную)
+  netTiyn     Int // чистая прибыль = gross − tax
+  orgId       String? // B2B: кто купил
+  courseId    String?
+  /// B2C: номер заказа или пометка. Без ФИО и контактов покупателя (правило 9).
+  buyerRef    String?
+  note        String?
+  createdById String
+  createdAt   DateTime    @default(now())
+
+  org    Organization? @relation(fields: [orgId], references: [id], onDelete: SetNull)
+  course Course?       @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  shares IncomeShare[]
+
+  @@index([receivedAt])
+  @@index([orgId])
+}
+
+model IncomeShare {
+  id         String @id @default(cuid())
+  incomeId   String
+  payeeId    String
+  shareBp    Int // фактическая доля от чистой, сотые процента
+  amountTiyn Int
+
+  income Income @relation(fields: [incomeId], references: [id], onDelete: Cascade)
+  payee  Payee  @relation(fields: [payeeId], references: [id], onDelete: Restrict)
+
+  @@unique([incomeId, payeeId])
+  @@index([payeeId])
 }
 
 // ─────────────────────────── ЗАЯВКИ / АДМИН-ЖУРНАЛ / БЕЗОПАСНОСТЬ (v1.2) ───────────────────────────

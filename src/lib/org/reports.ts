@@ -85,6 +85,7 @@ export interface OrgListRow {
   name: string;
   slug: string;
   status: string;
+  billing: "PAID" | "PILOT";
   contactEmail: string | null;
   members: number;
   admins: number;
@@ -117,6 +118,7 @@ export async function getOrgsList(): Promise<OrgListRow[]> {
       name: true,
       slug: true,
       status: true,
+      billing: true,
       contactEmail: true,
       createdAt: true,
       memberships: { select: { role: true, isActive: true } },
@@ -151,6 +153,7 @@ export async function getOrgsList(): Promise<OrgListRow[]> {
       name: o.name,
       slug: o.slug,
       status: o.status,
+      billing: o.billing,
       contactEmail: o.contactEmail,
       members: o.memberships.filter((m) => m.isActive && m.role === "ORG_LEARNER").length,
       admins: o.memberships.filter((m) => m.isActive && m.role === "ORG_ADMIN").length,

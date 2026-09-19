@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { computeSeatExpiry, computeSeatUsage, formatLogin } from "@/lib/org/seats";
+import { planProvision } from "@/lib/org/provision";
 import { hashPassword } from "@/lib/auth/password";
 import { generateTempPassword } from "@/lib/auth/temp-password";
 
@@ -276,6 +277,101 @@ export async function createMembers(input: {
   }
 
   return created;
+}
+
+export interface ProvisionResult {
+  /** Создано новых учёток. */
+  created: number;
+  /** Мест выдано существующим работникам (без новых учёток). */
+  reused: number;
+  /** Всего занято мест этим вызовом. */
+  seats: number;
+}
+
+/**
+ * Автоматически заполнить места лицензий работниками — при выдаче лицензии.
+ *
+ * Работников без пароля: у созданной учётки `passwordHash = null`, войти в неё
+ * нельзя, пока владелец не отправит клиенту доступы (lib/org/credentials). Так
+ * пароли не хранятся нигде в открытом виде и не «висят» в интерфейсе, пока их
+ * никто не передал.
+ *
+ * Места каждой лицензии ограничены её свободным остатком: даже если вызывающий
+ * ошибся со счётом (или задача повторилась после сбоя), лицензия не уйдёт в минус.
+ */
+export async function provisionSeats(input: {
+  orgId: string;
+  requests: { licenseId: string; count: number }[];
+  now?: Date;
+}): Promise<ProvisionResult> {
+  const now = input.now ?? new Date();
+
+  const licenses = await db.orgLicense.findMany({
+    where: { orgId: input.orgId, id: { in: input.requests.map((r) => r.licenseId) } },
+    select: { id: true, courseId: true, seatsTotal: true },
+  });
+  const byId = new Map(licenses.map((l) => [l.id, l]));
+
+  const planned = [];
+  for (const request of input.requests) {
+    const license = byId.get(request.licenseId);
+    if (!license) throw new SeatError("Лицензия не найдена");
+    const used = await db.enrollment.count({
+      where: { licenseId: license.id, revokedAt: null },
+    });
+    const free = Math.max(0, license.seatsTotal - used);
+    planned.push({
+      licenseId: license.id,
+      courseId: license.courseId,
+      count: Math.min(request.count, free),
+    });
+  }
+
+  const members = await db.orgMembership.findMany({
+    where: { orgId: input.orgId, role: "ORG_LEARNER", isActive: true },
+    select: {
+      userId: true,
+      user: { select: { enrollments: { select: { courseId: true } } } },
+    },
+    orderBy: { joinedAt: "asc" },
+  });
+  const plan = planProvision(
+    members.map((m) => ({
+      userId: m.userId,
+      courseIds: new Set(m.user.enrollments.map((e) => e.courseId)),
+    })),
+    planned,
+  );
+
+  let seats = 0;
+  for (const item of plan.reuse) {
+    await db.$transaction(async (tx) => {
+      for (const licenseId of item.licenseIds) {
+        await grantSeat({ orgId: input.orgId, userId: item.userId, licenseId, now, tx });
+      }
+    });
+    seats += item.licenseIds.length;
+  }
+
+  for (const item of plan.fresh) {
+    const login = await allocateLogin(input.orgId);
+    await db.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        // ПДн не собираем: ни e-mail, ни имени, ни телефона. Пароля нет до отправки доступов.
+        data: { login, role: "STUDENT", passwordHash: null, mustChangePassword: true },
+        select: { id: true },
+      });
+      await tx.orgMembership.create({
+        data: { orgId: input.orgId, userId: user.id, role: "ORG_LEARNER" },
+      });
+      for (const licenseId of item.licenseIds) {
+        await grantSeat({ orgId: input.orgId, userId: user.id, licenseId, now, tx });
+      }
+    });
+    seats += item.licenseIds.length;
+  }
+
+  return { created: plan.fresh.length, reused: seats - plan.fresh.reduce((n, f) => n + f.licenseIds.length, 0), seats };
 }
 
 /**

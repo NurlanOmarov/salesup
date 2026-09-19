@@ -27,6 +27,17 @@ export function OrgStatusBadge({ status }: { status: string }) {
   );
 }
 
+/** Платный клиент или пилот, которого пригласили потестить. */
+export function OrgBillingBadge({ billing }: { billing: string }) {
+  return billing === "PAID" ? (
+    <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-700">
+      Платный
+    </span>
+  ) : (
+    <span className="rounded-full bg-sky-500/10 px-2 py-0.5 text-xs text-sky-700">Пилот</span>
+  );
+}
+
 /**
  * Занятость мест. Цвет — сигнал владельцу: пустая лицензия (клиент купил и не
  * пользуется) грозит непродлением так же, как и полностью занятая — недопродажей.

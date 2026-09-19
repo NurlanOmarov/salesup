@@ -7,7 +7,10 @@ import { db } from "@/lib/db";
 import { SITE_HOSTS } from "@/lib/seo/site-hosts";
 import { writeAdminLog } from "@/lib/admin/log";
 import { ACCESS_DURATIONS, computeExpiry } from "@/lib/admin/enrollment";
-import { createOrgAdmin } from "@/lib/org/service";
+import { createOrgAdmin, provisionSeats, type ProvisionResult } from "@/lib/org/service";
+import { seatsToProvision } from "@/lib/org/provision";
+import { getOrgDeliveryState, SEND_CREDENTIALS_JOB } from "@/lib/org/delivery";
+import { env } from "@/env";
 import { getOrgProgressSnapshot } from "@/lib/org/reports";
 import { DEVICE_LIMIT } from "@/lib/antishare/limits";
 import { generateTempPassword } from "@/lib/auth/temp-password";
@@ -38,6 +41,49 @@ async function uniqueSlug(base: string): Promise<string> {
     if (!taken) return candidate;
   }
   throw new Error("Не удалось подобрать код организации");
+}
+
+
+/**
+ * Кабинеты под выданные места создаются сразу, без отдельного шага: лицензия на
+ * 10 мест → 10 учёток работников (`acme-0001`…`acme-0010`). Пароли на этом этапе
+ * НЕ выдаются — их не видит никто, пока владелец не нажмёт «Отправить клиенту»
+ * (lib/org/credentials): так они не хранятся и не светятся в интерфейсе.
+ *
+ * Если у клиента указан контактный e-mail и ответственного ещё нет, ответственный
+ * заводится из этого адреса: письму с доступами нужна его учётка, а контактный
+ * адрес владелец и так вписал как «e-mail ответственного представителя».
+ */
+async function provisionAfterLicense(
+  orgId: string,
+  actorId: string,
+  requests: { licenseId: string; count: number }[],
+): Promise<ProvisionResult & { adminCreated: boolean }> {
+  const result = await provisionSeats({ orgId, requests });
+
+  let adminCreated = false;
+  const org = await db.organization.findUnique({
+    where: { id: orgId },
+    select: { contactEmail: true },
+  });
+  const admins = await db.orgMembership.count({ where: { orgId, role: "ORG_ADMIN" } });
+  if (admins === 0 && org?.contactEmail) {
+    try {
+      await createOrgAdmin({ orgId, email: org.contactEmail });
+      adminCreated = true;
+    } catch {
+      // Например, контакт — e-mail владельца платформы: ответственного назначат руками.
+    }
+  }
+
+  if (result.seats > 0 || adminCreated) {
+    await writeAdminLog({
+      actorId,
+      action: "org.provision",
+      meta: { orgId, created: result.created, reused: result.reused, adminCreated },
+    });
+  }
+  return { ...result, adminCreated };
 }
 
 /** Создать организацию. Лицензии и ответственного добавляют следующим шагом. */
@@ -160,6 +206,32 @@ export const setOrgStatusAction = safeAction(
 
     revalidatePath(`/admin/orgs/${input.orgId}`);
     revalidatePath("/admin/orgs");
+    return { ok: true };
+  },
+);
+
+/** Пометка «платный клиент / пилот». На доступ работников не влияет. */
+export const setOrgBillingAction = safeAction(
+  {
+    schema: z.object({
+      orgId: z.string().min(1),
+      billing: z.enum(["PAID", "PILOT"]),
+    }),
+    auth: "owner",
+  },
+  async (input, { session }) => {
+    await db.organization.update({
+      where: { id: input.orgId },
+      data: { billing: input.billing },
+    });
+    await writeAdminLog({
+      actorId: session!.user.id,
+      action: "org.billing",
+      meta: { orgId: input.orgId, billing: input.billing },
+    });
+    revalidatePath(`/admin/orgs/${input.orgId}`);
+    revalidatePath("/admin/orgs");
+    revalidatePath("/admin/finance");
     return { ok: true };
   },
 );
@@ -306,12 +378,14 @@ export const grantLibraryAction = safeAction(
 
     const now = new Date();
     const licenseIds: string[] = [];
+    const previousSeats: (number | null)[] = [];
 
     for (const [index, course] of courses.entries()) {
       const existing = await db.orgLicense.findUnique({
         where: { orgId_courseId: { orgId: input.orgId, courseId: course.id } },
-        select: { id: true, startsAt: true },
+        select: { id: true, startsAt: true, seatsTotal: true },
       });
+      previousSeats.push(existing?.seatsTotal ?? null);
       const startsAt = existing?.startsAt ?? now;
       const expiresAt = computeExpiry(input.accessDuration, startsAt);
       const price = index === 0 ? (input.pricePerSeatTiyn ?? null) : 0;
@@ -342,6 +416,18 @@ export const grantLibraryAction = safeAction(
 
     await enqueue("org.sync-access", { orgId: input.orgId });
 
+    const provisioned = await provisionAfterLicense(
+      input.orgId,
+      session!.user.id,
+      licenseIds.map((licenseId, i) => ({
+        licenseId,
+        count: seatsToProvision({
+          previousSeatsTotal: previousSeats[i] ?? null,
+          seatsTotal: input.seatsTotal,
+        }),
+      })),
+    );
+
     await writeAdminLog({
       actorId: session!.user.id,
       action: "org.license.grant",
@@ -356,7 +442,7 @@ export const grantLibraryAction = safeAction(
     });
 
     revalidatePath(`/admin/orgs/${input.orgId}`);
-    return { licenses: licenseIds.length };
+    return { licenses: licenseIds.length, provisioned };
   },
 );
 
@@ -475,6 +561,16 @@ export const grantLicenseAction = safeAction(
     // Срок мог измениться — подтягиваем сроки уже выданных мест.
     await enqueue("org.sync-access", { orgId: input.orgId });
 
+    const provisioned = await provisionAfterLicense(input.orgId, session!.user.id, [
+      {
+        licenseId: license.id,
+        count: seatsToProvision({
+          previousSeatsTotal: existing?.seatsTotal ?? null,
+          seatsTotal: input.seatsTotal,
+        }),
+      },
+    ]);
+
     await writeAdminLog({
       actorId: session!.user.id,
       action: existing ? "org.license.update" : "org.license.grant",
@@ -489,7 +585,7 @@ export const grantLicenseAction = safeAction(
     });
 
     revalidatePath(`/admin/orgs/${input.orgId}`);
-    return { licenseId: license.id };
+    return { licenseId: license.id, provisioned };
   },
 );
 
@@ -801,5 +897,53 @@ export const resetOrgDevicesAction = safeAction(
 
     revalidatePath(`/admin/orgs/${orgId}`);
     return { cleared: count };
+  },
+);
+
+/**
+ * Отправить клиенту письмо со всеми доступами — кнопка «Завершить настройку и
+ * отправить». Письмо уходит фоновой задачей (SMTP есть только у воркера), итог
+ * виден в карточке организации и приходит владельцу в Telegram.
+ *
+ * Отправка выдаёт НОВЫЕ временные пароли всем, кто ещё не входил: старые, если
+ * их кому-то уже передавали, перестанут работать. Поэтому кнопка просит
+ * подтверждение, а число затронутых учёток показывается заранее.
+ */
+export const sendOrgCredentialsAction = safeAction(
+  {
+    schema: z.object({
+      orgId: z.string().min(1),
+      to: z.string().trim().email("Введите корректный e-mail получателя"),
+    }),
+    auth: "owner",
+  },
+  async (input, { session }) => {
+    if (!env.EMAIL_ENABLED) {
+      throw new Error("Почта выключена (EMAIL_ENABLED=false): письмо отправить нельзя");
+    }
+
+    const state = await getOrgDeliveryState(input.orgId);
+    if (state.status === "not-ready") {
+      throw new Error(`Пока нечего отправлять: не хватает — ${state.missing.join(", ")}`);
+    }
+    if (state.status === "sending") {
+      throw new Error("Письмо уже отправляется — дождитесь результата");
+    }
+
+    // Адрес получателя запоминаем как контакт клиента, если своего у него не было.
+    await db.organization.updateMany({
+      where: { id: input.orgId, contactEmail: null },
+      data: { contactEmail: input.to },
+    });
+
+    await enqueue(
+      SEND_CREDENTIALS_JOB,
+      { orgId: input.orgId, to: input.to, actorId: session!.user.id },
+      { maxAttempts: 1 },
+    );
+
+    revalidatePath(`/admin/orgs/${input.orgId}`);
+    revalidatePath("/admin/orgs");
+    return { queued: true };
   },
 );

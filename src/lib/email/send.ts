@@ -18,6 +18,8 @@ export interface EmailMessage {
   /** Куда отвечать (например, контакт заявителя). From всегда наш — Zoho и другие
    *  провайдеры отклоняют письмо, если отправитель не совпадает с учёткой SMTP. */
   replyTo?: string;
+  /** Вложения (например, CSV со списком учёток): содержимое — строка в UTF-8. */
+  attachments?: { filename: string; content: string; contentType: string }[];
 }
 
 let cached: Transporter | null = null;
@@ -53,6 +55,7 @@ export async function sendEmail(msg: EmailMessage): Promise<void> {
     text: msg.text,
     html: msg.html,
     replyTo: msg.replyTo,
+    attachments: msg.attachments,
   });
   log.info({ subject: msg.subject }, "email.send: письмо отправлено");
 }

@@ -64,6 +64,13 @@ export type AdminAction =
   | "org.group.delete"
   | "org.key.setup"
   | "org.key.reset"
+  | "org.provision" // автосоздание кабинетов работников при выдаче лицензии
+  | "org.credentials.send" // письмо клиенту с логинами и паролями ответственного и работников
+  | "org.billing" // пометка «платный клиент / пилот»
+  // Учёт доходов и гонораров (/admin/finance). meta.incomeId — всегда.
+  | "finance.income.create"
+  | "finance.income.delete"
+  | "finance.settings.update"
   // Живые сессии с тренером (docs/LIVE-SESSIONS-PLAN.md). meta.sessionId и
   // meta.orgId проставляются всегда — по ним разбираются споры «кто перенёс».
   | "live.session.plan"

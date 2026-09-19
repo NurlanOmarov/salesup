@@ -52,6 +52,7 @@ const GROUPS: { label: string; items: NavItem[] }[] = [
   {
     label: "Деньги",
     items: [
+      { href: "/admin/finance", label: "Доходы", hint: "Оплаты, налоги и гонорары" },
       { href: "/admin/pricing", label: "Тарифы", hint: "Цены курсов и подписки" },
       { href: "/admin/usage", label: "Расходы LLM", hint: "Лимиты и стоимость AI" },
     ],

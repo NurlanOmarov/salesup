@@ -6,11 +6,16 @@ import { siteOriginByCode } from "@/lib/seo/site-hosts";
 import { db } from "@/lib/db";
 import { getOrgMembers, getOrgOverview } from "@/lib/org/reports";
 import { getOrgSetupState, ownerSetupSteps } from "@/lib/org/setup";
+import { getOrgDeliveryState } from "@/lib/org/delivery";
+import { env } from "@/env";
+import { DeliveryPanel } from "./delivery-panel";
 import { ACCESS_DURATION_LABELS } from "@/lib/admin/enrollment";
 import { SetupChecklist } from "@/components/setup-checklist";
-import { OrgStatusBadge, ProgressBar, relativeDays, SeatsBar } from "../org-ui";
+import { OrgBillingBadge, OrgStatusBadge, ProgressBar, relativeDays, SeatsBar } from "../org-ui";
+import { formatMoney } from "@/lib/finance/split";
 import {
   AddOrgAdminPanel,
+  OrgBillingToggle,
   DeleteOrgAction,
   EditOrgAdmin,
   LicenseForm,
@@ -53,9 +58,11 @@ export default async function OrgPage({
       slug: true,
       unp: true,
       status: true,
+      billing: true,
       contactEmail: true,
       contactNote: true,
       note: true,
+      incomes: { select: { grossTiyn: true, currency: true } },
       site: true,
       deviceLimit: true,
       createdAt: true,
@@ -64,10 +71,11 @@ export default async function OrgPage({
   });
   if (!org) notFound();
 
-  const [overview, setup, members, courses, admins, logs] =
+  const [overview, setup, delivery, members, courses, admins, logs] =
     await Promise.all([
       getOrgOverview(org.id),
       getOrgSetupState(org.id),
+      getOrgDeliveryState(org.id),
       getOrgMembers(org.id),
       db.course.findMany({
         where: { status: "PUBLISHED" },
@@ -123,12 +131,27 @@ export default async function OrgPage({
           <div className="flex flex-wrap items-center gap-2.5">
             <h1 className="text-2xl font-bold">{org.name}</h1>
             <OrgStatusBadge status={org.status} />
+            <OrgBillingBadge billing={org.billing} />
           </div>
           <p className="mt-1 text-sm text-foreground/55">
             Код <span className="font-mono text-foreground/80">{org.slug}</span>
             {org.unp ? ` · УНП ${org.unp}` : ""} · заведена{" "}
             {org.createdAt.toLocaleDateString("ru-RU")} · выдано логинов:{" "}
             {org.loginSeq}
+          </p>
+          <p className="mt-1 text-sm text-foreground/55">
+            {org.incomes.length > 0 ? (
+              <>
+                Оплачено:{" "}
+                {paidByCurrency(org.incomes)} ·{" "}
+              </>
+            ) : null}
+            <Link
+              href={`/admin/finance?org=${org.id}#new`}
+              className="text-amber-700 hover:underline"
+            >
+              записать поступление
+            </Link>
           </p>
         </div>
         <div className="flex flex-col items-end gap-2">
@@ -139,6 +162,7 @@ export default async function OrgPage({
             <ExternalLink className="size-4" />
             Открыть кабинет клиента
           </Link>
+          <OrgBillingToggle orgId={org.id} billing={org.billing} />
           <OrgStatusActions orgId={org.id} status={org.status} />
           <DeleteOrgAction
             orgId={org.id}
@@ -167,9 +191,30 @@ export default async function OrgPage({
           intro="Порядок действий, чтобы люди начали учиться. Шаги закрываются сами — в том числе если что-то сделал сам клиент в своём кабинете."
           steps={ownerSetupSteps(setup, org.id, {
             hasRequisites: Boolean(org.unp || org.contactEmail || org.contactNote),
+            credentialsDelivered: delivery.status === "sent",
           })}
           doneTitle="Клиент запущен: лицензия выдана, ответственный работает, работники подключаются"
           doneBody="Дальше всё идёт без вас: коды раздаёт ответственный, прогресс виден ниже и в отчётах кабинета клиента."
+        />
+      </div>
+
+      {/* ── Доступы клиенту: отправлены или нет ──────────────────────── */}
+      <div className="mt-4">
+        <DeliveryPanel
+          orgId={org.id}
+          orgName={org.name}
+          status={delivery.status}
+          missing={delivery.missing}
+          admins={delivery.admins}
+          learners={delivery.learners}
+          unissued={delivery.unissued}
+          awaitingFirstLogin={delivery.awaitingFirstLogin}
+          signedIn={delivery.signedIn}
+          sentAt={delivery.sentAt?.toISOString() ?? null}
+          sentTo={delivery.sentTo}
+          lastError={delivery.lastError}
+          suggestedRecipient={delivery.suggestedRecipient}
+          emailEnabled={env.EMAIL_ENABLED}
         />
       </div>
 
@@ -498,4 +543,11 @@ function Card({
       {hint ? <p className="mt-0.5 text-xs text-foreground/50">{hint}</p> : null}
     </div>
   );
+}
+
+/** «44 000 тенге + 300 бел. руб.» — валюты не складываем между собой. */
+function paidByCurrency(incomes: { grossTiyn: number; currency: string }[]): string {
+  const sums = new Map<string, number>();
+  for (const i of incomes) sums.set(i.currency, (sums.get(i.currency) ?? 0) + i.grossTiyn);
+  return [...sums].map(([c, v]) => formatMoney(v, c)).join(" + ");
 }

@@ -21,7 +21,7 @@ export const PROMO = {
   /** Начало акции (Минск, +03:00). */
   startsAt: "2026-08-21T00:00:00+03:00",
   /** Конец акции включительно. Меняется здесь и больше нигде. */
-  endsAt: "2026-09-30T23:59:59+03:00",
+  endsAt: "2026-10-31T23:59:59+03:00",
 } as const;
 
 /** Идёт ли акция прямо сейчас. */
@@ -64,7 +64,7 @@ export function saleTiyn(fullTiyn: number, now: Date = new Date()): number {
   return salePrice(fullTiyn, now).tiyn;
 }
 
-/** Дата окончания акции словами: «30 сентября» — для баннера и подписей. */
+/** Дата окончания акции словами: «31 октября» — для баннера и подписей. */
 export function promoEndsLabel(locale: "ru" | "kk" | "uz" = "ru"): string {
   const map = { ru: "ru-RU", kk: "kk-KZ", uz: "uz-UZ" } as const;
   return promoEndsAt().toLocaleDateString(map[locale], {

@@ -13,6 +13,7 @@ import {
   grantLibraryAction,
   grantLicenseAction,
   setOrgStatusAction,
+  setOrgBillingAction,
   setLicenseDemoAction,
   setOrgDemoAction,
   setOrgDeviceLimitAction,
@@ -55,6 +56,62 @@ interface LicenseValue {
 }
 
 // ─────────────────────────── Статус организации ───────────────────────────
+
+/** Переключатель «платный / пилот» — пометка для владельца, доступ не меняет. */
+export function OrgBillingToggle({
+  orgId,
+  billing,
+}: {
+  orgId: string;
+  billing: "PAID" | "PILOT";
+}) {
+  const router = useRouter();
+  const [pending, setPending] = useState(false);
+  const feedback = useActionResult();
+
+  async function change(next: "PAID" | "PILOT") {
+    if (next === billing) return;
+    setPending(true);
+    feedback.clear();
+    try {
+      const res = await setOrgBillingAction({ orgId, billing: next });
+      if (res.ok) router.refresh();
+      else feedback.fail(res.error);
+    } catch {
+      feedback.fail("Не удалось сохранить — обновите страницу и попробуйте ещё раз.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  const opt = (value: "PAID" | "PILOT", label: string) => (
+    <button
+      type="button"
+      disabled={pending}
+      aria-pressed={billing === value}
+      onClick={() => change(value)}
+      className={`px-3 py-1 text-xs font-medium transition-colors ${
+        billing === value
+          ? value === "PAID"
+            ? "bg-emerald-600 text-white"
+            : "bg-sky-600 text-white"
+          : "text-foreground/60 hover:bg-foreground/5"
+      }`}
+    >
+      {label}
+    </button>
+  );
+
+  return (
+    <div className="flex flex-col items-end gap-1">
+      <div className="inline-flex overflow-hidden rounded-lg border border-foreground/15">
+        {opt("PAID", "Платный")}
+        {opt("PILOT", "Пилот")}
+      </div>
+      <ActionResult result={feedback.result} />
+    </div>
+  );
+}
 
 export function OrgStatusActions({
   orgId,
@@ -305,16 +362,32 @@ export function LicenseForm({
             : wasExisting
               ? `Лицензия обновлена: «${courseTitle}» — ${seatsSent} ${seatsWord}, доступ ${durationLabel}.`
               : `Лицензия выдана: «${courseTitle}» — ${seatsSent} ${seatsWord}, доступ ${durationLabel}.`;
+        // Кабинеты работников создаются вместе с лицензией — говорим об этом
+        // сразу, иначе владелец пойдёт заводить их руками.
+        const p = res.data.provisioned;
+        const cabinets =
+          p.created > 0
+            ? ` Создано кабинетов работников: ${p.created}.`
+            : p.reused > 0
+              ? ` Места выданы уже созданным работникам: ${p.reused}.`
+              : "";
+        const adminNote = p.adminCreated
+          ? " Ответственный создан из контактного e-mail клиента."
+          : "";
+        const needAdmin = !hasAdmins && !p.adminCreated;
         // Объясняем прыжок страницы: иначе смена экрана выглядит сбоем.
         feedback.ok(
-          hasAdmins ? what : `${what} Дальше — назначьте ответственного, форма ниже.`,
+          `${what}${cabinets}${adminNote} ` +
+            (needAdmin
+              ? "Дальше — назначьте ответственного, форма ниже."
+              : "Дальше — отправьте клиенту доступы (блок «Доступы клиенту» вверху страницы)."),
         );
         router.refresh();
         // Лицензия есть — следующий шаг запуска: ответственный. Пока его нет,
         // форма выдачи остаётся последним, что видел человек, и шаг теряется
         // под таблицей лицензий. Ждём перерисовку после refresh, иначе якорь
         // ещё на старом месте.
-        if (!hasAdmins) {
+        if (needAdmin) {
           window.setTimeout(() => {
             document
               .getElementById("admins")

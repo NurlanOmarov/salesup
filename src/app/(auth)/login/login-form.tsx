@@ -15,9 +15,12 @@ const initialState: LoginState = {};
 export function LoginForm({
   callbackUrl,
   supportContact,
+  passwordChanged,
 }: {
   callbackUrl?: string;
   supportContact?: string;
+  /** Пришли после смены пароля по ссылке из письма. */
+  passwordChanged?: boolean;
 }) {
   const [state, formAction, isPending] = useActionState(
     loginAction,
@@ -43,6 +46,11 @@ export function LoginForm({
       <p className="mt-1 text-sm text-foreground/60">
         Введите выданные администратором логин и пароль.
       </p>
+      {passwordChanged ? (
+        <p role="status" className="mt-3 rounded-lg bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700">
+          Пароль изменён. Войдите с новым паролем.
+        </p>
+      ) : null}
 
       <form action={formAction} className="mt-6 space-y-4">
         {callbackUrl ? (
@@ -86,14 +94,23 @@ export function LoginForm({
       </form>
 
       <p className="mt-4 text-center text-sm text-foreground/50">
-        Забыли пароль?{" "}
+        <Link href="/forgot-password" className="underline hover:text-foreground">
+          Забыли пароль?
+        </Link>
+      </p>
+      <p className="mt-2 text-center text-xs text-foreground/45">
+        Вход по логину вида <span className="font-mono">acme-0042</span> (сотрудник организации)?
+        Новый пароль выдаст ответственный вашей компании
         {supportContact ? (
-          <a href={supportContact} className="underline hover:text-foreground">
-            обратитесь к администратору
-          </a>
-        ) : (
-          <span>обратитесь к администратору</span>
-        )}
+          <>
+            {" "}
+            или{" "}
+            <a href={supportContact} className="underline hover:text-foreground">
+              поддержка
+            </a>
+          </>
+        ) : null}
+        .
       </p>
 
       <Link

@@ -23,6 +23,8 @@ const cookieInsecure = process.env.AUTH_COOKIE_INSECURE === "true";
 
 const PUBLIC_PREFIXES = [
   "/login",
+  "/forgot-password", // самообслуживание: запрос ссылки для сброса пароля
+  "/reset-password", // ...и страница по ссылке из письма
   "/courses",
   "/verify",
   "/offer",

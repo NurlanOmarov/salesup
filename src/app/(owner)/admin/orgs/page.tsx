@@ -3,7 +3,8 @@ import Link from "next/link";
 import { Building2, ExternalLink } from "lucide-react";
 import { getOrgsList } from "@/lib/org/reports";
 import { nextOrgStepHint } from "@/lib/org/setup";
-import { OrgStatusBadge, SeatsBar } from "./org-ui";
+import { getOrgIdsAwaitingDelivery } from "@/lib/org/delivery";
+import { OrgBillingBadge, OrgStatusBadge, SeatsBar } from "./org-ui";
 import { DemoQuickSelect } from "./demo-quick-select";
 import { OrgProgressButton } from "./org-progress-dialog";
 import { pluralRu } from "@/lib/courses/plural";
@@ -21,15 +22,16 @@ export const dynamic = "force-dynamic";
  * прямо в таблице, потому что именно она решает, продлит клиент или нет.
  */
 export default async function OrgsPage() {
-  const orgs = await getOrgsList();
+  const [orgs, awaitingDelivery] = await Promise.all([getOrgsList(), getOrgIdsAwaitingDelivery()]);
   const totals = orgs.reduce(
     (acc, o) => ({
       seatsTotal: acc.seatsTotal + o.seatsTotal,
       seatsUsed: acc.seatsUsed + o.seatsUsed,
       members: acc.members + o.members,
       onDemo: acc.onDemo + (o.demoMixed || o.demoPercent != null ? 1 : 0),
+      paid: acc.paid + (o.billing === "PAID" ? 1 : 0),
     }),
-    { seatsTotal: 0, seatsUsed: 0, members: 0, onDemo: 0 },
+    { seatsTotal: 0, seatsUsed: 0, members: 0, onDemo: 0, paid: 0 },
   );
 
   return (
@@ -51,7 +53,11 @@ export default async function OrgsPage() {
 
       {orgs.length > 0 ? (
         <div className="mt-5 grid gap-3 sm:grid-cols-3">
-          <Stat label="Организаций" value={String(orgs.length)} />
+          <Stat
+            label="Организаций"
+            value={String(orgs.length)}
+            hint={`платных ${totals.paid} · пилотов ${orgs.length - totals.paid}`}
+          />
           <Stat
             label="Мест продано"
             value={String(totals.seatsTotal)}
@@ -106,12 +112,15 @@ export default async function OrgsPage() {
                   className="border-b border-foreground/5 last:border-0 hover:bg-foreground/[0.02]"
                 >
                   <td className="px-4 py-3">
-                    <Link
-                      href={`/admin/orgs/${o.id}`}
-                      className="font-medium text-amber-700 hover:underline"
-                    >
-                      {o.name}
-                    </Link>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Link
+                        href={`/admin/orgs/${o.id}`}
+                        className="font-medium text-amber-700 hover:underline"
+                      >
+                        {o.name}
+                      </Link>
+                      <OrgBillingBadge billing={o.billing} />
+                    </div>
                     <p className="font-mono text-xs text-foreground/45">
                       {o.slug}-0001…
                     </p>
@@ -162,6 +171,14 @@ export default async function OrgsPage() {
                       <p className="mt-1 text-xs text-amber-700">
                         дальше: {nextOrgStepHint(o)}
                       </p>
+                    ) : o.status === "ACTIVE" && awaitingDelivery.has(o.id) ? (
+                      // Кабинеты есть, а письма клиенту нет — так и забывают отправить.
+                      <Link
+                        href={`/admin/orgs/${o.id}#delivery`}
+                        className="mt-1 inline-block rounded bg-amber-500/15 px-1.5 py-0.5 text-xs font-medium text-amber-800 hover:underline"
+                      >
+                        доступы не отправлены
+                      </Link>
                     ) : null}
                   </td>
                 </tr>
