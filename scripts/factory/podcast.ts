@@ -66,6 +66,7 @@ const QUEUE_ORDER = [
   "sales-tourism",
   "sales-b2b",
   "time-management",
+  "sales-mattresses",
   "sales-kitchens",
   "sales-kitchens-basics",
 ];
