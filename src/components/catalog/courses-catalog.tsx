@@ -152,7 +152,8 @@ export function CoursesCatalog({ courses }: { courses: CourseCardData[] }) {
       <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {visible.map((c, i) => (
           <Reveal key={c.slug} delay={i * 0.04}>
-            <CourseCard course={c} />
+            {/* Первый ряд виден сразу — его обложки грузим без ленивой загрузки. */}
+            <CourseCard course={c} priority={i < 3} />
           </Reveal>
         ))}
         <Reveal delay={visible.length * 0.04} className="h-full">

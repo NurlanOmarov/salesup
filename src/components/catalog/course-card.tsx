@@ -55,7 +55,14 @@ export type CourseCardData = {
   _count: { modules: number };
 };
 
-export function CourseCard({ course }: { course: CourseCardData }) {
+export function CourseCard({
+  course,
+  priority = false,
+}: {
+  course: CourseCardData;
+  /** Первые карточки видны сразу — грузим их обложки без ожидания ленивой загрузки. */
+  priority?: boolean;
+}) {
   // Подписи состава — на языке витрины (казахская и узбекская версии каталога).
   const t = messagesFor(useLocale()).catalogCard;
   const gradient =
@@ -78,7 +85,8 @@ export function CourseCard({ course }: { course: CourseCardData }) {
             alt={course.title}
             fill
             className="object-cover"
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 384px"
+            priority={priority}
           />
         ) : null}
         {inDevelopment ? (
