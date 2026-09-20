@@ -101,9 +101,11 @@ export async function transcodeQuality(opts: {
   quality: Quality;
   keyInfoPath: string;
   segmentSec: number;
+  /** Фрагмент исходника: одно длинное видео режется на уроки. */
+  clip?: { startSec: number; durationSec: number };
   onProgress?: (line: string) => void;
 }): Promise<void> {
-  const { input, outDir, quality, keyInfoPath, segmentSec, onProgress } = opts;
+  const { input, outDir, quality, keyInfoPath, segmentSec, clip, onProgress } = opts;
   const qDir = join(outDir, quality.name);
   await mkdir(qDir, { recursive: true });
 
@@ -111,7 +113,11 @@ export async function transcodeQuality(opts: {
     "ffmpeg",
     [
       "-y",
+      // -ss до -i: быстрый поиск; длительность задаём через -t, чтобы она
+      // отсчитывалась от точки входа, а не от начала файла.
+      ...(clip ? ["-ss", String(clip.startSec)] : []),
       "-i", input,
+      ...(clip ? ["-t", String(clip.durationSec)] : []),
       "-vf", `scale=-2:${quality.height}`,
       "-c:v", "libx264",
       "-profile:v", "main",

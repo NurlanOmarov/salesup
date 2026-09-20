@@ -73,6 +73,21 @@ import {
   MATTRESS_EXAM_PASS_SCORE,
 } from "./seed-data/mattress-content.js";
 import {
+  PAWNSHOP_SUMMARIES,
+  PAWNSHOP_LESSON_QUIZZES,
+  PAWNSHOP_FLASHCARDS,
+  PAWNSHOP_OBJECTIONS,
+  PAWNSHOP_CHECKLISTS,
+  PAWNSHOP_CART,
+  PAWNSHOP_SCRIPTS,
+  PAWNSHOP_AUDITS,
+  PAWNSHOP_BRANCHING,
+  PAWNSHOP_HOTSPOTS,
+  PAWNSHOP_SCENARIOS,
+  PAWNSHOP_EXAM,
+  PAWNSHOP_EXAM_PASS_SCORE,
+} from "./seed-data/pawnshop-content.js";
+import {
   SPIN_SUMMARIES,
   SPIN_SLIDES,
   SPIN_LESSON_QUIZZES,
@@ -559,6 +574,75 @@ const KITCHEN_BASICS_MODULES: ModuleSpec[] = [
         title: "Чем обосновать цену: семь аргументов вместо скидки",
         yt: "https://www.youtube.com/watch?v=60ZHLgdDQkE",
         durationSec: 340,
+      },
+    ],
+  },
+];
+
+// ── Курс «Клиентский сервис в ломбарде» (одно видео, разрезанное на уроки) ──
+// Источник: https://www.youtube.com/watch?v=pRAvDN-yy4I
+// Тренер: Виталий Дубовик (activesales.by). Запись видеотренинга на 54 минуты
+// нарезана на девять уроков (pnpm factory:video --from/--to --source), поэтому
+// у всех уроков один и тот же youtubeUrl с меткой времени начала фрагмента.
+const PAWNSHOP_MODULES: ModuleSpec[] = [
+  {
+    title: "Стандарты и работа с потребностью",
+    lessons: [
+      {
+        title: "Зачем ломбарду стандарты обслуживания",
+        yt: "https://www.youtube.com/watch?v=pRAvDN-yy4I",
+        durationSec: 270,
+        publish: true,
+      },
+      {
+        title: "Выявление потребности: четыре задачи товароведа",
+        yt: "https://www.youtube.com/watch?v=pRAvDN-yy4I",
+        durationSec: 118,
+      },
+      {
+        title: "Формирование потребности по методу СПИН",
+        yt: "https://www.youtube.com/watch?v=pRAvDN-yy4I",
+        durationSec: 555,
+      },
+    ],
+  },
+  {
+    title: "Разбор звонков и типичных ошибок",
+    lessons: [
+      {
+        title: "Тайный покупатель: два звонка с ошибками",
+        yt: "https://www.youtube.com/watch?v=pRAvDN-yy4I",
+        durationSec: 496,
+      },
+      {
+        title: "Эталонный звонок: 93% по чек-листу",
+        yt: "https://www.youtube.com/watch?v=pRAvDN-yy4I",
+        durationSec: 375,
+      },
+      {
+        title: "Ошибки оценки: занижение, отказ и страх незнакомого товара",
+        yt: "https://www.youtube.com/watch?v=pRAvDN-yy4I",
+        durationSec: 569,
+      },
+      {
+        title: "Алгоритм аргументированного отказа",
+        yt: "https://www.youtube.com/watch?v=pRAvDN-yy4I",
+        durationSec: 227,
+      },
+    ],
+  },
+  {
+    title: "Конфликты и сложные клиенты",
+    lessons: [
+      {
+        title: "Конфликтный клиент: приёмы самообладания",
+        yt: "https://www.youtube.com/watch?v=pRAvDN-yy4I",
+        durationSec: 411,
+      },
+      {
+        title: "Очередь и недовольный клиент: техника ближнего круга",
+        yt: "https://www.youtube.com/watch?v=pRAvDN-yy4I",
+        durationSec: 230,
       },
     ],
   },
@@ -1611,6 +1695,65 @@ const COURSES: CourseSpec[] = [
     // Промо — рекламный ролик тренинга (не дублирует уроки курса). Демо фильма
     // «1–16» не подошло: у него на YouTube нет обложки, отдаётся серая заглушка.
     promoVideos: [{ id: "PPldpQy4Oks", vertical: false }],
+  },
+  {
+    slug: "service-pawnshop",
+    title: "Клиентский сервис в ломбарде",
+    subtitle: "Видеотренинг для товароведов: потребность, оценка, отказ без конфликта",
+    description:
+      "Видеотренинг бизнес-тренера Виталия Дубовика (activesales.by) для сотрудников ломбардов, разрезанный на девять уроков. Внутри — не теория сервиса вообще, а работа товароведа: как выяснить, сколько денег нужно клиенту, как объяснить оценку, как отказать так, чтобы человек вернулся, и как не сгореть на конфликтных клиентах.\n" +
+      "\n" +
+      "Что внутри:\n" +
+      "— зачем ломбарду стандарты обслуживания и что даёт единое правило работы по сети\n" +
+      "— четыре задачи товароведа при выявлении потребности: сумма, товар, дополнительные вещи, срочность\n" +
+      "— формирование потребности по методу СПИН на примерах с телефоном и золотом\n" +
+      "— разбор трёх реальных звонков тайного покупателя: два с ошибками и один на 93% по чек-листу\n" +
+      "— типичные ошибки оценки: занижение суммы, отправка к конкурентам, страх незнакомого товара\n" +
+      "— алгоритм аргументированного отказа с положительным закрытием\n" +
+      "— конфликтный клиент: взгляд с балкона, типы поведения и техника ближнего круга\n" +
+      "\n" +
+      "После каждого урока — тест и тренажёр, в конце — итоговый тест и именной сертификат с проверкой подлинности.",
+    industry: "Ломбарды",
+    hoursLabel: "~54 минуты",
+    // Экспресс-объём: берём нижнюю границу отраслевого коридора — курс на час
+    // не должен стоить как двухчасовые курсы линейки.
+    priceTiyn: 29000,
+    learnPoints: [
+      "Выяснять за четыре вопроса, сколько денег нужно клиенту, на какой срок и под какой залог",
+      "Формировать потребность по СПИН, когда одного товара на нужную сумму не хватает",
+      "Объяснять оценку так, чтобы разница с ожиданиями клиента не превращалась в конфликт",
+      "Не отправлять клиента к конкурентам, а закрывать сделку аргументами о рынке",
+      "Отказывать по алгоритму: понимание, реальность рынка, пример, решение, закрытие с мостиком",
+      "Держать себя в руках с провокатором: взгляд с балкона, счёт до десяти, «стекло»",
+      "Снимать напряжение в очереди техникой ближнего круга",
+    ],
+    targetAudience: [
+      "Товароведы и приёмщики ломбардов",
+      "Руководители и управляющие сетей ломбардов",
+      "Сотрудники скупок и комиссионных магазинов",
+      "Новые сотрудники — как программа ввода в должность",
+    ],
+    faq: [
+      {
+        q: "Это про сервис вообще или именно про ломбард?",
+        a: "Именно про ломбард: оценка предмета залога, сумма займа, процент, выкуп, работа с клиентом, который рассчитывал на большие деньги. Примеры — телефон, золото, синтезатор, iPhone.",
+      },
+      {
+        q: "Подойдёт новому сотруднику?",
+        a: "Да, курс идёт от стандартов и базовых вопросов к сложным ситуациям. Разбор звонков тайного покупателя показывает и ошибки, и эталон — по нему удобно вводить новичка в должность.",
+      },
+      {
+        q: "Что с законами и процентами?",
+        a: "Тренер намеренно не называет конкретных ставок и норм: они свои у каждой сети и страны. В курсе — техника разговора, а правила оценки и проценты берите из регламента своей компании.",
+      },
+      {
+        q: "Сколько времени займёт?",
+        a: "Около часа видео плюс тесты и тренажёры. Девять уроков по две-девять минут — удобно пройти за смену или по одному уроку в день.",
+      },
+    ],
+    modules: PAWNSHOP_MODULES,
+    // Промо — сама запись тренинга: у ролика есть нормальная обложка на YouTube.
+    promoVideos: [{ id: "pRAvDN-yy4I", vertical: false }],
   },
   {
     slug: "sales-mattresses",
@@ -2998,6 +3141,35 @@ async function main() {
     // Уроки с готовым HLS публикуем: поурочный контент к ним собран.
     await db.lesson.updateMany({
       where: { module: { courseId: kitchenBasicsCourse.id }, videoStatus: "READY" },
+      data: { status: "PUBLISHED" },
+    });
+  }
+
+  // ── Курс «Клиентский сервис в ломбарде» ───────────────────────────────────
+  // Контент по видеотренингу Виталия Дубовика (транскрипты в «Презентации/
+  // Клиентский сервис в ломбарде»), см. prisma/seed-data/pawnshop-content.ts.
+  // Схема кругов близости — public/images/pawnshop, она же идёт в раздатку.
+  const pawnshopCourse = courses.find((c) => c.slug === "service-pawnshop");
+  if (pawnshopCourse) {
+    await seedSummaries(pawnshopCourse.id, PAWNSHOP_SUMMARIES);
+    await seedLessonQuizzes(pawnshopCourse.id, PAWNSHOP_LESSON_QUIZZES);
+    await seedFlashcards(pawnshopCourse.id, PAWNSHOP_FLASHCARDS);
+    await seedObjections(pawnshopCourse.id, PAWNSHOP_OBJECTIONS);
+    await seedArtifacts(pawnshopCourse.id, "CHECKLIST", PAWNSHOP_CHECKLISTS);
+    await seedArtifacts(pawnshopCourse.id, "NEEDS_CART", PAWNSHOP_CART);
+    await seedArtifacts(pawnshopCourse.id, "SCRIPT_BUILDER", PAWNSHOP_SCRIPTS);
+    await seedArtifacts(pawnshopCourse.id, "DIALOGUE_AUDIT", PAWNSHOP_AUDITS);
+    await seedArtifacts(pawnshopCourse.id, "BRANCHING", PAWNSHOP_BRANCHING);
+    await seedArtifacts(pawnshopCourse.id, "HOTSPOT", PAWNSHOP_HOTSPOTS);
+    await seedScenarios(pawnshopCourse.id, PAWNSHOP_SCENARIOS);
+    await seedFinalExam(pawnshopCourse.id, {
+      questions: PAWNSHOP_EXAM,
+      description:
+        "Проверка знаний по курсу: стандарты обслуживания, выявление и формирование потребности по СПИН, разбор звонков тайного покупателя, ошибки оценки, алгоритм отказа и работа с конфликтом.",
+      passScore: PAWNSHOP_EXAM_PASS_SCORE,
+    });
+    await db.lesson.updateMany({
+      where: { module: { courseId: pawnshopCourse.id }, videoStatus: "READY" },
       data: { status: "PUBLISHED" },
     });
   }

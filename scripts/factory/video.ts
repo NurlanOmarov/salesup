@@ -26,6 +26,11 @@ import {
  *   pnpm factory:video --course <courseSlug>        # батч всех уроков с youtubeUrl
  *   опции: --segment <sec=6> --keep (не удалять out/) --force (перекодировать READY)
  *
+ * Один длинный ролик можно разрезать на уроки: --from/--to задают фрагмент
+ * («12:30», «1:02:30» или секунды), --source берёт уже скачанный файл, чтобы
+ * не тянуть один и тот же ролик на каждый урок:
+ *   pnpm factory:video <url> --lesson <id> --from 0:00 --to 12:30 --source /tmp/source.mp4
+ *
  * Гарантии: на VPS нет нешифрованных mp4 (загружаются только HLS-сегменты);
  * AES-ключ хранится в БД зашифрованным app-секретом, в плейлисте — только URI
  * защищённого эндпоинта; повторный запуск идемпотентен (старый префикс очищается).
@@ -94,9 +99,29 @@ async function uploadHls(localDir: string, prefix: string): Promise<void> {
   }
 }
 
+/** «12:30», «1:02:30» или число секунд → секунды. */
+export function parseTimecode(value: string): number {
+  const parts = value.split(":").map((p) => Number(p));
+  if (parts.some((p) => !Number.isFinite(p) || p < 0)) throw new Error(`Некорректный таймкод: ${value}`);
+  if (parts.length === 1) return parts[0]!;
+  if (parts.length === 2) return parts[0]! * 60 + parts[1]!;
+  if (parts.length === 3) return parts[0]! * 3600 + parts[1]! * 60 + parts[2]!;
+  throw new Error(`Некорректный таймкод: ${value}`);
+}
+
 async function processLesson(
   lesson: LessonRow,
-  opts: { url: string; segmentSec: number; keep: boolean; force: boolean; cookies?: string },
+  opts: {
+    url: string;
+    segmentSec: number;
+    keep: boolean;
+    force: boolean;
+    cookies?: string;
+    /** Фрагмент длинного видео: один ролик — несколько уроков. */
+    clip?: { startSec: number; durationSec: number };
+    /** Готовый локальный исходник: не качать один и тот же ролик на каждый урок. */
+    sourceFile?: string;
+  },
 ): Promise<{ sizeBytes: number; durationSec: number; qualities: string[] }> {
   if (lesson.videoStatus === "READY" && !opts.force) {
     log.warn(`Урок «${lesson.title}» уже READY — пропуск (--force для перекодирования)`);
@@ -109,18 +134,30 @@ async function processLesson(
   await mkdir(outDir, { recursive: true });
 
   try {
-    // 1. Скачать исходник
-    log.step(`Скачиваю исходник: ${c.dim(opts.url)}`);
-    const source = join(workDir, "source.mp4");
-    await downloadSource(opts.url, source, opts.cookies);
+    // 1. Скачать исходник (или взять готовый — при нарезке одного ролика на уроки)
+    let source: string;
+    if (opts.sourceFile) {
+      source = opts.sourceFile;
+      log.info(`Исходник с диска: ${c.dim(source)}`);
+    } else {
+      log.step(`Скачиваю исходник: ${c.dim(opts.url)}`);
+      source = join(workDir, "source.mp4");
+      await downloadSource(opts.url, source, opts.cookies);
+    }
 
     // 2. Зондировать
-    const [height, durationSec] = await Promise.all([
+    const [height, fullDurationSec] = await Promise.all([
       probeHeight(source),
       probeDurationSec(source),
     ]);
+    const durationSec = opts.clip ? opts.clip.durationSec : fullDurationSec;
     const qualities = selectLadder(height);
-    log.info(`Источник ${height}p · ${fmtDuration(durationSec)} → качества: ${qualities.map((q) => q.name).join(", ")}`);
+    const clipNote = opts.clip
+      ? ` · фрагмент ${fmtDuration(opts.clip.startSec)}–${fmtDuration(opts.clip.startSec + opts.clip.durationSec)}`
+      : "";
+    log.info(
+      `Источник ${height}p · ${fmtDuration(fullDurationSec)}${clipNote} → качества: ${qualities.map((q) => q.name).join(", ")}`,
+    );
 
     // 3. AES-128 ключ: файл для ffmpeg + зашифрованное значение для БД
     const aesKey = generateHlsKey();
@@ -142,6 +179,7 @@ async function processLesson(
         quality: q,
         keyInfoPath,
         segmentSec: opts.segmentSec,
+        clip: opts.clip,
         onProgress: (line) => {
           const t = line.match(/time=(\d+:\d+:\d+\.\d+)/);
           if (t) process.stdout.write(`\r  ${c.dim(`time=${t[1]}`)}`);
@@ -168,7 +206,10 @@ async function processLesson(
         videoAesKeyEnc,
         videoStatus: "READY",
         durationSec,
-        youtubeUrl: opts.url,
+        // При нарезке ссылка ведёт на начало фрагмента в исходном ролике.
+        youtubeUrl: opts.clip
+          ? `${opts.url}${opts.url.includes("?") ? "&" : "?"}t=${opts.clip.startSec}`
+          : opts.url,
       },
     });
 
@@ -234,12 +275,18 @@ async function main() {
       }
     }
   } else {
-    // Один урок
+    // Один урок (опционально — фрагмент длинного ролика)
     const lessonId = requireOption(args, "lesson", "factory:video <url> --lesson <id>");
     const url = args.positionals[0];
     if (!url) throw new Error("Не задан URL видео (первый позиционный аргумент)");
+    const from = typeof args.options.from === "string" ? parseTimecode(args.options.from) : null;
+    const to = typeof args.options.to === "string" ? parseTimecode(args.options.to) : null;
+    if ((from === null) !== (to === null)) throw new Error("--from и --to задаются вместе");
+    if (from !== null && to !== null && to <= from) throw new Error("--to должен быть больше --from");
+    const clip = from !== null && to !== null ? { startSec: from, durationSec: to - from } : undefined;
+    const sourceFile = typeof args.options.source === "string" ? args.options.source : undefined;
     const lesson = await loadLesson(lessonId);
-    const r = await processLesson(lesson, { url, segmentSec, keep, force, cookies });
+    const r = await processLesson(lesson, { url, segmentSec, keep, force, cookies, clip, sourceFile });
     totalBytes += r.sizeBytes;
     totalSec += r.durationSec;
     if (r.qualities.length) processed++;
