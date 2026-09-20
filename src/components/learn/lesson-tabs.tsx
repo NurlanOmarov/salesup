@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import {
   PlayCircle,
   FileText,
@@ -599,11 +600,25 @@ export function LessonTabs({
   );
 }
 
-/** Markdown-рендер с типографикой курса. */
+/** Markdown-рендер с типографикой курса. GFM нужен для таблиц в конспектах. */
 function Markdown({ text }: { text: string }) {
   return (
     <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
       components={{
+        table: ({ children }) => (
+          <div className="mt-3 overflow-x-auto">
+            <table className="w-full border-collapse text-sm">{children}</table>
+          </div>
+        ),
+        th: ({ children }) => (
+          <th className="border-b border-foreground/15 px-3 py-2 text-left font-semibold text-foreground">
+            {children}
+          </th>
+        ),
+        td: ({ children }) => (
+          <td className="border-b border-foreground/10 px-3 py-2 align-top text-foreground/80">{children}</td>
+        ),
         h2: ({ children }) => <h2 className="text-lg font-bold">{children}</h2>,
         h3: ({ children }) => <h3 className="mt-4 font-semibold">{children}</h3>,
         p: ({ children }) => <p className="mt-2 text-foreground/80">{children}</p>,

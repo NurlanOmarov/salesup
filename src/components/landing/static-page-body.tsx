@@ -1,4 +1,5 @@
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 /**
  * Markdown-рендер текста статических страниц (/offer, /privacy) с типографикой
@@ -9,6 +10,7 @@ export function StaticPageBody({ text }: { text: string }) {
   return (
     <div className="mt-6">
       <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
         components={{
           h2: ({ children }) => (
             <h2 className="mt-8 text-xl font-bold first:mt-0">{children}</h2>
