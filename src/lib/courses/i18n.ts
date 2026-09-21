@@ -44,8 +44,10 @@ export function localizedCourse<T extends CourseTexts>(
     title: t.title || course.title,
     subtitle: t.subtitle || course.subtitle,
     description: t.description || course.description,
-    seoTitle: t.seoTitle || course.seoTitle,
-    seoDescription: t.seoDescription || course.seoDescription,
+    // SEO переведённой страницы берём только из перевода: русский SEO-заголовок
+    // на казахской или узбекской странице расходится по языку с её содержимым.
+    seoTitle: t.seoTitle || t.title,
+    seoDescription: t.seoDescription || t.subtitle || null,
   };
 }
 

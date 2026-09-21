@@ -32,6 +32,26 @@ describe("localizedCourse", () => {
     expect(localizedCourse(course, "ru").title).toBe("Техники продаж в туризме");
     expect(localizedCourse(course, "uz").title).toBe("Техники продаж в туризме");
   });
+
+  it("SEO переведённой страницы не подхватывает русский SEO-заголовок и описание", () => {
+    const withRuSeo = {
+      ...course,
+      seoTitle: "Курс продаж в туризме: как продавать туры дорого",
+      seoDescription: "Русское SEO-описание курса",
+    };
+    const kk = localizedCourse(withRuSeo, "kk");
+    expect(kk.seoTitle).toBe("Туризмдегі сату техникалары");
+    expect(kk.seoDescription).not.toBe("Русское SEO-описание курса");
+  });
+
+  it("свой SEO-заголовок перевода важнее переведённого названия", () => {
+    const tuned = {
+      ...course,
+      translations: [{ ...course.translations[0]!, seoTitle: "Туризмде сату курсы", seoDescription: "Сипаттама" }],
+    };
+    expect(localizedCourse(tuned, "kk").seoTitle).toBe("Туризмде сату курсы");
+    expect(localizedCourse(tuned, "kk").seoDescription).toBe("Сипаттама");
+  });
 });
 
 describe("localizedCard", () => {
