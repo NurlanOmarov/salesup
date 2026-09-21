@@ -15,6 +15,8 @@ export function ExamRunner({
   attemptsLeft,
   continueHref,
   continueLabel,
+  gatesNext,
+  backHref,
 }: {
   quizId: string;
   questions: RunnerQuestion[];
@@ -22,6 +24,8 @@ export function ExamRunner({
   attemptsLeft: number | null;
   continueHref: string;
   continueLabel: string;
+  gatesNext: boolean;
+  backHref: string;
 }) {
   return (
     <QuizRunner
@@ -30,6 +34,8 @@ export function ExamRunner({
       attemptsLeft={attemptsLeft}
       continueHref={continueHref}
       continueLabel={continueLabel}
+      gatesNext={gatesNext}
+      backHref={backHref}
       onSubmit={async (answers) => {
         const res = await submitQuizAttempt({ quizId, answers });
         if (!res.ok) throw new Error(res.error);

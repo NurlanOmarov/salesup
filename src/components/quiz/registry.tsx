@@ -27,7 +27,7 @@ export const QUESTION_TYPES: Record<QuestionKind, QuestionTypeDef> = {
     Input: ChoiceInput,
     Review: ChoiceReview,
     isAnswered: (a) => a.length >= 1,
-    hint: "Выберите все подходящие варианты",
+    hint: "Верных вариантов несколько — отметьте все, иначе ответ не засчитается",
   },
   ORDERING: {
     Input: OrderingInput,

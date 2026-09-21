@@ -34,6 +34,23 @@ export interface QuizRunnerProps {
   /** Куда вести после прохождения (следующий урок / кабинет). */
   continueHref: string;
   continueLabel: string;
+  /**
+   * Задание открывает следующий урок и ещё не сдано. Тогда при провале ссылку
+   * «Следующий урок» не показываем — она вела на «Урок пока закрыт», и ученик
+   * решал, что система сломалась, — а прямо говорим, что нужно пересдать.
+   */
+  gatesNext?: boolean;
+  /** Возврат к уроку (вместо «Следующего урока», пока задание не сдано). */
+  backHref?: string;
+}
+
+/** ORDERING предзаполняем начальным порядком — ответ есть сразу (можно идти дальше). */
+function initialAnswers(questions: RunnerQuestion[]): Record<string, string[]> {
+  const init: Record<string, string[]> = {};
+  for (const q of questions) {
+    if (q.type === "ORDERING") init[q.id] = q.options.map((o) => o.id);
+  }
+  return init;
 }
 
 export function QuizRunner({
@@ -44,16 +61,11 @@ export function QuizRunner({
   xpPerQuestion = 10,
   continueHref,
   continueLabel,
+  gatesNext = false,
+  backHref,
 }: QuizRunnerProps) {
   const [idx, setIdx] = useState(0);
-  // ORDERING предзаполняем начальным порядком — ответ есть сразу (можно идти дальше).
-  const [answers, setAnswers] = useState<Record<string, string[]>>(() => {
-    const init: Record<string, string[]> = {};
-    for (const q of questions) {
-      if (q.type === "ORDERING") init[q.id] = q.options.map((o) => o.id);
-    }
-    return init;
-  });
+  const [answers, setAnswers] = useState<Record<string, string[]>>(() => initialAnswers(questions));
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Result | null>(null);
@@ -81,14 +93,15 @@ export function QuizRunner({
   }
 
   function reset() {
-    setAnswers({});
+    setAnswers(initialAnswers(questions));
     setIdx(0);
     setResult(null);
     setError(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   if (result) {
-    return <ResultScreen result={result} questions={questions} answers={answers} onReset={reset} canRetry={!noAttempts} xpPerQuestion={xpPerQuestion} continueHref={continueHref} continueLabel={continueLabel} />;
+    return <ResultScreen result={result} questions={questions} answers={answers} onReset={reset} canRetry={!noAttempts} xpPerQuestion={xpPerQuestion} continueHref={continueHref} continueLabel={continueLabel} gatesNext={gatesNext} backHref={backHref} />;
   }
 
   if (questions.length === 0) return <p className="text-foreground/50">В задании пока нет вопросов.</p>;
@@ -139,7 +152,7 @@ export function QuizRunner({
           className="mt-5"
         >
           <p className="text-lg font-medium">{q.text}</p>
-          {def.hint ? <p className="mt-1 text-xs text-foreground/50">{def.hint}</p> : null}
+          {def.hint ? <p className="mt-1 text-sm text-foreground/60">{def.hint}</p> : null}
           <div className="mt-4">
             <InputComp question={q} answer={answer} onChange={(v) => setAnswer(q.id, v)} />
           </div>
@@ -181,6 +194,8 @@ function ResultScreen({
   xpPerQuestion,
   continueHref,
   continueLabel,
+  gatesNext,
+  backHref,
 }: {
   result: Result;
   questions: RunnerQuestion[];
@@ -190,7 +205,11 @@ function ResultScreen({
   xpPerQuestion: number;
   continueHref: string;
   continueLabel: string;
+  gatesNext: boolean;
+  backHref?: string;
 }) {
+  // Провал задания, которое открывает следующий урок: вперёд пути нет, только пересдача.
+  const locked = !result.passed && gatesNext;
   const correctCount = result.review.filter((r) => r.correct).length;
   const xp = result.xpEarned ?? correctCount * xpPerQuestion;
 
@@ -220,6 +239,20 @@ function ResultScreen({
         <p className="mt-1 text-sm text-foreground/60">
           Правильных: {correctCount} из {result.review.length} · проходной {result.passScore}%
         </p>
+        {!result.passed ? (
+          <p className="mx-auto mt-3 max-w-md text-sm text-foreground/75">
+            {locked
+              ? `Задание не засчитано — следующий урок откроется, когда наберёте ${result.passScore}%. `
+              : "Задание не засчитано. "}
+            Ошибки разобраны ниже, пересдавать можно сколько угодно раз.
+          </p>
+        ) : null}
+        {!result.passed && canRetry ? (
+          <Button onClick={onReset} variant="accent" size="lg" className="mt-4">
+            <RotateCcw className="size-4" />
+            Пройти заново
+          </Button>
+        ) : null}
         {result.passed ? (
           <motion.p
             initial={{ opacity: 0, y: 6 }}
@@ -283,18 +316,30 @@ function ResultScreen({
             Пройти заново
           </Button>
         ) : null}
-        <Link
-          href={continueHref}
-          className={[
-            "inline-flex items-center justify-center gap-1.5 rounded-lg px-5 text-sm font-semibold transition-colors h-11",
-            result.passed
-              ? "bg-amber-500 text-slate-950 hover:bg-amber-400"
-              : "border border-foreground/15 text-foreground/80 hover:bg-foreground/5",
-          ].join(" ")}
-        >
-          {continueLabel}
-          <ChevronRight className="size-4" />
-        </Link>
+        {locked ? (
+          backHref ? (
+            <Link
+              href={backHref}
+              className="inline-flex h-11 items-center justify-center gap-1.5 rounded-lg border border-foreground/15 px-5 text-sm font-semibold text-foreground/80 transition-colors hover:bg-foreground/5"
+            >
+              <ChevronLeft className="size-4" />
+              Вернуться к уроку
+            </Link>
+          ) : null
+        ) : (
+          <Link
+            href={continueHref}
+            className={[
+              "inline-flex items-center justify-center gap-1.5 rounded-lg px-5 text-sm font-semibold transition-colors h-11",
+              result.passed
+                ? "bg-amber-500 text-slate-950 hover:bg-amber-400"
+                : "border border-foreground/15 text-foreground/80 hover:bg-foreground/5",
+            ].join(" ")}
+          >
+            {continueLabel}
+            <ChevronRight className="size-4" />
+          </Link>
+        )}
       </div>
     </div>
   );

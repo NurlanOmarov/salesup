@@ -58,7 +58,11 @@ export function ChoiceInput({ question, answer, onChange }: InputProps) {
   );
 }
 
-/** Разбор для choice-типов. */
+/**
+ * Разбор для choice-типов. Показывает не только верные варианты, но и выбор
+ * ученика: без этого в MULTI_CHOICE не видно, что ошибка — в НЕотмеченных верных
+ * вариантах (все верные выглядели одинаково, отмечал их ученик или нет).
+ */
 export function ChoiceReview({ question, answer, review }: import("../types").ReviewProps) {
   const selected = new Set(answer);
   const correct = new Set(review.correctOptionIds);
@@ -67,16 +71,31 @@ export function ChoiceReview({ question, answer, review }: import("../types").Re
       {question.options.map((o) => {
         const isCorrect = correct.has(o.id);
         const isSelected = selected.has(o.id);
+        const tag = isSelected ? "ваш выбор" : isCorrect && !review.correct ? "вы не отметили" : null;
         return (
           <li
             key={o.id}
             className={[
-              "flex items-center gap-2",
+              "flex items-start gap-2",
               isCorrect ? "font-medium text-emerald-700" : isSelected ? "text-red-600" : "text-foreground/50",
             ].join(" ")}
           >
             <span className="w-4 shrink-0">{isCorrect ? "✓" : isSelected ? "✗" : "•"}</span>
-            <span className={isSelected && !isCorrect ? "line-through" : ""}>{o.text}</span>
+            <span>
+              <span className={isSelected && !isCorrect ? "line-through" : ""}>{o.text}</span>
+              {tag ? (
+                <span
+                  className={[
+                    "ml-2 inline-block rounded-full px-2 py-px align-middle text-[11px] font-medium",
+                    isSelected
+                      ? "bg-foreground/[0.06] text-foreground/60"
+                      : "bg-amber-500/15 text-amber-800",
+                  ].join(" ")}
+                >
+                  {tag}
+                </span>
+              ) : null}
+            </span>
           </li>
         );
       })}

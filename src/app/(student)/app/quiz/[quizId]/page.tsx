@@ -34,7 +34,7 @@ export default async function QuizPage({
       maxAttempts: true,
       status: true,
       course: { select: { slug: true, title: true } },
-      lesson: { select: { id: true, title: true, module: { select: { course: { select: { slug: true, title: true } } } } } },
+      lesson: { select: { id: true, title: true, requiresQuizPass: true, module: { select: { course: { select: { slug: true, title: true } } } } } },
       questions: {
         where: { validation: "VALIDATED" },
         orderBy: { sortOrder: "asc" },
@@ -117,6 +117,9 @@ export default async function QuizPage({
   });
   const bestScore = attempts.reduce((m, a) => Math.max(m, a.scorePct ?? 0), 0);
   const alreadyPassed = attempts.some((a) => a.status === "PASSED");
+  // Задание урока с requiresQuizPass — пропуск к следующему уроку. Пока оно не сдано,
+  // ссылка «Следующий урок» после провала вела бы на экран «Урок пока закрыт».
+  const gatesNext = Boolean(quiz.lesson?.requiresQuizPass) && !alreadyPassed && continueHref !== "/app";
   const attemptsLeft =
     quiz.maxAttempts != null ? Math.max(0, quiz.maxAttempts - attempts.length) : null;
 
@@ -184,6 +187,8 @@ export default async function QuizPage({
           attemptsLeft={attemptsLeft}
           continueHref={continueHref}
           continueLabel={continueLabel}
+          gatesNext={gatesNext}
+          backHref={backHref}
         />
       </div>
     </main>

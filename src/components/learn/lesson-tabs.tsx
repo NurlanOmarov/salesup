@@ -221,6 +221,11 @@ export function LessonTabs({
     { key: "slides", label: "Презентация", icon: Presentation, show: !!slides || hasSlidesPdf, group: "materials" },
     { key: "transcript", label: "Транскрипт", icon: ScrollText, show: !!transcript, group: "materials" },
     { key: "notes", label: "Заметки", icon: StickyNote, show: true, group: "materials" },
+    // Задание — первым в «Практике»: вкладка группы открывает её первый пункт, а
+    // сдача задания — единственное, что открывает следующий урок. Когда первыми
+    // стояли карточки с крупным «ВОПРОС», ученики отвечали на них и не понимали,
+    // почему урок не засчитан.
+    { key: "quiz", label: "Задание", icon: GraduationCap, show: !!quiz, group: "practice" },
     { key: "flashcards", label: "Карточки", icon: Layers, show: !!flashcards, group: "practice" },
     { key: "objections", label: "Возражения", icon: MessageSquareWarning, show: !!objections, group: "practice" },
     { key: "rapidfire", label: "На скорость", icon: Zap, show: !!objections, group: "practice" },
@@ -239,7 +244,6 @@ export function LessonTabs({
     { key: "scale", label: "Весы", icon: Scale, show: !!scale, group: "practice" },
     { key: "cart", label: "Тележка", icon: ShoppingCart, show: !!cart, group: "practice" },
     { key: "simulation", label: "Симулятор", icon: MessagesSquare, show: !!simulation, group: "practice" },
-    { key: "quiz", label: "Задание", icon: GraduationCap, show: !!quiz, group: "practice" },
     { key: "tutor", label: "Наставник", icon: Bot, show: true, group: "tutor" },
   ];
 
