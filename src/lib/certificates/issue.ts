@@ -1,6 +1,10 @@
 import { db } from "@/lib/db";
+import { env } from "@/env";
 import { hasDemoLimit } from "@/lib/access";
-import { checkEligibility } from "./eligibility.js";
+import { enqueue } from "@/lib/jobs/enqueue";
+import { log } from "@/lib/log";
+import { checkEligibility, type IneligibleReason } from "./eligibility.js";
+import { certificateReadyTelegramText, certificateTelegramButtons, type CertificateLearner } from "./notify.js";
 
 /**
  * Фиксация готовности к сертификату при выполнении условий (S5.3): все опубликованные
@@ -18,7 +22,7 @@ import { checkEligibility } from "./eligibility.js";
 export async function markCertificateReadyIfEligible(
   userId: string,
   courseId: string,
-): Promise<{ ready: boolean; certificateId?: string }> {
+): Promise<{ ready: boolean; certificateId?: string; reason?: IneligibleReason | "DEMO" }> {
   // Уже готов/выдан?
   const existing = await db.certificate.findUnique({
     where: { userId_courseId: { userId, courseId } },
@@ -29,11 +33,12 @@ export async function markCertificateReadyIfEligible(
   // Демо-доступ (Enrollment/OrgLicense.demoPercent) сертификата не даёт: часть
   // курса не пройдена по определению, а экзамен при демо закрыт. Проверка явная,
   // чтобы готовность не появилась от старых попыток, сданных до включения демо.
-  if (await hasDemoLimit(userId, courseId)) return { ready: false };
+  if (await hasDemoLimit(userId, courseId)) return { ready: false, reason: "DEMO" };
 
   const course = await db.course.findUnique({
     where: { id: courseId },
     select: {
+      title: true,
       hoursLabel: true,
       certificateEnabled: true,
       certificateMinScore: true,
@@ -71,7 +76,7 @@ export async function markCertificateReadyIfEligible(
     minScore: course.certificateMinScore,
     certificateEnabled: course.certificateEnabled,
   });
-  if (!eligibility.eligible) return { ready: false };
+  if (!eligibility.eligible) return { ready: false, reason: eligibility.reason };
 
   // Запись готовности — без ФИО/номера/hash/PDF (ПДн не формируем).
   const cert = await db.certificate.create({
@@ -85,5 +90,35 @@ export async function markCertificateReadyIfEligible(
     select: { id: true },
   });
 
+  // Владельцу — сразу в Telegram: сертификат выдаёт он, и узнавать о готовом
+  // ученике только из письма с ФИО (которое может и не дойти) нельзя.
+  // Сбой уведомления не отменяет готовность сертификата.
+  try {
+    await enqueue("telegram.send", {
+      text: certificateReadyTelegramText({
+        courseTitle: course.title,
+        scorePct: bestAttempt?.scorePct ?? null,
+        learner: await certificateLearner(userId),
+      }),
+      buttons: certificateTelegramButtons(env.NEXT_PUBLIC_SITE_URL),
+      kind: "certificate-ready",
+    });
+  } catch (e) {
+    log.error({ err: e }, "certificate: уведомление владельцу не поставлено в очередь");
+  }
+
   return { ready: true, certificateId: cert.id };
+}
+
+/** Кто ученик — для уведомлений владельцу (розница — e-mail, B2B — логин и клиент). */
+export async function certificateLearner(userId: string): Promise<CertificateLearner> {
+  const [user, membership] = await Promise.all([
+    db.user.findUnique({ where: { id: userId }, select: { email: true, login: true } }),
+    db.orgMembership.findFirst({ where: { userId }, select: { org: { select: { name: true } } } }),
+  ]);
+  return {
+    email: user?.email ?? null,
+    login: user?.login ?? null,
+    orgName: membership?.org.name ?? null,
+  };
 }

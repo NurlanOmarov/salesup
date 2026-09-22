@@ -206,6 +206,17 @@ export default async function CertificatesPage() {
                   reviewedCourseIds.has(c.courseId) ? (
                     <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-amber-500/20 bg-amber-500/[0.04] p-4 text-sm">
                       <Mail className="mt-0.5 size-4 shrink-0 text-amber-600" />
+                      {isOrgLearner ? (
+                        // Работник организации: его ПДн платформа не получает (правило 9,
+                        // оферта /offer-b2b п. 10.1) — данные для сертификата школе
+                        // передаёт клиент через ответственного представителя.
+                        <p className="text-foreground/80">
+                          <span className="font-semibold">Шаг 2.</span> Спасибо за отзыв!
+                          Сертификаты работникам компании оформляются через ответственного
+                          представителя: сообщите ему, что курс пройден, — он передаст школе
+                          данные для сертификата. Школа уже знает, что сертификат готов.
+                        </p>
+                      ) : (
                       <p className="text-foreground/80">
                         <span className="font-semibold">Шаг 2.</span> Спасибо за отзыв! Теперь
                         отправьте ваше ФИО на почту{" "}
@@ -219,6 +230,7 @@ export default async function CertificatesPage() {
                         </a>
                         . Мы подготовим сертификат и вышлем его вам.
                       </p>
+                      )}
                     </div>
                   ) : (
                     <CertificateReviewForm

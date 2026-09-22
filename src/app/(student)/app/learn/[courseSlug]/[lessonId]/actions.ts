@@ -7,6 +7,7 @@ import { canAccessLesson } from "@/lib/access";
 import { awardXp, awardBadge, touchStreak } from "@/lib/gamification/award";
 import { XP_REWARDS } from "@/lib/gamification/levels";
 import { addNote, deleteNote } from "@/lib/learn/notes";
+import { markCertificateReadyIfEligible } from "@/lib/certificates/issue";
 
 /**
  * Сохранение прогресса просмотра урока (S2.2/S4.2): upsert LessonProgress каждые
@@ -29,7 +30,7 @@ export const saveLessonProgress = safeAction(
     if (!access.ok) throw new Error("Нет доступа к уроку");
 
     const [lesson, existing] = await Promise.all([
-      db.lesson.findUnique({ where: { id: lessonId }, select: { durationSec: true } }),
+      db.lesson.findUnique({ where: { id: lessonId }, select: { durationSec: true, module: { select: { courseId: true } } } }),
       db.lessonProgress.findUnique({
         where: { userId_lessonId: { userId, lessonId } },
         select: { completedAt: true },
@@ -64,6 +65,15 @@ export const saveLessonProgress = safeAction(
         if (streak >= 7) await awardBadge(userId, "streak-7");
       } catch (e) {
         console.error("Награды за урок не начислены:", e);
+      }
+      // Экзамен могли сдать раньше, чем досмотрены все уроки: тогда сертификат
+      // готов именно сейчас, а не в момент сдачи. Проверка идемпотентна.
+      if (lesson?.module.courseId) {
+        try {
+          await markCertificateReadyIfEligible(userId, lesson.module.courseId);
+        } catch (e) {
+          console.error("Не удалось проверить готовность сертификата:", e);
+        }
       }
     }
 

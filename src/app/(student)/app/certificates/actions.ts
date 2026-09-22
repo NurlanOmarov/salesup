@@ -6,6 +6,10 @@ import { db } from "@/lib/db";
 import { safeAction } from "@/lib/safe-action";
 import { moderateReview } from "@/lib/reviews/moderation";
 import { isEnrollmentActive } from "@/lib/access";
+import { env } from "@/env";
+import { enqueue } from "@/lib/jobs/enqueue";
+import { certificateLearner } from "@/lib/certificates/issue";
+import { reviewTelegramText, certificateTelegramButtons } from "@/lib/certificates/notify";
 
 /** Подпись отзыва работника организации: ПДн у B2B-учеников мы не получаем. */
 const ORG_LEARNER_NAME = "Ученик корпоративной программы";
@@ -46,7 +50,7 @@ export const submitCourseReviewAction = safeAction(
       db.orgMembership.findFirst({ where: { userId }, select: { id: true } }),
       db.course.findUnique({
         where: { id: input.courseId },
-        select: { slug: true },
+        select: { slug: true, title: true },
       }),
     ]);
     if (!enrollment || !course) throw new Error("Курс недоступен");
@@ -65,6 +69,10 @@ export const submitCourseReviewAction = safeAction(
       moderationNote: note,
       publicConsent: input.publicConsent,
     };
+    const existed = await db.review.findUnique({
+      where: { courseId_userId: { courseId: input.courseId, userId } },
+      select: { id: true },
+    });
     await db.review.upsert({
       where: { courseId_userId: { courseId: input.courseId, userId } },
       create: { courseId: input.courseId, userId, ...data },
@@ -74,6 +82,27 @@ export const submitCourseReviewAction = safeAction(
     // Витрина курса статична (ISR) — сбрасываем её, чтобы отзыв появился сразу.
     revalidatePath(`/courses/${course.slug}`);
     revalidatePath("/app/certificates");
-    return { published: status === "VALIDATED" && input.publicConsent };
+    const published = status === "VALIDATED" && input.publicConsent;
+
+    // Владельцу — только первый отзыв (правка текста не должна слать дубль).
+    // Отзыв открывает запрос сертификата: владелец узнаёт, что его скоро попросят.
+    if (!existed) {
+      try {
+        await enqueue("telegram.send", {
+          text: reviewTelegramText({
+            courseTitle: course.title,
+            rating: input.rating,
+            text: input.text,
+            published,
+            learner: await certificateLearner(userId),
+          }),
+          buttons: certificateTelegramButtons(env.NEXT_PUBLIC_SITE_URL),
+          kind: "review-new",
+        });
+      } catch (e) {
+        console.error("Уведомление об отзыве не поставлено в очередь:", e);
+      }
+    }
+    return { published };
   },
 );

@@ -88,6 +88,12 @@ export default async function QuizPage({
     const courseLessons = await db.course.findUnique({
       where: { slug: courseInfo.slug },
       select: {
+        id: true,
+        quizzes: {
+          where: { kind: "FINAL_EXAM", status: "PUBLISHED" },
+          select: { id: true },
+          take: 1,
+        },
         modules: {
           orderBy: { sortOrder: "asc" },
           select: {
@@ -104,9 +110,14 @@ export default async function QuizPage({
       .filter((l) => l.status === "PUBLISHED");
     const curIdx = flat.findIndex((l) => l.id === quiz.lesson!.id);
     const nextLesson = curIdx >= 0 ? flat[curIdx + 1] : null;
+    const examId = courseLessons?.quizzes[0]?.id;
     if (nextLesson) {
       continueHref = `/app/learn/${courseInfo.slug}/${nextLesson.id}`;
       continueLabel = "Следующий урок";
+    } else if (examId && courseLessons && !(await hasDemoLimit(userId, courseLessons.id))) {
+      // Последний урок курса: дальше — итоговый экзамен, путь к сертификату.
+      continueHref = `/app/quiz/${examId}`;
+      continueLabel = "Итоговый экзамен";
     }
   }
 
@@ -189,6 +200,7 @@ export default async function QuizPage({
           continueLabel={continueLabel}
           gatesNext={gatesNext}
           backHref={backHref}
+          isExam={!quiz.lesson}
         />
       </div>
     </main>

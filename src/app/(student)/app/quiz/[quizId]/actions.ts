@@ -111,10 +111,14 @@ export const submitQuizAttempt = safeAction(
     // Сдан итоговый экзамен → пробуем выдать сертификат (идемпотентно).
     // Ошибки генерации PDF не должны ронять ответ: тест уже зачтён.
     let certificateReady = false;
+    // Почему сертификат не открылся после сданного экзамена — экран результата
+    // объясняет это ученику, а не молча отправляет в кабинет.
+    let certificateBlocker: string | null = null;
     if (result.passed && quiz.kind === "FINAL_EXAM" && quiz.courseId) {
       try {
         const r = await markCertificateReadyIfEligible(userId, quiz.courseId);
         certificateReady = r.ready;
+        certificateBlocker = r.reason ?? null;
       } catch (e) {
         console.error("Не удалось зафиксировать готовность к сертификату:", e);
       }
@@ -165,6 +169,7 @@ export const submitQuizAttempt = safeAction(
       passed: result.passed,
       passScore: quiz.passScore,
       certificateReady,
+      certificateBlocker,
       xpEarned,
       review,
     };

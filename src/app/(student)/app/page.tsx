@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
-import { BookOpen, PlayCircle, GraduationCap, Trophy, CalendarCheck, Layers, StickyNote, Info, Lock } from "lucide-react";
+import { BookOpen, PlayCircle, GraduationCap, Trophy, CalendarCheck, Layers, StickyNote, Info, Lock, Award } from "lucide-react";
 import { requireUser } from "@/lib/auth/guards";
 import { db } from "@/lib/db";
 import { demoLessonCount, effectiveDemoPercent, isEnrollmentActive } from "@/lib/access";
 import { coverPublicUrl } from "@/lib/utils";
 import { courseProgress, nextLesson } from "@/lib/learn/progress";
+import { finishStage, type FinishStage } from "@/lib/certificates/stage";
 import { ProgressPanel, type BadgeView } from "@/components/gamification/progress-panel";
 import { DailyQuests } from "@/components/gamification/daily-quests";
 import { WeeklyGoal } from "@/components/gamification/weekly-goal";
@@ -43,6 +44,7 @@ export default async function DashboardPage() {
     title: true,
     coverUrl: true,
     industry: true,
+    certificateEnabled: true,
     modules: {
       orderBy: { sortOrder: "asc" as const },
       select: {
@@ -128,6 +130,26 @@ export default async function DashboardPage() {
     passedLessonQuizzes.map((a) => a.quiz.lessonId).filter((id): id is string => !!id),
   );
 
+  // Путь к сертификату: сданные итоговые экзамены, сертификаты и отзывы ученика.
+  // Нужны, чтобы кабинет после уроков вёл на экзамен и к сертификату, а не
+  // обратно на первый урок.
+  const [passedExams, userCerts, userReviews] = isOwner
+    ? [[], [], []]
+    : await Promise.all([
+        db.quizAttempt.findMany({
+          where: { userId, status: "PASSED", quiz: { kind: "FINAL_EXAM" } },
+          select: { quizId: true },
+        }),
+        db.certificate.findMany({
+          where: { userId, revokedAt: null },
+          select: { courseId: true, status: true },
+        }),
+        db.review.findMany({ where: { userId }, select: { courseId: true } }),
+      ]);
+  const passedExamIds = new Set(passedExams.map((a) => a.quizId));
+  const certByCourse = new Map(userCerts.map((c) => [c.courseId, c]));
+  const reviewedCourseIds = new Set(userReviews.map((r) => r.courseId));
+
   const courses = accessibleCourses.map((course) => {
     const lessons = course.modules
       .flatMap((m) => m.lessons)
@@ -147,9 +169,23 @@ export default async function DashboardPage() {
     const demoPercent = course.demoPercent;
     const demoOpen =
       demoPercent == null ? null : demoLessonCount(ordered.length, demoPercent);
+    const examId = course.quizzes[0]?.id ?? null;
+    const stage: FinishStage = isOwner
+      ? { kind: "learning" }
+      : finishStage({
+          totalLessons: progress.total,
+          completedLessons: progress.completed,
+          examId,
+          examPassed: examId ? passedExamIds.has(examId) : false,
+          certificateEnabled: course.certificateEnabled,
+          demo: demoPercent != null,
+          certificate: certByCourse.get(course.id) ?? null,
+          reviewed: reviewedCourseIds.has(course.id),
+        });
     return {
       ...course,
       progress,
+      stage,
       nextLessonId: next?.id ?? null,
       nextLessonTitle: next?.title ?? null,
       examId: course.quizzes[0]?.id ?? null,
@@ -159,9 +195,19 @@ export default async function DashboardPage() {
   });
 
   // Герой «Продолжить»: курс с недавней активностью и незавершённый, иначе — первый с уроком.
-  const inProgress = courses.filter((c) => c.nextLessonId && c.progress.completed > 0);
+  // Пройденный курс сюда не попадает: «Продолжить» на 100% вело обратно на первый урок.
+  const inProgress = courses.filter(
+    (c) => c.nextLessonId && c.progress.completed > 0 && c.progress.percent < 100,
+  );
   const resume =
     inProgress.find((c) => c.slug === recentSlug) ?? inProgress[0] ?? null;
+
+  // Курс на финише (уроки пройдены, впереди экзамен или сертификат) — отдельный
+  // блок над «Продолжить»: это следующий шаг ученика, а не «ещё один урок».
+  const finishing = courses.filter(
+    (c) => c.stage.kind === "exam" || c.stage.kind === "review" || c.stage.kind === "request",
+  );
+  const finish = finishing.find((c) => c.slug === recentSlug) ?? finishing[0] ?? null;
 
   // Ближайший к завершению курс (для метрики «до сертификата»).
   const closest = courses
@@ -190,7 +236,11 @@ export default async function DashboardPage() {
       <div>
         <h1 className="text-2xl font-bold">Моё обучение</h1>
         <p className="mt-1 text-foreground/60">
-          Здравствуйте, {session.user.name ?? session.user.email}
+          {/* У работников организаций нет ни имени, ни e-mail (ПДн не храним) —
+              без этого приветствие обрывалось на запятой. */}
+          {session.user.name || session.user.email
+            ? `Здравствуйте, ${session.user.name ?? session.user.email}`
+            : "Здравствуйте!"}
         </p>
         {isOwner ? (
           <p className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-700">
@@ -198,6 +248,8 @@ export default async function DashboardPage() {
           </p>
         ) : null}
       </div>
+
+      {finish ? <FinishHero course={finish} /> : null}
 
       {/* Герой «Продолжить обучение» — туда, где остановился ученик */}
       {resume ? (
@@ -375,18 +427,46 @@ export default async function DashboardPage() {
                 </div>
 
                 <div className="mt-4 flex flex-wrap gap-2">
+                  {/* На финише главная кнопка — следующий шаг к сертификату,
+                      уроки остаются доступными второй кнопкой. */}
+                  {c.stage.kind === "exam" ? (
+                    <Link
+                      href={`/app/quiz/${c.stage.examId}`}
+                      className={buttonVariants({ variant: "accent", size: "sm" })}
+                    >
+                      <GraduationCap className="size-4" />
+                      Сдать итоговый экзамен
+                    </Link>
+                  ) : c.stage.kind === "review" || c.stage.kind === "request" ? (
+                    <Link href="/app/certificates" className={buttonVariants({ variant: "accent", size: "sm" })}>
+                      <Award className="size-4" />
+                      Получить сертификат
+                    </Link>
+                  ) : c.stage.kind === "issued" ? (
+                    <Link href="/app/certificates" className={buttonVariants({ variant: "outline", size: "sm" })}>
+                      <Award className="size-4" />
+                      Сертификат
+                    </Link>
+                  ) : null}
                   {c.nextLessonId ? (
                     <Link
                       href={`/app/learn/${c.slug}/${c.nextLessonId}`}
-                      className={buttonVariants({ variant: "accent", size: "sm" })}
+                      className={buttonVariants({
+                        variant: c.progress.percent === 100 ? "outline" : "accent",
+                        size: "sm",
+                      })}
                     >
                       <PlayCircle className="size-4" />
-                      {c.progress.completed > 0 ? "Продолжить" : "Начать обучение"}
+                      {c.progress.percent === 100
+                        ? "Уроки курса"
+                        : c.progress.completed > 0
+                          ? "Продолжить"
+                          : "Начать обучение"}
                     </Link>
                   ) : (
                     <p className="text-sm text-foreground/60">Уроки скоро появятся</p>
                   )}
-                  {c.examId ? (
+                  {c.examId && c.stage.kind === "learning" ? (
                     <Link
                       href={`/app/quiz/${c.examId}`}
                       className={buttonVariants({ variant: "outline", size: "sm" })}
@@ -410,5 +490,62 @@ export default async function DashboardPage() {
         </>
       )}
     </main>
+  );
+}
+
+/**
+ * Блок «следующий шаг» для курса на финише: уроки пройдены, дальше — экзамен
+ * или сертификат (отзыв → запрос). Раньше на этом месте кабинет звал обратно на
+ * первый урок, и ученики не доходили ни до экзамена, ни до сертификата.
+ */
+function FinishHero({
+  course,
+}: {
+  course: { title: string; stage: FinishStage };
+}) {
+  const { stage } = course;
+  const view =
+    stage.kind === "exam"
+      ? {
+          eyebrow: "Уроки пройдены",
+          text: "Остался итоговый экзамен — после него откроется сертификат.",
+          href: `/app/quiz/${stage.examId}`,
+          cta: "Сдать экзамен",
+          Icon: GraduationCap,
+        }
+      : stage.kind === "review"
+        ? {
+            eyebrow: "Сертификат готов",
+            text: "Оставьте короткий отзыв о курсе и запросите сертификат.",
+            href: "/app/certificates",
+            cta: "Получить сертификат",
+            Icon: Award,
+          }
+        : {
+            eyebrow: "Сертификат готов",
+            text: "Остался последний шаг — запросить сертификат.",
+            href: "/app/certificates",
+            cta: "Как получить",
+            Icon: Award,
+          };
+  const { Icon } = view;
+  return (
+    <Link
+      href={view.href}
+      className="group mt-6 flex flex-col gap-4 rounded-2xl border border-amber-500/40 bg-gradient-to-br from-amber-500/[0.12] to-transparent p-5 transition-colors hover:from-amber-500/[0.18] sm:flex-row sm:items-center"
+    >
+      <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-700">
+        <Icon className="size-6" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-medium uppercase tracking-wide text-amber-700">{view.eyebrow}</p>
+        <h2 className="mt-1 text-lg font-bold">{course.title}</h2>
+        <p className="mt-0.5 text-sm text-foreground/70">{view.text}</p>
+      </div>
+      <span className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-slate-950 transition-colors group-hover:bg-amber-400">
+        <Icon className="size-4" />
+        {view.cta}
+      </span>
+    </Link>
   );
 }

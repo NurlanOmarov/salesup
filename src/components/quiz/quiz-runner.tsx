@@ -19,7 +19,10 @@ interface Result {
   scorePct: number;
   passed: boolean;
   passScore: number;
-  certificateIssued?: boolean;
+  /** Итоговый экзамен сдан и сертификат стал «Готов к получению». */
+  certificateReady?: boolean;
+  /** Экзамен сдан, но сертификат не открылся — причина (IneligibleReason). */
+  certificateBlocker?: string | null;
   xpEarned?: number;
   review: QuestionReview[];
 }
@@ -42,6 +45,8 @@ export interface QuizRunnerProps {
   gatesNext?: boolean;
   /** Возврат к уроку (вместо «Следующего урока», пока задание не сдано). */
   backHref?: string;
+  /** Итоговый экзамен курса, а не задание урока — свои формулировки и путь к сертификату. */
+  isExam?: boolean;
 }
 
 /** ORDERING предзаполняем начальным порядком — ответ есть сразу (можно идти дальше). */
@@ -63,6 +68,7 @@ export function QuizRunner({
   continueLabel,
   gatesNext = false,
   backHref,
+  isExam = false,
 }: QuizRunnerProps) {
   const [idx, setIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string[]>>(() => initialAnswers(questions));
@@ -101,7 +107,7 @@ export function QuizRunner({
   }
 
   if (result) {
-    return <ResultScreen result={result} questions={questions} answers={answers} onReset={reset} canRetry={!noAttempts} xpPerQuestion={xpPerQuestion} continueHref={continueHref} continueLabel={continueLabel} gatesNext={gatesNext} backHref={backHref} />;
+    return <ResultScreen result={result} questions={questions} answers={answers} onReset={reset} canRetry={!noAttempts} xpPerQuestion={xpPerQuestion} continueHref={continueHref} continueLabel={continueLabel} gatesNext={gatesNext} backHref={backHref} isExam={isExam} />;
   }
 
   if (questions.length === 0) return <p className="text-foreground/50">В задании пока нет вопросов.</p>;
@@ -196,6 +202,7 @@ function ResultScreen({
   continueLabel,
   gatesNext,
   backHref,
+  isExam,
 }: {
   result: Result;
   questions: RunnerQuestion[];
@@ -207,9 +214,13 @@ function ResultScreen({
   continueLabel: string;
   gatesNext: boolean;
   backHref?: string;
+  isExam: boolean;
 }) {
   // Провал задания, которое открывает следующий урок: вперёд пути нет, только пересдача.
   const locked = !result.passed && gatesNext;
+  const certReady = !!result.certificateReady;
+  // Экзамен сдан, но для сертификата балла мало — дать пересдать прямо отсюда.
+  const scoreTooLow = result.passed && result.certificateBlocker === "SCORE_TOO_LOW";
   const correctCount = result.review.filter((r) => r.correct).length;
   const xp = result.xpEarned ?? correctCount * xpPerQuestion;
 
@@ -234,7 +245,7 @@ function ResultScreen({
         </motion.div>
         <CountUp value={result.scorePct} className="text-4xl font-bold" suffix="%" />
         <p className={["mt-1 text-lg font-semibold", result.passed ? "text-emerald-700" : "text-amber-700"].join(" ")}>
-          {result.passed ? "Задание пройдено!" : "Почти получилось"}
+          {result.passed ? (isExam ? "Экзамен сдан!" : "Задание пройдено!") : "Почти получилось"}
         </p>
         <p className="mt-1 text-sm text-foreground/60">
           Правильных: {correctCount} из {result.review.length} · проходной {result.passScore}%
@@ -243,11 +254,13 @@ function ResultScreen({
           <p className="mx-auto mt-3 max-w-md text-sm text-foreground/75">
             {locked
               ? `Задание не засчитано — следующий урок откроется, когда наберёте ${result.passScore}%. `
-              : "Задание не засчитано. "}
+              : isExam
+                ? `Экзамен не сдан — сертификат откроется, когда наберёте ${result.passScore}%. `
+                : "Задание не засчитано. "}
             Ошибки разобраны ниже, пересдавать можно сколько угодно раз.
           </p>
         ) : null}
-        {!result.passed && canRetry ? (
+        {(!result.passed || scoreTooLow) && canRetry ? (
           <Button onClick={onReset} variant="accent" size="lg" className="mt-4">
             <RotateCcw className="size-4" />
             Пройти заново
@@ -265,14 +278,33 @@ function ResultScreen({
         ) : null}
       </motion.div>
 
-      {result.certificateIssued ? (
-        <Link
-          href="/app/certificates"
-          className="mt-4 flex items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3 font-semibold text-amber-800 transition-colors hover:bg-amber-500/10"
-        >
-          <Award className="size-5" />
-          Сертификат сформирован — открыть
-        </Link>
+      {/* Путь к сертификату сразу под результатом: раньше экран вёл только
+          в «Моё обучение», и до отзыва и запроса сертификата ученики не доходили. */}
+      {certReady ? (
+        <div className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/[0.06] p-5 text-center">
+          <Award className="mx-auto size-8 text-amber-600" />
+          <p className="mt-2 font-semibold">Сертификат готов к получению</p>
+          <p className="mt-1 text-sm text-foreground/70">
+            Остался последний шаг: короткий отзыв о курсе — и запрос сертификата.
+          </p>
+          <Link
+            href="/app/certificates"
+            className="mt-4 inline-flex h-11 items-center justify-center gap-1.5 rounded-lg bg-amber-500 px-5 text-sm font-semibold text-slate-950 transition-colors hover:bg-amber-400"
+          >
+            <Award className="size-4" />
+            Получить сертификат
+          </Link>
+        </div>
+      ) : result.passed && result.certificateBlocker === "LESSONS_INCOMPLETE" ? (
+        <p className="mt-4 rounded-xl border border-foreground/10 bg-foreground/[0.03] px-4 py-3 text-sm text-foreground/75">
+          Экзамен засчитан. Сертификат откроется, когда будут пройдены все уроки курса — урок
+          засчитывается после просмотра видео до конца.
+        </p>
+      ) : scoreTooLow ? (
+        <p className="mt-4 rounded-xl border border-foreground/10 bg-foreground/[0.03] px-4 py-3 text-sm text-foreground/75">
+          Экзамен засчитан, но для сертификата по этому курсу нужен более высокий балл —
+          пересдайте экзамен.
+        </p>
       ) : null}
 
       {/* Разбор */}
@@ -331,7 +363,7 @@ function ResultScreen({
             href={continueHref}
             className={[
               "inline-flex items-center justify-center gap-1.5 rounded-lg px-5 text-sm font-semibold transition-colors h-11",
-              result.passed
+              result.passed && !certReady
                 ? "bg-amber-500 text-slate-950 hover:bg-amber-400"
                 : "border border-foreground/15 text-foreground/80 hover:bg-foreground/5",
             ].join(" ")}

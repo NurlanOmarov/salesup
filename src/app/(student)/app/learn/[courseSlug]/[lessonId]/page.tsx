@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, LayoutGrid, CheckCircle2, GraduationCap, Info, Lock } from "lucide-react";
+import { ChevronLeft, ChevronRight, LayoutGrid, CheckCircle2, GraduationCap, Info, Lock, Award } from "lucide-react";
 import { requireUser } from "@/lib/auth/guards";
 import { env } from "@/env";
 import { buttonVariants } from "@/components/ui/button";
@@ -555,6 +555,16 @@ export default async function LearnPage({
               <Lock className="size-4" />
               Следующий урок откроется после сдачи задания
             </span>
+          ) : finalExam && !demoState ? (
+            // Последний урок курса: дальше — итоговый экзамен и сертификат. Раньше
+            // здесь было пусто, и ученики считали курс законченным на уроках.
+            <Link
+              href={examPassed ? "/app/certificates" : `/app/quiz/${finalExam.id}`}
+              className={buttonVariants({ variant: "accent", size: "sm" })}
+            >
+              {examPassed ? <Award className="size-4" /> : <GraduationCap className="size-4" />}
+              {examPassed ? "К сертификату" : "Итоговый экзамен"}
+            </Link>
           ) : (
             <span />
           )}
