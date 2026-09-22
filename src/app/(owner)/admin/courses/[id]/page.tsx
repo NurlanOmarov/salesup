@@ -41,6 +41,7 @@ export default async function CourseEditPage({
         accessDuration: true,
         sortOrder: true,
         hoursLabel: true,
+        completionMessage: true,
         seoTitle: true,
         seoDescription: true,
         ogTitle: true,

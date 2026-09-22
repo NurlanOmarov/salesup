@@ -241,6 +241,8 @@ type CourseSpec = {
   priceTiyn?: number;
   oldPriceTiyn?: number;
   hoursLabel: string;
+  /** Благодарность по окончании курса (Course.completionMessage) — для частей большой программы. */
+  completionMessage?: string;
   inDevelopment?: boolean; // бейдж «В разработке» на витрине (каркасы без контента)
   learnPoints: string[];
   targetAudience: string[];
@@ -1265,6 +1267,9 @@ const COURSES: CourseSpec[] = [
       "После каждого урока — короткий тест на усвоение материала, а в конце курса — итоговый тест по всем модулям: сдали на проходной балл — получили именной сертификат с проверкой подлинности.",
     industry: "Стройматериалы и DIY",
     hoursLabel: "~25 минут",
+    // Курс — первая часть основного, ещё не вышедшего курса по DIY-продажам.
+    completionMessage:
+      "Вы завершили первую часть большого курса по продажам в DIY-рознице. Основная часть уже готовится — в ней будет ещё больше техник и практики. Следите за новостями: мы сообщим, как только она выйдет.",
     learnPoints: [
       "Вести быструю консультацию и сразу предлагать помощь, не теряя покупателя в зале",
       "Осознанно переключать роль продавца: ходящий словарь, шоумен, киллер, партнёр",
@@ -2121,6 +2126,7 @@ async function upsertCourse(spec: CourseSpec) {
           industry: spec.industry,
           audience: spec.audience ?? "SPECIALIZED",
           hoursLabel: spec.hoursLabel,
+          completionMessage: spec.completionMessage ?? null,
           learnPoints: spec.learnPoints,
           targetAudience: spec.targetAudience,
           faq: spec.faq,
@@ -2152,6 +2158,7 @@ async function upsertCourse(spec: CourseSpec) {
       priceTiyn: coursePriceTiyn(spec),
       oldPriceTiyn: spec.oldPriceTiyn ?? null,
       hoursLabel: spec.hoursLabel,
+      completionMessage: spec.completionMessage ?? null,
       status: "PUBLISHED",
       inDevelopment: spec.inDevelopment ?? false,
       learnPoints: spec.learnPoints,
@@ -2171,6 +2178,7 @@ async function upsertCourse(spec: CourseSpec) {
       priceTiyn: coursePriceTiyn(spec),
       oldPriceTiyn: spec.oldPriceTiyn ?? null,
       hoursLabel: spec.hoursLabel,
+      completionMessage: spec.completionMessage ?? null,
       status: "PUBLISHED",
       inDevelopment: spec.inDevelopment ?? false,
       accessDuration: "LIFETIME",

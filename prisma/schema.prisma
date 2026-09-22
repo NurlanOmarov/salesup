@@ -224,6 +224,10 @@ model Course {
   certificateEnabled  Boolean        @default(true)
   certificateMinScore Int            @default(80)
   hoursLabel          String?
+  /// Благодарность по окончании курса — показывается после сдачи экзамена, в
+  /// кабинете и на странице сертификатов. Нужна, когда курс — часть большой
+  /// программы (sales-diy — первая часть ещё не вышедшего курса). null — не показывать.
+  completionMessage   String?        @db.Text
   // SEO (генерируется фабрикой, валидируется критиком; поля *Title/*Description —
   // ручной override владельца поверх фабрики: пусто → берётся сгенерённое/дефолт).
   seoTitle            String?

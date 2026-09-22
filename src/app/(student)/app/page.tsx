@@ -15,6 +15,7 @@ import { OnboardingTour } from "@/components/student/onboarding-tour";
 import { dailyQuests } from "@/lib/gamification/quests";
 import { buttonVariants } from "@/components/ui/button";
 import { LiveSessionsBlock } from "@/components/live/sessions-block";
+import { CompletionMessage } from "@/components/student/completion-message";
 
 export const metadata: Metadata = {
   title: "Моё обучение",
@@ -45,6 +46,7 @@ export default async function DashboardPage() {
     coverUrl: true,
     industry: true,
     certificateEnabled: true,
+    completionMessage: true,
     modules: {
       orderBy: { sortOrder: "asc" as const },
       select: {
@@ -425,6 +427,15 @@ export default async function DashboardPage() {
                     />
                   </div>
                 </div>
+
+                {/* Курс пройден (экзамен сдан или сертификата у курса нет) — благодарность. */}
+                {c.completionMessage &&
+                (c.stage.kind === "review" ||
+                  c.stage.kind === "request" ||
+                  c.stage.kind === "issued" ||
+                  c.stage.kind === "done") ? (
+                  <CompletionMessage message={c.completionMessage} className="mt-4" />
+                ) : null}
 
                 <div className="mt-4 flex flex-wrap gap-2">
                   {/* На финише главная кнопка — следующий шаг к сертификату,

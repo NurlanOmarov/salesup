@@ -7,6 +7,7 @@ import confetti from "canvas-confetti";
 import { CheckCircle2, XCircle, ChevronLeft, ChevronRight, RotateCcw, Award, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { QUESTION_TYPES } from "./registry";
+import { CompletionMessage } from "@/components/student/completion-message";
 import type { RunnerQuestion, QuestionReview } from "./types";
 
 /**
@@ -47,6 +48,8 @@ export interface QuizRunnerProps {
   backHref?: string;
   /** Итоговый экзамен курса, а не задание урока — свои формулировки и путь к сертификату. */
   isExam?: boolean;
+  /** Благодарность курса (Course.completionMessage) — показывается после сданного экзамена. */
+  completionMessage?: string | null;
 }
 
 /** ORDERING предзаполняем начальным порядком — ответ есть сразу (можно идти дальше). */
@@ -69,6 +72,7 @@ export function QuizRunner({
   gatesNext = false,
   backHref,
   isExam = false,
+  completionMessage = null,
 }: QuizRunnerProps) {
   const [idx, setIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string[]>>(() => initialAnswers(questions));
@@ -107,7 +111,7 @@ export function QuizRunner({
   }
 
   if (result) {
-    return <ResultScreen result={result} questions={questions} answers={answers} onReset={reset} canRetry={!noAttempts} xpPerQuestion={xpPerQuestion} continueHref={continueHref} continueLabel={continueLabel} gatesNext={gatesNext} backHref={backHref} isExam={isExam} />;
+    return <ResultScreen result={result} questions={questions} answers={answers} onReset={reset} canRetry={!noAttempts} xpPerQuestion={xpPerQuestion} continueHref={continueHref} continueLabel={continueLabel} gatesNext={gatesNext} backHref={backHref} isExam={isExam} completionMessage={completionMessage} />;
   }
 
   if (questions.length === 0) return <p className="text-foreground/50">В задании пока нет вопросов.</p>;
@@ -203,6 +207,7 @@ function ResultScreen({
   gatesNext,
   backHref,
   isExam,
+  completionMessage,
 }: {
   result: Result;
   questions: RunnerQuestion[];
@@ -215,6 +220,7 @@ function ResultScreen({
   gatesNext: boolean;
   backHref?: string;
   isExam: boolean;
+  completionMessage: string | null;
 }) {
   // Провал задания, которое открывает следующий урок: вперёд пути нет, только пересдача.
   const locked = !result.passed && gatesNext;
@@ -277,6 +283,10 @@ function ResultScreen({
           </motion.p>
         ) : null}
       </motion.div>
+
+      {isExam && result.passed && completionMessage ? (
+        <CompletionMessage message={completionMessage} className="mt-4" />
+      ) : null}
 
       {/* Путь к сертификату сразу под результатом: раньше экран вёл только
           в «Моё обучение», и до отзыва и запроса сертификата ученики не доходили. */}

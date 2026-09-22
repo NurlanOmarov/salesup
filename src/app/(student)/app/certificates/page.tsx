@@ -7,6 +7,7 @@ import { isEnrollmentActive } from "@/lib/access";
 import { CERTIFICATE_REQUEST_EMAIL } from "@/lib/certificates/constants";
 import { CertificateCelebration } from "@/components/student/certificate-celebration";
 import { CertificateReviewForm } from "@/components/student/certificate-review-form";
+import { CompletionMessage } from "@/components/student/completion-message";
 
 /** Салютуем только свежим сертификатам: иначе первый заход после релиза
  *  осыпал бы конфетти всех, кто получил документ месяцы назад. */
@@ -32,7 +33,7 @@ export default async function CertificatesPage() {
       readyAt: true,
       issuedAt: true,
       courseId: true,
-      course: { select: { title: true } },
+      course: { select: { title: true, completionMessage: true } },
     },
   });
 
@@ -201,6 +202,10 @@ export default async function CertificatesPage() {
                     )}
                   </span>
                 </div>
+
+                {c.course.completionMessage ? (
+                  <CompletionMessage message={c.course.completionMessage} className="mt-4" />
+                ) : null}
 
                 {!issued ? (
                   reviewedCourseIds.has(c.courseId) ? (

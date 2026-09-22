@@ -33,7 +33,7 @@ export default async function QuizPage({
       passScore: true,
       maxAttempts: true,
       status: true,
-      course: { select: { slug: true, title: true } },
+      course: { select: { slug: true, title: true, completionMessage: true } },
       lesson: { select: { id: true, title: true, requiresQuizPass: true, module: { select: { course: { select: { slug: true, title: true } } } } } },
       questions: {
         where: { validation: "VALIDATED" },
@@ -201,6 +201,7 @@ export default async function QuizPage({
           gatesNext={gatesNext}
           backHref={backHref}
           isExam={!quiz.lesson}
+          completionMessage={quiz.course?.completionMessage ?? null}
         />
       </div>
     </main>

@@ -52,6 +52,7 @@ interface CourseFields {
   accessDuration: (typeof ACCESS_DURATIONS)[number];
   sortOrder: number;
   hoursLabel: string | null;
+  completionMessage: string | null;
   seoTitle: string | null;
   seoDescription: string | null;
   ogTitle: string | null;
@@ -122,6 +123,7 @@ export function CourseEditForm({
   const [accessDuration, setAccessDuration] = useState(course.accessDuration);
   const [sortOrder, setSortOrder] = useState(course.sortOrder);
   const [hoursLabel, setHoursLabel] = useState(course.hoursLabel ?? "");
+  const [completionMessage, setCompletionMessage] = useState(course.completionMessage ?? "");
   const [seoTitle, setSeoTitle] = useState(course.seoTitle ?? "");
   const [seoDescription, setSeoDescription] = useState(
     course.seoDescription ?? "",
@@ -258,6 +260,7 @@ export function CourseEditForm({
     setAccessDuration(course.accessDuration);
     setSortOrder(course.sortOrder);
     setHoursLabel(course.hoursLabel ?? "");
+    setCompletionMessage(course.completionMessage ?? "");
     setSeoTitle(course.seoTitle ?? "");
     setSeoDescription(course.seoDescription ?? "");
     setOgTitle(course.ogTitle ?? "");
@@ -308,6 +311,7 @@ export function CourseEditForm({
         accessDuration,
         sortOrder,
         hoursLabel,
+        completionMessage,
         seoTitle,
         seoDescription,
         ogTitle,
@@ -625,6 +629,24 @@ export function CourseEditForm({
               Сертификат по окончании
             </label>
           </div>
+        </div>
+
+        <div>
+          <label className={labelCls} htmlFor="completion-message">
+            Благодарность по окончании курса
+          </label>
+          <textarea
+            id="completion-message"
+            rows={3}
+            className={inputCls}
+            value={completionMessage}
+            onChange={(e) => setCompletionMessage(e.target.value)}
+            placeholder="Например, если курс — первая часть большой программы: «Основная часть уже готовится…»"
+          />
+          <p className="mt-1 text-xs text-foreground/50">
+            Видит ученик после итогового экзамена, в кабинете и на странице сертификатов под
+            заголовком «Спасибо, что прошли курс до конца!». Пусто — не показывать.
+          </p>
         </div>
 
         {/* ─── SEO ─────────────────────────────────────────────── */}
