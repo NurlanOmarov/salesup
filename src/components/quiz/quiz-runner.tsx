@@ -295,7 +295,7 @@ function ResultScreen({
           <Award className="mx-auto size-8 text-amber-600" />
           <p className="mt-2 font-semibold">Сертификат готов к получению</p>
           <p className="mt-1 text-sm text-foreground/70">
-            Остался последний шаг: короткий отзыв о курсе — и запрос сертификата.
+            Осталось два коротких шага: отзыв о курсе и ФИО для сертификата — он будет готов сразу.
           </p>
           <Link
             href="/app/certificates"

@@ -22,7 +22,7 @@ const nextConfig: NextConfig = {
   //  • шрифты для PDF-сертификатов;
   //  • базы geoip-lite для /api/track (определение страны по IP, правило 9/10).
   outputFileTracingIncludes: {
-    "/**": ["./src/assets/fonts/**"],
+    "/**": ["./src/assets/fonts/**", "./src/assets/certificate/**"],
     "/api/track": ["./node_modules/geoip-lite/data/**"],
   },
   // Резолв ESM-style `.js`-импортов в TS-исходниках (lib/storage и др.):

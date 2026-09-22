@@ -11,9 +11,11 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 /**
- * Управление выдачей сертификатов. Ученик, выполнивший условия, попадает в «Готовы к
- * выдаче» и отправляет ФИО на почту; владелец изготавливает документ вне системы и
- * помечает «Выдан». ФИО в системе не хранится (правило 9, минимизация ПДн).
+ * Сертификаты (D-019). Выдача автоматическая: ученик прошёл курс → «Готов к
+ * получению» → оставил отзыв → ввёл ФИО с согласием → PDF выпущен и ушёл на почту
+ * (ответственному представителю организации или самому ученику). Владелец здесь
+ * только видит картину; ручная отметка «Выдан» осталась для документов,
+ * изготовленных вне системы.
  */
 export default async function AdminCertificatesPage() {
   const certs = await db.certificate.findMany({
@@ -26,8 +28,12 @@ export default async function AdminCertificatesPage() {
       scorePct: true,
       readyAt: true,
       issuedAt: true,
+      holderName: true,
+      pdfKey: true,
+      emailedAt: true,
+      emailedTo: true,
       course: { select: { title: true } },
-      user: { select: { email: true } },
+      user: { select: { email: true, login: true } },
     },
   });
 
@@ -43,9 +49,10 @@ export default async function AdminCertificatesPage() {
             Сертификаты
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-foreground/60">
-            Сертификаты не формируются автоматически и ФИО не хранится. Ученик,
-            прошедший курс, отправляет ФИО на почту; изготовьте документ и отметьте
-            «Выдан».
+            Сертификаты выдаются автоматически: ученик оставляет отзыв, вводит ФИО с
+            согласием на обработку — PDF выпускается сразу и уходит на почту (работникам
+            компаний — ответственному представителю). «Готовы к получению» — прошли курс,
+            но ещё не ввели ФИО.
           </p>
         </div>
         <a
@@ -63,7 +70,7 @@ export default async function AdminCertificatesPage() {
       <section className="mt-8">
         <h2 className="flex items-center gap-2 text-sm font-semibold text-amber-600">
           <Clock className="size-4" />
-          Готовы к выдаче ({ready.length})
+          Готовы к получению ({ready.length})
         </h2>
         {ready.length === 0 ? (
           <p className="mt-3 rounded-2xl border border-dashed border-foreground/15 p-6 text-center text-sm text-foreground/50">
@@ -79,7 +86,7 @@ export default async function AdminCertificatesPage() {
                 <div>
                   <p className="font-semibold">{c.course.title}</p>
                   <p className="text-sm text-foreground/60">
-                    {c.user.email} · готов {c.readyAt.toLocaleDateString("ru-RU")}
+                    {c.user.email ?? c.user.login} · готов {c.readyAt.toLocaleDateString("ru-RU")}
                     {c.scorePct != null ? ` · ${c.scorePct}%` : ""}
                   </p>
                 </div>
@@ -106,19 +113,33 @@ export default async function AdminCertificatesPage() {
               <thead className="bg-foreground/[0.03] text-left text-xs uppercase tracking-wide text-foreground/50">
                 <tr>
                   <th className="px-4 py-2 font-medium">Курс</th>
+                  <th className="px-4 py-2 font-medium">ФИО</th>
                   <th className="px-4 py-2 font-medium">Ученик</th>
                   <th className="px-4 py-2 font-medium">Номер</th>
                   <th className="px-4 py-2 font-medium">Выдан</th>
+                  <th className="px-4 py-2 font-medium">Письмо</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-foreground/5">
                 {issued.map((c) => (
                   <tr key={c.id}>
                     <td className="px-4 py-2.5">{c.course.title}</td>
-                    <td className="px-4 py-2.5 text-foreground/60">{c.user.email}</td>
-                    <td className="px-4 py-2.5 font-mono text-xs">{c.number ?? "—"}</td>
+                    <td className="px-4 py-2.5">{c.holderName ?? "—"}</td>
+                    <td className="px-4 py-2.5 text-foreground/60">{c.user.email ?? c.user.login}</td>
+                    <td className="px-4 py-2.5 font-mono text-xs">
+                      {c.pdfKey ? (
+                        <a href={`/api/certificate/${c.id}`} target="_blank" rel="noopener" className="text-amber-700 hover:underline">
+                          {c.number ?? "PDF"}
+                        </a>
+                      ) : (
+                        (c.number ?? "—")
+                      )}
+                    </td>
                     <td className="px-4 py-2.5 text-foreground/60">
                       {c.issuedAt?.toLocaleDateString("ru-RU") ?? "—"}
+                    </td>
+                    <td className="px-4 py-2.5 text-xs text-foreground/60">
+                      {c.emailedAt ? `${c.emailedTo ?? ""} · ${c.emailedAt.toLocaleDateString("ru-RU")}` : c.pdfKey ? "не отправлено" : "—"}
                     </td>
                   </tr>
                 ))}

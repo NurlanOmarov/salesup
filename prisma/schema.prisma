@@ -228,6 +228,12 @@ model Course {
   /// кабинете и на странице сертификатов. Нужна, когда курс — часть большой
   /// программы (sales-diy — первая часть ещё не вышедшего курса). null — не показывать.
   completionMessage   String?        @db.Text
+  /// Название курса на сертификате, если отличается от витринного
+  /// (sales-diy: «Эффективные продажи в DIY»). null — берётся title.
+  certificateCourseTitle String?
+  /// Что именно пройдено — строка сертификата после «успешно прошёл(ла)»:
+  /// «бизнес-курс онлайн» по умолчанию, у sales-diy — «вводную часть бизнес-курса онлайн».
+  certificateLead     String?
   // SEO (генерируется фабрикой, валидируется критиком; поля *Title/*Description —
   // ручной override владельца поверх фабрики: пусто → берётся сгенерённое/дефолт).
   seoTitle            String?
@@ -828,14 +834,22 @@ model Certificate {
   number     String?           @unique // присваивается вручную при выдаче
   userId     String
   courseId   String
-  holderName String? // НЕ заполняется автоматически (ПДн); опц. ручной ввод владельцем
+  holderName String? // ФИО — вводит сам ученик на шаге 2, с согласием (consentAt); D-019
   scorePct   Int?
   hoursLabel String?
   pdfKey     String? // относительный ключ в lib/storage (если владелец приложит PDF)
   verifyHash String?           @unique
   status     CertificateStatus @default(READY)
   readyAt    DateTime          @default(now()) // когда выполнены условия
-  issuedAt   DateTime? // когда владелец пометил «Выдан»
+  issuedAt   DateTime? // когда выпущен PDF (автоматически после ввода ФИО) либо владелец пометил «Выдан»
+  /// Согласие на обработку ФИО и сведений о прохождении курса для сертификата
+  /// (Закон РБ № 99-З): когда дано и редакция текста (CERTIFICATE_CONSENT_VERSION).
+  consentAt      DateTime?
+  consentVersion String?
+  /// Куда и когда ушёл PDF: ответственному представителю организации (B2B) или
+  /// на почту самого ученика (розница). Пусто — письмо ещё не отправлено.
+  emailedAt  DateTime?
+  emailedTo  String?
   revokedAt  DateTime?
   user       User              @relation(fields: [userId], references: [id])
   course     Course            @relation(fields: [courseId], references: [id])

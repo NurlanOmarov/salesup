@@ -8,7 +8,9 @@ import { moderateReview } from "@/lib/reviews/moderation";
 import { isEnrollmentActive } from "@/lib/access";
 import { env } from "@/env";
 import { enqueue } from "@/lib/jobs/enqueue";
-import { certificateLearner } from "@/lib/certificates/issue";
+import { certificateLearner, issueCertificate, CertificateIssueError } from "@/lib/certificates/issue";
+import { normalizeHolderName, validateHolderName, HOLDER_NAME_ERRORS } from "@/lib/certificates/holder";
+import { CERTIFICATE_CONSENT_VERSION } from "@/lib/certificates/consent";
 import { reviewTelegramText, certificateTelegramButtons } from "@/lib/certificates/notify";
 
 /** Подпись отзыва работника организации: ПДн у B2B-учеников мы не получаем. */
@@ -104,5 +106,42 @@ export const submitCourseReviewAction = safeAction(
       }
     }
     return { published };
+  },
+);
+
+/**
+ * Шаг 2: ученик вводит ФИО и даёт согласие на обработку ПДн — сертификат
+ * выпускается сразу (PDF, номер, QR), письмо с ним уходит ответственному
+ * представителю организации или самому ученику (D-019). Согласие — отдельная
+ * обязательная галочка: без неё запрос отклоняется на сервере, а не только в UI.
+ */
+export const issueCertificateAction = safeAction(
+  {
+    schema: z.object({
+      certificateId: z.string().min(1),
+      holderName: z.string().max(200),
+      consent: z.literal(true, { errorMap: () => ({ message: "Нужно согласие на обработку персональных данных" }) }),
+    }),
+    auth: "user",
+  },
+  async (input, { session }) => {
+    const holderName = normalizeHolderName(input.holderName);
+    const invalid = validateHolderName(holderName);
+    if (invalid) throw new Error(HOLDER_NAME_ERRORS[invalid]);
+
+    try {
+      const res = await issueCertificate({
+        userId: session!.user.id,
+        certificateId: input.certificateId,
+        holderName,
+        consentVersion: CERTIFICATE_CONSENT_VERSION,
+      });
+      revalidatePath("/app/certificates");
+      revalidatePath("/app");
+      return res;
+    } catch (e) {
+      if (e instanceof CertificateIssueError) throw new Error(e.message);
+      throw e;
+    }
   },
 );

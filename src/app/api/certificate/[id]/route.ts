@@ -8,9 +8,10 @@ export const dynamic = "force-dynamic";
 /**
  * Скачивание PDF сертификата (S5.3). Доступ: владелец сертификата или OWNER.
  * Публичная проверка подлинности — отдельно через /verify/<hash> (без PDF).
+ * Встраивается в iframe на странице сертификатов — поэтому ответ same-origin.
  */
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
@@ -34,11 +35,14 @@ export async function GET(
     return new NextResponse("PDF not found", { status: 404 });
   }
   const pdf = await storage.get(cert.pdfKey);
+  // ?download=1 — кнопка «Скачать PDF»; без параметра — встроенный просмотрщик.
+  const download = new URL(req.url).searchParams.get("download") === "1";
+  const filename = `certificate-${(cert.number ?? id).replace(/[^\w-]+/g, "-")}.pdf`;
 
   return new NextResponse(new Uint8Array(pdf), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `inline; filename="certificate-${cert.number}.pdf"`,
+      "Content-Disposition": `${download ? "attachment" : "inline"}; filename="${filename}"`,
       "Cache-Control": "private, no-store",
     },
   });

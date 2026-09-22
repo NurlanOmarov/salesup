@@ -64,6 +64,17 @@ export const handlers: Record<string, JobHandler> = {
     await sendTelegramMessage(text, chatId, buttons);
   },
 
+  // Письмо с PDF сертификата (D-019): ответственному представителю организации
+  // (B2B) или самому ученику (розница). PDF читаем из lib/storage здесь, а не
+  // кладём в payload — Job хранит JSON, мегабайты base64 в нём ни к чему.
+  // Идемпотентно по emailedAt: повтор задачи после успешной отправки — no-op.
+  "certificate.email": async (payload) => {
+    const { certificateId } = payload as { certificateId?: string };
+    if (!certificateId) throw new Error("certificate.email: нет certificateId");
+    const { sendCertificateEmail } = await import("@/lib/certificates/email.js");
+    await sendCertificateEmail(certificateId);
+  },
+
   // Еженедельный дайджест владельцу (S6.2): собираем сводку, при EMAIL_ENABLED
   // отправляем письмо (S5.5), иначе она доступна на странице /admin/digest.
   // semantic: true — раз в неделю считаем SEO-каннибализацию (embeddings, доли цента;

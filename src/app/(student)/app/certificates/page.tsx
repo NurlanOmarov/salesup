@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Award, Mail, Clock, CheckCircle2, Circle, GraduationCap, PlayCircle } from "lucide-react";
+import { Award, Clock, CheckCircle2, Circle, GraduationCap, PlayCircle } from "lucide-react";
 import { requireUser } from "@/lib/auth/guards";
 import { db } from "@/lib/db";
 import { isEnrollmentActive } from "@/lib/access";
-import { CERTIFICATE_REQUEST_EMAIL } from "@/lib/certificates/constants";
 import { CertificateCelebration } from "@/components/student/certificate-celebration";
 import { CertificateReviewForm } from "@/components/student/certificate-review-form";
+import { CertificateClaimForm } from "@/components/student/certificate-claim-form";
+import { CertificateViewer } from "@/components/student/certificate-viewer";
+import { certificateConsentText } from "@/lib/certificates/consent";
 import { CompletionMessage } from "@/components/student/completion-message";
 
 /** Салютуем только свежим сертификатам: иначе первый заход после релиза
@@ -33,6 +35,9 @@ export default async function CertificatesPage() {
       readyAt: true,
       issuedAt: true,
       courseId: true,
+      number: true,
+      pdfKey: true,
+      emailedAt: true,
       course: { select: { title: true, completionMessage: true } },
     },
   });
@@ -207,36 +212,25 @@ export default async function CertificatesPage() {
                   <CompletionMessage message={c.course.completionMessage} className="mt-4" />
                 ) : null}
 
-                {!issued ? (
+                {issued && c.pdfKey ? (
+                  <CertificateViewer
+                    certificateId={c.id}
+                    number={c.number}
+                    sentNote={
+                      c.emailedAt
+                        ? isOrgLearner
+                          ? "Копия отправлена на почту ответственного представителя вашей компании."
+                          : "Копия отправлена вам на почту."
+                        : null
+                    }
+                  />
+                ) : !issued ? (
                   reviewedCourseIds.has(c.courseId) ? (
-                    <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-amber-500/20 bg-amber-500/[0.04] p-4 text-sm">
-                      <Mail className="mt-0.5 size-4 shrink-0 text-amber-600" />
-                      {isOrgLearner ? (
-                        // Работник организации: его ПДн платформа не получает (правило 9,
-                        // оферта /offer-b2b п. 10.1) — данные для сертификата школе
-                        // передаёт клиент через ответственного представителя.
-                        <p className="text-foreground/80">
-                          <span className="font-semibold">Шаг 2.</span> Спасибо за отзыв!
-                          Сертификаты работникам компании оформляются через ответственного
-                          представителя: сообщите ему, что курс пройден, — он передаст школе
-                          данные для сертификата. Школа уже знает, что сертификат готов.
-                        </p>
-                      ) : (
-                      <p className="text-foreground/80">
-                        <span className="font-semibold">Шаг 2.</span> Спасибо за отзыв! Теперь
-                        отправьте ваше ФИО на почту{" "}
-                        <a
-                          href={`mailto:${CERTIFICATE_REQUEST_EMAIL}?subject=${encodeURIComponent(
-                            `Сертификат: ${c.course.title}`,
-                          )}`}
-                          className="font-semibold text-amber-700 underline underline-offset-2 dark:text-amber-400"
-                        >
-                          {CERTIFICATE_REQUEST_EMAIL}
-                        </a>
-                        . Мы подготовим сертификат и вышлем его вам.
-                      </p>
-                      )}
-                    </div>
+                    <CertificateClaimForm
+                      certificateId={c.id}
+                      consentText={certificateConsentText(isOrgLearner)}
+                      isOrgLearner={isOrgLearner}
+                    />
                   ) : (
                     <CertificateReviewForm
                       courseId={c.courseId}

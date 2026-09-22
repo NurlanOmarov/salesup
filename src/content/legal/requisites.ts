@@ -16,6 +16,8 @@ export const REQUISITES = {
   /** Родительный падеж — для оборотов «является офертой …», «по поручению …». */
   legalNameGenitive:
     "Индивидуального предпринимателя Дубовика Виталия Николаевича",
+  /** Дательный падеж — для оборота «даю согласие …» (lib/certificates/consent). */
+  legalNameDative: "индивидуальному предпринимателю Дубовику Виталию Николаевичу",
   /** Короткая форма для футера и текста документов. */
   shortName: "ИП Дубовик В. Н.",
   /** Учётный номер плательщика. */
@@ -61,5 +63,5 @@ export const SITE_DOMAIN = "study.activesales.by";
  * версия сохраняется в момент акцепта (User.termsVersion, Lead.consentVersion),
  * чтобы всегда было видно, какую редакцию принял конкретный человек.
  */
-export const LEGAL_VERSION = "1.2";
-export const LEGAL_DATE = "8 сентября 2026 г.";
+export const LEGAL_VERSION = "1.3";
+export const LEGAL_DATE = "22 сентября 2026 г.";

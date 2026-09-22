@@ -18,8 +18,8 @@ export interface EmailMessage {
   /** Куда отвечать (например, контакт заявителя). From всегда наш — Zoho и другие
    *  провайдеры отклоняют письмо, если отправитель не совпадает с учёткой SMTP. */
   replyTo?: string;
-  /** Вложения (например, CSV со списком учёток): содержимое — строка в UTF-8. */
-  attachments?: { filename: string; content: string; contentType: string }[];
+  /** Вложения: строка в UTF-8 (CSV со списком учёток) или Buffer (PDF сертификата). */
+  attachments?: { filename: string; content: string | Buffer; contentType: string }[];
 }
 
 let cached: Transporter | null = null;

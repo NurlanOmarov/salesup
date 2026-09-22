@@ -4,7 +4,8 @@ import { db } from "@/lib/db";
 
 export const metadata: Metadata = {
   title: "Проверка сертификата",
-  // Служебная страница — вне индекса (CLAUDE.md, правило 9). ФИО здесь не показывается.
+  // Служебная страница — вне индекса: на ней ФИО владельца сертификата (с его
+  // согласия, lib/certificates/consent), поисковикам её отдавать нельзя.
   robots: { index: false, follow: false },
 };
 
@@ -12,8 +13,9 @@ export const dynamic = "force-dynamic";
 
 /**
  * Публичная страница проверки подлинности сертификата. Доступна без входа. По verifyHash
- * подтверждает факт и параметры выдачи (курс, номер, дата) — БЕЗ ФИО (ПДн не хранятся,
- * правило 9). Работает только для выданных сертификатов, которым владелец присвоил hash.
+ * подтверждает факт и параметры выдачи: ФИО (его показ оговорён в согласии, которое
+ * ученик даёт при выпуске, D-019), курс, номер, дата. Hash — 128 случайных бит, по
+ * ссылке из QR-кода; перебрать сертификаты нельзя. Только для выданных сертификатов.
  */
 export default async function VerifyPage({
   params,
@@ -26,6 +28,7 @@ export default async function VerifyPage({
     where: { verifyHash: hash },
     select: {
       number: true,
+      holderName: true,
       scorePct: true,
       hoursLabel: true,
       status: true,
@@ -45,6 +48,12 @@ export default async function VerifyPage({
           <h1 className="mt-4 text-2xl font-bold">Сертификат подлинный</h1>
           <div className="mt-6 w-full rounded-2xl border border-foreground/10 bg-background p-6 text-left">
             <dl className="space-y-3 text-sm">
+              {cert!.holderName ? (
+                <div>
+                  <dt className="text-xs uppercase tracking-wide text-foreground/50">Выдан</dt>
+                  <dd className="font-medium">{cert!.holderName}</dd>
+                </div>
+              ) : null}
               <div>
                 <dt className="text-xs uppercase tracking-wide text-foreground/50">Курс</dt>
                 <dd className="font-medium">{cert!.course.title}</dd>

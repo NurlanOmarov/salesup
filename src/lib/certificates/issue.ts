@@ -4,7 +4,16 @@ import { hasDemoLimit } from "@/lib/access";
 import { enqueue } from "@/lib/jobs/enqueue";
 import { log } from "@/lib/log";
 import { checkEligibility, type IneligibleReason } from "./eligibility.js";
-import { certificateReadyTelegramText, certificateTelegramButtons, type CertificateLearner } from "./notify.js";
+import { randomBytes } from "node:crypto";
+import { storage } from "@/lib/storage";
+import {
+  certificateReadyTelegramText,
+  certificateIssuedTelegramText,
+  certificateTelegramButtons,
+  type CertificateLearner,
+} from "./notify.js";
+import { renderCertificatePdf } from "./pdf.js";
+import { formatCertificateNumber, passedVerb } from "./holder.js";
 
 /**
  * Фиксация готовности к сертификату при выполнении условий (S5.3): все опубликованные
@@ -121,4 +130,101 @@ export async function certificateLearner(userId: string): Promise<CertificateLea
     login: user?.login ?? null,
     orgName: membership?.org.name ?? null,
   };
+}
+
+// ─────────────────────────── Автоматическая выдача (D-019) ───────────────────────────
+
+/** Ключ PDF в lib/storage — относительный, как всё медиа (CLAUDE.md, правило 3). */
+export function certificatePdfKey(certificateId: string): string {
+  return `certificates/${certificateId}.pdf`;
+}
+
+export class CertificateIssueError extends Error {}
+
+/**
+ * Выпуск сертификата по ФИО, которое ввёл сам ученик (шаг 2 страницы сертификатов).
+ * Условия: запись «Готов к получению» принадлежит ученику, отзыв о курсе оставлен
+ * (шаг 1), согласие на обработку ПДн дано. Номер — из сквозного счётчика
+ * (certificate_number_seq), PDF — в lib/storage; затем письмо с PDF уходит
+ * ответственному представителю организации или самому ученику (задача
+ * `certificate.email`), владельцу — уведомление в Telegram.
+ *
+ * Идемпотентно: уже выданный сертификат повторно не выпускается.
+ */
+export async function issueCertificate(input: {
+  userId: string;
+  certificateId: string;
+  holderName: string;
+  consentVersion: string;
+}): Promise<{ certificateId: string; number: string }> {
+  const cert = await db.certificate.findUnique({
+    where: { id: input.certificateId },
+    select: {
+      id: true,
+      userId: true,
+      courseId: true,
+      status: true,
+      number: true,
+      revokedAt: true,
+      course: { select: { title: true, certificateCourseTitle: true, certificateLead: true } },
+    },
+  });
+  if (!cert || cert.userId !== input.userId || cert.revokedAt) {
+    throw new CertificateIssueError("Сертификат не найден");
+  }
+  if (cert.status === "ISSUED" && cert.number) return { certificateId: cert.id, number: cert.number };
+
+  const reviewed = await db.review.findUnique({
+    where: { courseId_userId: { courseId: cert.courseId, userId: input.userId } },
+    select: { id: true },
+  });
+  if (!reviewed) throw new CertificateIssueError("Сначала оставьте отзыв о курсе");
+
+  const learner = await certificateLearner(input.userId);
+  const issuedAt = new Date();
+  const seqRows = await db.$queryRaw<{ nextval: bigint }[]>`SELECT nextval('certificate_number_seq')`;
+  const number = formatCertificateNumber(Number(seqRows[0]!.nextval), issuedAt);
+  const verifyHash = randomBytes(16).toString("hex");
+  const base = env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "");
+
+  const pdf = await renderCertificatePdf({
+    holderName: input.holderName,
+    orgName: learner.orgName,
+    verb: passedVerb(input.holderName),
+    lead: cert.course.certificateLead ?? "бизнес-курс онлайн",
+    courseTitle: cert.course.certificateCourseTitle ?? cert.course.title,
+    number,
+    verifyUrl: `${base}/verify/${verifyHash}`,
+  });
+  const pdfKey = certificatePdfKey(cert.id);
+  await storage.put(pdfKey, Buffer.from(pdf));
+
+  await db.certificate.update({
+    where: { id: cert.id },
+    data: {
+      holderName: input.holderName,
+      number,
+      verifyHash,
+      pdfKey,
+      status: "ISSUED",
+      issuedAt,
+      consentAt: issuedAt,
+      consentVersion: input.consentVersion,
+    },
+  });
+
+  // Письмо и уведомление — через очередь: сбой SMTP не должен отменять выдачу,
+  // а Job-runner повторит отправку сам.
+  try {
+    await enqueue("certificate.email", { certificateId: cert.id });
+    await enqueue("telegram.send", {
+      text: certificateIssuedTelegramText({ courseTitle: cert.course.title, number, learner }),
+      buttons: certificateTelegramButtons(env.NEXT_PUBLIC_SITE_URL),
+      kind: "certificate-issued",
+    });
+  } catch (e) {
+    log.error({ err: e }, "certificate: письмо/уведомление не поставлены в очередь");
+  }
+
+  return { certificateId: cert.id, number };
 }

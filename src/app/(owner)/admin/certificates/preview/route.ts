@@ -14,12 +14,12 @@ export async function GET() {
 
   const base = env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "");
   const pdf = await renderCertificatePdf({
-    holderName: "Иван Иванов",
-    courseTitle: "Продажи в фарме: переговоры с врачом",
-    number: "SA-2026-000123",
-    hoursLabel: "8 часов",
-    scorePct: 92,
-    issuedAt: new Date(),
+    holderName: "Иванов Иван Иванович",
+    orgName: "ООО «Образец»",
+    verb: "прошёл",
+    lead: "бизнес-курс онлайн",
+    courseTitle: "Эффективные продажи в DIY",
+    number: "5000/22.09.2026",
     verifyUrl: `${base}/verify/sample`,
   });
 

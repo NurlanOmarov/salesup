@@ -243,6 +243,10 @@ type CourseSpec = {
   hoursLabel: string;
   /** Благодарность по окончании курса (Course.completionMessage) — для частей большой программы. */
   completionMessage?: string;
+  /** Название курса на сертификате, если отличается от витринного. */
+  certificateCourseTitle?: string;
+  /** Что пройдено — после «успешно прошёл(ла)»: по умолчанию «бизнес-курс онлайн». */
+  certificateLead?: string;
   inDevelopment?: boolean; // бейдж «В разработке» на витрине (каркасы без контента)
   learnPoints: string[];
   targetAudience: string[];
@@ -1270,6 +1274,9 @@ const COURSES: CourseSpec[] = [
     // Курс — первая часть основного, ещё не вышедшего курса по DIY-продажам.
     completionMessage:
       "Вы завершили первую часть большого курса по продажам в DIY-рознице. Основная часть уже готовится — в ней будет ещё больше техник и практики. Следите за новостями: мы сообщим, как только она выйдет.",
+    // Формулировки сертификата — как в образце школы.
+    certificateCourseTitle: "Эффективные продажи в DIY",
+    certificateLead: "вводную часть бизнес-курса онлайн",
     learnPoints: [
       "Вести быструю консультацию и сразу предлагать помощь, не теряя покупателя в зале",
       "Осознанно переключать роль продавца: ходящий словарь, шоумен, киллер, партнёр",
@@ -2127,6 +2134,8 @@ async function upsertCourse(spec: CourseSpec) {
           audience: spec.audience ?? "SPECIALIZED",
           hoursLabel: spec.hoursLabel,
           completionMessage: spec.completionMessage ?? null,
+          certificateCourseTitle: spec.certificateCourseTitle ?? null,
+          certificateLead: spec.certificateLead ?? null,
           learnPoints: spec.learnPoints,
           targetAudience: spec.targetAudience,
           faq: spec.faq,
@@ -2159,6 +2168,8 @@ async function upsertCourse(spec: CourseSpec) {
       oldPriceTiyn: spec.oldPriceTiyn ?? null,
       hoursLabel: spec.hoursLabel,
       completionMessage: spec.completionMessage ?? null,
+      certificateCourseTitle: spec.certificateCourseTitle ?? null,
+      certificateLead: spec.certificateLead ?? null,
       status: "PUBLISHED",
       inDevelopment: spec.inDevelopment ?? false,
       learnPoints: spec.learnPoints,
@@ -2179,6 +2190,8 @@ async function upsertCourse(spec: CourseSpec) {
       oldPriceTiyn: spec.oldPriceTiyn ?? null,
       hoursLabel: spec.hoursLabel,
       completionMessage: spec.completionMessage ?? null,
+      certificateCourseTitle: spec.certificateCourseTitle ?? null,
+      certificateLead: spec.certificateLead ?? null,
       status: "PUBLISHED",
       inDevelopment: spec.inDevelopment ?? false,
       accessDuration: "LIFETIME",
