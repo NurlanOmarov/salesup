@@ -177,6 +177,17 @@ describe("определение курса по тексту заказа", () 
     expect(matchCourseFromText([text], courses)?.slug).toBe("sales-spin");
   });
 
+  it("различает коды, начинающиеся одинаково: sales-kitchens и sales-kitchens-basics", () => {
+    const withBasics = [...courses, { slug: "sales-kitchens-basics", title: "Кухни — основа продаж" }];
+    const desc = (code: string) => `Доступ на 12 месяцев откроется на указанный e-mail. Код: ${code}`;
+    expect(matchCourseFromText([desc("sales-kitchens-basics")], withBasics)?.slug).toBe("sales-kitchens-basics");
+    expect(matchCourseFromText([desc("sales-kitchens")], withBasics)?.slug).toBe("sales-kitchens");
+    // порядок курсов в базе не должен влиять на результат
+    expect(matchCourseFromText([desc("sales-kitchens-basics")], [...withBasics].reverse())?.slug).toBe(
+      "sales-kitchens-basics",
+    );
+  });
+
   it("не путает адрес курса с частью другого слова", () => {
     expect(matchCourseFromText(["курс sales-spinner для менеджеров"], courses)).toBeNull();
   });
