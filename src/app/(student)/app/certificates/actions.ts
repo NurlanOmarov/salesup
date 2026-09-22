@@ -141,7 +141,10 @@ export const issueCertificateAction = safeAction(
       return res;
     } catch (e) {
       if (e instanceof CertificateIssueError) throw new Error(e.message);
-      throw e;
+      // Системные ошибки (хранилище, PDF) ученику не показываем: в них пути на
+      // диске (правило 2). Причина — в логе, ученику — понятное сообщение.
+      console.error("Сертификат не выпущен:", e);
+      throw new Error("Не удалось выпустить сертификат. Попробуйте ещё раз через минуту.");
     }
   },
 );

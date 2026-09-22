@@ -1,8 +1,9 @@
 import { Download, ExternalLink, Mail } from "lucide-react";
+import { CertificatePdfCanvas } from "./certificate-pdf-canvas";
 
 /**
- * Выпущенный сертификат: PDF во встроенном просмотрщике браузера и кнопки
- * «Открыть» / «Скачать». Файл отдаёт /api/certificate/<id> — только владельцу
+ * Выпущенный сертификат: превью PDF (canvas, работает и на Android) и кнопки
+ * «Скачать» / «Открыть на весь экран». Файл отдаёт /api/certificate/<id> — только владельцу
  * сертификата (или OWNER), без кэширования.
  */
 export function CertificateViewer({
@@ -17,13 +18,7 @@ export function CertificateViewer({
   const src = `/api/certificate/${certificateId}`;
   return (
     <div className="mt-4">
-      <div className="overflow-hidden rounded-xl border border-foreground/10 bg-foreground/[0.03]">
-        <iframe
-          src={`${src}#view=FitH&toolbar=0`}
-          title={`Сертификат${number ? ` № ${number}` : ""}`}
-          className="aspect-[842/595] w-full"
-        />
-      </div>
+      <CertificatePdfCanvas url={src} title={`Сертификат${number ? ` № ${number}` : ""}`} />
       <div className="mt-3 flex flex-wrap gap-2">
         <a
           href={`${src}?download=1`}
