@@ -1,9 +1,18 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Wallet } from "lucide-react";
+import { AlertCircle, Wallet } from "lucide-react";
 import { db } from "@/lib/db";
+import { getIncomeSuggestion, getOrgsAwaitingIncome } from "@/lib/finance/pending";
+import { loadRates } from "@/lib/finance/rates";
+import {
+  convertedAmounts,
+  fxFromRates,
+  resolveFx,
+  type FxSnapshot,
+} from "@/lib/finance/fx";
 import {
   getFinanceSettings,
+  getIncomeBuyers,
   getIncomes,
   getIncomeYears,
   getOrgBillingCounts,
@@ -11,14 +20,18 @@ import {
   totalsByMonth,
 } from "@/lib/finance/service";
 import {
-  COUNTRY_LABELS,
+  countryLabel,
   formatBp,
   formatMoney,
   formatRate,
+  isCountry,
   payeeGross,
   type Country,
 } from "@/lib/finance/split";
-import { IncomeForm } from "./income-form";
+import { pluralRu } from "@/lib/courses/plural";
+import { IncomeFilters, type IncomeFilterValue } from "./income-filters";
+import { IncomeForm, type IncomeFormLists } from "./income-form";
+import { EditIncomeButton, IncomeEditProvider } from "./income-edit";
 import { DeleteIncomeButton, FinanceSettingsForm } from "./finance-manage";
 
 export const metadata: Metadata = {
@@ -38,30 +51,82 @@ const MONTHS = [
  * на налоги, сколько получил каждый. Получатели — инициалами. Итоги по валютам
  * не смешиваются: тенге и рубли складывать без курса на дату нельзя.
  */
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
 export default async function FinancePage({
   searchParams,
 }: {
-  searchParams: Promise<{ year?: string; org?: string }>;
+  searchParams: Promise<{
+    year?: string;
+    from?: string;
+    to?: string;
+    country?: string;
+    buyer?: string;
+    q?: string;
+    org?: string;
+  }>;
 }) {
   const sp = await searchParams;
-  const year = sp.year && /^\d{4}$/.test(sp.year) ? Number(sp.year) : null;
+  // Значения отбора чистим здесь: в запрос к базе и в компонент фильтров уходит
+  // уже проверенное, а мусор в адресе просто игнорируется.
+  const filters: IncomeFilterValue = {
+    year: sp.year && /^\d{4}$/.test(sp.year) ? sp.year : "",
+    from: sp.from && DATE_RE.test(sp.from) ? sp.from : "",
+    to: sp.to && DATE_RE.test(sp.to) ? sp.to : "",
+    country: isCountry(sp.country) ? sp.country : "",
+    buyer: sp.buyer?.trim() ? sp.buyer.trim() : "",
+    q: sp.q?.trim() ? sp.q.trim().slice(0, 100) : "",
+    org: sp.org ?? "",
+  };
+  const year = filters.year ? Number(filters.year) : null;
+  const retailOnly = filters.buyer === "retail";
+  const filtered =
+    Boolean(filters.year || filters.from || filters.to || filters.country || filters.buyer) ||
+    Boolean(filters.q);
 
-  const [incomes, years, settings, billing, orgs, courses] = await Promise.all([
-    getIncomes(year),
-    getIncomeYears(),
-    getFinanceSettings(),
-    getOrgBillingCounts(),
-    db.organization.findMany({
-      where: { status: { not: "ARCHIVED" } },
-      orderBy: [{ billing: "asc" }, { name: "asc" }],
-      select: { id: true, name: true, site: true, billing: true },
-    }),
-    db.course.findMany({
-      where: { status: "PUBLISHED" },
-      orderBy: { sortOrder: "asc" },
-      select: { id: true, title: true },
-    }),
-  ]);
+  const [
+    incomes,
+    years,
+    buyers,
+    settings,
+    billing,
+    awaiting,
+    todayRates,
+    suggestion,
+    orgs,
+    courses,
+  ] = await Promise.all([
+      getIncomes({
+        year,
+        from: filters.from,
+        to: filters.to,
+        country: filters.country,
+        orgId: retailOnly ? null : filters.buyer,
+        channel: retailOnly ? "B2C" : null,
+        q: filters.q,
+      }),
+      getIncomeYears(),
+      getIncomeBuyers(),
+      getFinanceSettings(),
+      getOrgBillingCounts(),
+      getOrgsAwaitingIncome(),
+      // Курсы НБ РК на сегодня — только для записей, у которых своего курса нет
+      // (сделаны до появления снимка): показать вторую валюту хоть как-то.
+      loadRates(),
+      // Визард из карточки клиента: /admin/finance?org=<id>#new открывает форму
+      // уже заполненной по его лицензиям.
+      sp.org ? getIncomeSuggestion(sp.org) : Promise.resolve(null),
+      db.organization.findMany({
+        where: { status: { not: "ARCHIVED" } },
+        orderBy: [{ billing: "asc" }, { name: "asc" }],
+        select: { id: true, name: true, site: true, billing: true },
+      }),
+      db.course.findMany({
+        where: { status: "PUBLISHED" },
+        orderBy: { sortOrder: "asc" },
+        select: { id: true, title: true },
+      }),
+    ]);
 
   const totals = totalsByCurrency(incomes);
   const months = totalsByMonth(incomes);
@@ -70,28 +135,92 @@ export default async function FinancePage({
   const coOwners = active.filter((p) => p.role === "CO_OWNER");
   const authors = active.filter((p) => p.role === "AUTHOR");
   const payeeLabels = settings.payees.map((p) => p.label);
+  // Записи, сделанные до появления снимка курса: их пересчёт — по сегодняшнему.
+  const withoutStoredFx = incomes.filter(
+    (i) => i.kztPerUnitMicro == null || i.kztPerBynMicro == null,
+  ).length;
+  // Справочники формы одинаковы для записи и для правки любой строки журнала.
+  const lists: IncomeFormLists = {
+    orgs,
+    courses,
+    coOwners: coOwners.map((p) => ({ id: p.id, label: p.label, shareBp: p.shareBp })),
+    authors: authors.map((p) => ({ id: p.id, label: p.label })),
+    rates,
+  };
 
   return (
     <main>
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">Доходы</h1>
-          <p className="mt-1 text-sm text-foreground/60">
-            Полученные оплаты B2B и B2C, налоги и гонорары. Суммы вносятся вручную по факту
-            поступления денег.
-          </p>
-        </div>
-        <nav className="flex flex-wrap gap-1 text-sm">
-          <PeriodLink href="/admin/finance" active={year === null}>
-            Всё время
-          </PeriodLink>
-          {years.map((y) => (
-            <PeriodLink key={y} href={`/admin/finance?year=${y}`} active={year === y}>
-              {y}
-            </PeriodLink>
-          ))}
-        </nav>
+      <div>
+        <h1 className="text-2xl font-bold">Доходы</h1>
+        <p className="mt-1 text-sm text-foreground/60">
+          Полученные оплаты B2B и B2C, налоги и гонорары. Суммы вносятся вручную по факту
+          поступления денег.
+        </p>
       </div>
+
+      {/* ── Оплата не внесена ──────────────────────────────────────────
+          Доступы клиенту выдают раньше денег: клиент отмечен платным, а
+          поступления по нему нет ни одного — его выручки в учёте просто не
+          существует. Поэтому напоминание стоит выше всех сводок. */}
+      {awaiting.length > 0 ? (
+        <section className="mt-5 rounded-xl border border-amber-600/30 bg-amber-500/5 p-4">
+          <div className="flex items-baseline gap-2">
+            <AlertCircle className="size-4 shrink-0 translate-y-0.5 text-amber-700" />
+            <h2 className="font-semibold text-amber-800">
+              Оплата не внесена · {awaiting.length}{" "}
+              {pluralRu(awaiting.length, "организация", "организации", "организаций")}
+            </h2>
+          </div>
+          <p className="mt-1 text-sm text-foreground/65">
+            Клиенты отмечены платными, но поступлений по ним нет — этих денег нет ни в
+            итогах ниже, ни в гонорарах. Форма откроется заполненной по лицензиям клиента:
+            останется сверить сумму и дату.
+          </p>
+          <ul className="mt-3 divide-y divide-amber-600/15 border-t border-amber-600/15">
+            {awaiting.map((o) => (
+              <li key={o.id} className="flex flex-wrap items-center justify-between gap-3 py-2.5">
+                <div className="min-w-0">
+                  <Link
+                    href={`/admin/orgs/${o.id}`}
+                    className="font-medium text-amber-800 hover:underline"
+                  >
+                    {o.name}
+                  </Link>
+                  <p className="text-xs text-foreground/55">
+                    {countryLabel(o.suggestion.country)} · {o.suggestion.basis}
+                    {o.suggestion.estimated && o.suggestion.bynTiyn > 0
+                      ? " · цена места в лицензии не записана, посчитано по сетке"
+                      : ""}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm tabular-nums text-foreground/70">
+                    {o.suggestion.grossTiyn
+                      ? `≈ ${formatMoney(o.suggestion.grossTiyn, o.suggestion.currency)}`
+                      : "сумма не рассчитана"}
+                  </span>
+                  <Link
+                    href={`/admin/finance?org=${o.id}#new`}
+                    className="rounded-lg bg-amber-500 px-3 py-1.5 text-sm font-semibold text-slate-950 transition-colors hover:bg-amber-400"
+                  >
+                    Заполнить оплату
+                  </Link>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {/* ── Отбор ──────────────────────────────────────────────────────
+          Стоит выше сводок нарочно: итоги считаются ровно по тому, что попало
+          в отбор, и иначе было бы непонятно, за что эти цифры. */}
+      <IncomeFilters
+        value={filters}
+        years={years}
+        buyers={buyers.orgs}
+        hasRetail={buyers.hasRetail}
+      />
 
       {/* ── Сводка ─────────────────────────────────────────────────────── */}
       <section className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -105,16 +234,23 @@ export default async function FinancePage({
             <span className="text-base font-medium text-foreground/45"> платных</span>
           </p>
           <p className="text-xs text-foreground/50">и {billing.pilot} на пилоте</p>
+          {awaiting.length > 0 ? (
+            <p className="text-xs font-medium text-amber-700">
+              {awaiting.length} без записи оплаты
+            </p>
+          ) : null}
         </Link>
         <Stat
-          label="Поступлений"
+          label={filtered ? "Поступлений по отбору" : "Поступлений"}
           value={String(incomes.length)}
           hint={
             incomes.length > 0
               ? `B2B ${incomes.filter((i) => i.channel === "B2B").length} · B2C ${
                   incomes.filter((i) => i.channel === "B2C").length
                 }`
-              : "пока ни одного"
+              : filtered
+                ? "под отбор ничего не подошло"
+                : "пока ни одного"
           }
         />
       </section>
@@ -166,7 +302,9 @@ export default async function FinancePage({
 
       {/* ── Новое поступление ──────────────────────────────────────────── */}
       <section id="new" className="mt-8 scroll-mt-20">
-        <h2 className="text-lg font-semibold">Записать поступление</h2>
+        <h2 className="text-lg font-semibold">
+          {suggestion ? "Оплата клиента" : "Записать поступление"}
+        </h2>
         <p className="mt-1 text-sm text-foreground/55">
           Налоги считаются по ставке страны покупателя, от чистой прибыли совладелец получает
           свою долю, автор курса — остаток. Запись от организации-пилота переводит её в платные.
@@ -178,12 +316,12 @@ export default async function FinancePage({
             </p>
           ) : (
             <IncomeForm
-              orgs={orgs}
-              courses={courses}
-              coOwners={coOwners.map((p) => ({ id: p.id, label: p.label, shareBp: p.shareBp }))}
-              authors={authors.map((p) => ({ id: p.id, label: p.label }))}
-              rates={rates}
+              // Смена ?org= меняет предзаполнение, а значения полей живут в
+              // клиенте: без key форма осталась бы с данными прошлого клиента.
+              key={sp.org ?? "blank"}
+              {...lists}
               defaultOrgId={sp.org ?? null}
+              suggestion={suggestion}
             />
           )}
         </div>
@@ -192,95 +330,147 @@ export default async function FinancePage({
       {/* ── Журнал поступлений ─────────────────────────────────────────── */}
       <section className="mt-8">
         <h2 className="text-lg font-semibold">Поступления</h2>
-        <div className="mt-4 overflow-x-auto rounded-xl border border-foreground/10 bg-background">
-          {incomes.length === 0 ? (
-            <div className="p-10 text-center">
-              <Wallet className="mx-auto size-8 text-foreground/25" />
-              <p className="mt-3 text-sm text-foreground/55">
-                {year ? `За ${year} год поступлений нет.` : "Поступлений пока нет."}
-              </p>
-            </div>
-          ) : (
-            <table className="w-full text-sm">
-              <thead className="border-b border-foreground/10 bg-foreground/[0.02] text-left text-xs uppercase tracking-wide text-foreground/50">
-                <tr>
-                  <th className="px-4 py-3 font-medium">Дата</th>
-                  <th className="px-4 py-3 font-medium">Покупатель</th>
-                  <th className="px-4 py-3 font-medium">Страна</th>
-                  <th className="px-4 py-3 text-right font-medium">Получено</th>
-                  <th className="px-4 py-3 text-right font-medium">Налоги</th>
-                  <th className="px-4 py-3 text-right font-medium">Чистая</th>
-                  {payeeLabels.map((l) => (
-                    <th key={l} className="px-4 py-3 text-right font-medium">
-                      {l}
-                    </th>
-                  ))}
-                  <th className="px-2 py-3" />
-                </tr>
-              </thead>
-              <tbody className="tabular-nums">
-                {incomes.map((i) => (
-                  <tr key={i.id} className="border-b border-foreground/5 align-top last:border-0">
-                    <td className="whitespace-nowrap px-4 py-3">
-                      {i.receivedAt.toLocaleDateString("ru-RU", { timeZone: "UTC" })}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="mr-1.5 rounded bg-foreground/5 px-1.5 py-0.5 text-xs text-foreground/60">
-                        {i.channel}
-                      </span>
-                      {i.org ? (
-                        <Link href={`/admin/orgs/${i.org.id}`} className="text-amber-700 hover:underline">
-                          {i.org.name}
-                        </Link>
-                      ) : (
-                        (i.buyerRef ?? "—")
-                      )}
-                      {i.course ? (
-                        <p className="text-xs text-foreground/50">{i.course.title}</p>
-                      ) : null}
-                      {i.note ? <p className="text-xs text-foreground/45">{i.note}</p> : null}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-foreground/70">
-                      {COUNTRY_LABELS[i.country as Country] ?? i.country}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-right font-medium">
-                      {formatMoney(i.grossTiyn, i.currency)}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-right text-foreground/60">
-                      {formatMoney(i.taxTiyn, i.currency)}
-                      <p className="text-xs text-foreground/40">
-                        {i.taxTiyn === 0 ? "" : effectiveRate(i.taxTiyn, i.grossTiyn, i.rateMilli)}
-                      </p>
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-right">
-                      {formatMoney(i.netTiyn, i.currency)}
-                    </td>
-                    {payeeLabels.map((l) => {
-                      const s = i.shares.find((x) => x.payee.label === l);
-                      return (
-                        <td key={l} className="whitespace-nowrap px-4 py-3 text-right">
-                          {s ? formatMoney(s.amountTiyn, i.currency) : "—"}
-                          {s && i.netTiyn > 0 ? (
-                            <p className="text-xs text-foreground/45">
-                              доход{" "}
-                              {formatMoney(payeeGross(s.amountTiyn, i.netTiyn, i.grossTiyn), i.currency)}
-                            </p>
-                          ) : null}
-                        </td>
-                      );
-                    })}
-                    <td className="px-2 py-3 text-right">
-                      <DeleteIncomeButton
-                        id={i.id}
-                        label={`${formatMoney(i.grossTiyn, i.currency)} от ${i.receivedAt.toLocaleDateString("ru-RU", { timeZone: "UTC" })}`}
-                      />
-                    </td>
+        <p className="mt-1 text-sm text-foreground/55">
+          Вторая валюта — пересчёт по курсу НБ РК на день записи: он зафиксирован и
+          задним числом не меняется. Запись можно поправить карандашом в строке.
+        </p>
+        {/* Провайдер держит справочники формы правки: одна копия на всю таблицу. */}
+        <IncomeEditProvider lists={lists}>
+          <div className="mt-4 overflow-x-auto rounded-xl border border-foreground/10 bg-background">
+            {incomes.length === 0 ? (
+              <div className="p-10 text-center">
+                <Wallet className="mx-auto size-8 text-foreground/25" />
+                <p className="mt-3 text-sm text-foreground/55">
+                  {filtered
+                    ? "Под отбор ничего не подошло — измените период, страну или покупателя."
+                    : "Поступлений пока нет."}
+                </p>
+              </div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="border-b border-foreground/10 bg-foreground/[0.02] text-left text-xs uppercase tracking-wide text-foreground/50">
+                  <tr>
+                    <th className="px-4 py-3 font-medium">Дата</th>
+                    <th className="px-4 py-3 font-medium">Покупатель</th>
+                    <th className="px-4 py-3 font-medium">Страна</th>
+                    <th className="px-4 py-3 text-right font-medium">Получено</th>
+                    <th className="px-4 py-3 text-right font-medium">Налоги</th>
+                    <th className="px-4 py-3 text-right font-medium">Чистая</th>
+                    {payeeLabels.map((l) => (
+                      <th key={l} className="px-4 py-3 text-right font-medium">
+                        {l}
+                      </th>
+                    ))}
+                    <th className="px-2 py-3" />
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
+                </thead>
+                <tbody className="tabular-nums">
+                  {incomes.map((i) => {
+                    // Курс записи, а если его нет (строка старше снимка) — сегодняшний,
+                    // и тогда пересчёт помечается как приблизительный.
+                    const { fx, approximate } = resolveFx(
+                      { kztPerUnitMicro: i.kztPerUnitMicro, kztPerBynMicro: i.kztPerBynMicro },
+                      fxFromRates(i.currency, todayRates),
+                    );
+                    return (
+                      <tr key={i.id} className="border-b border-foreground/5 align-top last:border-0">
+                        <td className="whitespace-nowrap px-4 py-3">
+                          {i.receivedAt.toLocaleDateString("ru-RU", { timeZone: "UTC" })}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="mr-1.5 rounded bg-foreground/5 px-1.5 py-0.5 text-xs text-foreground/60">
+                            {i.channel}
+                          </span>
+                          {i.org ? (
+                            <Link href={`/admin/orgs/${i.org.id}`} className="text-amber-700 hover:underline">
+                              {i.org.name}
+                            </Link>
+                          ) : (
+                            (i.buyerRef ?? "—")
+                          )}
+                          {i.course ? (
+                            <p className="text-xs text-foreground/50">{i.course.title}</p>
+                          ) : null}
+                          {i.note ? <p className="text-xs text-foreground/45">{i.note}</p> : null}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-foreground/70">
+                          {countryLabel(i.country)}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-right font-medium">
+                          {formatMoney(i.grossTiyn, i.currency)}
+                          <SecondCurrency
+                            tiyn={i.grossTiyn}
+                            currency={i.currency}
+                            fx={fx}
+                            approximate={approximate}
+                          />
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-right text-foreground/60">
+                          {formatMoney(i.taxTiyn, i.currency)}
+                          <p className="text-xs text-foreground/40">
+                            {i.taxTiyn === 0 ? "" : effectiveRate(i.taxTiyn, i.grossTiyn, i.rateMilli)}
+                          </p>
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-right">
+                          {formatMoney(i.netTiyn, i.currency)}
+                          <SecondCurrency
+                            tiyn={i.netTiyn}
+                            currency={i.currency}
+                            fx={fx}
+                            approximate={approximate}
+                          />
+                        </td>
+                        {payeeLabels.map((l) => {
+                          const s = i.shares.find((x) => x.payee.label === l);
+                          return (
+                            <td key={l} className="whitespace-nowrap px-4 py-3 text-right">
+                              {s ? formatMoney(s.amountTiyn, i.currency) : "—"}
+                              {s && i.netTiyn > 0 ? (
+                                <p className="text-xs text-foreground/45">
+                                  доход{" "}
+                                  {formatMoney(payeeGross(s.amountTiyn, i.netTiyn, i.grossTiyn), i.currency)}
+                                </p>
+                              ) : null}
+                            </td>
+                          );
+                        })}
+                        <td className="whitespace-nowrap px-2 py-3 text-right">
+                          <EditIncomeButton
+                            label={rowLabel(i)}
+                            income={{
+                              id: i.id,
+                              receivedAt: i.receivedAt.toISOString().slice(0, 10),
+                              channel: i.channel,
+                              country: i.country as Country,
+                              currency: i.currency,
+                              grossTiyn: i.grossTiyn,
+                              taxTiyn: i.taxTiyn,
+                              orgId: i.orgId,
+                              courseId: i.courseId,
+                              buyerRef: i.buyerRef,
+                              note: i.note,
+                              authorId:
+                                i.shares.find((x) => x.payee.role === "AUTHOR")?.payee.id ?? null,
+                            }}
+                          />
+                          <DeleteIncomeButton id={i.id} label={rowLabel(i)} />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </IncomeEditProvider>
+        {withoutStoredFx > 0 ? (
+          <p className="mt-2 text-xs text-foreground/45">
+            * У {withoutStoredFx}{" "}
+            {pluralRu(withoutStoredFx, "записи", "записей", "записей")} курс дня не
+            сохранён — они сделаны до того, как журнал стал его запоминать; для них
+            показан сегодняшний курс НБ РК.
+          </p>
+        ) : null}
       </section>
 
       {/* ── По месяцам ─────────────────────────────────────────────────── */}
@@ -361,34 +551,48 @@ export default async function FinancePage({
   );
 }
 
+/** «44 000 тенге от 15.09.2026» — подпись строки для кнопок действий. */
+function rowLabel(i: { grossTiyn: number; currency: string; receivedAt: Date }): string {
+  return `${formatMoney(i.grossTiyn, i.currency)} от ${i.receivedAt.toLocaleDateString("ru-RU", { timeZone: "UTC" })}`;
+}
+
+/**
+ * Та же сумма в другой валюте журнала. Курс — на день записи; если его не
+ * сохранили, берём сегодняшний и говорим об этом в подсказке, а не молча.
+ */
+function SecondCurrency({
+  tiyn,
+  currency,
+  fx,
+  approximate,
+}: {
+  tiyn: number;
+  currency: string;
+  fx: FxSnapshot;
+  approximate: boolean;
+}) {
+  const converted = convertedAmounts(tiyn, currency, fx);
+  if (converted.length === 0) return null;
+  return (
+    <p
+      className="text-xs font-normal text-foreground/40"
+      title={
+        approximate
+          ? "Курс на дату записи не сохранён — пересчёт по сегодняшнему курсу НБ РК"
+          : "Пересчёт по курсу НБ РК на день записи"
+      }
+    >
+      {converted.map((c) => `≈ ${formatMoney(c.tiyn, c.currency)}`).join(" · ")}
+      {approximate ? " *" : ""}
+    </p>
+  );
+}
+
 /** Ставка по записи; если налог правили вручную — фактический процент. */
 function effectiveRate(tax: number, gross: number, rateMilli: number): string {
   const byRate = Math.round((gross * rateMilli) / 100_000);
   if (Math.abs(byRate - tax) <= 100) return formatRate(rateMilli);
   return `факт ${formatRate(Math.round((tax / gross) * 100_000))}`;
-}
-
-function PeriodLink({
-  href,
-  active,
-  children,
-}: {
-  href: string;
-  active: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <Link
-      href={href}
-      className={`rounded-md px-3 py-1.5 transition-colors ${
-        active
-          ? "bg-amber-500/10 font-semibold text-amber-700"
-          : "text-foreground/60 hover:bg-foreground/5"
-      }`}
-    >
-      {children}
-    </Link>
-  );
 }
 
 function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {

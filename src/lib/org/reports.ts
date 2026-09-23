@@ -99,6 +99,11 @@ export interface OrgListRow {
   /** У лицензий разные проценты — одно число показать нельзя. */
   demoMixed: boolean;
   /**
+   * Есть ли записанное поступление (lib/finance). Платный клиент без единого
+   * поступления — это не внесённая в учёт оплата, а не бесплатный клиент.
+   */
+  hasIncome: boolean;
+  /**
    * Средний прогресс учащихся 0..1 — та же цифра, что в окне «Как учится компания».
    * null — учиться некому: нет работников с открытыми курсами.
    */
@@ -123,6 +128,8 @@ export async function getOrgsList(): Promise<OrgListRow[]> {
       createdAt: true,
       memberships: { select: { role: true, isActive: true } },
       licenses: { select: { id: true, seatsTotal: true, expiresAt: true, demoPercent: true } },
+      // Достаточно факта: сумма выручки клиента живёт в /admin/finance.
+      incomes: { select: { id: true }, take: 1 },
     },
   });
   if (orgs.length === 0) return [];
@@ -165,6 +172,7 @@ export async function getOrgsList(): Promise<OrgListRow[]> {
       // лицензий: иначе бейдж врал бы, показывая настройку одной из них.
       demoPercent: demoValues.size === 1 ? (o.licenses[0]?.demoPercent ?? null) : null,
       demoMixed: demoValues.size > 1,
+      hasIncome: o.incomes.length > 0,
       avgProgress: progressByOrg.get(o.id) ?? null,
       createdAt: o.createdAt,
     };

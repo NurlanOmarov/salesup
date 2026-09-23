@@ -2,10 +2,11 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createIncomeAction } from "./actions";
+import { createIncomeAction, updateIncomeAction } from "./actions";
 import {
   COUNTRIES,
   COUNTRY_CURRENCY,
+  COUNTRY_FLAGS,
   COUNTRY_LABELS,
   INCOME_CURRENCIES,
   formatBp,
@@ -15,17 +16,46 @@ import {
   splitIncome,
   type Country,
 } from "@/lib/finance/split";
+import type { IncomeSuggestion } from "@/lib/finance/suggest";
 import { ActionResult, useActionResult } from "@/components/action-result";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-interface Props {
+/** Справочники, одинаковые для записи и правки поступления. */
+export interface IncomeFormLists {
   orgs: { id: string; name: string; site: string | null; billing: string }[];
   courses: { id: string; title: string }[];
   coOwners: { id: string; label: string; shareBp: number | null }[];
   authors: { id: string; label: string }[];
+  /** Ставки налогов по странам, процент × 1000. */
   rates: Record<string, number>;
-  defaultOrgId: string | null;
+}
+
+/** Сохранённое поступление в виде значений формы — для правки. */
+export interface EditableIncome {
+  id: string;
+  receivedAt: string; // YYYY-MM-DD
+  channel: "B2B" | "B2C";
+  country: Country;
+  currency: string;
+  grossTiyn: number;
+  taxTiyn: number;
+  orgId: string | null;
+  courseId: string | null;
+  buyerRef: string | null;
+  note: string | null;
+  /** Получатель-автор из раскладки: кому уходил остаток чистой прибыли. */
+  authorId: string | null;
+}
+
+interface Props extends IncomeFormLists {
+  defaultOrgId?: string | null;
+  /** Предзаполнение по лицензиям выбранной организации (lib/finance/suggest). */
+  suggestion?: IncomeSuggestion | null;
+  /** Задано — форма правит эту запись, а не создаёт новую. */
+  income?: EditableIncome;
+  /** Правка сохранена: закрыть окно (в режиме создания не нужен). */
+  onSaved?: () => void;
 }
 
 const selectCls = "h-10 w-full rounded-lg border border-foreground/15 bg-background px-3 text-sm";
@@ -42,28 +72,57 @@ function isCountry(v: string | null | undefined): v is Country {
 }
 
 /**
- * Запись поступления. Налог подставляется по ставке страны покупателя, но его
- * можно поправить на фактический — тогда раскладка пересчитывается от него.
+ * Запись и правка поступления — одна форма на оба случая: поля, проверки и
+ * раскладка совпадают, а расходиться им нельзя. Налог подставляется по ставке
+ * страны покупателя, но его можно поправить на фактический — тогда раскладка
+ * пересчитывается от него.
  */
-export function IncomeForm({ orgs, courses, coOwners, authors, rates, defaultOrgId }: Props) {
+export function IncomeForm({
+  orgs,
+  courses,
+  coOwners,
+  authors,
+  rates,
+  defaultOrgId,
+  suggestion,
+  income,
+  onSaved,
+}: Props) {
   const router = useRouter();
   const feedback = useActionResult();
   const [pending, setPending] = useState(false);
 
-  const defaultOrg = orgs.find((o) => o.id === defaultOrgId) ?? null;
-  const initialCountry: Country = isCountry(defaultOrg?.site) ? defaultOrg.site : "KZ";
+  const editing = income ?? null;
+  const defaultOrg = orgs.find((o) => o.id === (editing?.orgId ?? defaultOrgId)) ?? null;
+  // Подсказка по лицензиям — только для новой записи: у сохранённой значения
+  // уже есть, и подменять их расчётом было бы потерей факта.
+  const prefill = !editing && defaultOrg ? (suggestion ?? null) : null;
+  const initialCountry: Country =
+    editing?.country ?? prefill?.country ?? (isCountry(defaultOrg?.site) ? defaultOrg.site : "KZ");
 
-  const [channel, setChannel] = useState<"B2B" | "B2C">("B2B");
-  const [orgId, setOrgId] = useState(defaultOrg?.id ?? "");
+  const [channel, setChannel] = useState<"B2B" | "B2C">(editing?.channel ?? "B2B");
+  const [orgId, setOrgId] = useState(editing?.orgId ?? defaultOrg?.id ?? "");
   const [country, setCountry] = useState<Country>(initialCountry);
-  const [currency, setCurrency] = useState<string>(COUNTRY_CURRENCY[initialCountry]);
-  const [receivedAt, setReceivedAt] = useState(() => new Date().toISOString().slice(0, 10));
-  const [gross, setGross] = useState("");
-  const [tax, setTax] = useState("");
-  const [authorId, setAuthorId] = useState(authors[0]?.id ?? "");
-  const [courseId, setCourseId] = useState("");
-  const [buyerRef, setBuyerRef] = useState("");
-  const [note, setNote] = useState("");
+  const [currency, setCurrency] = useState<string>(
+    editing?.currency ?? prefill?.currency ?? COUNTRY_CURRENCY[initialCountry],
+  );
+  const [receivedAt, setReceivedAt] = useState(
+    () => editing?.receivedAt ?? new Date().toISOString().slice(0, 10),
+  );
+  // Сумма подставляется расчётом по лицензиям, но остаётся обычным полем:
+  // в учёт идёт то, что реально пришло, а не то, что должно было прийти.
+  const [gross, setGross] = useState(
+    editing ? String(editing.grossTiyn / 100) : prefill?.grossTiyn ? String(prefill.grossTiyn / 100) : "",
+  );
+  // У сохранённой записи налог показываем как есть: он мог быть поправлен руками.
+  const [tax, setTax] = useState(editing ? String(editing.taxTiyn / 100) : "");
+  const [authorId, setAuthorId] = useState(editing?.authorId ?? authors[0]?.id ?? "");
+  const [courseId, setCourseId] = useState(editing?.courseId ?? prefill?.courseId ?? "");
+  const [buyerRef, setBuyerRef] = useState(editing?.buyerRef ?? "");
+  const [note, setNote] = useState(editing?.note ?? prefill?.note ?? "");
+  // После записи форма снова становится обычной «новой»: оставить подсказку о
+  // предзаполнении над уже очищенными полями — значит соврать.
+  const [prefillShown, setPrefillShown] = useState(true);
 
   function pickCountry(c: Country) {
     setCountry(c);
@@ -104,32 +163,48 @@ export function IncomeForm({ orgs, courses, coOwners, authors, rates, defaultOrg
     e.preventDefault();
     setPending(true);
     feedback.clear();
+    const payload = {
+      receivedAt,
+      channel,
+      country,
+      currency,
+      gross,
+      tax,
+      authorId,
+      orgId: channel === "B2B" ? orgId : null,
+      courseId: courseId || null,
+      buyerRef: channel === "B2C" ? buyerRef : null,
+      note,
+    };
+    // Окно правки закрываем уже после того, как форма перестанет быть занятой:
+    // иначе состояние обновляется у размонтированного компонента.
+    let saved = false;
     try {
-      const res = await createIncomeAction({
-        receivedAt,
-        channel,
-        country,
-        currency,
-        gross,
-        tax,
-        authorId,
-        orgId: channel === "B2B" ? orgId : null,
-        courseId: courseId || null,
-        buyerRef: channel === "B2C" ? buyerRef : null,
-        note,
-      });
+      const res = editing
+        ? await updateIncomeAction({ ...payload, id: editing.id })
+        : await createIncomeAction(payload);
       if (res.ok) {
         const org = orgs.find((o) => o.id === orgId);
-        feedback.ok(
-          channel === "B2B" && org?.billing === "PILOT"
-            ? `Поступление записано, «${org.name}» теперь отмечена как платная.`
-            : "Поступление записано.",
-        );
-        setGross("");
-        setTax("");
-        setBuyerRef("");
-        setNote("");
-        router.refresh();
+        if (editing) {
+          feedback.ok("Поступление изменено.");
+          router.refresh();
+          saved = true;
+        } else {
+          feedback.ok(
+            channel === "B2B" && org?.billing === "PILOT"
+              ? `Поступление записано, «${org.name}» теперь отмечена как платная.`
+              : channel === "B2B" && org
+                ? `Поступление записано — «${org.name}» есть в доходах.`
+                : "Поступление записано.",
+          );
+          setGross("");
+          setTax("");
+          setBuyerRef("");
+          setNote("");
+          setCourseId("");
+          setPrefillShown(false);
+          router.refresh();
+        }
       } else {
         const field = res.fieldErrors ? Object.values(res.fieldErrors)[0]?.[0] : undefined;
         feedback.fail(field ?? res.error);
@@ -139,11 +214,44 @@ export function IncomeForm({ orgs, courses, coOwners, authors, rates, defaultOrg
     } finally {
       setPending(false);
     }
+    if (saved) onSaved?.();
   }
 
   return (
     <form onSubmit={submit} className="grid gap-4 lg:grid-cols-[1fr_300px]">
       <div className="grid gap-3 sm:grid-cols-2">
+        {/* Откуда взялись цифры: без этого сумма выглядит как чужая догадка,
+            и владелец на всякий случай перебивает её вручную. */}
+        {prefill && prefillShown ? (
+          <div className="rounded-lg border border-amber-600/25 bg-amber-500/5 p-3 text-xs text-foreground/70 sm:col-span-2">
+            <p className="text-sm font-medium text-amber-800">
+              Заполнено по лицензиям «{defaultOrg?.name}»
+            </p>
+            <p className="mt-1">
+              {prefill.basis}
+              {prefill.converted && prefill.grossTiyn
+                ? ` → ${formatMoney(prefill.grossTiyn, prefill.currency)} по курсу НБ РК`
+                : ""}
+              {prefill.estimated && prefill.bynTiyn > 0
+                ? ". Цена места в лицензии не записана — посчитано по корпоративной сетке"
+                : ""}
+              {prefill.ratesMissing
+                ? ". Курс НБ РК недоступен — сумму в валюте клиента введите руками"
+                : ""}
+              .
+            </p>
+            <p className="mt-1 text-foreground/55">
+              Сверьте сумму и дату с выпиской: в учёт идёт то, что реально пришло. Любое
+              поле можно поправить.
+            </p>
+            {prefill.existingIncomes > 0 ? (
+              <p className="mt-1 font-medium text-amber-800">
+                По этому клиенту уже записано поступлений: {prefill.existingIncomes}.
+                Убедитесь, что это новая оплата, а не повтор.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
         <Field label="Дата получения оплаты">
           <Input type="date" value={receivedAt} onChange={(e) => setReceivedAt(e.target.value)} required />
         </Field>
@@ -200,7 +308,7 @@ export function IncomeForm({ orgs, courses, coOwners, authors, rates, defaultOrg
           <select value={country} onChange={(e) => pickCountry(e.target.value as Country)} className={selectCls}>
             {COUNTRIES.map((c) => (
               <option key={c} value={c}>
-                {COUNTRY_LABELS[c]}
+                {COUNTRY_FLAGS[c]} {COUNTRY_LABELS[c]}
               </option>
             ))}
           </select>
@@ -279,8 +387,14 @@ export function IncomeForm({ orgs, courses, coOwners, authors, rates, defaultOrg
         )}
         <div className="mt-auto pt-4">
           <Button type="submit" disabled={pending || !preview} className="w-full">
-            Записать поступление
+            {editing ? "Сохранить изменения" : "Записать поступление"}
           </Button>
+          {editing ? (
+            <p className="mt-2 text-xs text-foreground/45">
+              Ставка налога и курс валют остаются теми, что были при записи; сменится
+              страна или валюта — возьмутся текущие.
+            </p>
+          ) : null}
           <ActionResult result={feedback.result} className="mt-2" />
         </div>
       </div>

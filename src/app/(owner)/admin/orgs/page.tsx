@@ -30,8 +30,11 @@ export default async function OrgsPage() {
       members: acc.members + o.members,
       onDemo: acc.onDemo + (o.demoMixed || o.demoPercent != null ? 1 : 0),
       paid: acc.paid + (o.billing === "PAID" ? 1 : 0),
+      unpaid:
+        acc.unpaid +
+        (o.billing === "PAID" && !o.hasIncome && o.status !== "ARCHIVED" ? 1 : 0),
     }),
-    { seatsTotal: 0, seatsUsed: 0, members: 0, onDemo: 0, paid: 0 },
+    { seatsTotal: 0, seatsUsed: 0, members: 0, onDemo: 0, paid: 0, unpaid: 0 },
   );
 
   return (
@@ -57,6 +60,12 @@ export default async function OrgsPage() {
             label="Организаций"
             value={String(orgs.length)}
             hint={`платных ${totals.paid} · пилотов ${orgs.length - totals.paid}`}
+            // Платный клиент без поступления — оплата мимо учёта, а не скидка.
+            alert={
+              totals.unpaid > 0
+                ? { text: `${totals.unpaid} без записи оплаты`, href: "/admin/finance" }
+                : undefined
+            }
           />
           <Stat
             label="Мест продано"
@@ -180,6 +189,16 @@ export default async function OrgsPage() {
                         доступы не отправлены
                       </Link>
                     ) : null}
+                    {/* Деньги — отдельная ось: клиент бывает запущен и при этом
+                        не заведён в доходы. */}
+                    {o.billing === "PAID" && !o.hasIncome && o.status !== "ARCHIVED" ? (
+                      <Link
+                        href={`/admin/finance?org=${o.id}#new`}
+                        className="mt-1 block text-xs font-medium text-amber-700 hover:underline"
+                      >
+                        оплата не внесена
+                      </Link>
+                    ) : null}
                   </td>
                 </tr>
               ))}
@@ -203,16 +222,24 @@ function Stat({
   label,
   value,
   hint,
+  alert,
 }: {
   label: string;
   value: string;
   hint?: string;
+  /** Строка-напоминание со ссылкой: то, что требует действия владельца. */
+  alert?: { text: string; href: string };
 }) {
   return (
     <div className="rounded-xl border border-foreground/10 bg-background p-4">
       <p className="text-xs uppercase tracking-wide text-foreground/50">{label}</p>
       <p className="mt-1 text-2xl font-bold">{value}</p>
       {hint ? <p className="text-xs text-foreground/50">{hint}</p> : null}
+      {alert ? (
+        <Link href={alert.href} className="text-xs font-medium text-amber-700 hover:underline">
+          {alert.text}
+        </Link>
+      ) : null}
     </div>
   );
 }

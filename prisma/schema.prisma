@@ -1316,22 +1316,30 @@ model TaxRate {
 /// Поступление денег. Ставка и доли фиксируются на момент записи — правка
 /// ставок потом не переписывает прошлые выплаты.
 model Income {
-  id          String      @id @default(cuid())
-  receivedAt  DateTime    @db.Date // дата получения оплаты
-  channel     SaleChannel
-  country     String // страна покупателя — от неё ставка налогов
-  currency    String // KZT / BYN / RUB / UZS
-  grossTiyn   Int // получено
-  rateMilli   Int // ставка на момент записи
-  taxTiyn     Int // налоги и сборы (по ставке или поправленные вручную)
-  netTiyn     Int // чистая прибыль = gross − tax
-  orgId       String? // B2B: кто купил
-  courseId    String?
+  id              String      @id @default(cuid())
+  receivedAt      DateTime    @db.Date // дата получения оплаты
+  channel         SaleChannel
+  country         String // страна покупателя — от неё ставка налогов
+  currency        String // KZT / BYN / RUB / UZS
+  grossTiyn       Int // получено
+  rateMilli       Int // ставка на момент записи
+  taxTiyn         Int // налоги и сборы (по ставке или поправленные вручную)
+  netTiyn         Int // чистая прибыль = gross − tax
+  /// Курс НБ РК на момент записи, в микротенге (1 000 000 = 1 тенге): сколько
+  /// тенге стоила единица валюты поступления и сколько — один белорусский рубль.
+  /// Журнал показывает сумму сразу в двух валютах по курсу того дня, а не по
+  /// сегодняшнему — иначе прошлые поступления «плавали» бы каждый день.
+  /// null — записи, сделанные до появления снимка, и случаи, когда курс был
+  /// недоступен: такие строки пересчитываются по текущему курсу, с пометкой.
+  kztPerUnitMicro Int?
+  kztPerBynMicro  Int?
+  orgId           String? // B2B: кто купил
+  courseId        String?
   /// B2C: номер заказа или пометка. Без ФИО и контактов покупателя (правило 9).
-  buyerRef    String?
-  note        String?
-  createdById String
-  createdAt   DateTime    @default(now())
+  buyerRef        String?
+  note            String?
+  createdById     String
+  createdAt       DateTime    @default(now())
 
   org    Organization? @relation(fields: [orgId], references: [id], onDelete: SetNull)
   course Course?       @relation(fields: [courseId], references: [id], onDelete: SetNull)

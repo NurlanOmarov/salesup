@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ExternalLink, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ExternalLink, ShieldCheck, Wallet } from "lucide-react";
 import { siteOriginByCode } from "@/lib/seo/site-hosts";
 import { db } from "@/lib/db";
 import { getOrgMembers, getOrgOverview } from "@/lib/org/reports";
 import { getOrgSetupState, ownerSetupSteps } from "@/lib/org/setup";
 import { getOrgDeliveryState } from "@/lib/org/delivery";
+import { getIncomeSuggestion } from "@/lib/finance/pending";
 import { env } from "@/env";
 import { DeliveryPanel } from "./delivery-panel";
 import { ACCESS_DURATION_LABELS } from "@/lib/admin/enrollment";
@@ -100,6 +101,11 @@ export default async function OrgPage({
 
   const learners = members.filter((m) => m.role === "ORG_LEARNER");
 
+  // Клиент отмечен платным, а поступления нет: деньги мимо учёта. Подсказку по
+  // сумме считаем только в этом случае — остальным она не нужна.
+  const paymentPending = org.billing === "PAID" && org.incomes.length === 0;
+  const suggestion = paymentPending ? await getIncomeSuggestion(org.id) : null;
+
   // Демо-доступ компании: общий процент показываем только если он одинаков у всех
   // лицензий — иначе ползунок врал бы, показывая настройку одной из них.
   const demoValues = overview.licenses.map((l) => l.demoPercent);
@@ -184,6 +190,35 @@ export default async function OrgPage({
         </p>
       ) : null}
 
+      {/* ── Оплата не внесена в учёт ─────────────────────────────────── */}
+      {paymentPending ? (
+        <section className="mt-4 rounded-xl border border-amber-600/30 bg-amber-500/5 p-4">
+          <div className="flex items-baseline gap-2">
+            <Wallet className="size-4 shrink-0 translate-y-0.5 text-amber-700" />
+            <h2 className="font-semibold text-amber-800">Оплата не внесена в учёт</h2>
+          </div>
+          <p className="mt-1 text-sm text-foreground/70">
+            Клиент отмечен платным, но поступления по нему нет — этих денег нет ни в
+            доходах, ни в гонорарах, ни в дайджесте.
+            {suggestion?.grossTiyn
+              ? ` По лицензиям ожидается ${formatMoney(suggestion.grossTiyn, suggestion.currency)} (${suggestion.basis}).`
+              : ""}
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <Link
+              href={`/admin/finance?org=${org.id}#new`}
+              className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-slate-950 transition-colors hover:bg-amber-400"
+            >
+              Заполнить данные по оплате
+            </Link>
+            <span className="text-xs text-foreground/55">
+              Форма откроется заполненной — сверьте сумму и дату. Если клиент всё-таки
+              бесплатный, снимите отметку «платный» выше.
+            </span>
+          </div>
+        </section>
+      ) : null}
+
       {/* ── Пошаговый запуск ─────────────────────────────────────────── */}
       <div className="mt-6">
         <SetupChecklist
@@ -192,6 +227,8 @@ export default async function OrgPage({
           steps={ownerSetupSteps(setup, org.id, {
             hasRequisites: Boolean(org.unp || org.contactEmail || org.contactNote),
             credentialsDelivered: delivery.status === "sent",
+            billingPaid: org.billing === "PAID",
+            hasIncome: org.incomes.length > 0,
           })}
           doneTitle="Клиент запущен: лицензия выдана, ответственный работает, работники подключаются"
           doneBody="Дальше всё идёт без вас: коды раздаёт ответственный, прогресс виден ниже и в отчётах кабинета клиента."

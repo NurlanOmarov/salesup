@@ -1,5 +1,8 @@
 import { db } from "@/lib/db";
 import { writeAdminLog } from "@/lib/admin/log";
+import { incomeWhere, type IncomeFilters } from "./filters";
+import { needsFreshFx } from "./fx";
+import { currentFx } from "./rates";
 import { payeeGross, splitIncome, type Country } from "./split";
 
 /**
@@ -32,10 +35,13 @@ export interface CreateIncomeInput {
 }
 
 export async function createIncome(input: CreateIncomeInput, actorId: string) {
-  const [rate, coOwners, author] = await Promise.all([
+  const [rate, coOwners, author, fx] = await Promise.all([
     db.taxRate.findUnique({ where: { country: input.country } }),
     db.payee.findMany({ where: { role: "CO_OWNER", isActive: true } }),
     db.payee.findUnique({ where: { id: input.authorId } }),
+    // Курс запоминаем на момент записи: журнал показывает поступление в двух
+    // валютах, и пересчёт не должен меняться каждый день (lib/finance/fx).
+    currentFx(input.currency),
   ]);
   if (!rate) throw new Error(`Не задана ставка налогов для страны ${input.country}`);
   if (!author || author.role !== "AUTHOR" || !author.isActive) {
@@ -62,6 +68,8 @@ export async function createIncome(input: CreateIncomeInput, actorId: string) {
         rateMilli: rate.rateMilli,
         taxTiyn: split.taxTiyn,
         netTiyn: split.netTiyn,
+        kztPerUnitMicro: fx.kztPerUnitMicro,
+        kztPerBynMicro: fx.kztPerBynMicro,
         orgId: input.channel === "B2B" ? input.orgId : null,
         courseId: input.courseId,
         buyerRef: input.channel === "B2C" ? input.buyerRef : null,
@@ -94,6 +102,97 @@ export async function createIncome(input: CreateIncomeInput, actorId: string) {
   });
 }
 
+/**
+ * Правка записанного поступления: забыли заметку, ошиблись суммой или датой.
+ *
+ * Что пересчитывается: раскладка по получателям — она производная от суммы и
+ * налога, хранить её расходящейся с ними нельзя. Что НЕ меняется: ставка налога
+ * и курс валют остаются теми, что были при записи (D-018: прошлое задним числом
+ * не переписывается). Исключение — смена страны или валюты: старая ставка и
+ * старый курс к ним просто не относятся, поэтому берутся текущие.
+ */
+export async function updateIncome(
+  id: string,
+  input: CreateIncomeInput,
+  actorId: string,
+) {
+  const current = await db.income.findUnique({ where: { id } });
+  if (!current) throw new Error("Поступление не найдено");
+
+  const countryChanged = current.country !== input.country;
+
+  const [rate, coOwners, author] = await Promise.all([
+    countryChanged
+      ? db.taxRate.findUnique({ where: { country: input.country } })
+      : Promise.resolve({ country: current.country, rateMilli: current.rateMilli }),
+    db.payee.findMany({ where: { role: "CO_OWNER", isActive: true } }),
+    db.payee.findUnique({ where: { id: input.authorId } }),
+  ]);
+  if (!rate) throw new Error(`Не задана ставка налогов для страны ${input.country}`);
+  if (!author || author.role !== "AUTHOR" || !author.isActive) {
+    throw new Error("Выберите автора курса");
+  }
+
+  const fx = needsFreshFx(current, input.currency)
+    ? await currentFx(input.currency)
+    : { kztPerUnitMicro: current.kztPerUnitMicro, kztPerBynMicro: current.kztPerBynMicro };
+
+  const split = splitIncome({
+    grossTiyn: input.grossTiyn,
+    rateMilli: rate.rateMilli,
+    currency: input.currency,
+    coOwners,
+    author,
+    taxTiyn: input.taxTiyn,
+  });
+
+  return db.$transaction(async (tx) => {
+    // Доли пересобираем целиком: получатель мог смениться, и остаток автора
+    // всегда считается заново от новой чистой прибыли.
+    await tx.incomeShare.deleteMany({ where: { incomeId: id } });
+    const income = await tx.income.update({
+      where: { id },
+      data: {
+        receivedAt: input.receivedAt,
+        channel: input.channel,
+        country: input.country,
+        currency: input.currency,
+        grossTiyn: input.grossTiyn,
+        rateMilli: rate.rateMilli,
+        taxTiyn: split.taxTiyn,
+        netTiyn: split.netTiyn,
+        kztPerUnitMicro: fx.kztPerUnitMicro,
+        kztPerBynMicro: fx.kztPerBynMicro,
+        orgId: input.channel === "B2B" ? input.orgId : null,
+        courseId: input.courseId,
+        buyerRef: input.channel === "B2C" ? input.buyerRef : null,
+        note: input.note,
+        shares: { create: split.shares },
+      },
+    });
+
+    if (income.orgId) {
+      await tx.organization.update({
+        where: { id: income.orgId },
+        data: { billing: "PAID" },
+      });
+    }
+
+    await writeAdminLog({
+      actorId,
+      action: "finance.income.update",
+      meta: {
+        incomeId: income.id,
+        ...(income.orgId ? { orgId: income.orgId } : {}),
+        grossTiyn: income.grossTiyn,
+        currency: income.currency,
+      },
+      tx,
+    });
+    return income;
+  });
+}
+
 export async function deleteIncome(id: string, actorId: string) {
   await db.$transaction(async (tx) => {
     const income = await tx.income.delete({ where: { id } });
@@ -111,22 +210,47 @@ export async function deleteIncome(id: string, actorId: string) {
   });
 }
 
-/** Поступления за период: год или всё время (year = null). */
-export async function getIncomes(year: number | null) {
+export type { IncomeFilters } from "./filters";
+
+/** Поступления по отбору; пустой отбор — всё время. */
+export async function getIncomes(filters: IncomeFilters = {}) {
   return db.income.findMany({
-    where: year
-      ? { receivedAt: { gte: new Date(Date.UTC(year, 0, 1)), lt: new Date(Date.UTC(year + 1, 0, 1)) } }
-      : undefined,
+    where: incomeWhere(filters),
     orderBy: [{ receivedAt: "desc" }, { createdAt: "desc" }],
     include: {
       org: { select: { id: true, name: true } },
       course: { select: { title: true } },
-      shares: { include: { payee: { select: { label: true } } } },
+      shares: { include: { payee: { select: { id: true, label: true, role: true } } } },
     },
   });
 }
 
 export type IncomeRow = Awaited<ReturnType<typeof getIncomes>>[number];
+
+/**
+ * Покупатели, по которым есть поступления, — для фильтра. Берём именно из
+ * журнала, а не список всех организаций: фильтровать по клиенту, который ни
+ * разу не платил, незачем, а список короче и полезнее.
+ */
+export async function getIncomeBuyers(): Promise<{
+  orgs: { id: string; name: string }[];
+  hasRetail: boolean;
+}> {
+  const [rows, retail] = await Promise.all([
+    db.income.findMany({
+      where: { orgId: { not: null } },
+      distinct: ["orgId"],
+      select: { org: { select: { id: true, name: true } } },
+      orderBy: { receivedAt: "desc" },
+    }),
+    db.income.count({ where: { channel: "B2C" } }),
+  ]);
+  const orgs = rows
+    .map((r) => r.org)
+    .filter((o): o is { id: string; name: string } => o !== null)
+    .sort((a, b) => a.name.localeCompare(b.name, "ru"));
+  return { orgs, hasRetail: retail > 0 };
+}
 
 /** Годы, за которые есть поступления, — для переключателя периода. */
 export async function getIncomeYears(): Promise<number[]> {

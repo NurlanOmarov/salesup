@@ -69,6 +69,7 @@ export type AdminAction =
   | "org.billing" // пометка «платный клиент / пилот»
   // Учёт доходов и гонораров (/admin/finance). meta.incomeId — всегда.
   | "finance.income.create"
+  | "finance.income.update"
   | "finance.income.delete"
   | "finance.settings.update"
   // Живые сессии с тренером (docs/LIVE-SESSIONS-PLAN.md). meta.sessionId и

@@ -94,9 +94,13 @@ export function ownerSetupSteps(
     hasRequisites: boolean;
     /** Письмо с доступами клиенту отправлено (или клиент уже вошёл сам). */
     credentialsDelivered?: boolean;
+    /** Клиент отмечен платным — тогда в шагах появляется запись оплаты. */
+    billingPaid?: boolean;
+    /** По клиенту есть хотя бы одно поступление (lib/finance). */
+    hasIncome?: boolean;
   },
 ): SetupStep[] {
-  return [
+  const steps: SetupStep[] = [
     {
       key: "requisites",
       title: "Заполнить реквизиты клиента",
@@ -145,6 +149,23 @@ export function ownerSetupSteps(
       done: state.learnersSignedIn > 0,
     },
   ];
+
+  // Оплату показываем только платным клиентам: у пилота денег нет по условию,
+  // и вечно незакрытый шаг в его чеклисте был бы просто шумом. Вставляем сразу
+  // за лицензией — именно за неё клиент и платит.
+  if (details.billingPaid) {
+    const afterLicense = steps.findIndex((s) => s.key === "license") + 1;
+    steps.splice(afterLicense, 0, {
+      key: "income",
+      title: "Записать оплату",
+      body: "Клиент отмечен платным — внесите поступление, иначе этих денег нет ни в доходах, ни в гонорарах, ни в дайджесте. Форма открывается заполненной по лицензии: останется сверить сумму, дату и валюту с тем, что реально пришло.",
+      done: Boolean(details.hasIncome),
+      href: `/admin/finance?org=${orgId}#new`,
+      linkLabel: "Заполнить оплату",
+    });
+  }
+
+  return steps;
 }
 
 /**

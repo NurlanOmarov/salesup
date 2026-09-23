@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { safeAction } from "@/lib/safe-action";
 import { db } from "@/lib/db";
 import { writeAdminLog } from "@/lib/admin/log";
-import { createIncome, deleteIncome } from "@/lib/finance/service";
+import { createIncome, deleteIncome, updateIncome } from "@/lib/finance/service";
 import { COUNTRIES, INCOME_CURRENCIES } from "@/lib/finance/split";
 
 /** Консоль владельца → доходы. Только OWNER, каждое действие — в AdminLog. */
@@ -56,6 +56,28 @@ const createIncomeSchema = z
     path: ["orgId"],
   });
 
+const updateIncomeSchema = z
+  .object({
+    id: z.string().min(1),
+    receivedAt: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Укажите дату получения оплаты"),
+    channel: z.enum(["B2B", "B2C"]),
+    country: z.enum(COUNTRIES),
+    currency: z.enum(INCOME_CURRENCIES),
+    gross: money.refine((v) => v > 0, "Сумма должна быть больше нуля"),
+    tax: z.union([z.literal(""), money]).transform((v) => (v === "" ? null : v)),
+    authorId: z.string().min(1, "Выберите автора"),
+    orgId: optionalText(40),
+    courseId: optionalText(40),
+    buyerRef: optionalText(80),
+    note: optionalText(500),
+  })
+  .refine((v) => v.channel === "B2C" || v.orgId, {
+    message: "Выберите организацию",
+    path: ["orgId"],
+  });
+
 const financeSettingsSchema = z.object({
   // Процент строкой: «11,364» → 11364.
   rates: z.array(
@@ -95,6 +117,35 @@ export const createIncomeAction = safeAction(
   },
   async (input, { session }) => {
     const income = await createIncome(
+      {
+        receivedAt: new Date(`${input.receivedAt}T00:00:00Z`),
+        channel: input.channel,
+        country: input.country,
+        currency: input.currency,
+        grossTiyn: input.gross,
+        taxTiyn: input.tax,
+        authorId: input.authorId,
+        orgId: input.orgId,
+        courseId: input.courseId,
+        buyerRef: input.buyerRef,
+        note: input.note,
+      },
+      session!.user.id,
+    );
+    revalidatePath("/admin/finance");
+    revalidatePath("/admin/orgs");
+    return { id: income.id };
+  },
+);
+
+export const updateIncomeAction = safeAction(
+  {
+    schema: updateIncomeSchema,
+    auth: "owner",
+  },
+  async (input, { session }) => {
+    const income = await updateIncome(
+      input.id,
       {
         receivedAt: new Date(`${input.receivedAt}T00:00:00Z`),
         channel: input.channel,

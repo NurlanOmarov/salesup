@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { payeeGross, splitIncome, taxByRate } from "./split";
+import {
+  countryLabel,
+  isCountry,
+  payeeGross,
+  splitIncome,
+  taxByRate,
+} from "./split";
 
 const N = { id: "n", role: "CO_OWNER" as const, shareBp: 2000 };
 const V = { id: "v", role: "AUTHOR" as const, shareBp: null };
@@ -84,5 +90,17 @@ describe("payeeGross", () => {
   it("Н.: 7 800 чистыми из 39 000 при выручке 44 000 → доход 8 800", () => {
     expect(payeeGross(780_000, 3_900_000, 4_400_000)).toBe(880_000);
     expect(payeeGross(3_120_000, 3_900_000, 4_400_000)).toBe(3_520_000);
+  });
+});
+
+describe("страны", () => {
+  it("страна подписывается флагом — строку журнала видно взглядом", () => {
+    expect(countryLabel("KZ")).toBe("🇰🇿 Казахстан");
+    expect(countryLabel("BY")).toBe("🇧🇾 Беларусь");
+  });
+
+  it("незнакомый код отдаётся как есть — флаг выдумывать нечему", () => {
+    expect(countryLabel("DE")).toBe("DE");
+    expect(isCountry("DE")).toBe(false);
   });
 });

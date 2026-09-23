@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import { deleteIncomeAction, updateFinanceSettingsAction } from "./actions";
-import { COUNTRIES, COUNTRY_LABELS, type Country } from "@/lib/finance/split";
+import { COUNTRIES, COUNTRY_FLAGS, COUNTRY_LABELS, type Country } from "@/lib/finance/split";
 import { ActionResult, useActionResult } from "@/components/action-result";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -97,7 +97,9 @@ export function FinanceSettingsForm({
         <div className="mt-2 grid gap-3 sm:grid-cols-4">
           {COUNTRIES.map((c) => (
             <label key={c} className="block text-sm">
-              <span className="text-foreground/60">{COUNTRY_LABELS[c]}</span>
+              <span className="text-foreground/60">
+                  {COUNTRY_FLAGS[c]} {COUNTRY_LABELS[c]}
+                </span>
               <Input
                 className="mt-1"
                 inputMode="decimal"

@@ -24,6 +24,27 @@ export const COUNTRY_LABELS: Record<Country, string> = {
   UZ: "Узбекистан",
 };
 
+/**
+ * Флаг страны — чтобы в журнале строка опознавалась взглядом, до чтения слова.
+ * Эмодзи, а не картинки: в списках, вариантах <select> и заголовках они работают
+ * одинаково и ничего не грузят.
+ */
+export const COUNTRY_FLAGS: Record<Country, string> = {
+  KZ: "🇰🇿",
+  BY: "🇧🇾",
+  RU: "🇷🇺",
+  UZ: "🇺🇿",
+};
+
+export function isCountry(v: string | null | undefined): v is Country {
+  return (COUNTRIES as readonly string[]).includes(v ?? "");
+}
+
+/** «🇰🇿 Казахстан». Незнакомый код отдаём как есть — выдумывать флаг нечему. */
+export function countryLabel(country: string): string {
+  return isCountry(country) ? `${COUNTRY_FLAGS[country]} ${COUNTRY_LABELS[country]}` : country;
+}
+
 export const INCOME_CURRENCIES = ["KZT", "BYN", "RUB", "UZS"] as const;
 export type IncomeCurrency = (typeof INCOME_CURRENCIES)[number];
 

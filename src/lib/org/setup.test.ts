@@ -60,6 +60,28 @@ describe("шаги запуска клиента", () => {
     expect(steps.filter((s) => !s.optional).every((s) => s.done)).toBe(true);
   });
 
+  it("у пилота шага про оплату нет, у платного клиента — есть и ведёт в доходы", () => {
+    const pilot = ownerSetupSteps(READY, "org1", { hasRequisites: true });
+    expect(pilot.find((s) => s.key === "income")).toBeUndefined();
+
+    const paid = ownerSetupSteps(READY, "org1", { hasRequisites: true, billingPaid: true });
+    const income = paid.find((s) => s.key === "income");
+    expect(income?.done).toBe(false);
+    expect(income?.href).toBe("/admin/finance?org=org1#new");
+    // Незакрытая оплата не даёт считать клиента запущенным — иначе о ней забудут.
+    expect(paid.filter((s) => !s.optional).every((s) => s.done)).toBe(false);
+  });
+
+  it("записанное поступление закрывает шаг оплаты", () => {
+    const steps = ownerSetupSteps(READY, "org1", {
+      hasRequisites: true,
+      billingPaid: true,
+      hasIncome: true,
+    });
+    expect(steps.find((s) => s.key === "income")?.done).toBe(true);
+    expect(steps.filter((s) => !s.optional).every((s) => s.done)).toBe(true);
+  });
+
   it("шаги ответственного ведут только в его же кабинет", () => {
     const steps = orgAdminSetupSteps(READY, "org1");
     for (const step of steps) expect(step.href?.startsWith("/org/org1")).toBe(true);
