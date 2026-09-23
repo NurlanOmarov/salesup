@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, X } from "lucide-react";
+import { ListFilter, Search, X } from "lucide-react";
 import { COUNTRIES, COUNTRY_FLAGS, COUNTRY_LABELS } from "@/lib/finance/split";
 import { Input } from "@/components/ui/input";
 
@@ -77,9 +77,20 @@ export function IncomeFilters({
   }, [q]);
 
   return (
-    <section className="mt-5 rounded-xl border border-foreground/10 bg-background p-3">
+    <section
+      id="filters"
+      className="mt-5 scroll-mt-20 rounded-xl border border-foreground/10 bg-background p-3"
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        <ListFilter className="size-4 text-amber-600" />
+        <h2 className="text-sm font-semibold">Отбор</h2>
+        <span className="text-xs text-foreground/45">
+          период, страна, покупатель, поиск — итоги ниже считаются по отобранному
+        </span>
+      </div>
+
       {/* Период: год целиком — одним нажатием, произвольный промежуток — датами. */}
-      <div className="flex flex-wrap items-center gap-1 text-sm">
+      <div className="mt-2 flex flex-wrap items-center gap-1 text-sm">
         <PeriodChip
           onClick={() => apply({ year: "", from: "", to: "" })}
           active={!value.year && !value.from && !value.to}

@@ -329,7 +329,12 @@ export default async function FinancePage({
 
       {/* ── Журнал поступлений ─────────────────────────────────────────── */}
       <section className="mt-8">
-        <h2 className="text-lg font-semibold">Поступления</h2>
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-lg font-semibold">Поступления</h2>
+          <Link href="#filters" className="text-sm text-amber-700 hover:underline">
+            {filtered ? "Отбор задан — изменить" : "Отобрать: период, страна, покупатель, поиск"}
+          </Link>
+        </div>
         <p className="mt-1 text-sm text-foreground/55">
           Вторая валюта — пересчёт по курсу НБ РК на день записи: он зафиксирован и
           задним числом не меняется. Запись можно поправить карандашом в строке.
@@ -407,6 +412,12 @@ export default async function FinancePage({
                         </td>
                         <td className="whitespace-nowrap px-4 py-3 text-right text-foreground/60">
                           {formatMoney(i.taxTiyn, i.currency)}
+                          <SecondCurrency
+                            tiyn={i.taxTiyn}
+                            currency={i.currency}
+                            fx={fx}
+                            approximate={approximate}
+                          />
                           <p className="text-xs text-foreground/40">
                             {i.taxTiyn === 0 ? "" : effectiveRate(i.taxTiyn, i.grossTiyn, i.rateMilli)}
                           </p>
@@ -422,14 +433,36 @@ export default async function FinancePage({
                         </td>
                         {payeeLabels.map((l) => {
                           const s = i.shares.find((x) => x.payee.label === l);
+                          // Доход получателя — его доля выручки до налогов. Обе
+                          // цифры нужны в тех же двух валютах, что и вся строка:
+                          // иначе долю тенгового поступления считаешь в уме.
+                          const gross = s
+                            ? payeeGross(s.amountTiyn, i.netTiyn, i.grossTiyn)
+                            : 0;
                           return (
                             <td key={l} className="whitespace-nowrap px-4 py-3 text-right">
                               {s ? formatMoney(s.amountTiyn, i.currency) : "—"}
+                              {s ? (
+                                <SecondCurrency
+                                  tiyn={s.amountTiyn}
+                                  currency={i.currency}
+                                  fx={fx}
+                                  approximate={approximate}
+                                />
+                              ) : null}
                               {s && i.netTiyn > 0 ? (
-                                <p className="text-xs text-foreground/45">
-                                  доход{" "}
-                                  {formatMoney(payeeGross(s.amountTiyn, i.netTiyn, i.grossTiyn), i.currency)}
-                                </p>
+                                <>
+                                  <p className="mt-1 text-xs text-foreground/45">
+                                    доход {formatMoney(gross, i.currency)}
+                                  </p>
+                                  <SecondCurrency
+                                    tiyn={gross}
+                                    currency={i.currency}
+                                    fx={fx}
+                                    approximate={approximate}
+                                    dim
+                                  />
+                                </>
                               ) : null}
                             </td>
                           );
@@ -565,17 +598,20 @@ function SecondCurrency({
   currency,
   fx,
   approximate,
+  dim,
 }: {
   tiyn: number;
   currency: string;
   fx: FxSnapshot;
   approximate: boolean;
+  /** Пересчёт под уже второстепенной строкой («доход»): ещё тише. */
+  dim?: boolean;
 }) {
   const converted = convertedAmounts(tiyn, currency, fx);
   if (converted.length === 0) return null;
   return (
     <p
-      className="text-xs font-normal text-foreground/40"
+      className={`text-xs font-normal ${dim ? "text-foreground/30" : "text-foreground/40"}`}
       title={
         approximate
           ? "Курс на дату записи не сохранён — пересчёт по сегодняшнему курсу НБ РК"
