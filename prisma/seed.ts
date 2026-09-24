@@ -38,6 +38,8 @@ import {
   KITCHEN_SCRIPTS,
   KITCHEN_AUDITS,
   KITCHEN_BRANCHING,
+  KITCHEN_CLIENT_TYPES,
+  KITCHEN_NEEDS_CART,
   KITCHEN_SCENARIOS,
   KITCHEN_EXAM,
   KITCHEN_EXAM_PASS_SCORE,
@@ -3104,6 +3106,8 @@ async function main() {
     await seedArtifacts(kitchenCourse.id, "SCRIPT_BUILDER", KITCHEN_SCRIPTS);
     await seedArtifacts(kitchenCourse.id, "DIALOGUE_AUDIT", KITCHEN_AUDITS);
     await seedArtifacts(kitchenCourse.id, "BRANCHING", KITCHEN_BRANCHING);
+    await seedArtifacts(kitchenCourse.id, "CLIENT_TYPES", KITCHEN_CLIENT_TYPES);
+    await seedArtifacts(kitchenCourse.id, "NEEDS_CART", KITCHEN_NEEDS_CART);
     await seedScenarios(kitchenCourse.id, KITCHEN_SCENARIOS);
     await seedFinalExam(kitchenCourse.id, {
       questions: KITCHEN_EXAM,
