@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { User, UserRound, GitBranch, RefreshCw, Trophy, XCircle, Flag } from "lucide-react";
 import type { BranchingData, BranchNode, BranchOutcome } from "@/lib/interactive";
+import { seededShuffle } from "@/lib/learn/format";
 import { usePracticeDone } from "@/components/learn/practice-context";
 
 /**
@@ -29,9 +30,15 @@ export function BranchingScenario({ data }: { data: BranchingData }) {
   const byId = useMemo(() => new Map(data.nodes.map((n) => [n.id, n])), [data.nodes]);
   const [currentId, setCurrentId] = useState(data.start);
   const [history, setHistory] = useState<Turn[]>([]);
+  const [attempt, setAttempt] = useState(0);
 
   const node: BranchNode | undefined = byId.get(currentId);
-  const choices = node?.choices ?? [];
+  // Варианты перемешаны (стабильно по узлу и прогону): в данных выигрышный ход
+  // обычно первый, и его угадывали по позиции.
+  const choices = useMemo(
+    () => seededShuffle(node?.choices ?? [], `${currentId}#${attempt}`),
+    [node, currentId, attempt],
+  );
   const terminal = !!node && choices.length === 0;
   // Балл по исходу ветки: успех — 100, нейтральный итог — 60, провал — 0.
   const outcomeScore = { win: 100, neutral: 60, lose: 0 } as const;
@@ -48,6 +55,7 @@ export function BranchingScenario({ data }: { data: BranchingData }) {
   }
 
   function restart() {
+    setAttempt((a) => a + 1);
     setHistory([]);
     setCurrentId(data.start);
   }

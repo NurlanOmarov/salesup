@@ -155,36 +155,61 @@ export function NeedsCart({ data }: { data: NeedsCartData }) {
 }
 
 function CartVisual({ progress }: { progress: number }) {
+  // Товары падают ВНУТРЬ корзины: сначала нижний ряд, потом верхний. Раньше они
+  // висели над тележкой, а ручка заходила в корзину.
   const items = 6;
   const filled = Math.round(progress * items);
+  const slots = [
+    { x: 42, y: 90 },
+    { x: 70, y: 90 },
+    { x: 98, y: 90 },
+    { x: 54, y: 70 },
+    { x: 82, y: 70 },
+    { x: 108, y: 70 },
+  ];
+  // Корзина — трапеция: верх y=64 (x 24..140), низ y=112 (x 38..126).
+  const edgeX = (y: number, side: "l" | "r") => {
+    const k = (y - 64) / 48;
+    return side === "l" ? 24 + 14 * k : 140 - 14 * k;
+  };
   return (
     <svg viewBox="0 0 160 140" className="h-32 w-36 shrink-0 justify-self-center sm:h-36 sm:w-40" role="img" aria-label="Тележка потребностей">
-      {/* товары над тележкой — заполняются по прогрессу */}
-      {Array.from({ length: items }).map((_, i) => {
+      {/* задняя стенка корзины */}
+      <path d="M24 64 H140 L126 112 H38 Z" className="fill-foreground/[0.05]" />
+
+      {slots.slice(0, items).map((p, i) => {
         const on = i < filled;
-        const x = 24 + (i % 3) * 34;
-        const y = 18 + Math.floor(i / 3) * 26;
         return (
           <motion.rect
             key={i}
-            x={x}
-            y={y}
-            width="24"
-            height="20"
-            rx="4"
+            x={p.x}
+            width="22"
+            height="18"
+            rx="3"
             initial={false}
-            animate={{ opacity: on ? 1 : 0, scale: on ? 1 : 0.6 }}
-            transition={{ type: "spring", stiffness: 260, damping: 20 }}
-            className="fill-brand/70"
+            animate={{ y: on ? p.y : p.y - 40, opacity: on ? 1 : 0 }}
+            transition={{ type: "spring", stiffness: 240, damping: 18 }}
+            className={i < 3 ? "fill-brand/75" : "fill-brand/55"}
           />
         );
       })}
 
-      {/* корзина тележки */}
-      <path d="M20 78 h108 l-14 42 h-80 z" className="fill-foreground/[0.06] stroke-foreground/25" strokeWidth="2.5" />
-      <path d="M8 70 h20 l8 12" className="stroke-foreground/25" strokeWidth="3" fill="none" strokeLinecap="round" />
-      <circle cx="52" cy="130" r="8" className="fill-foreground/25" />
-      <circle cx="104" cy="130" r="8" className="fill-foreground/25" />
+      {/* сетка и контур корзины — поверх товаров, как передняя стенка */}
+      {[88].map((y) => (
+        <line key={y} x1={edgeX(y, "l")} y1={y} x2={edgeX(y, "r")} y2={y} className="stroke-foreground/15" strokeWidth="1.5" />
+      ))}
+      {[52, 72, 92, 112].map((x) => (
+        <line key={x} x1={x} y1={64} x2={38 + ((x - 24) / 116) * 88} y2={112} className="stroke-foreground/15" strokeWidth="1.5" />
+      ))}
+      <path d="M24 64 H140 L126 112 H38 Z" fill="none" className="stroke-foreground/35" strokeWidth="2.5" strokeLinejoin="round" />
+
+      {/* ручка — снаружи, от левого верхнего угла */}
+      <path d="M24 64 L14 44 H4" fill="none" className="stroke-foreground/35" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+
+      {/* рама и колёса */}
+      <path d="M38 112 L42 120 H122 L126 112" fill="none" className="stroke-foreground/35" strokeWidth="2.5" strokeLinejoin="round" />
+      <circle cx="50" cy="128" r="7" className="fill-foreground/30" />
+      <circle cx="114" cy="128" r="7" className="fill-foreground/30" />
     </svg>
   );
 }
