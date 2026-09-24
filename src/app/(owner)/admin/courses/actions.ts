@@ -55,17 +55,25 @@ export const updateCourseAction = safeAction(
       // рилсы без YouTube) загружает фабрика — форма их только сохраняет.
       promoVideos: z
         .array(
-          z
-            .object({
+          // Без .refine(): в "use server"-файле Next принимает инлайн-функцию
+          // за серверное действие и валит сборку. Два вида ролика — union.
+          z.union([
+            z.object({
+              id: z
+                .string()
+                .trim()
+                .regex(/^[A-Za-z0-9_-]{11}$/, "ID видео YouTube — 11 символов"),
+              vertical: z.boolean(),
+              title: z.string().trim().max(80).optional(),
+              file: z.undefined().optional(),
+            }),
+            z.object({
               id: z.string().trim(),
               vertical: z.boolean(),
               title: z.string().trim().max(80).optional(),
-              file: z.string().regex(PROMO_FILE_RE, "Некорректный файл ролика").optional(),
-            })
-            .refine((v) => v.file || /^[A-Za-z0-9_-]{11}$/.test(v.id), {
-              message: "ID видео YouTube — 11 символов",
-              path: ["id"],
+              file: z.string().regex(PROMO_FILE_RE, "Некорректный файл ролика"),
             }),
+          ]),
         )
         .max(6, "Больше шести роликов на карточке — это уже не промо"),
       seoNoindex: z.boolean(),
