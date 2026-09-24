@@ -217,7 +217,8 @@ export function EconomyCalc({ data }: { data: EconomyCalcData }) {
           <div className="mt-4 flex gap-2.5 rounded-xl border border-brand/25 bg-brand/[0.06] p-3.5 text-sm">
             <MessageSquareQuote className="mt-0.5 size-4 shrink-0 text-brand" />
             <p>
-              <span className="font-semibold">Скажите клиенту: </span>«{round.pitch}»
+              <span className="font-semibold">{round.pitchLabel ?? "Скажите клиенту"}: </span>
+              {round.pitchLabel ? round.pitch : `«${round.pitch}»`}
             </p>
           </div>
           <button

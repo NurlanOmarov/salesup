@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PartyPopper, RotateCcw } from "lucide-react";
 import { CART_KIND_ORDER, type CartQuestion, type NeedsCartData } from "@/lib/interactive";
+import { seededShuffle } from "@/lib/learn/format";
 import { usePracticeDone } from "@/components/learn/practice-context";
 
 const KIND_LABEL: Record<string, string> = {
@@ -24,7 +25,12 @@ const KIND_BY_PRIORITY: (keyof typeof CART_KIND_ORDER)[] = ["open", "alt", "clos
  */
 export function NeedsCart({ data }: { data: NeedsCartData }) {
   const [picked, setPicked] = useState<CartQuestion[]>([]);
-  const [pool, setPool] = useState<CartQuestion[]>(data.questions);
+  // Пул перемешан стабильно: в данных вопросы часто уже стоят по порядку воронки.
+  const shuffled = useMemo(
+    () => seededShuffle(data.questions, data.questions.map((q) => q.text).join("|")),
+    [data.questions],
+  );
+  const [pool, setPool] = useState<CartQuestion[]>(shuffled);
   const [reject, setReject] = useState<{ i: number; text: string } | null>(null);
 
   // Пока в пуле остались вопросы более раннего типа воронки — принимаем только их.
@@ -52,7 +58,7 @@ export function NeedsCart({ data }: { data: NeedsCartData }) {
 
   function reset() {
     setPicked([]);
-    setPool(data.questions);
+    setPool(shuffled);
     setReject(null);
     setMisses(0);
   }

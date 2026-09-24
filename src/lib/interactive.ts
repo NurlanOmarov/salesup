@@ -664,6 +664,11 @@ export interface EconomyRound {
   steps: string[];
   /** Как сказать эту цифру клиенту. */
   pitch: string;
+  /**
+   * Подпись к выводу. По умолчанию «Скажите клиенту»; для внутренних расчётов
+   * (своя воронка, своя конверсия) — например, «Вывод».
+   */
+  pitchLabel?: string;
 }
 
 export interface EconomyCalcData {

@@ -48,7 +48,12 @@ export function StageLadder({ data }: { data: StageLadderData }) {
     if (!correct) {
       setMisses((m) => m + 1);
       setShake(true);
-      setFeedback({ ok: false, text: card.explanation });
+      // В данных разбор написан для верного выбора («Верно — …»): при ошибке
+      // снимаем это начало, иначе ученик видит «Верно» на неверный ответ.
+      setFeedback({
+        ok: false,
+        text: `Не так. ${card.explanation.replace(/^\s*верно\s*[—–:,.-]*\s*/i, "")}`,
+      });
       setTimeout(() => setShake(false), 420);
       return;
     }

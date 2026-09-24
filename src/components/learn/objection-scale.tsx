@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PartyPopper, RotateCcw, XCircle } from "lucide-react";
 import type { ObjectionScaleData, ScaleOption } from "@/lib/interactive";
-import { unquote } from "@/lib/learn/format";
+import { seededShuffle, unquote } from "@/lib/learn/format";
 import { usePracticeDone } from "@/components/learn/practice-context";
 import { toScorePct } from "@/lib/learn/practice";
 
@@ -19,6 +19,8 @@ import { toScorePct } from "@/lib/learn/practice";
 export function ObjectionScale({ data }: { data: ObjectionScaleData }) {
   const [roundIdx, setRoundIdx] = useState(0);
   const round = data.rounds[roundIdx];
+  // Варианты перемешаны (стабильно по раунду): в данных позитивный обычно первый.
+  const options = useMemo(() => (round ? seededShuffle(round.options, round.objection) : []), [round]);
 
   const [disabled, setDisabled] = useState<Set<number>>(new Set());
   const [misses, setMisses] = useState(0);
@@ -92,7 +94,7 @@ export function ObjectionScale({ data }: { data: ObjectionScaleData }) {
 
           {!won && !left ? (
             <div className="mt-3 grid gap-2">
-              {round.options.map((opt, i) => (
+              {options.map((opt, i) => (
                 <button
                   key={i}
                   type="button"

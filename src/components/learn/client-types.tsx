@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, X, Lightbulb, ChevronRight, RefreshCw, Trophy, Quote } from "lucide-react";
 import type { ClientTypeKey, ClientTypesData } from "@/lib/interactive";
+import { seededShuffle } from "@/lib/learn/format";
 import { usePracticeDone } from "@/components/learn/practice-context";
 import { toScorePct } from "@/lib/learn/practice";
 
@@ -92,11 +93,19 @@ export function ClientTypesTrainer({ data }: { data: ClientTypesData }) {
   const [typeHits, setTypeHits] = useState(0);
   const [reactionHits, setReactionHits] = useState(0);
   const [done, setDone] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   // Балл — доля верных ответов: и тип клиента, и реакция на каждой карточке.
   usePracticeDone("CLIENT_TYPES", done, toScorePct(typeHits + reactionHits, total * 2));
 
   const card = cards[index];
+  // Кнопки — только тех типов, что есть в тренажёре (в DIY их три, без жёлтого).
+  const typeKeys = ORDER.filter((k) => cards.some((c) => c.type === k));
+  // Реакции перемешаны стабильно: в данных верная обычно первая.
+  const reactions = useMemo(
+    () => (card ? seededShuffle(card.reactions, `${card.quote}#${attempt}`) : []),
+    [card, attempt],
+  );
   const typeAnswered = pickedType !== null;
   const reactionAnswered = pickedReaction !== null;
 
@@ -116,7 +125,7 @@ export function ClientTypesTrainer({ data }: { data: ClientTypesData }) {
   const pickReaction = (i: number) => {
     if (reactionAnswered || !card) return;
     setPickedReaction(i);
-    if (card.reactions[i]?.correct) {
+    if (reactions[i]?.correct) {
       setReactionHits((n) => n + 1);
       bump(18);
     } else {
@@ -135,6 +144,7 @@ export function ClientTypesTrainer({ data }: { data: ClientTypesData }) {
   };
 
   const restart = () => {
+    setAttempt((a) => a + 1);
     setIndex(0);
     setPickedType(null);
     setPickedReaction(null);
@@ -202,8 +212,8 @@ export function ClientTypesTrainer({ data }: { data: ClientTypesData }) {
 
       {/* Шаг 1 — тип */}
       <p className="mt-5 text-sm font-medium text-foreground/70">Шаг 1. Какой это тип?</p>
-      <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {ORDER.map((key) => {
+      <div className={`mt-2 grid grid-cols-2 gap-2 ${typeKeys.length === 3 ? "sm:grid-cols-3" : "sm:grid-cols-4"}`}>
+        {typeKeys.map((key) => {
           const t = TYPES[key];
           const isPicked = pickedType === key;
           const isCorrect = key === card.type;
@@ -269,7 +279,7 @@ export function ClientTypesTrainer({ data }: { data: ClientTypesData }) {
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-5">
             <p className="text-sm font-medium text-foreground/70">Шаг 2. Что отвечаете?</p>
             <div className="mt-2 space-y-2">
-              {card.reactions.map((r, i) => {
+              {reactions.map((r, i) => {
                 const isPicked = pickedReaction === i;
                 const reveal = reactionAnswered && (isPicked || r.correct);
                 return (
