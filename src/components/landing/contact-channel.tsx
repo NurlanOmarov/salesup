@@ -116,9 +116,17 @@ export function ContactChannel() {
       <input type="hidden" name="contactType" value={type} />
       <input type="hidden" name="contact" value={value} />
 
+      {/* В узкой колонке вкладки встают сеткой 2×2 вместо обрезанных «W…», «T…»:
+          название мессенджера важнее, чем одна строка. Ширину меряем у самой
+          формы (container query), а не у окна — форма бывает узкой и на ПК. */}
+      <div className="@container">
       <div
-        className="grid gap-1 rounded-lg border border-foreground/10 bg-foreground/5 p-1"
-        style={{ gridTemplateColumns: `repeat(${types.length}, minmax(0, 1fr))` }}
+        className={cn(
+          "grid gap-1 rounded-lg border border-foreground/10 bg-foreground/5 p-1",
+          types.length === 4
+            ? "grid-cols-2 @sm:grid-cols-4"
+            : "grid-cols-3",
+        )}
       >
         {types.map((option) => (
           <button
@@ -137,6 +145,7 @@ export function ContactChannel() {
             <span className="truncate">{CONTACT_LABELS[option]}</span>
           </button>
         ))}
+      </div>
       </div>
 
       {type === "TELEGRAM" ? (

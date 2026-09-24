@@ -74,8 +74,8 @@ export function BusinessCta({
 
       <div
         className={cn(
-          "grid gap-5",
-          isOffline ? "lg:grid-cols-[1fr_1fr]" : "lg:grid-cols-[1.1fr_1fr]",
+          "grid gap-5 lg:items-start [&>*]:min-w-0",
+          isOffline ? "lg:grid-cols-[1fr_1fr]" : "lg:grid-cols-[1.35fr_1fr]",
         )}
       >
         {isOffline ? (
@@ -109,7 +109,9 @@ export function BusinessCta({
           />
         )}
 
-        <div className="rounded-2xl border border-foreground/10 bg-background p-5 sm:p-6">
+        {/* Калькулятор длинный — форма едет рядом, чтобы после выбора курсов
+            не пришлось листать обратно наверх. */}
+        <div className="rounded-2xl border border-foreground/10 bg-background p-5 sm:p-6 lg:sticky lg:top-24">
           <p className="text-sm font-semibold">
             {isOffline ? c.offlineRequest : c.onlineRequest}
           </p>
@@ -122,6 +124,7 @@ export function BusinessCta({
             <LeadForm
               kind="B2B"
               defaultSeats={seats}
+              seatsFromCalculator
               planCourseIds={courseIds}
               withTrainer={withTrainer}
               defaultMessage={

@@ -20,6 +20,7 @@ export const businessUz = {
     coursesFallback: "Sohalar va umumiy ko'nikmalar bo'yicha sotuv kurslari",
     bulletCabinet: "Har bir xodim progressi ko'rinadigan kompaniya kabineti",
     bulletTrainers: "AI-trenajyorlar: mijoz simulyatori va e'tirozlarni mashq qilish",
+    ctaQuote: "Narxini hisoblash",
     heroAlt: "Rahbar jamoa o'quvi bo'yicha hisobotni ko'rmoqda",
     howAlt: "Sotuv bo'limi xodimlari muzokara xonasida har biri o'z noutbukida o'qimoqda",
   },
@@ -83,6 +84,7 @@ export const businessUz = {
       a: "Yuridik shaxs yoki YaTT hisob-fakturasi bo'yicha. To'lovdan so'ng dalolatnoma imzolaymiz. Barcha shartlar — tashkilotlar uchun ommaviy ofertada.",
     },
   ],
+  bottomTitle: "Jamoangiz o'qishini hisoblab beraylikmi?",
   quoteTitle: "Jamoangiz uchun hisoblab beramiz",
   quoteText:
     "Nechta xodim va qaysi mavzular kerakligini ayting — hisob-kitob va hisob-fakturani yuboramiz. Jamoa besh kishidan kam bo'lsa, oddiy kirishlarni tanlaymiz.",

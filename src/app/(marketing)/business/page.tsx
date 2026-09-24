@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import type { CourseAudience } from "@prisma/client";
 import Image from "next/image";
-import { CheckCircle2 } from "lucide-react";
+import { ArrowDown, ArrowUp, CheckCircle2 } from "lucide-react";
 import { db } from "@/lib/db";
 import { buildSafe } from "@/lib/utils";
 import { getStaticPageSeo } from "@/lib/seo/static-pages";
@@ -118,9 +118,12 @@ export default async function BusinessPage() {
         <div className="relative mx-auto max-w-6xl px-4 pb-12 pt-12 sm:pt-16 lg:pb-16">
         <AudienceSwitch current="b2b" size="hero" onDark />
 
-        {/* [&>*]:min-w-0 — иначе колонка не сжимается ниже своего min-content
-            и на телефоне страница получает горизонтальный скролл. */}
-        <div className="mt-6 grid gap-10 lg:grid-cols-[1.05fr_1fr] lg:items-start [&>*]:min-w-0">
+        {/* Калькулятор и форма в первом экране не помещаются: правая половина
+            делилась ещё на две колонки, и поле формы сжималось до 200 px —
+            вкладки мессенджеров обрезались до «W…», «T…». Первый экран теперь
+            только продаёт и ведёт кнопкой к расчёту, а расчёт живёт своей
+            секцией во всю ширину сразу под ним. */}
+        <div className="mt-6 max-w-2xl">
           <div>
             {/* Категория продукта до заголовка: компания покупает не пакет
                 доступов, а корпоративную академию — с этой рамкой цена места
@@ -170,17 +173,31 @@ export default async function BusinessPage() {
                 </li>
               ))}
             </ul>
-          </div>
 
-          <Reveal>
-            <BusinessCta
-              fallbackRetailTiyn={entryPack}
-              courses={courses}
-              currencyCode={code}
-              rates={rates}
-            />
-          </Reveal>
+            <a
+              href="#quote"
+              className="mt-8 inline-flex h-12 items-center gap-2 rounded-xl bg-brand px-6 font-semibold text-white shadow-lg shadow-brand/30 transition-colors hover:bg-brand/90"
+            >
+              {c.hero.ctaQuote}
+              <ArrowDown className="size-4" />
+            </a>
+          </div>
         </div>
+        </div>
+      </section>
+
+      {/* ── Расчёт и заявка ────────────────────────────────────────── */}
+      {/* scroll-mt — чтобы заголовок не прятался под липкой шапкой. */}
+      <section id="quote" className="mx-auto max-w-6xl scroll-mt-24 px-4 pt-14">
+        <h2 className="text-2xl font-bold sm:text-3xl">{c.quoteTitle}</h2>
+        <p className="mt-2 max-w-2xl text-foreground/65">{c.quoteText}</p>
+        <div className="mt-6">
+          <BusinessCta
+            fallbackRetailTiyn={entryPack}
+            courses={courses}
+            currencyCode={code}
+            rates={rates}
+          />
         </div>
       </section>
 
@@ -291,21 +308,19 @@ export default async function BusinessPage() {
         </div>
       </section>
 
-      {/* ── Повтор заявки ──────────────────────────────────────────── */}
+      {/* ── Повтор призыва ─────────────────────────────────────────── */}
+      {/* Второй копии формы нет: две одинаковые формы на странице дублируют id
+          полей и путают, какая из них «настоящая». Кнопка возвращает к расчёту. */}
       <section className="mx-auto max-w-6xl px-4 pb-20">
-        <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.015] p-6 sm:p-8">
-          <h2 className="text-2xl font-bold">{c.quoteTitle}</h2>
-          <p className="mt-2 max-w-2xl text-foreground/65">
-            {c.quoteText}
-          </p>
-          <div className="mt-6">
-            <BusinessCta
-              fallbackRetailTiyn={entryPack}
-              courses={courses}
-              currencyCode={code}
-              rates={rates}
-            />
-          </div>
+        <div className="flex flex-col items-start gap-4 rounded-2xl border border-foreground/10 bg-foreground/[0.015] p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
+          <h2 className="text-xl font-bold sm:text-2xl">{c.bottomTitle}</h2>
+          <a
+            href="#quote"
+            className="inline-flex h-12 shrink-0 items-center gap-2 rounded-xl bg-brand px-6 font-semibold text-white transition-colors hover:bg-brand/90"
+          >
+            {c.hero.ctaQuote}
+            <ArrowUp className="size-4" />
+          </a>
         </div>
       </section>
     </main>

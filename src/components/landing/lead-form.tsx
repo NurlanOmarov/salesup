@@ -27,6 +27,7 @@ export function LeadForm({
   kind = "B2C",
   format = "ONLINE",
   defaultSeats,
+  seatsFromCalculator = false,
   defaultMessage,
   planCourseIds,
   withTrainer = false,
@@ -38,6 +39,9 @@ export function LeadForm({
    *  оба без тарифов и расчёта. */
   format?: "ONLINE" | "OFFLINE" | "CUSTOM";
   defaultSeats?: number;
+  /** Число сотрудников уже задано калькулятором рядом — второе поле с тем же
+   *  вопросом только путает, какое из них «главное». Уходит скрытым полем. */
+  seatsFromCalculator?: boolean;
   /** Предзаполненный комментарий: например, курсы, выбранные в калькуляторе. */
   defaultMessage?: string;
   /** id выбранных в калькуляторе курсов — по ним сервер считает ту же сумму,
@@ -110,6 +114,9 @@ export function LeadForm({
               placeholder={t.lead.companyPlaceholder}
             />
           </div>
+          {seatsFromCalculator ? (
+            <input type="hidden" name="seatsWanted" value={defaultSeats ?? ""} />
+          ) : (
           <div className="mt-3 space-y-1.5">
             <Label htmlFor="lead-seats">
               {isOffline ? t.lead.participants : t.lead.employees}
@@ -124,6 +131,7 @@ export function LeadForm({
               placeholder="10"
             />
           </div>
+          )}
         </>
       ) : null}
       <div className="mt-3 space-y-1.5">
