@@ -1896,12 +1896,12 @@ const COURSES: CourseSpec[] = [
     // Промо — шесть рилсов с той же записи. На YouTube их нет, поэтому лежат у
     // нас сжатыми MP4 (pnpm factory:promo), см. lib/courses/promo-video.ts.
     promoVideos: [
-      { id: "reel-1", file: "courses/sales-b2b-chemistry/promo/reel-1.mp4", vertical: true, title: "Рекомендации в продажах" },
-      { id: "reel-2", file: "courses/sales-b2b-chemistry/promo/reel-2.mp4", vertical: true, title: "Воронка продаж" },
-      { id: "reel-3", file: "courses/sales-b2b-chemistry/promo/reel-3.mp4", vertical: true, title: "Ошибки в продажах" },
-      { id: "reel-4", file: "courses/sales-b2b-chemistry/promo/reel-4.mp4", vertical: true, title: "Пирамида потребностей клиента" },
-      { id: "reel-5", file: "courses/sales-b2b-chemistry/promo/reel-5.mp4", vertical: true, title: "Работа с возражениями" },
-      { id: "reel-6", file: "courses/sales-b2b-chemistry/promo/reel-6.mp4", vertical: true, title: "Исходящие звонки" },
+      { id: "reel-1", file: "courses/sales-b2b-chemistry/promo/reel-1-v2.mp4", vertical: true, title: "Рекомендации в продажах" },
+      { id: "reel-2", file: "courses/sales-b2b-chemistry/promo/reel-2-v2.mp4", vertical: true, title: "Воронка продаж" },
+      { id: "reel-3", file: "courses/sales-b2b-chemistry/promo/reel-3-v2.mp4", vertical: true, title: "Ошибки в продажах" },
+      { id: "reel-4", file: "courses/sales-b2b-chemistry/promo/reel-4-v2.mp4", vertical: true, title: "Пирамида потребностей клиента" },
+      { id: "reel-5", file: "courses/sales-b2b-chemistry/promo/reel-5-v2.mp4", vertical: true, title: "Работа с возражениями" },
+      { id: "reel-6", file: "courses/sales-b2b-chemistry/promo/reel-6-v2.mp4", vertical: true, title: "Исходящие звонки" },
     ],
   },
   {
