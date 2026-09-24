@@ -3208,6 +3208,7 @@ export const KITCHEN_OBJECTIONS: LessonObjections[] = [
   },
   {
     titleMatch: "конфликтов",
+    label: "Конфликт",
     items: [
       {
         objection: "Вчера поставили кухню — фасад кривой, ящик заедает! Я за это деньги платил?!",
@@ -3318,6 +3319,7 @@ export const KITCHEN_OBJECTIONS: LessonObjections[] = [
   },
   {
     titleMatch: "отличаются от других товаров",
+    label: "Реплики клиента",
     items: [
       {
         objection: "Ремонт только начали, закончим месяца через три. Я пока присматриваюсь — позвоню, когда будет нужно.",
@@ -3478,6 +3480,7 @@ export const KITCHEN_OBJECTIONS: LessonObjections[] = [
   },
   {
     titleMatch: "7 советов",
+    label: "Совет в деле",
     items: [
       {
         objection: "Светлые кухни у вас есть?",
@@ -3537,6 +3540,7 @@ export const KITCHEN_OBJECTIONS: LessonObjections[] = [
   },
   {
     titleMatch: "10 золотых правил",
+    label: "Золотые правила",
     items: [
       {
         objection: "Хочу фасады, как видела в отеле: глянец и подсветка по всему периметру.",
@@ -3587,6 +3591,7 @@ export const KITCHEN_OBJECTIONS: LessonObjections[] = [
   },
   {
     titleMatch: "4 правила комплимента",
+    label: "Комплимент",
     items: [
       {
         objection: "Не задавайте мне вопросов и советов не давайте. Я сам мебельщик, разберусь.",
@@ -3722,6 +3727,7 @@ export const KITCHEN_OBJECTIONS: LessonObjections[] = [
   },
   {
     titleMatch: "убедить купить кухню",
+    label: "«Ну и что?»",
     items: [
       {
         objection: "Вы говорите: у вас лазерная проклейка кромки. Ну и что мне с того?",
