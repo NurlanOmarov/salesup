@@ -95,7 +95,9 @@ export function ObjectionTrainer({ data }: { data: ObjectionsData }) {
           <MessageSquareWarning className="size-5" />
         </div>
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-rose-600">Клиент возражает</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-rose-600">
+            {data.label ? "Клиент говорит" : "Клиент возражает"}
+          </p>
           <p className="mt-0.5 font-semibold">«{unquote(item.objection)}»</p>
         </div>
       </div>

@@ -291,8 +291,8 @@ export function LessonTabs({
     // поэтому карточки в главные не выбираются почти никогда (низ приоритета).
     { key: "quiz", label: "Задание", icon: GraduationCap, show: !!quiz, group: "practice" },
     { key: "flashcards", label: "Карточки", icon: Layers, show: !!flashcards, group: "practice" },
-    { key: "objections", label: "Возражения", icon: MessageSquareWarning, show: !!objections, group: "practice" },
-    { key: "rapidfire", label: "На скорость", icon: Zap, show: !!objections, group: "practice" },
+    { key: "objections", label: objections?.label ?? "Возражения", icon: MessageSquareWarning, show: !!objections, group: "practice" },
+    { key: "rapidfire", label: "На скорость", icon: Zap, show: !!objections && !objections.label, group: "practice" },
     { key: "branching", label: "Сценарий", icon: GitBranch, show: !!branching, group: "practice" },
     { key: "script", label: "Скрипт", icon: ListOrdered, show: !!script, group: "practice" },
     { key: "audit", label: "Найди ошибку", icon: SearchCheck, show: !!audit, group: "practice" },
@@ -321,6 +321,8 @@ export function LessonTabs({
     visible.map((t) => TAB_KIND[t.key]).filter((k): k is PracticeKind => !!k),
   );
   const mainTab = mainKind ? visible.find((t) => TAB_KIND[t.key] === mainKind)?.key ?? null : null;
+  const mainLabel =
+    mainKind === "OBJECTIONS" && objections?.label ? objections.label : mainKind ? PRACTICE_LABELS[mainKind] : "";
 
   const [tab, setTab] = useState<Tab>(initialTab === "practice" && mainTab ? mainTab : "video");
   const reduceMotion = useReducedMotion();
@@ -527,7 +529,7 @@ export function LessonTabs({
               <div>
                 <p className="font-semibold">Видео просмотрено — закрепите на практике</p>
                 <p className="text-sm text-foreground/60">
-                  Тренажёр «{PRACTICE_LABELS[mainKind]}»: пара минут, +25 XP. Без практики знания уходят за неделю.
+                  Тренажёр «{mainLabel}»: пара минут, +25 XP. Без практики знания уходят за неделю.
                 </p>
               </div>
             </div>
@@ -798,7 +800,7 @@ export function LessonTabs({
 
       <LessonPath
         videoDone={videoDone}
-        practice={mainTab && mainKind ? { label: PRACTICE_LABELS[mainKind], done: lessonPracticed } : null}
+        practice={mainTab && mainKind ? { label: mainLabel, done: lessonPracticed } : null}
         quiz={quiz ? { id: quiz.id, title: quiz.title, passed: quizPassed } : null}
         nextLocked={nextLocked}
         onVideo={() => setTab("video")}

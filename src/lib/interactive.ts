@@ -52,6 +52,12 @@ export interface ObjectionCard {
 
 export interface ObjectionsData {
   items: ObjectionCard[];
+  /**
+   * Название тренажёра, если реплики — не возражения (выбор комплимента, метода
+   * закрытия, роли продавца): подпись вкладки вместо «Возражения». С ним режим
+   * «на скорость» не показывается — «возражения на скорость» там не к месту.
+   */
+  label?: string;
 }
 
 /** Безопасный парсинг тренажёра возражений из `AiArtifact.content`. null при ошибке. */
@@ -68,7 +74,8 @@ export function parseObjections(content: string | null | undefined): ObjectionsD
         it.options.length >= 2 &&
         it.options.some((o) => o.correct),
     );
-    return items.length > 0 ? { items } : null;
+    const label = typeof data.label === "string" && data.label.trim() ? data.label.trim() : undefined;
+    return items.length > 0 ? { items, ...(label ? { label } : {}) } : null;
   } catch {
     return null;
   }

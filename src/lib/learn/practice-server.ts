@@ -7,6 +7,7 @@ import {
   pickMainTrainer,
   type PracticeKind,
 } from "@/lib/learn/practice";
+import { parseObjections } from "@/lib/interactive";
 
 /**
  * Учёт тренажёров на сервере: результаты (PracticeResult), события в Event,
@@ -141,10 +142,15 @@ export async function trainerKindsByLesson(
 ): Promise<Map<string, Set<PracticeKind>>> {
   const map = new Map<string, Set<PracticeKind>>();
   if (lessonIds.length === 0) return map;
-  const [artifacts, scenarios] = await Promise.all([
+  const [artifacts, objections, scenarios] = await Promise.all([
     db.aiArtifact.findMany({
       where: { lessonId: { in: lessonIds }, validation: "VALIDATED", type: { in: [...TRAINER_ARTIFACT_TYPES] } },
       select: { lessonId: true, type: true },
+    }),
+    // Режим «на скорость» есть только у настоящих возражений (без своей подписи).
+    db.aiArtifact.findMany({
+      where: { lessonId: { in: lessonIds }, validation: "VALIDATED", type: "OBJECTIONS" },
+      select: { lessonId: true, content: true },
     }),
     db.simulationScenario.findMany({
       where: { lessonId: { in: lessonIds }, validation: "VALIDATED" },
@@ -156,9 +162,10 @@ export async function trainerKindsByLesson(
     set.add(kind);
     map.set(lessonId, set);
   };
-  for (const a of artifacts) {
-    add(a.lessonId, a.type as PracticeKind);
-    if (a.type === "OBJECTIONS") add(a.lessonId, "RAPID_FIRE");
+  for (const a of artifacts) add(a.lessonId, a.type as PracticeKind);
+  for (const o of objections) {
+    const parsed = parseObjections(o.content);
+    if (parsed && !parsed.label) add(o.lessonId, "RAPID_FIRE");
   }
   for (const s of scenarios) add(s.lessonId, "SIMULATION");
   return map;

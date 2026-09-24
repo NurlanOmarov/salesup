@@ -44,7 +44,7 @@ export const PRACTICE_LABELS: Record<PracticeKind, string> = {
   BRANCHING: "Сценарий разговора",
   DIALOGUE_AUDIT: "Найди ошибку",
   SCRIPT_BUILDER: "Собери скрипт",
-  OBJECTIONS: "Ответь на возражение",
+  OBJECTIONS: "Выбери лучший ответ",
   RAPID_FIRE: "Возражения на скорость",
   TASK_METAPHOR: "Тренажёр-метафора",
   EISENHOWER: "Матрица Эйзенхауэра",

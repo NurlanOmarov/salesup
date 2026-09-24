@@ -12,6 +12,7 @@ import {
   PHARMA_AUDITS,
   PHARMA_HOTSPOTS,
   PHARMA_BRANCHING,
+  PHARMA_NEEDS_CART,
   PHARMA_SCENARIOS,
   type LessonScenario,
 } from "./seed-data/pharma-interactive.js";
@@ -146,6 +147,7 @@ import {
   TOURISM_HOTSPOTS,
   TOURISM_BRANCHING,
   TOURISM_CLIENT_TYPES,
+  TOURISM_NEEDS_CART,
   TOURISM_SCENARIOS,
   TOURISM_EXAM,
   TOURISM_EXAM_PASS_SCORE,
@@ -184,9 +186,7 @@ import {
   DIY_SLIDES,
   DIY_LESSON_QUIZZES,
   DIY_FLASHCARDS,
-  DIY_OBJECTIONS,
   DIY_CHECKLISTS,
-  DIY_SCRIPTS,
   DIY_AUDITS,
   DIY_BRANCHING,
   DIY_CLIENT_TYPES,
@@ -214,6 +214,13 @@ const db = new PrismaClient();
  *                              иначе на проде остаётся описание от старого каркаса
  * По умолчанию (локальная разработка) — прежнее поведение: полный сид.
  */
+/**
+ * SEED_TRAINERS_ONLY=1 (вместе с SEED_COURSES) — обновить только тренажёры и
+ * сценарии симулятора: курс, уроки, конспекты, слайды, тесты и экзамен не
+ * трогаются. Для правок практики на проде: полный сид перезаписывает поля курса,
+ * которые владелец мог поменять в админке (описание, цену, FAQ).
+ */
+const SEED_TRAINERS_ONLY = process.env.SEED_TRAINERS_ONLY === "1";
 const SEED_COURSES = (process.env.SEED_COURSES ?? "")
   .split(",")
   .map((x) => x.trim())
@@ -2780,6 +2787,7 @@ async function seedFinalExam(
   courseId: string,
   spec: { questions: SeedQuestion[]; description: string; passScore: number },
 ) {
+  if (SEED_TRAINERS_ONLY) return;
   const existing = await db.quiz.findFirst({
     where: { courseId, kind: "FINAL_EXAM" },
     select: { id: true },
@@ -2810,6 +2818,7 @@ async function seedFinalExam(
 
 /** Задания к отдельным урокам (LESSON_QUIZ) — тип подобран под содержание урока. */
 async function seedLessonQuizzes(courseId: string, rows: LessonQuizSeed[]) {
+  if (SEED_TRAINERS_ONLY) return;
   const lessons = await db.lesson.findMany({
     where: { module: { courseId } },
     select: { id: true, title: true },
@@ -2844,6 +2853,7 @@ async function seedLessonQuizzes(courseId: string, rows: LessonQuizSeed[]) {
 
 /** Конспекты уроков (AiArtifact SUMMARY) по реальному содержанию видео. */
 async function seedSummaries(courseId: string, rows: LessonSummary[]) {
+  if (SEED_TRAINERS_ONLY) return;
   const lessons = await db.lesson.findMany({
     where: { module: { courseId } },
     select: { id: true, title: true },
@@ -2861,6 +2871,7 @@ async function seedSummaries(courseId: string, rows: LessonSummary[]) {
 
 /** Презентации уроков (AiArtifact SLIDES) — JSON-колоды для просмотрщика. */
 async function seedSlides(courseId: string, rows: LessonDeck[]) {
+  if (SEED_TRAINERS_ONLY) return;
   const lessons = await db.lesson.findMany({
     where: { module: { courseId } },
     select: { id: true, title: true },
@@ -2904,7 +2915,7 @@ async function seedObjections(courseId: string, rows: LessonObjections[]) {
   for (const lo of rows) {
     const lesson = lessons.find((l) => l.title.includes(lo.titleMatch));
     if (!lesson) continue;
-    const content = JSON.stringify({ items: lo.items });
+    const content = JSON.stringify({ items: lo.items, ...(lo.label ? { label: lo.label } : {}) });
     await db.aiArtifact.upsert({
       where: { lessonId_type: { lessonId: lesson.id, type: "OBJECTIONS" } },
       create: { lessonId: lesson.id, type: "OBJECTIONS", content, validation: "VALIDATED", criticScore: 100 },
@@ -2946,6 +2957,22 @@ async function seedArtifacts(
       where: { lessonId_type: { lessonId: lesson.id, type } },
       create: { lessonId: lesson.id, type, content, validation: "VALIDATED", criticScore: 100 },
       update: { content, validation: "VALIDATED" },
+    });
+  }
+}
+
+/**
+ * Снять тренажёры, убранные из данных. seedArtifacts только добавляет и
+ * обновляет, поэтому без явного удаления старая запись осталась бы на проде.
+ * Идемпотентно; PracticeResult ссылается на урок, а не на артефакт.
+ */
+async function removeArtifacts(
+  courseId: string,
+  rows: { lessonTitle: string; type: "SCRIPT_BUILDER" | "OBJECTIONS" | "ECONOMY_CALC" }[],
+) {
+  for (const row of rows) {
+    await db.aiArtifact.deleteMany({
+      where: { type: row.type, lesson: { title: row.lessonTitle, module: { courseId } } },
     });
   }
 }
@@ -3032,9 +3059,20 @@ async function main() {
     if (unknown.length > 0) throw new Error(`SEED_COURSES: неизвестные курсы — ${unknown.join(", ")}`);
     console.log(`▶ Точечный сид: ${specs.map((x) => x.slug).join(", ")}`);
   }
-  const courses = [];
-  for (const spec of specs) {
-    courses.push(await upsertCourse(spec));
+  const courses: { id: string; slug: string }[] = [];
+  if (SEED_TRAINERS_ONLY) {
+    if (SEED_COURSES.length === 0) throw new Error("SEED_TRAINERS_ONLY требует SEED_COURSES");
+    console.log("▶ Только тренажёры: курс, уроки, конспекты и тесты не трогаем");
+    courses.push(
+      ...(await db.course.findMany({
+        where: { slug: { in: specs.map((x) => x.slug) } },
+        select: { id: true, slug: true },
+      })),
+    );
+  } else {
+    for (const spec of specs) {
+      courses.push(await upsertCourse(spec));
+    }
   }
 
   // Медпред-курс собран полностью: публикуем все уроки, конспекты, экзамен.
@@ -3053,6 +3091,11 @@ async function main() {
   await seedArtifacts(pharmaCourse.id, "DIALOGUE_AUDIT", PHARMA_AUDITS);
   await seedArtifacts(pharmaCourse.id, "HOTSPOT", PHARMA_HOTSPOTS);
   await seedArtifacts(pharmaCourse.id, "BRANCHING", PHARMA_BRANCHING);
+  await seedArtifacts(pharmaCourse.id, "NEEDS_CART", PHARMA_NEEDS_CART);
+  // Скрипт закрепления заменён ветвлением: из четырёх фраз видео не собрать один порядок.
+  await removeArtifacts(pharmaCourse.id, [
+    { lessonTitle: "Как закрепить договорённости с клиентом", type: "SCRIPT_BUILDER" },
+  ]);
   await seedScenarios(pharmaCourse.id, PHARMA_SCENARIOS);
   await seedFinalExam(pharmaCourse.id, {
     questions: PHARMA_EXAM,
@@ -3196,6 +3239,7 @@ async function main() {
     await seedArtifacts(tourismCourse.id, "HOTSPOT", TOURISM_HOTSPOTS);
     await seedArtifacts(tourismCourse.id, "BRANCHING", TOURISM_BRANCHING);
     await seedArtifacts(tourismCourse.id, "CLIENT_TYPES", TOURISM_CLIENT_TYPES);
+    await seedArtifacts(tourismCourse.id, "NEEDS_CART", TOURISM_NEEDS_CART);
     await seedScenarios(tourismCourse.id, TOURISM_SCENARIOS);
     await seedFinalExam(tourismCourse.id, {
       questions: TOURISM_EXAM,
@@ -3223,6 +3267,13 @@ async function main() {
     await seedObjections(realtyCourse.id, REALTY_OBJECTIONS);
     await seedArtifacts(realtyCourse.id, "CHECKLIST", REALTY_CHECKLISTS);
     await seedArtifacts(realtyCourse.id, "SCRIPT_BUILDER", REALTY_SCRIPTS);
+    // Порядка шагов, который собирал конструктор, в видео нет — урок ведёт ветвление.
+    await removeArtifacts(realtyCourse.id, [
+      {
+        lessonTitle: "Ошибка №6: репутация агентства и конфликты, которые нельзя делегировать",
+        type: "SCRIPT_BUILDER",
+      },
+    ]);
     await seedArtifacts(realtyCourse.id, "DIALOGUE_AUDIT", REALTY_AUDITS);
     await seedArtifacts(realtyCourse.id, "HOTSPOT", REALTY_HOTSPOTS);
     await seedArtifacts(realtyCourse.id, "BRANCHING", REALTY_BRANCHING);
@@ -3369,6 +3420,11 @@ async function main() {
     await seedArtifacts(chemistryCourse.id, "BRANCHING", CHEMISTRY_BRANCHING);
     await seedArtifacts(chemistryCourse.id, "HOTSPOT", CHEMISTRY_HOTSPOTS);
     await seedArtifacts(chemistryCourse.id, "ECONOMY_CALC", CHEMISTRY_ECONOMY);
+    // Урок 4: «пока нет безопасности, экономию не слышат» — калькулятор главным
+    // тренажёром противоречил смыслу урока, главным стало ветвление.
+    await removeArtifacts(chemistryCourse.id, [
+      { lessonTitle: "Пирамида потребностей клиента-партнёра", type: "ECONOMY_CALC" },
+    ]);
     await seedScenarios(chemistryCourse.id, CHEMISTRY_SCENARIOS);
     await seedFinalExam(chemistryCourse.id, {
       questions: CHEMISTRY_EXAM,
@@ -3388,9 +3444,14 @@ async function main() {
     await seedSlides(diyCourse.id, DIY_SLIDES);
     await seedLessonQuizzes(diyCourse.id, DIY_LESSON_QUIZZES);
     await seedFlashcards(diyCourse.id, DIY_FLASHCARDS);
-    await seedObjections(diyCourse.id, DIY_OBJECTIONS);
     await seedArtifacts(diyCourse.id, "CHECKLIST", DIY_CHECKLISTS);
-    await seedArtifacts(diyCourse.id, "SCRIPT_BUILDER", DIY_SCRIPTS);
+    // Дубли сняты: скрипт урока 1 повторял лестницу этапов, возражения урока 3 —
+    // весы и ветвление (с ними уходит и «на скорость»). Семь равноправных вкладок
+    // практики ученики не открывали вовсе.
+    await removeArtifacts(diyCourse.id, [
+      { lessonTitle: "Этапы продажи: от контакта до закрытия сделки", type: "SCRIPT_BUILDER" },
+      { lessonTitle: "Возражения в DIY-рознице: «дорого», доставка и обмен", type: "OBJECTIONS" },
+    ]);
     await seedArtifacts(diyCourse.id, "DIALOGUE_AUDIT", DIY_AUDITS);
     await seedArtifacts(diyCourse.id, "BRANCHING", DIY_BRANCHING);
     await seedArtifacts(diyCourse.id, "CLIENT_TYPES", DIY_CLIENT_TYPES);
