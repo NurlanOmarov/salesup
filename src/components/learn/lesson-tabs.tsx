@@ -73,6 +73,7 @@ import { EconomyCalc } from "@/components/learn/economy-calc";
 import { PracticeProvider } from "@/components/learn/practice-context";
 import { reportPracticeAction } from "@/app/(student)/app/learn/[courseSlug]/[lessonId]/actions";
 import { PRACTICE_LABELS, pickMainTrainer, type PracticeKind } from "@/lib/learn/practice";
+import { XP_REWARDS } from "@/lib/gamification/levels";
 import type { SlideDeckData } from "@/lib/slides";
 import type {
   FlashcardsData,
@@ -167,6 +168,21 @@ const TAB_KIND: Partial<Record<Tab, PracticeKind>> = {
 interface PracticeToast {
   xp: number;
   stepDone: boolean;
+  /** Сколько тренажёров урока ещё не пройдено. */
+  remaining: number;
+  /** Этим прохождением закрыт весь набор — в xp уже входит бонус. */
+  allDone: boolean;
+  /** Следующий непройденный тренажёр (по порядку «Практики»). */
+  next: { tab: Tab; label: string } | null;
+}
+
+/** 1 тренажёр, 2 тренажёра, 5 тренажёров. */
+function trainersWord(n: number): string {
+  const d10 = n % 10;
+  const d100 = n % 100;
+  if (d10 === 1 && d100 !== 11) return "тренажёр";
+  if (d10 >= 2 && d10 <= 4 && (d100 < 12 || d100 > 14)) return "тренажёра";
+  return "тренажёров";
 }
 
 const GROUPS: { key: Group; label: string; icon: typeof PlayCircle }[] = [
@@ -318,6 +334,7 @@ export function LessonTabs({
   const [toast, setToast] = useState<PracticeToast | null>(null);
   const [showMore, setShowMore] = useState(false);
   const lessonPracticed = done.size > 0;
+  const doneRef = useRef(done);
 
   // Открытие тренажёра — событие для аналитики (один раз за визит на вид).
   const opened = useRef(new Set<PracticeKind>());
@@ -332,18 +349,34 @@ export function LessonTabs({
     (kind: PracticeKind, scorePct: number | null) => {
       void reportPracticeAction({ lessonId, kind, phase: "finish", scorePct }).then((res) => {
         if (!res.ok) return;
-        setDone((s) => new Set(s).add(kind));
-        if (res.data.firstTime) setToast({ xp: res.data.xpGained, stepDone: res.data.lessonStepDone });
+        const nextDone = new Set(doneRef.current).add(kind);
+        doneRef.current = nextDone;
+        setDone(nextDone);
+        if (!res.data.firstTime) return;
+        // Следующий непройденный — в том же порядке, что вкладки «Практики».
+        const nextItem = practiceTabsRef.current.find((t) => {
+          const k = TAB_KIND[t.key];
+          return k && !nextDone.has(k);
+        });
+        setToast({
+          xp: res.data.xpGained,
+          stepDone: res.data.lessonStepDone,
+          remaining: res.data.remaining,
+          allDone: res.data.allDone,
+          next: nextItem ? { tab: nextItem.key, label: nextItem.label } : null,
+        });
       });
     },
     [lessonId],
   );
 
+  // Уведомление с кнопкой держится дольше и не пропадает, пока на него навели курсор.
+  const [toastHover, setToastHover] = useState(false);
   useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 7000);
+    if (!toast || toastHover) return;
+    const t = setTimeout(() => setToast(null), toast.next || toast.stepDone ? 14000 : 8000);
     return () => clearTimeout(t);
-  }, [toast]);
+  }, [toast, toastHover]);
 
   // Порядок «Практики»: главный тренажёр → задание → остальные (под «Ещё»).
   const practiceOrder = (key: Tab) => (key === mainTab ? 0 : key === "quiz" ? 1 : 2);
@@ -353,6 +386,8 @@ export function LessonTabs({
       .filter((t) => t.group === g.key)
       .sort((a, b) => (g.key === "practice" ? practiceOrder(a.key) - practiceOrder(b.key) : 0)),
   })).filter((g) => g.items.length > 0);
+  const practiceTabsRef = useRef<typeof visible>([]);
+  practiceTabsRef.current = groups.find((g) => g.key === "practice")?.items ?? [];
 
   const activeGroupKey = visible.find((t) => t.key === tab)?.group ?? groups[0]?.key;
   const activeGroup = groups.find((g) => g.key === activeGroupKey) ?? groups[0];
@@ -777,6 +812,8 @@ export function LessonTabs({
             initial={reduceMotion ? false : { opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 16 }}
+            onMouseEnter={() => setToastHover(true)}
+            onMouseLeave={() => setToastHover(false)}
             className="fixed inset-x-4 bottom-4 z-50 mx-auto flex max-w-md items-start gap-3 rounded-2xl border border-emerald-500/30 bg-background p-4 shadow-lg sm:left-auto sm:right-6"
           >
             <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-700">
@@ -784,27 +821,61 @@ export function LessonTabs({
             </div>
             <div className="min-w-0 flex-1">
               <p className="font-semibold">
-                Тренировка засчитана <span className="text-emerald-700">+{toast.xp} XP</span>
+                {toast.allDone ? "Все тренажёры урока пройдены!" : "Тренировка засчитана"}{" "}
+                <span className="text-emerald-700">+{toast.xp} XP</span>
               </p>
               <p className="mt-0.5 text-sm text-foreground/60">
-                {toast.stepDone && quiz && !quizPassed
-                  ? "Шаг «Тренировка» пройден. Теперь задание — после практики оно даётся легче."
-                  : "Ещё один тренажёр за плечами. Возвращайтесь к нему перед встречей с клиентом."}
+                {toast.allDone
+                  ? `В том числе бонус +${XP_REWARDS.practiceAllInLesson} XP за полный набор. Материал урока закреплён по максимуму.`
+                  : toast.stepDone && quiz && !quizPassed
+                    ? "Шаг «Тренировка» пройден — теперь можно к заданию."
+                    : toast.remaining > 0
+                      ? "Отличная работа — навык закрепляется."
+                      : "Возвращайтесь к тренажёру перед встречей с клиентом."}
               </p>
-              {toast.stepDone && quiz && !quizPassed ? (
-                <Link
-                  href={`/app/quiz/${quiz.id}`}
-                  className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-amber-700 hover:underline"
-                >
-                  К заданию
-                  <ChevronRight className="size-4" />
-                </Link>
+              {/* Приглашение набрать ещё баллов: остаток и цена, а не «казино» —
+                  ученик видит, сколько осталось и что за это получит. */}
+              {!toast.allDone && toast.remaining > 0 ? (
+                <p className="mt-1.5 text-sm text-foreground/75">
+                  Хотите ещё баллов? В уроке {toast.remaining === 1 ? "остался" : "осталось"}{" "}
+                  {toast.remaining} {trainersWord(toast.remaining)}: +{XP_REWARDS.practiceExtra} XP за каждый
+                  {toast.remaining + done.size > 1 ? ` и бонус +${XP_REWARDS.practiceAllInLesson} XP за все` : ""}.
+                </p>
               ) : null}
+              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+                {toast.stepDone && quiz && !quizPassed ? (
+                  <Link
+                    href={`/app/quiz/${quiz.id}`}
+                    className="inline-flex items-center gap-1 text-sm font-semibold text-amber-700 hover:underline"
+                  >
+                    К заданию
+                    <ChevronRight className="size-4" />
+                  </Link>
+                ) : null}
+                {!toast.allDone && toast.next ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTab(toast.next!.tab);
+                      setShowMore(true);
+                      setToast(null);
+                      setToastHover(false);
+                    }}
+                    className="inline-flex items-center gap-1 text-sm font-semibold text-emerald-700 hover:underline"
+                  >
+                    Следующий: «{toast.next.label}»
+                    <ChevronRight className="size-4" />
+                  </button>
+                ) : null}
+              </div>
             </div>
             <button
               type="button"
               aria-label="Закрыть"
-              onClick={() => setToast(null)}
+              onClick={() => {
+                setToast(null);
+                setToastHover(false);
+              }}
               className="text-foreground/40 transition-colors hover:text-foreground/70"
             >
               <X className="size-4" />
@@ -905,7 +976,7 @@ function LessonPath({
                   <span className="text-foreground/40">{i + 1}.</span>
                   {s.title}
                 </span>
-                <span className="block truncate text-xs text-foreground/55">{s.hint}</span>
+                <span className="line-clamp-2 block text-xs text-foreground/55">{s.hint}</span>
               </span>
               {s.done ? (
                 <CheckCircle2 className="size-5 shrink-0 text-emerald-600" />

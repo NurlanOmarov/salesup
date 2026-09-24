@@ -54,4 +54,6 @@ export const XP_REWARDS = {
   practiceFirstInLesson: 25,
   /** Каждый следующий новый тренажёр того же урока. */
   practiceExtra: 10,
+  /** Бонус за все тренажёры урока — начисляется вместе с последним из них. */
+  practiceAllInLesson: 30,
 } as const;

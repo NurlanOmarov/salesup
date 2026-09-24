@@ -174,52 +174,61 @@ export function StageLadder({ data }: { data: StageLadderData }) {
 }
 
 function Staircase({ titles, step, shake }: { titles: string[]; step: number; shake: boolean }) {
-  // 5 ступеней снизу вверх; текущая ступень подсвечена, маркер «стоит» на ней.
+  // Ступени снизу вверх, каждая шире предыдущей — подписи помещаются целиком.
+  // Слева — колонка маркера: он стоит ровно по центру текущей ступени и не
+  // наезжает на подпись (раньше центр считался от верхней грани и маркер
+  // висел на ступень выше, а на финише уходил за лестницу).
   const n = titles.length;
-  const stepH = 26;
-  const stepW = 34;
-  const width = 40 + stepW * n;
-  const height = 34 + stepH * n;
+  const stepH = 30;
+  const gap = 4;
+  const railW = 26;
+  const baseW = 96;
+  const growW = 22;
+  const width = railW + baseW + growW * n;
+  const height = stepH * n;
+  const rowY = (i: number) => (n - 1 - i) * stepH;
+  const current = Math.min(step, n - 1);
 
   return (
     <svg
       viewBox={`0 0 ${width} ${height}`}
-      className="h-auto w-40 shrink-0 justify-self-center sm:w-44"
+      className="h-auto w-56 shrink-0 justify-self-center sm:w-60"
       role="img"
       aria-label="Лестница этапов продажи"
     >
       {titles.map((t, i) => {
-        const y = height - 24 - stepH * i;
-        const w = 40 + stepW * (i + 1);
+        const y = rowY(i);
+        const w = baseW + growW * (i + 1);
         const on = i <= step;
+        const isCurrent = i === current;
         return (
           <g key={i}>
             <rect
-              x={0}
-              y={y}
+              x={railW}
+              y={y + gap / 2}
               width={w}
-              height={stepH}
-              rx={4}
-              className={on ? "fill-brand/25" : "fill-foreground/[0.06]"}
+              height={stepH - gap}
+              rx={5}
+              className={isCurrent ? "fill-brand/35" : on ? "fill-brand/15" : "fill-foreground/[0.06]"}
             />
             <text
-              x={6}
+              x={railW + 8}
               y={y + stepH / 2 + 4}
-              className={`text-[9px] font-medium ${on ? "fill-brand-strong" : "fill-foreground/35"}`}
+              className={`text-[11px] ${isCurrent ? "font-semibold" : "font-medium"} ${on ? "fill-brand-strong" : "fill-foreground/40"}`}
             >
-              {i + 1}. {t.length > 20 ? `${t.slice(0, 19)}…` : t}
+              {i + 1}. {t.length > 26 ? `${t.slice(0, 25)}…` : t}
             </text>
           </g>
         );
       })}
       {/* маркер игрока */}
       <motion.circle
-        cx={16}
-        r={9}
+        cx={railW / 2}
+        r={8}
         className="fill-brand"
         initial={false}
         animate={{
-          cy: height - 24 - stepH * Math.min(step, n - 1) - stepH / 2,
+          cy: rowY(current) + stepH / 2,
           x: shake ? [0, -4, 4, -3, 0] : 0,
         }}
         transition={{

@@ -139,7 +139,14 @@ export const reportPracticeAction = safeAction(
 
     if (phase === "open") {
       await recordPracticeOpen(userId, lessonId, kind);
-      return { firstTime: false, lessonStepDone: false, xpGained: 0, bestScore: null };
+      return {
+        firstTime: false,
+        lessonStepDone: false,
+        xpGained: 0,
+        bestScore: null,
+        remaining: 0,
+        allDone: false,
+      };
     }
     return recordPracticeFinish(userId, lessonId, kind, scorePct ?? null);
   },

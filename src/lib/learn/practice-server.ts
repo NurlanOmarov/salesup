@@ -28,6 +28,10 @@ export interface PracticeRecordResult {
   lessonStepDone: boolean;
   xpGained: number;
   bestScore: number | null;
+  /** Сколько тренажёров урока ещё не пройдено (после этой записи). */
+  remaining: number;
+  /** Этим прохождением закрыты все тренажёры урока — начислен бонус. */
+  allDone: boolean;
 }
 
 /**
@@ -41,9 +45,10 @@ export async function recordPracticeFinish(
   scorePct: number | null,
 ): Promise<PracticeRecordResult> {
   const where = { userId_lessonId_kind: { userId, lessonId, kind } };
-  const [existing, lessonDoneBefore] = await Promise.all([
+  const [existing, lessonDoneBefore, available] = await Promise.all([
     db.practiceResult.findUnique({ where, select: { bestScore: true } }),
     db.practiceResult.count({ where: { userId, lessonId } }),
+    trainerKindsByLesson([lessonId]).then((m) => m.get(lessonId) ?? new Set<PracticeKind>()),
   ]);
 
   let firstTime = false;
@@ -69,9 +74,23 @@ export async function recordPracticeFinish(
   });
 
   const lessonStepDone = firstTime && lessonDoneBefore === 0;
+  // Остаток считаем по видам, которые у урока есть сейчас (набор мог смениться).
+  const doneKinds = await db.practiceResult.findMany({
+    where: { userId, lessonId },
+    select: { kind: true },
+  });
+  const doneSet = new Set(doneKinds.map((r) => r.kind));
+  const remaining = [...available].filter((k) => !doneSet.has(k)).length;
+  // Бонус — ровно один раз: только на первом прохождении того тренажёра, который
+  // закрыл набор (повторные прогоны firstTime не дают). Урок с одним тренажёром
+  // бонуса не получает — «все» из одного не достижение.
+  const allDone = firstTime && remaining === 0 && available.size > 1;
+
   let xpGained = 0;
   if (firstTime) {
-    xpGained = lessonStepDone ? XP_REWARDS.practiceFirstInLesson : XP_REWARDS.practiceExtra;
+    xpGained =
+      (lessonStepDone ? XP_REWARDS.practiceFirstInLesson : XP_REWARDS.practiceExtra) +
+      (allDone ? XP_REWARDS.practiceAllInLesson : 0);
     // Геймификация не должна ронять запись результата.
     try {
       await awardXp(userId, xpGained);
@@ -85,7 +104,7 @@ export async function recordPracticeFinish(
     }
   }
 
-  return { firstTime, lessonStepDone, xpGained, bestScore };
+  return { firstTime, lessonStepDone, xpGained, bestScore, remaining, allDone };
 }
 
 async function bumpRun(
