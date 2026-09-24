@@ -99,6 +99,12 @@ export interface OrgListRow {
   /** У лицензий разные проценты — одно число показать нельзя. */
   demoMixed: boolean;
   /**
+   * Сертификаты работников клиента (не отозванные): выданные и те, что готовы
+   * к получению, — раздельно. Медаль в реестре означает документ на руках, и
+   * путать её с выполненными условиями нельзя.
+   */
+  certificates: { issued: number; ready: number };
+  /**
    * Есть ли записанное поступление (lib/finance). Платный клиент без единого
    * поступления — это не внесённая в учёт оплата, а не бесплатный клиент.
    */
@@ -126,7 +132,7 @@ export async function getOrgsList(): Promise<OrgListRow[]> {
       billing: true,
       contactEmail: true,
       createdAt: true,
-      memberships: { select: { role: true, isActive: true } },
+      memberships: { select: { userId: true, role: true, isActive: true } },
       licenses: { select: { id: true, seatsTotal: true, expiresAt: true, demoPercent: true } },
       // Достаточно факта: сумма выручки клиента живёт в /admin/finance.
       incomes: { select: { id: true }, take: 1 },
@@ -135,7 +141,10 @@ export async function getOrgsList(): Promise<OrgListRow[]> {
   if (orgs.length === 0) return [];
 
   const licenseIds = orgs.flatMap((o) => o.licenses.map((l) => l.id));
-  const progressByOrg = await getOrgsAvgProgress(orgs.map((o) => o.id));
+  const [progressByOrg, certsByUser] = await Promise.all([
+    getOrgsAvgProgress(orgs.map((o) => o.id)),
+    getCertificateCounts(orgs.flatMap((o) => o.memberships.map((m) => m.userId))),
+  ]);
   const usedByLicense = new Map<string, number>();
   if (licenseIds.length > 0) {
     const grouped = await db.enrollment.groupBy({
@@ -172,11 +181,44 @@ export async function getOrgsList(): Promise<OrgListRow[]> {
       // лицензий: иначе бейдж врал бы, показывая настройку одной из них.
       demoPercent: demoValues.size === 1 ? (o.licenses[0]?.demoPercent ?? null) : null,
       demoMixed: demoValues.size > 1,
+      certificates: o.memberships.reduce(
+        (acc, m) => {
+          const c = certsByUser.get(m.userId);
+          return c ? { issued: acc.issued + c.issued, ready: acc.ready + c.ready } : acc;
+        },
+        { issued: 0, ready: 0 },
+      ),
       hasIncome: o.incomes.length > 0,
       avgProgress: progressByOrg.get(o.id) ?? null,
       createdAt: o.createdAt,
     };
   });
+}
+
+/**
+ * Сертификаты работников — одним groupBy на весь реестр, а не запросом на
+ * организацию. Выданные и готовые к получению считаем отдельно: это разные
+ * состояния, и в реестре они выглядят по-разному.
+ */
+async function getCertificateCounts(
+  userIds: string[],
+): Promise<Map<string, { issued: number; ready: number }>> {
+  const unique = [...new Set(userIds)];
+  const result = new Map<string, { issued: number; ready: number }>();
+  if (unique.length === 0) return result;
+
+  const rows = await db.certificate.groupBy({
+    by: ["userId", "status"],
+    where: { userId: { in: unique }, revokedAt: null },
+    _count: { _all: true },
+  });
+  for (const r of rows) {
+    const current = result.get(r.userId) ?? { issued: 0, ready: 0 };
+    if (r.status === "ISSUED") current.issued += r._count._all;
+    else current.ready += r._count._all;
+    result.set(r.userId, current);
+  }
+  return result;
 }
 
 /**

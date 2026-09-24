@@ -4,7 +4,7 @@ import { Building2, ExternalLink } from "lucide-react";
 import { getOrgsList } from "@/lib/org/reports";
 import { nextOrgStepHint } from "@/lib/org/setup";
 import { getOrgIdsAwaitingDelivery } from "@/lib/org/delivery";
-import { OrgBillingBadge, OrgStatusBadge, SeatsBar } from "./org-ui";
+import { CertificatesBadge, OrgBillingBadge, OrgStatusBadge, SeatsBar } from "./org-ui";
 import { DemoQuickSelect } from "./demo-quick-select";
 import { OrgProgressButton } from "./org-progress-dialog";
 import { pluralRu } from "@/lib/courses/plural";
@@ -149,13 +149,20 @@ export default async function OrgsPage() {
                   </td>
                   <td className="px-4 py-3">
                     {/* Средний прогресс виден сразу, без захода в карточку;
-                        подробности — в окне по клику, не теряя место в списке. */}
-                    <OrgProgressButton
-                      orgId={o.id}
-                      orgName={o.name}
-                      progress={o.avgProgress}
-                      disabled={o.licenses === 0}
-                    />
+                        подробности — в окне по клику, не теряя место в списке.
+                        Медаль рядом — у клиента уже есть выданный сертификат. */}
+                    <div className="flex items-center gap-2">
+                      <OrgProgressButton
+                        orgId={o.id}
+                        orgName={o.name}
+                        progress={o.avgProgress}
+                        disabled={o.licenses === 0}
+                      />
+                      <CertificatesBadge
+                        issued={o.certificates.issued}
+                        ready={o.certificates.ready}
+                      />
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-foreground/70">
                     {o.nextExpiryAt

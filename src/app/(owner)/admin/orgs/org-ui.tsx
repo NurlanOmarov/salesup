@@ -1,3 +1,4 @@
+import { Medal } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /** Мелкие презентационные детали, общие для списка организаций и карточки клиента. */
@@ -100,4 +101,51 @@ export function relativeDays(date: Date | null, now: Date = new Date()): string 
   if (days < 7) return `${days} дн. назад`;
   if (days < 30) return `${Math.floor(days / 7)} нед. назад`;
   return date.toLocaleDateString("ru-RU");
+}
+
+/**
+ * Медаль рядом с прогрессом.
+ *
+ * Золотая — сертификат ВЫДАН, документ у работника на руках. Серая — курс
+ * пройден, но ФИО с согласием ещё не введено, и выдавать пока нечего (D-019).
+ * Состояния разные, и для разговора с клиентом это разные новости, поэтому
+ * одним значком они не сливаются.
+ */
+export function CertificatesBadge({
+  issued,
+  ready,
+}: {
+  issued: number;
+  ready: number;
+}) {
+  if (issued > 0) {
+    const text = issued === 1 ? "Сертификат выдан" : `Выдано сертификатов: ${issued}`;
+    return (
+      <span
+        title={text}
+        aria-label={text}
+        className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-amber-500/10 px-1.5 py-0.5 text-xs font-semibold text-amber-700"
+      >
+        <Medal className="size-3.5" />
+        {issued > 1 ? issued : null}
+      </span>
+    );
+  }
+  if (ready > 0) {
+    const text =
+      ready === 1
+        ? "Сертификат готов к получению — работник ещё не ввёл ФИО"
+        : `Готовы к получению: ${ready} — работники ещё не ввели ФИО`;
+    return (
+      <span
+        title={text}
+        aria-label={text}
+        className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-foreground/5 px-1.5 py-0.5 text-xs font-medium text-foreground/45"
+      >
+        <Medal className="size-3.5" />
+        {ready > 1 ? ready : null}
+      </span>
+    );
+  }
+  return null;
 }
