@@ -215,7 +215,9 @@ function Scale({ tilt }: { tilt: number }) {
   const rightPan = { x: rightTop.x, y: rightTop.y + stringLen };
 
   return (
-    <svg viewBox="0 0 200 150" className="h-32 w-40 shrink-0 justify-self-center sm:h-36 sm:w-44" role="img" aria-label="Весы возражения">
+    // Холст с полями по бокам: подписи чаш («оправдание») шире самих чаш и при
+    // наклоне выходили за край — слово обрезалось до «правдание».
+    <svg viewBox="-24 0 248 150" className="h-32 w-48 shrink-0 justify-self-center sm:h-36 sm:w-52" role="img" aria-label="Весы возражения">
       {/* стойка */}
       <rect x="96" y="20" width="8" height="90" rx="3" className="fill-foreground/20" />
       <rect x="70" y="106" width="60" height="10" rx="4" className="fill-foreground/20" />
@@ -253,7 +255,7 @@ function Scale({ tilt }: { tilt: number }) {
       {/* левая чаша — «оправдание». Никогда не поворачивается, только едет за нитью. */}
       <motion.g initial={false} animate={{ x: leftPan.x, y: leftPan.y }} transition={SCALE_SPRING}>
         <path d="M-18 0 h36 a18 10 0 0 1 -36 0 z" className="fill-red-500/20 stroke-red-400/50" strokeWidth="1.5" />
-        <text y="18" textAnchor="middle" className="fill-red-600 text-[9px] font-semibold">
+        <text y="18" textAnchor="middle" className="fill-red-600 text-[10px] font-semibold">
           оправдание
         </text>
       </motion.g>
@@ -261,7 +263,7 @@ function Scale({ tilt }: { tilt: number }) {
       {/* правая чаша — «позитив» */}
       <motion.g initial={false} animate={{ x: rightPan.x, y: rightPan.y }} transition={SCALE_SPRING}>
         <path d="M-18 0 h36 a18 10 0 0 1 -36 0 z" className="fill-emerald-500/20 stroke-emerald-400/50" strokeWidth="1.5" />
-        <text y="18" textAnchor="middle" className="fill-emerald-700 text-[9px] font-semibold">
+        <text y="18" textAnchor="middle" className="fill-emerald-700 text-[10px] font-semibold">
           позитив
         </text>
       </motion.g>
