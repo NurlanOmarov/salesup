@@ -87,6 +87,8 @@ export interface OrgListRow {
   status: string;
   billing: "PAID" | "PILOT";
   contactEmail: string | null;
+  /** E-mail активных ответственных — по ним ищут клиента в реестре. */
+  adminEmails: string[];
   members: number;
   admins: number;
   seatsTotal: number;
@@ -132,7 +134,9 @@ export async function getOrgsList(): Promise<OrgListRow[]> {
       billing: true,
       contactEmail: true,
       createdAt: true,
-      memberships: { select: { userId: true, role: true, isActive: true } },
+      memberships: {
+        select: { userId: true, role: true, isActive: true, user: { select: { email: true } } },
+      },
       licenses: { select: { id: true, seatsTotal: true, expiresAt: true, demoPercent: true } },
       // Достаточно факта: сумма выручки клиента живёт в /admin/finance.
       incomes: { select: { id: true }, take: 1 },
@@ -171,6 +175,9 @@ export async function getOrgsList(): Promise<OrgListRow[]> {
       status: o.status,
       billing: o.billing,
       contactEmail: o.contactEmail,
+      adminEmails: o.memberships
+        .filter((m) => m.isActive && m.role === "ORG_ADMIN" && m.user.email)
+        .map((m) => m.user.email as string),
       members: o.memberships.filter((m) => m.isActive && m.role === "ORG_LEARNER").length,
       admins: o.memberships.filter((m) => m.isActive && m.role === "ORG_ADMIN").length,
       seatsTotal: o.licenses.reduce((s, l) => s + l.seatsTotal, 0),

@@ -8,6 +8,7 @@ import { CertificatesBadge, OrgBillingBadge, OrgStatusBadge, SeatsBar } from "./
 import { DemoQuickSelect } from "./demo-quick-select";
 import { OrgProgressButton } from "./org-progress-dialog";
 import { pluralRu } from "@/lib/courses/plural";
+import { Input } from "@/components/ui/input";
 
 export const metadata: Metadata = {
   title: "Организации",
@@ -21,8 +22,26 @@ export const dynamic = "force-dynamic";
  * «кто сколько мест купил и сколько из них реально учится» — утилизация мест
  * прямо в таблице, потому что именно она решает, продлит клиент или нет.
  */
-export default async function OrgsPage() {
+export default async function OrgsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  const { q } = await searchParams;
+  const query = q?.trim().toLowerCase() ?? "";
   const [orgs, awaitingDelivery] = await Promise.all([getOrgsList(), getOrgIdsAwaitingDelivery()]);
+  // Ищем по названию/slug и по e-mail ответственного (контактный в карточке
+  // или логин ORG_ADMIN). Сводка сверху остаётся по всему реестру.
+  const emailsOf = (o: (typeof orgs)[number]) =>
+    [...new Set([o.contactEmail, ...o.adminEmails].filter((e): e is string => !!e))];
+  const shown = query
+    ? orgs.filter(
+        (o) =>
+          o.name.toLowerCase().includes(query) ||
+          o.slug.toLowerCase().includes(query) ||
+          emailsOf(o).some((e) => e.toLowerCase().includes(query)),
+      )
+    : orgs;
   const totals = orgs.reduce(
     (acc, o) => ({
       seatsTotal: acc.seatsTotal + o.seatsTotal,
@@ -84,6 +103,17 @@ export default async function OrgsPage() {
         </div>
       ) : null}
 
+      {orgs.length > 0 ? (
+        <form className="mt-5" action="/admin/orgs">
+          <Input
+            name="q"
+            defaultValue={q?.trim()}
+            placeholder="Поиск по компании или e-mail ответственного…"
+            className="max-w-md"
+          />
+        </form>
+      ) : null}
+
       {/* Колонок стало больше — на узком экране таблица прокручивается, а не жмётся. */}
       <div className="mt-5 overflow-x-auto rounded-xl border border-foreground/10 bg-background">
         {orgs.length === 0 ? (
@@ -101,6 +131,13 @@ export default async function OrgsPage() {
               Создать первую
             </Link>
           </div>
+        ) : shown.length === 0 ? (
+          <p className="p-8 text-center text-foreground/50">
+            Ничего не найдено.{" "}
+            <Link href="/admin/orgs" className="underline hover:text-foreground">
+              Сбросить поиск
+            </Link>
+          </p>
         ) : (
           <table className="w-full text-sm">
             <thead className="border-b border-foreground/10 bg-foreground/[0.02] text-left text-xs uppercase tracking-wide text-foreground/50">
@@ -115,7 +152,7 @@ export default async function OrgsPage() {
               </tr>
             </thead>
             <tbody>
-              {orgs.map((o) => (
+              {shown.map((o) => (
                 <tr
                   key={o.id}
                   className="border-b border-foreground/5 last:border-0 hover:bg-foreground/[0.02]"
@@ -133,6 +170,16 @@ export default async function OrgsPage() {
                     <p className="font-mono text-xs text-foreground/45">
                       {o.slug}-0001…
                     </p>
+                    {/* При поиске видно, по какому адресу нашлась компания. */}
+                    {query
+                      ? emailsOf(o)
+                          .filter((e) => e.toLowerCase().includes(query))
+                          .map((e) => (
+                            <p key={e} className="text-xs text-foreground/55">
+                              {e}
+                            </p>
+                          ))
+                      : null}
                   </td>
                   <td className="px-4 py-3">
                     <SeatsBar used={o.seatsUsed} total={o.seatsTotal} />
