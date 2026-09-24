@@ -64,7 +64,9 @@ export function ObjectionTrainer({ data }: { data: ObjectionsData }) {
         </p>
         <p className="mt-1 text-sm text-foreground/60">
           {correctCount === total
-            ? "Отлично! Все возражения отработаны верно."
+            ? data.label
+              ? "Отлично! Во всех ситуациях выбран лучший ответ."
+              : "Отлично! Все возражения отработаны верно."
             : "Хороший результат. Повторите разбор и попробуйте снова."}
         </p>
         <button
@@ -84,7 +86,7 @@ export function ObjectionTrainer({ data }: { data: ObjectionsData }) {
     <div className="rounded-2xl border border-foreground/10 bg-background p-4 sm:p-5">
       <div className="flex items-center justify-between text-sm text-foreground/55">
         <span>
-          Возражение {index + 1} из {total}
+          {data.label ? "Ситуация" : "Возражение"} {index + 1} из {total}
         </span>
         <span>Верных: {correctCount}</span>
       </div>
@@ -163,7 +165,7 @@ export function ObjectionTrainer({ data }: { data: ObjectionsData }) {
             onClick={next}
             className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-semibold text-slate-950 transition-colors hover:bg-amber-400"
           >
-            {index < total - 1 ? "Следующее возражение" : "Завершить"}
+            {index < total - 1 ? (data.label ? "Следующая ситуация" : "Следующее возражение") : "Завершить"}
             <ChevronRight className="size-4" />
           </button>
         </div>

@@ -16,7 +16,7 @@ const CRITERIA: { key: string; letter: string; label: string; hint: string }[] =
   { key: "s", letter: "S", label: "Конкретная", hint: "Что именно и для чего сделать?" },
   { key: "m", letter: "M", label: "Измеримая", hint: "По какому числу поймёте, что достигли?" },
   { key: "a", letter: "A", label: "Достижимая", hint: "Реально ли с вашими ресурсами?" },
-  { key: "r", letter: "R", label: "Значимая", hint: "Зачем это важно именно вам?" },
+  { key: "r", letter: "R", label: "Совместимая", hint: "Совместима ли цель с вашей ситуацией сейчас — нужна ли она вам?" },
   { key: "t", letter: "T", label: "Ограниченная по времени", hint: "К какой конкретной дате?" },
 ];
 
