@@ -238,8 +238,7 @@ export const businessRu = {
       next: "Далее",
       toContact: "Оставить контакт",
       back: "Назад",
-      forTeam: "за команду",
-      perSeat: "за сотрудника",
+      forTeam: "за всю команду на год",
     },
   },
 } as const;

@@ -220,8 +220,7 @@ export const businessUz = {
       next: "Keyingi",
       toContact: "Aloqa qoldirish",
       back: "Orqaga",
-      forTeam: "jamoa uchun",
-      perSeat: "bir xodim uchun",
+      forTeam: "butun jamoa uchun, bir yilga",
     },
   },
 } as const satisfies BusinessContent;

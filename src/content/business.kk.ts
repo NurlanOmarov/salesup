@@ -220,8 +220,7 @@ export const businessKk = {
       next: "Әрі қарай",
       toContact: "Байланыс қалдыру",
       back: "Артқа",
-      forTeam: "командаға",
-      perSeat: "бір қызметкерге",
+      forTeam: "бүкіл командаға, бір жылға",
     },
   },
 } as const satisfies BusinessContent;

@@ -56,7 +56,7 @@ export function BusinessCta({
   const [withTrainer, setWithTrainer] = useState(false);
 
   const [step, setStep] = useState(1);
-  const [totals, setTotals] = useState<{ totalTiyn: number; perSeatTiyn: number } | null>(null);
+  const [totals, setTotals] = useState<{ totalTiyn: number } | null>(null);
   // Полоска живёт только пока блок расчёта на экране: на остальной странице
   // она заслоняла бы контент и продавала бы то, чего человек сейчас не видит.
   const [inView, setInView] = useState(false);
@@ -92,7 +92,7 @@ export function BusinessCta({
       <div
         role="group"
         aria-label={c.format}
-        className="inline-flex rounded-xl border border-foreground/12 bg-background p-1 shadow-sm"
+        className="flex rounded-xl border border-foreground/12 bg-background p-1 shadow-sm sm:inline-flex"
       >
         <FormatButton
           active={!isOffline}
@@ -233,23 +233,23 @@ export function BusinessCta({
                 <ArrowLeft className="size-4" />
               </button>
             ) : null}
-            <div className="min-w-0 flex-1">
-              {totals ? (
-                <>
-                  <p className="truncate text-base font-bold tabular-nums">
-                    {money(totals.totalTiyn)}{" "}
-                    <span className="text-xs font-normal text-foreground/55">{w.forTeam}</span>
-                  </p>
-                  <p className="truncate text-xs text-foreground/55 tabular-nums">
-                    {money(totals.perSeatTiyn)} {w.perSeat}
-                  </p>
-                </>
-              ) : null}
-            </div>
+            {/* На шаге пакета итог крупно стоит в самой карточке — дубль в
+                полоске сжимался до «3 450 бе…», поэтому там кнопка на всю ширину. */}
+            {totals && step < STEPS - 1 ? (
+              <div className="min-w-0 flex-1">
+                <p className="whitespace-nowrap text-base font-bold tabular-nums">
+                  {money(totals.totalTiyn)}
+                </p>
+                <p className="truncate text-xs text-foreground/55">{w.forTeam}</p>
+              </div>
+            ) : null}
             <button
               type="button"
               onClick={() => goTo(step + 1)}
-              className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-xl bg-brand px-4 text-sm font-semibold text-white"
+              className={cn(
+                "inline-flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-brand px-4 text-sm font-semibold text-white",
+                step === STEPS - 1 && "flex-1",
+              )}
             >
               {step === STEPS - 1 ? w.toContact : w.next}
               <ArrowRight className="size-4" />
@@ -278,7 +278,7 @@ function FormatButton({
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm transition-colors",
+        "flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm transition-colors sm:flex-none",
         active
           ? "bg-foreground/[0.07] font-medium"
           : "text-foreground/60 hover:text-foreground/85",

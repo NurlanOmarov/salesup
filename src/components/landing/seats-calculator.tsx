@@ -67,7 +67,7 @@ export function SeatsCalculator({
     withTrainer: boolean;
   }) => void;
   /** Итог для закреплённой полоски на телефоне (цена уже со скидкой акции). */
-  onTotals?: (value: { totalTiyn: number; perSeatTiyn: number }) => void;
+  onTotals?: (value: { totalTiyn: number }) => void;
   /** Текущий шаг мастера на телефоне: на экране меньше lg видна только его
    *  часть калькулятора (1 — команда, 2 — курсы, 3 — пакет и итог). На
    *  десктопе всё видно разом, шаг ни на что не влияет. Без шага — обычный
@@ -185,9 +185,9 @@ export function SeatsCalculator({
   const oldPerSeatTiyn = sale.oldTiyn ? Math.round(sale.oldTiyn / seats) : null;
 
   useEffect(() => {
-    onTotals?.({ totalTiyn: sale.tiyn, perSeatTiyn });
+    onTotals?.({ totalTiyn: sale.tiyn });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sale.tiyn, perSeatTiyn]);
+  }, [sale.tiyn]);
 
   // Части калькулятора по шагам мастера. Отступ сверху у части — только когда
   // над ней что-то видно: на телефоне шаг стоит в карточке один.
