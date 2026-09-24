@@ -165,6 +165,8 @@ const TAB_KIND: Partial<Record<Tab, PracticeKind>> = {
   simulation: "SIMULATION",
 };
 
+const METAPHOR_TAB = { frog: "Лягушка", elephant: "Слон", nails: "Гвозди" } as const;
+
 interface PracticeToast {
   xp: number;
   stepDone: boolean;
@@ -298,7 +300,14 @@ export function LessonTabs({
     { key: "audit", label: "Найди ошибку", icon: SearchCheck, show: !!audit, group: "practice" },
     { key: "checklist", label: "Чек-лист", icon: ListChecks, show: !!checklist, group: "practice" },
     { key: "hotspot", label: "Схема", icon: MapPin, show: !!hotspot, group: "practice" },
-    { key: "metaphor", label: "Тренажёр", icon: PawPrint, show: !!metaphor?.length, group: "practice" },
+    {
+      key: "metaphor",
+      // Одна метафора — вкладка называется по ней («Лягушка», «Слон»), а не безликим «Тренажёр».
+      label: metaphor?.length === 1 ? METAPHOR_TAB[metaphor[0]!.variant] : "Метафоры",
+      icon: PawPrint,
+      show: !!metaphor?.length,
+      group: "practice",
+    },
     { key: "eisenhower", label: "Матрица", icon: Grid2x2, show: !!eisenhower, group: "practice" },
     { key: "rule6040", label: "60/40", icon: PieChart, show: !!rule6040, group: "practice" },
     { key: "smart", label: "SMART-цель", icon: Target, show: !!smart, group: "practice" },
@@ -322,7 +331,13 @@ export function LessonTabs({
   );
   const mainTab = mainKind ? visible.find((t) => TAB_KIND[t.key] === mainKind)?.key ?? null : null;
   const mainLabel =
-    mainKind === "OBJECTIONS" && objections?.label ? objections.label : mainKind ? PRACTICE_LABELS[mainKind] : "";
+    mainKind === "OBJECTIONS" && objections?.label
+      ? objections.label
+      : mainKind === "TASK_METAPHOR" && metaphor?.length === 1
+        ? METAPHOR_TAB[metaphor[0]!.variant]
+        : mainKind
+          ? PRACTICE_LABELS[mainKind]
+          : "";
 
   const [tab, setTab] = useState<Tab>(initialTab === "practice" && mainTab ? mainTab : "video");
   const reduceMotion = useReducedMotion();
@@ -833,7 +848,7 @@ export function LessonTabs({
                     ? "Шаг «Тренировка» пройден — теперь можно к заданию."
                     : toast.remaining > 0
                       ? "Отличная работа — навык закрепляется."
-                      : "Возвращайтесь к тренажёру перед встречей с клиентом."}
+                      : "Возвращайтесь к тренажёру, чтобы навык не забывался."}
               </p>
               {/* Приглашение набрать ещё баллов: остаток и цена, а не «казино» —
                   ученик видит, сколько осталось и что за это получит. */}

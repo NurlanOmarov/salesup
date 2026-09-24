@@ -564,12 +564,14 @@ function FrogRound({
                   animate={t.frog ? { scale: [0.96, 1.03, 1] } : { opacity: 1 }}
                   transition={{ duration: 0.35 }}
                   className={`flex items-start gap-2 rounded-lg px-3 py-2 text-sm ${
-                    t.frog ? "bg-emerald-500/10" : "bg-brand/[0.06]"
+                    // Главные дела после лягушек — это правильный порядок, а не
+                    // ошибка: нейтральный фон, чтобы не читалось как промах.
+                    t.frog ? "bg-emerald-500/10" : "bg-foreground/[0.04]"
                   }`}
                 >
                   <span
                     className={`mt-px flex size-5 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold ${
-                      t.frog ? "bg-emerald-500/20 text-emerald-800" : "bg-brand/15 text-brand-strong"
+                      t.frog ? "bg-emerald-500/20 text-emerald-800" : "bg-foreground/10 text-foreground/60"
                     }`}
                   >
                     {i + 1}

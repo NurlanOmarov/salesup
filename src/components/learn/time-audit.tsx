@@ -198,14 +198,19 @@ function Tape({
     );
   }
 
-  // Круг дня: разобранные события по верному виду, в порядке ленты; остальное —
-  // серый фон («ещё не учтено»).
+  // Круг дня: разобранные события собраны в три сектора по виду (работа →
+  // перерывы → пожиратели) — так видны доли, как в уроке; остальное — серый фон
+  // («ещё не учтено»). По событию на сектор выходила мелкая «нарезка».
   let acc = 0;
-  const slices = events.slice(0, pos).map((e, i) => {
-    const start = (acc / total) * 360;
-    acc += e.minutes;
-    return { i, e, start, end: (acc / total) * 360 };
-  });
+  const done = events.slice(0, pos);
+  const slices = (["work", "break", "waster"] as TimeEventKind[])
+    .map((k, i) => {
+      const minutes = done.filter((e) => e.kind === k).reduce((s, e) => s + e.minutes, 0);
+      const start = (acc / total) * 360;
+      acc += minutes;
+      return { i, e: { kind: k, minutes }, start, end: (acc / total) * 360 };
+    })
+    .filter((x) => x.e.minutes > 0);
   const sum = (k: TimeEventKind) => events.filter((e) => e.kind === k).reduce((s, e) => s + e.minutes, 0);
   const fbEvent = fb ? events[fb.idx]! : null;
 
