@@ -214,5 +214,14 @@ export const businessKk = {
     offlineNote: "Міндетіңізді айтыңыз — бағдарламамен, күндермен және құнымен қайта хабарласамыз.",
     onlineRequest: "Есеп пен шот алу",
     onlineNote: "Жұмыс уақытында жауап беріп, нақты құнын есептеп, шот жібереміз.",
+    wizard: {
+      steps: ["Команда", "Курстар", "Пакет", "Байланыс"],
+      stepOf: (n: number, total: number) => `${total} қадамның ${n}-сі`,
+      next: "Әрі қарай",
+      toContact: "Байланыс қалдыру",
+      back: "Артқа",
+      forTeam: "командаға",
+      perSeat: "бір қызметкерге",
+    },
   },
 } as const satisfies BusinessContent;

@@ -214,5 +214,14 @@ export const businessUz = {
     offlineNote: "Vazifangizni ayting — dastur, sanalar va narx bilan qaytamiz.",
     onlineRequest: "Hisob-kitob va hisob-faktura olish",
     onlineNote: "Ish vaqtida javob beramiz, aniq narxni hisoblaymiz va hisob-faktura yuboramiz.",
+    wizard: {
+      steps: ["Jamoa", "Kurslar", "Paket", "Aloqa"],
+      stepOf: (n: number, total: number) => `Qadam ${n} / ${total}`,
+      next: "Keyingi",
+      toContact: "Aloqa qoldirish",
+      back: "Orqaga",
+      forTeam: "jamoa uchun",
+      perSeat: "bir xodim uchun",
+    },
   },
 } as const satisfies BusinessContent;

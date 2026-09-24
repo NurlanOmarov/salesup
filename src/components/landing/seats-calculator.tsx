@@ -48,6 +48,8 @@ export function SeatsCalculator({
   currencyCode = "BYN",
   rates = {},
   onQuote,
+  onTotals,
+  step,
 }: {
   courses?: CalculatorCourse[];
   /** База расчёта, когда каталог недоступен (пререндер без БД). */
@@ -64,6 +66,13 @@ export function SeatsCalculator({
     /** Выбран пакет с живыми сессиями тренера — уходит в заявку. */
     withTrainer: boolean;
   }) => void;
+  /** Итог для закреплённой полоски на телефоне (цена уже со скидкой акции). */
+  onTotals?: (value: { totalTiyn: number; perSeatTiyn: number }) => void;
+  /** Текущий шаг мастера на телефоне: на экране меньше lg видна только его
+   *  часть калькулятора (1 — команда, 2 — курсы, 3 — пакет и итог). На
+   *  десктопе всё видно разом, шаг ни на что не влияет. Без шага — обычный
+   *  калькулятор целиком. */
+  step?: number;
 }) {
   const industries = courses.filter((c) => c.audience === "SPECIALIZED");
   const general = courses.filter((c) => c.audience === "EVERYONE");
@@ -175,8 +184,23 @@ export function SeatsCalculator({
   const perSeatTiyn = Math.round(sale.tiyn / seats);
   const oldPerSeatTiyn = sale.oldTiyn ? Math.round(sale.oldTiyn / seats) : null;
 
+  useEffect(() => {
+    onTotals?.({ totalTiyn: sale.tiyn, perSeatTiyn });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sale.tiyn, perSeatTiyn]);
+
+  // Части калькулятора по шагам мастера. Отступ сверху у части — только когда
+  // над ней что-то видно: на телефоне шаг стоит в карточке один.
+  const part = (n: number, gap = true) =>
+    step === undefined
+      ? gap
+        ? "mt-5"
+        : ""
+      : cn(step !== n && "max-lg:hidden", gap && "lg:mt-5");
+
   return (
     <div className="rounded-2xl border border-foreground/10 bg-background p-5 sm:p-6">
+      <div className={part(1, false)}>
       <p className="text-sm font-semibold">{c.seats}</p>
 
       {/*
@@ -228,9 +252,10 @@ export function SeatsCalculator({
           ))}
         </div>
       </div>
+      </div>
 
       {courses.length > 0 ? (
-        <div className="mt-5">
+        <div className={part(2)}>
           <p className="text-sm font-semibold">{c.whatOpens}</p>
 
           {industries.length > 0 ? (
@@ -335,7 +360,8 @@ export function SeatsCalculator({
           Внутренности кнопок — во flex-колонке и в span-ах: у <button> контент
           лежит в анонимном центрированном боксе, и в узкой колонке многострочная
           подпись вылезала за рамку. */}
-      <div className="mt-5">
+      <div className={part(3)}>
+      <div>
         <p className="text-sm font-semibold">{c.packTitle}</p>
         <div className="mt-2 grid gap-2 sm:grid-cols-2">
           <button
@@ -467,6 +493,7 @@ export function SeatsCalculator({
       <p className="mt-3 text-xs text-foreground/50">
         {chosen.length > 0 ? c.includesCourses(chosen.length) : c.includesAny}
       </p>
+      </div>
     </div>
   );
 }

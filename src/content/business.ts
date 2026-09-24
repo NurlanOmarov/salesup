@@ -232,6 +232,15 @@ export const businessRu = {
     offlineNote: "Расскажите о задаче — вернёмся с программой, датами и стоимостью.",
     onlineRequest: "Получить расчёт и счёт",
     onlineNote: "Ответим в рабочее время, посчитаем точную стоимость и пришлём счёт.",
+    wizard: {
+      steps: ["Команда", "Курсы", "Пакет", "Контакт"],
+      stepOf: (n: number, total: number) => `Шаг ${n} из ${total}`,
+      next: "Далее",
+      toContact: "Оставить контакт",
+      back: "Назад",
+      forTeam: "за команду",
+      perSeat: "за сотрудника",
+    },
   },
 } as const;
 
