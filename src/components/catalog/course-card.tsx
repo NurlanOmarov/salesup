@@ -17,6 +17,7 @@ const industryGradients: Record<string, string> = {
   "B2B-переговоры": "from-indigo-700 via-indigo-800 to-slate-900",
   "FMCG": "from-violet-700 via-violet-800 to-slate-900",
   "Розница": "from-rose-700 via-rose-800 to-slate-900",
+  "Промышленная химия": "from-cyan-700 via-cyan-800 to-slate-900",
 };
 
 export interface CoursePrices {

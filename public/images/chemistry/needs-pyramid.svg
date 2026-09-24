@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 440" width="640" height="440" role="img" aria-label="Пирамида потребностей B2B-клиента: выживание производства, финансовая эффективность, снижение личного риска, развитие и рост, партнёрство">
+  <defs>
+    <style>
+      .l1 { fill: #fee2e2; stroke: #dc2626; stroke-width: 2.5; stroke-linejoin: round; }
+      .l2 { fill: #fef3c7; stroke: #d97706; stroke-width: 2.5; stroke-linejoin: round; }
+      .l3 { fill: #e0f2fe; stroke: #0284c7; stroke-width: 2.5; stroke-linejoin: round; }
+      .l4 { fill: #ede9fe; stroke: #6366f1; stroke-width: 2.5; stroke-linejoin: round; }
+      .l5 { fill: #d1fae5; stroke: #059669; stroke-width: 2.5; stroke-linejoin: round; }
+      .cap { font: 800 15px/1.2 system-ui, -apple-system, "Segoe UI", sans-serif; fill: #0f172a; text-anchor: middle; }
+      .sub { font: 500 11.5px/1.3 system-ui, -apple-system, "Segoe UI", sans-serif; fill: #475569; text-anchor: middle; }
+      .title { font: 700 15px/1.2 system-ui, -apple-system, "Segoe UI", sans-serif; fill: #94a3b8; text-anchor: middle; letter-spacing: 1.5px; }
+      .foot { font: italic 500 12px/1.3 system-ui, -apple-system, "Segoe UI", sans-serif; fill: #b91c1c; text-anchor: middle; }
+    </style>
+  </defs>
+
+  <!-- Светлая подложка: схема живёт и в тёмном кабинете, и на белой раздатке. -->
+  <rect x="0" y="0" width="640" height="440" rx="14" fill="#ffffff" />
+  <text class="title" x="320" y="28">ПИРАМИДА ПОТРЕБНОСТЕЙ B2B-КЛИЕНТА</text>
+  <polygon class="l1" points="98.2,315.8 541.8,315.8 578.2,377.0 61.8,377.0" />
+  <text class="cap" x="320" y="344">1. Выживание производства</text>
+  <text class="sub" x="320" y="361">сырьё на складе, поставка в срок, без брака</text>
+  <polygon class="l2" points="138.2,248.6 501.8,248.6 538.2,309.8 101.8,309.8" />
+  <text class="cap" x="320" y="277">2. Финансовая эффективность</text>
+  <text class="sub" x="320" y="294">себестоимость −2–5%, маржа, оборачиваемость</text>
+  <polygon class="l3" points="178.2,181.4 461.8,181.4 498.2,242.6 141.8,242.6" />
+  <text class="cap" x="320" y="210">3. Снижение личного риска</text>
+  <text class="sub" x="320" y="227">ошибка при смене поставщика, потеря бонуса</text>
+  <polygon class="l4" points="218.2,114.2 421.8,114.2 458.2,175.4 181.8,175.4" />
+  <text class="cap" x="320" y="143">4. Развитие и рост</text>
+  <text class="sub" x="320" y="160">новые рецептуры, вывод продукта</text>
+  <polygon class="l5" points="258.2,47.0 381.8,47.0 418.2,108.2 221.8,108.2" />
+  <text class="cap" x="320" y="76">5. Партнёрство</text>
+  <text class="sub" x="320" y="93">фиксация цены, общий план</text>
+  <text class="foot" x="320" y="410">Пока клиент не чувствует безопасность, он не слышит экономию</text>
+</svg>

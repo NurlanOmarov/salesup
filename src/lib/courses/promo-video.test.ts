@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { youtubeId, isShortsUrl, parsePromoVideos } from "./promo-video";
+import { youtubeId, isShortsUrl, parsePromoVideos, promoPosterKey, PROMO_MEDIA_RE } from "./promo-video";
 
 describe("youtubeId", () => {
   it("берёт ID из разных форм ссылки", () => {
@@ -48,5 +48,31 @@ describe("parsePromoVideos", () => {
         { id: "8BpOtMv_Qzk", vertical: false },
       ]),
     ).toEqual([{ id: "8BpOtMv_Qzk", vertical: true }]);
+  });
+
+  it("свой ролик: id — имя файла, чужие каталоги и расширения отбрасываются", () => {
+    expect(
+      parsePromoVideos([
+        { file: "courses/sales-chem/promo/reel-1.mp4", vertical: true, title: "Воронка" },
+        { file: "courses/sales-chem/lessons/abc/master.m3u8" },
+        { file: "../etc/passwd" },
+        { file: "courses/sales-chem/promo/reel-1.mp4" },
+      ]),
+    ).toEqual([
+      { id: "reel-1", vertical: true, title: "Воронка", file: "courses/sales-chem/promo/reel-1.mp4" },
+    ]);
+  });
+});
+
+describe("свои промо-файлы", () => {
+  it("превью лежит рядом с роликом", () => {
+    expect(promoPosterKey("courses/x/promo/reel-2.mp4")).toBe("courses/x/promo/reel-2.jpg");
+  });
+
+  it("публично отдаются только ролики и превью из каталога promo", () => {
+    expect(PROMO_MEDIA_RE.test("courses/x/promo/reel-2.mp4")).toBe(true);
+    expect(PROMO_MEDIA_RE.test("courses/x/promo/reel-2.jpg")).toBe(true);
+    expect(PROMO_MEDIA_RE.test("courses/x/lessons/abc/720p/seg_000.ts")).toBe(false);
+    expect(PROMO_MEDIA_RE.test("courses/x/promo/../lessons/a.mp4")).toBe(false);
   });
 });

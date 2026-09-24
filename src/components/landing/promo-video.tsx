@@ -3,11 +3,16 @@
 import { useState } from "react";
 import { Play } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { PromoVideo } from "@/lib/courses/promo-video";
+import {
+  promoMediaUrl,
+  promoPosterKey,
+  type PromoVideo,
+} from "@/lib/courses/promo-video";
 
 /**
  * Промо-ролики курса: источник — YouTube, копий у нас нет (правило 10 — диск VPS
- * держим под уроки, а не под маркетинг).
+ * держим под уроки, а не под маркетинг). Исключение — рилсы, которых на YouTube
+ * нет: они лежат у нас сжатым MP4 (`file`) и играют в обычном <video>.
  *
  * До клика грузится только превью-кадр: iframe YouTube тянет около мегабайта
  * скриптов и ставит куки, поэтому появляется он лишь по нажатию (домен nocookie,
@@ -70,12 +75,14 @@ function PromoVideoItem({
   courseTitle: string;
   className?: string;
 }) {
-  const { id, vertical, title } = video;
+  const { id, vertical, title, file } = video;
   const [playing, setPlaying] = useState(false);
   // У вертикальных роликов кадр в исходных пропорциях лежит в oardefault;
   // maxres для них — тот же кадр с полями. При 404 откатываемся на hqdefault.
   const [thumb, setThumb] = useState(
-    `https://i.ytimg.com/vi/${id}/${vertical ? "oardefault" : "maxresdefault"}.jpg`,
+    file
+      ? promoMediaUrl(promoPosterKey(file))
+      : `https://i.ytimg.com/vi/${id}/${vertical ? "oardefault" : "maxresdefault"}.jpg`,
   );
 
   const label = title ? `${title} — ${courseTitle}` : courseTitle;
@@ -86,7 +93,21 @@ function PromoVideoItem({
 
   return (
     <figure className={className}>
-      {playing ? (
+      {playing && file ? (
+        <div className={frameCls}>
+          {/* Свой ролик: до клика грузится только кадр-превью, сам MP4 — по нажатию. */}
+          <video
+            className="absolute inset-0 size-full object-contain"
+            src={promoMediaUrl(file)}
+            poster={thumb}
+            aria-label={label}
+            controls
+            autoPlay
+            playsInline
+            preload="auto"
+          />
+        </div>
+      ) : playing ? (
         <div className={frameCls}>
           <iframe
             className="absolute inset-0 size-full"
@@ -110,7 +131,9 @@ function PromoVideoItem({
             alt=""
             aria-hidden
             loading="lazy"
-            onError={() => setThumb(`https://i.ytimg.com/vi/${id}/hqdefault.jpg`)}
+            onError={() => {
+              if (!file) setThumb(`https://i.ytimg.com/vi/${id}/hqdefault.jpg`);
+            }}
             className="absolute inset-0 size-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
           />
           <span className="absolute inset-0 bg-slate-950/25 transition-colors group-hover:bg-slate-950/10" />

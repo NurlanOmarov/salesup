@@ -31,6 +31,7 @@ import {
   parseStageLadder,
   parseObjectionScale,
   parseNeedsCart,
+  parseEconomyCalc,
 } from "@/lib/interactive";
 import { loadScenario } from "@/lib/ai/simulate";
 import { listLessonNotes } from "@/lib/learn/notes";
@@ -229,7 +230,7 @@ export default async function LearnPage({
     }),
   ]);
 
-  const [ladderArtifact, scaleArtifact, cartArtifact] = await Promise.all([
+  const [ladderArtifact, scaleArtifact, cartArtifact, economyArtifact] = await Promise.all([
     db.aiArtifact.findUnique({
       where: { lessonId_type: { lessonId, type: "STAGE_LADDER" } },
       select: { content: true, validation: true },
@@ -240,6 +241,10 @@ export default async function LearnPage({
     }),
     db.aiArtifact.findUnique({
       where: { lessonId_type: { lessonId, type: "NEEDS_CART" } },
+      select: { content: true, validation: true },
+    }),
+    db.aiArtifact.findUnique({
+      where: { lessonId_type: { lessonId, type: "ECONOMY_CALC" } },
       select: { content: true, validation: true },
     }),
   ]);
@@ -279,6 +284,8 @@ export default async function LearnPage({
     scaleArtifact?.validation === "VALIDATED" ? parseObjectionScale(scaleArtifact.content) : null;
   const cart =
     cartArtifact?.validation === "VALIDATED" ? parseNeedsCart(cartArtifact.content) : null;
+  const economy =
+    economyArtifact?.validation === "VALIDATED" ? parseEconomyCalc(economyArtifact.content) : null;
   const transcriptText =
     transcript && transcript.status === "CLEANED" ? transcript.cleanText : null;
 
@@ -481,6 +488,7 @@ export default async function LearnPage({
             ladder={ladder}
             scale={scale}
             cart={cart}
+            economy={economy}
             simulation={simulation}
             quiz={lessonQuiz}
             voiceEnabled={env.VOICE_ENABLED}

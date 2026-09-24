@@ -35,6 +35,7 @@ import {
   Milestone,
   Scale,
   ShoppingCart,
+  Calculator,
   GraduationCap,
   ChevronRight,
 } from "lucide-react";
@@ -64,6 +65,7 @@ import { ClientTypesTrainer } from "@/components/learn/client-types";
 import { StageLadder } from "@/components/learn/stage-ladder";
 import { ObjectionScale } from "@/components/learn/objection-scale";
 import { NeedsCart } from "@/components/learn/needs-cart";
+import { EconomyCalc } from "@/components/learn/economy-calc";
 import type { SlideDeckData } from "@/lib/slides";
 import type {
   FlashcardsData,
@@ -82,6 +84,7 @@ import type {
   StageLadderData,
   ObjectionScaleData,
   NeedsCartData,
+  EconomyCalcData,
 } from "@/lib/interactive";
 
 export interface SimulationInfo {
@@ -123,6 +126,7 @@ type Tab =
   | "ladder"
   | "scale"
   | "cart"
+  | "economy"
   | "simulation"
   | "quiz"
   | "transcript"
@@ -166,6 +170,7 @@ export function LessonTabs({
   ladder = null,
   scale = null,
   cart = null,
+  economy = null,
   simulation = null,
   quiz = null,
   voiceEnabled = false,
@@ -199,6 +204,7 @@ export function LessonTabs({
   ladder?: StageLadderData | null;
   scale?: ObjectionScaleData | null;
   cart?: NeedsCartData | null;
+  economy?: EconomyCalcData | null;
   simulation?: SimulationInfo | null;
   /** Задание к уроку (LESSON_QUIZ) — открывается на отдельной странице. */
   quiz?: { id: string; title: string } | null;
@@ -243,6 +249,7 @@ export function LessonTabs({
     { key: "ladder", label: "Лестница", icon: Milestone, show: !!ladder, group: "practice" },
     { key: "scale", label: "Весы", icon: Scale, show: !!scale, group: "practice" },
     { key: "cart", label: "Тележка", icon: ShoppingCart, show: !!cart, group: "practice" },
+    { key: "economy", label: "Расчёт выгоды", icon: Calculator, show: !!economy, group: "practice" },
     { key: "simulation", label: "Симулятор", icon: MessagesSquare, show: !!simulation, group: "practice" },
     { key: "tutor", label: "Наставник", icon: Bot, show: true, group: "tutor" },
   ];
@@ -539,6 +546,12 @@ export function LessonTabs({
         {tab === "cart" && cart ? (
           <motion.div key="cart" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
             <NeedsCart data={cart} />
+          </motion.div>
+        ) : null}
+
+        {tab === "economy" && economy ? (
+          <motion.div key="economy" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4">
+            <EconomyCalc data={economy} />
           </motion.div>
         ) : null}
 

@@ -88,6 +88,21 @@ import {
   PAWNSHOP_EXAM_PASS_SCORE,
 } from "./seed-data/pawnshop-content.js";
 import {
+  CHEMISTRY_SUMMARIES,
+  CHEMISTRY_LESSON_QUIZZES,
+  CHEMISTRY_FLASHCARDS,
+  CHEMISTRY_OBJECTIONS,
+  CHEMISTRY_CHECKLISTS,
+  CHEMISTRY_SCRIPTS,
+  CHEMISTRY_AUDITS,
+  CHEMISTRY_BRANCHING,
+  CHEMISTRY_HOTSPOTS,
+  CHEMISTRY_ECONOMY,
+  CHEMISTRY_SCENARIOS,
+  CHEMISTRY_EXAM,
+  CHEMISTRY_EXAM_PASS_SCORE,
+} from "./seed-data/chemistry-content.js";
+import {
   SPIN_SUMMARIES,
   SPIN_SLIDES,
   SPIN_LESSON_QUIZZES,
@@ -257,7 +272,7 @@ type CourseSpec = {
    * Промо-ролики витрины: только ID видео, сами ролики остаются на YouTube
    * (lib/courses/promo-video.ts). `vertical` — Shorts, показываем 9:16.
    */
-  promoVideos?: { id: string; vertical: boolean; title?: string }[];
+  promoVideos?: { id: string; vertical: boolean; title?: string; file?: string }[];
 };
 
 // ── Курс «Эффективные продажи кухонь 2.0» (реальный YouTube-плейлист) ────────
@@ -649,6 +664,56 @@ const PAWNSHOP_MODULES: ModuleSpec[] = [
         title: "Очередь и недовольный клиент: техника ближнего круга",
         yt: "https://www.youtube.com/watch?v=pRAvDN-yy4I",
         durationSec: 230,
+      },
+    ],
+  },
+];
+
+// ── Курс «Продажи B2B в промышленной химии» (видео файлами, не с YouTube) ────
+// Тренер: Виталий Дубовик (activesales.by). Шесть вертикальных видеоуроков
+// (~41 мин) пришли файлами; в youtubeUrl — пометка local:<имя файла>, по ней
+// фабрика видео берёт исходник с диска (pnpm factory:video … --source <файл>).
+// Шесть рилсов с той же записи — промо-ролики на витрине (свои файлы,
+// lib/courses/promo-video.ts): на YouTube их нет.
+const CHEMISTRY_MODULES: ModuleSpec[] = [
+  {
+    title: "Как продают промышленную химию",
+    lessons: [
+      {
+        title: "10 рекомендаций для B2B-продаж промышленной химии",
+        yt: "local:Продажи в b2b Рекомендации УРОК 1.mp4",
+        durationSec: 450,
+        publish: true,
+      },
+      {
+        title: "Воронка продаж B2B: этапы и нормы конверсии",
+        yt: "local:Воронка продаж УРОК 2.mp4",
+        durationSec: 618,
+      },
+      {
+        title: "10 ошибок в B2B-продажах промышленной химии",
+        yt: "local:Ошибки в продажах УРОК 3.mp4",
+        durationSec: 446,
+      },
+    ],
+  },
+  {
+    title: "Клиент, возражения и первый звонок",
+    lessons: [
+      {
+        title: "Пирамида потребностей клиента-партнёра",
+        yt: "local:Пирамида потребностей УРОК 4.mp4",
+        durationSec: 333,
+      },
+      {
+        title: "Работа с возражениями: 10 ситуаций закупщика",
+        yt: "local:Работа с возражениями УРОК 5.mp4",
+        durationSec: 460,
+      },
+      {
+        title: "Исходящий звонок: алгоритм и формула 30 секунд",
+        yt: "local:Исходящие звонки УРОК 6.mp4",
+        durationSec: 162,
       },
     ],
   },
@@ -1765,6 +1830,69 @@ const COURSES: CourseSpec[] = [
     promoVideos: [{ id: "pRAvDN-yy4I", vertical: false }],
   },
   {
+    slug: "sales-b2b-chemistry",
+    title: "Продажи B2B в промышленной химии",
+    subtitle: "Как продавать сырьё заводам: язык технолога, расчёт выгоды и работа с возражениями закупщика",
+    description:
+      "Видеокурс бизнес-тренера Виталия Дубовика (activesales.by) для тех, кто продаёт сырьё и химию производствам: косметическим заводам, производителям бытовой химии, пищевым и промышленным предприятиям. Главная мысль курса — «B2B — это цифры»: продаёт не «качественный продукт», а посчитанная выгода клиента.\n" +
+      "\n" +
+      "Что внутри:\n" +
+      "— десять рекомендаций, которые сокращают цикл сделки: язык технолога, интересы каждого участника, испытания на производстве\n" +
+      "— воронка продаж B2B: девять этапов разговора и нормы конверсии от первого звонка до повторной закупки\n" +
+      "— десять ошибок, из-за которых заводы уходят к конкурентам, и что делать вместо них\n" +
+      "— пирамида потребностей клиента-партнёра: почему нельзя начинать с цены\n" +
+      "— десять возражений закупщика и по три ответа на каждое\n" +
+      "— алгоритм холодного звонка и формула интереса за 30 секунд\n" +
+      "\n" +
+      "После каждого урока — тест и тренажёры, в том числе «Расчёт выгоды»: вы сами считаете экономику клиента на цифрах из урока. В конце — итоговый тест и именной сертификат с проверкой подлинности.",
+    industry: "Промышленная химия",
+    hoursLabel: "~41 минута",
+    learnPoints: [
+      "Говорить с технологом на языке цифр и протоколов испытаний",
+      "Понимать, чего боятся технолог, снабжение, финансы и директор",
+      "Считать экономический эффект для клиента: брак, простой, себестоимость",
+      "Вести сделку по воронке и сверять конверсию с нормами рынка",
+      "Начинать разговор с уровня пирамиды, на котором находится клиент",
+      "Отвечать на «дорого», «работаем пять лет» и «пришлите КП» тремя способами",
+      "Проводить холодный звонок по алгоритму из пяти шагов",
+    ],
+    targetAudience: [
+      "Менеджеры по продажам химического сырья и ингредиентов",
+      "Сотрудники дистрибьюторов промышленной химии",
+      "Руководители отделов B2B-продаж на производствах",
+      "Новые менеджеры — как быстрый ввод в отраслевые продажи",
+    ],
+    faq: [
+      {
+        q: "Курс только про косметическую химию?",
+        a: "Примеры в основном из косметики и бытовой химии: эмульгаторы, загустители, консерванты, ПАВ. Но логика — расчёт выгоды, воронка, пирамида потребностей, возражения закупщика — одинакова для любого сырья, которое продают заводам.",
+      },
+      {
+        q: "Там много теории?",
+        a: "Нет: каждый приём подкреплён цифрами и готовыми фразами. В тренажёре «Расчёт выгоды» вы сами считаете потери клиента от брака и простоя — это и есть главный навык курса.",
+      },
+      {
+        q: "Сколько времени займёт?",
+        a: "Около 41 минуты видео плюс тесты и тренажёры. Шесть уроков по три–десять минут: удобно проходить по одному в день.",
+      },
+      {
+        q: "Цифры в примерах — реальные?",
+        a: "Это примеры тренера для расчёта, валюта в них условная. Смысл — научиться переводить свойства сырья в деньги клиента. Свои цифры подставляйте из объёмов и цен конкретного завода.",
+      },
+    ],
+    modules: CHEMISTRY_MODULES,
+    // Промо — шесть рилсов с той же записи. На YouTube их нет, поэтому лежат у
+    // нас сжатыми MP4 (pnpm factory:promo), см. lib/courses/promo-video.ts.
+    promoVideos: [
+      { id: "reel-1", file: "courses/sales-b2b-chemistry/promo/reel-1.mp4", vertical: true, title: "Рекомендации в продажах" },
+      { id: "reel-2", file: "courses/sales-b2b-chemistry/promo/reel-2.mp4", vertical: true, title: "Воронка продаж" },
+      { id: "reel-3", file: "courses/sales-b2b-chemistry/promo/reel-3.mp4", vertical: true, title: "Ошибки в продажах" },
+      { id: "reel-4", file: "courses/sales-b2b-chemistry/promo/reel-4.mp4", vertical: true, title: "Пирамида потребностей клиента" },
+      { id: "reel-5", file: "courses/sales-b2b-chemistry/promo/reel-5.mp4", vertical: true, title: "Работа с возражениями" },
+      { id: "reel-6", file: "courses/sales-b2b-chemistry/promo/reel-6.mp4", vertical: true, title: "Исходящие звонки" },
+    ],
+  },
+  {
     slug: "sales-mattresses",
     title: "Продажи матрасов в рознице",
     subtitle: "Мини-курс за девять минут: вопросы, средний чек и удержание покупателя в зале",
@@ -2175,7 +2303,8 @@ async function upsertCourse(spec: CourseSpec) {
       learnPoints: spec.learnPoints,
       targetAudience: spec.targetAudience,
       faq: spec.faq,
-      coverUrl: spec.coverUrl ?? null,
+      // coverUrl в update не пишем: обложки на проде владелец загружает через
+      // админку, и повторный сид не должен их затирать.
       promoVideos: spec.promoVideos ?? [],
     },
     create: {
@@ -2797,7 +2926,8 @@ async function seedArtifacts(
     | "CLIENT_TYPES"
     | "STAGE_LADDER"
     | "OBJECTION_SCALE"
-    | "NEEDS_CART",
+    | "NEEDS_CART"
+    | "ECONOMY_CALC",
   rows: { titleMatch: string; data: unknown }[],
 ) {
   const lessons = await db.lesson.findMany({
@@ -3213,6 +3343,35 @@ async function main() {
     });
     await db.lesson.updateMany({
       where: { module: { courseId: mattressCourse.id }, videoStatus: "READY" },
+      data: { status: "PUBLISHED" },
+    });
+  }
+
+  // ── Курс «Продажи B2B в промышленной химии» ───────────────────────────────
+  // Контент по шести видеоурокам Виталия Дубовика (транскрипты в
+  // «Презентации/Продажи B2B в промышленной химии»), см. seed-data/chemistry-content.ts.
+  // Схемы воронки и пирамиды — public/images/chemistry, они же идут в раздатку.
+  const chemistryCourse = courses.find((c) => c.slug === "sales-b2b-chemistry");
+  if (chemistryCourse) {
+    await seedSummaries(chemistryCourse.id, CHEMISTRY_SUMMARIES);
+    await seedLessonQuizzes(chemistryCourse.id, CHEMISTRY_LESSON_QUIZZES);
+    await seedFlashcards(chemistryCourse.id, CHEMISTRY_FLASHCARDS);
+    await seedObjections(chemistryCourse.id, CHEMISTRY_OBJECTIONS);
+    await seedArtifacts(chemistryCourse.id, "CHECKLIST", CHEMISTRY_CHECKLISTS);
+    await seedArtifacts(chemistryCourse.id, "SCRIPT_BUILDER", CHEMISTRY_SCRIPTS);
+    await seedArtifacts(chemistryCourse.id, "DIALOGUE_AUDIT", CHEMISTRY_AUDITS);
+    await seedArtifacts(chemistryCourse.id, "BRANCHING", CHEMISTRY_BRANCHING);
+    await seedArtifacts(chemistryCourse.id, "HOTSPOT", CHEMISTRY_HOTSPOTS);
+    await seedArtifacts(chemistryCourse.id, "ECONOMY_CALC", CHEMISTRY_ECONOMY);
+    await seedScenarios(chemistryCourse.id, CHEMISTRY_SCENARIOS);
+    await seedFinalExam(chemistryCourse.id, {
+      questions: CHEMISTRY_EXAM,
+      description:
+        "Проверка знаний по курсу: язык технолога и участники сделки, воронка и нормы конверсии, типичные ошибки, пирамида потребностей, возражения закупщика и холодный звонок.",
+      passScore: CHEMISTRY_EXAM_PASS_SCORE,
+    });
+    await db.lesson.updateMany({
+      where: { module: { courseId: chemistryCourse.id }, videoStatus: "READY" },
       data: { status: "PUBLISHED" },
     });
   }

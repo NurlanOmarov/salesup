@@ -18,6 +18,9 @@ import {
   parseStageLadder,
   parseObjectionScale,
   parseNeedsCart,
+  parseEconomyCalc,
+  parseUserNumber,
+  isEconomyAnswerCorrect,
   type BranchingData,
 } from "./interactive";
 
@@ -426,5 +429,40 @@ describe("parseNeedsCart", () => {
   it("null на битом JSON и пустом контенте", () => {
     expect(parseNeedsCart("{")).toBeNull();
     expect(parseNeedsCart(null)).toBeNull();
+  });
+});
+
+describe("калькулятор выгоды", () => {
+  const round = {
+    situation: "800 000 флаконов в месяц, 3% брака, себестоимость 120 ₽",
+    question: "Сколько стоит брак в месяц?",
+    answer: 2_880_000,
+    unit: "₽",
+    steps: ["800 000 × 3% = 24 000 флаконов", "24 000 × 120 = 2 880 000 ₽"],
+    pitch: "Нестабильный эмульгатор стоит вам 2,88 млн в месяц",
+  };
+
+  it("читает раунды и отбрасывает битые", () => {
+    const r = parseEconomyCalc(JSON.stringify({ rounds: [round, { question: "без ответа" }] }));
+    expect(r?.rounds).toHaveLength(1);
+    expect(parseEconomyCalc(JSON.stringify({ rounds: [] }))).toBeNull();
+    expect(parseEconomyCalc("не json")).toBeNull();
+  });
+
+  it("понимает, как люди пишут числа", () => {
+    expect(parseUserNumber("2 880 000")).toBe(2_880_000);
+    expect(parseUserNumber("2880000 ₽")).toBe(2_880_000);
+    expect(parseUserNumber("2,88 млн")).toBe(2_880_000);
+    expect(parseUserNumber("600 тыс")).toBe(600_000);
+    expect(parseUserNumber("0,2")).toBe(0.2);
+    expect(parseUserNumber("много")).toBeNull();
+    expect(parseUserNumber("")).toBeNull();
+  });
+
+  it("принимает ответ в пределах допуска", () => {
+    expect(isEconomyAnswerCorrect(round, 2_880_000)).toBe(true);
+    expect(isEconomyAnswerCorrect(round, 2_900_000)).toBe(true);
+    expect(isEconomyAnswerCorrect(round, 24_000)).toBe(false);
+    expect(isEconomyAnswerCorrect({ answer: 100, tolerance: 0 }, 101)).toBe(false);
   });
 });

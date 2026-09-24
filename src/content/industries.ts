@@ -19,6 +19,9 @@ const INDUSTRIES: Record<string, Record<ExtraLocale, string>> = {
   "Техники продаж": { kk: "Сату техникалары", uz: "Sotuv texnikalari" },
   FMCG: { kk: "FMCG", uz: "FMCG" },
   Розница: { kk: "Бөлшек сауда", uz: "Chakana savdo" },
+  Ломбарды: { kk: "Ломбардтар", uz: "Lombardlar" },
+  "Стройматериалы и DIY": { kk: "Құрылыс материалдары және DIY", uz: "Qurilish materiallari va DIY" },
+  "Промышленная химия": { kk: "Өнеркәсіптік химия", uz: "Sanoat kimyosi" },
 };
 
 /** Отрасль на языке страницы; неизвестное значение остаётся как есть. */

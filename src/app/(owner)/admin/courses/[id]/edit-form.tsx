@@ -321,7 +321,12 @@ export function CourseEditForm({
         coverAlt,
         promoVideos: promoVideos
           .filter((v) => v.id)
-          .map((v) => ({ id: v.id, vertical: v.vertical, title: v.title || undefined })),
+          .map((v) => ({
+            id: v.id,
+            vertical: v.vertical,
+            title: v.title || undefined,
+            file: v.file,
+          })),
         seoNoindex,
         certificateEnabled,
         wooProductId: wooProductId > 0 ? wooProductId : "",
@@ -1158,28 +1163,34 @@ export function CourseEditForm({
                 className="rounded-lg border border-foreground/10 p-3"
               >
                 <div className="flex items-start gap-2">
-                  <input
-                    className={inputCls}
-                    placeholder="Ссылка на видео или ID"
-                    value={row.input}
-                    onChange={(e) => {
-                      const input = e.target.value;
-                      setPromoVideos((rows) =>
-                        rows.map((r, idx) =>
-                          idx === i
-                            ? {
-                                ...r,
-                                input,
-                                id: youtubeId(input) ?? "",
-                                // Ссылка /shorts/ — ролик заведомо вертикальный;
-                                // ручную галочку это не перебивает.
-                                vertical: isShortsUrl(input) || r.vertical,
-                              }
-                            : r,
-                        ),
-                      );
-                    }}
-                  />
+                  {row.file ? (
+                    <p className="mt-1 flex-1 break-all text-sm text-foreground/70">
+                      Ролик на нашем сервере: {row.file.split("/").pop()}
+                    </p>
+                  ) : (
+                    <input
+                      className={inputCls}
+                      placeholder="Ссылка на видео или ID"
+                      value={row.input}
+                      onChange={(e) => {
+                        const input = e.target.value;
+                        setPromoVideos((rows) =>
+                          rows.map((r, idx) =>
+                            idx === i
+                              ? {
+                                  ...r,
+                                  input,
+                                  id: youtubeId(input) ?? "",
+                                  // Ссылка /shorts/ — ролик заведомо вертикальный;
+                                  // ручную галочку это не перебивает.
+                                  vertical: isShortsUrl(input) || r.vertical,
+                                }
+                              : r,
+                          ),
+                        );
+                      }}
+                    />
+                  )}
                   <button
                     type="button"
                     onClick={() =>
@@ -1219,7 +1230,11 @@ export function CourseEditForm({
                     Вертикальный (Shorts)
                   </label>
                   <span className="text-xs text-foreground/40">
-                    {row.id ? `ID: ${row.id}` : "ссылка не распознана"}
+                    {row.file
+                      ? "загружен фабрикой"
+                      : row.id
+                        ? `ID: ${row.id}`
+                        : "ссылка не распознана"}
                   </span>
                 </div>
               </div>

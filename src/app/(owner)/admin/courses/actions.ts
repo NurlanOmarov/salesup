@@ -10,6 +10,7 @@ import { log } from "@/lib/log";
 import { safeAction, type ActionResult } from "@/lib/safe-action";
 import { ACCESS_DURATIONS } from "@/lib/admin/enrollment";
 import { alfaPaymentUrlSchema } from "@/lib/payments/alfa/link";
+import { PROMO_FILE_RE } from "@/lib/courses/promo-video";
 
 /**
  * Управление каталогом курсов (реестр / цены / фото). Только OWNER.
@@ -50,17 +51,21 @@ export const updateCourseAction = safeAction(
       focusKeyword: z.string().trim().max(120).optional().or(z.literal("")),
       coverAlt: z.string().trim().max(200).optional().or(z.literal("")),
       // Промо-ролики витрины: храним только ID видео (11 символов), сами ролики
-      // остаются на YouTube. Ссылку в ID превращает форма.
+      // остаются на YouTube. Ссылку в ID превращает форма. Свои ролики (`file`,
+      // рилсы без YouTube) загружает фабрика — форма их только сохраняет.
       promoVideos: z
         .array(
-          z.object({
-            id: z
-              .string()
-              .trim()
-              .regex(/^[A-Za-z0-9_-]{11}$/, "ID видео YouTube — 11 символов"),
-            vertical: z.boolean(),
-            title: z.string().trim().max(80).optional(),
-          }),
+          z
+            .object({
+              id: z.string().trim(),
+              vertical: z.boolean(),
+              title: z.string().trim().max(80).optional(),
+              file: z.string().regex(PROMO_FILE_RE, "Некорректный файл ролика").optional(),
+            })
+            .refine((v) => v.file || /^[A-Za-z0-9_-]{11}$/.test(v.id), {
+              message: "ID видео YouTube — 11 символов",
+              path: ["id"],
+            }),
         )
         .max(6, "Больше шести роликов на карточке — это уже не промо"),
       seoNoindex: z.boolean(),
@@ -117,6 +122,7 @@ export const updateCourseAction = safeAction(
           id: v.id,
           vertical: v.vertical,
           ...(v.title ? { title: v.title } : {}),
+          ...(v.file ? { file: v.file } : {}),
         })),
       seoNoindex: input.seoNoindex,
       certificateEnabled: input.certificateEnabled,

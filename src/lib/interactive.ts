@@ -638,3 +638,80 @@ export function parseNeedsCart(content: string | null | undefined): NeedsCartDat
     return null;
   }
 }
+
+// ─── Калькулятор выгоды (посчитать экономический эффект клиента в цифрах) ─────
+
+/**
+ * Тренажёр «B2B — это цифры»: ученик получает условие из урока (объём, цена,
+ * процент брака) и сам считает выгоду клиента. Верный ответ открывает расчёт
+ * по шагам и фразу, которой эту цифру говорят клиенту. Ошибка не наказывает:
+ * первая — подсказка, вторая — готовый расчёт. Учит главному правилу курса:
+ * продажа без расчёта в промышленной химии не работает.
+ */
+export interface EconomyRound {
+  /** Условие задачи — цифры из урока. */
+  situation: string;
+  /** Что именно посчитать. */
+  question: string;
+  answer: number;
+  /** Единица ответа: «₽», «флаконов», «кг». */
+  unit: string;
+  /** Допустимая относительная погрешность (по умолчанию 1%). */
+  tolerance?: number;
+  /** Подсказка после первой ошибки. */
+  hint?: string;
+  /** Расчёт по шагам — показывается после ответа. */
+  steps: string[];
+  /** Как сказать эту цифру клиенту. */
+  pitch: string;
+}
+
+export interface EconomyCalcData {
+  title?: string;
+  prompt?: string;
+  rounds: EconomyRound[];
+}
+
+/** Число из пользовательского ввода: «2 880 000», «2,5», «1.5 млн» → число; мусор → null. */
+export function parseUserNumber(input: string): number | null {
+  const raw = input.trim().toLowerCase().replace(/\s| /g, "").replace(",", ".");
+  const m = raw.match(/^(-?\d+(?:\.\d+)?)(млн|тыс)?[^\d]*$/);
+  if (!m) return null;
+  const n = Number(m[1]);
+  if (!Number.isFinite(n)) return null;
+  if (m[2] === "млн") return n * 1_000_000;
+  if (m[2] === "тыс") return n * 1_000;
+  return n;
+}
+
+/** Попал ли ответ в допуск раунда. Чистая функция (юнит-тест). */
+export function isEconomyAnswerCorrect(round: Pick<EconomyRound, "answer" | "tolerance">, value: number): boolean {
+  const tol = round.tolerance ?? 0.01;
+  if (round.answer === 0) return Math.abs(value) < 1e-9;
+  return Math.abs(value - round.answer) / Math.abs(round.answer) <= tol;
+}
+
+/** Безопасный парсинг калькулятора выгоды. Нужен ≥1 раунд с числовым ответом и расчётом. */
+export function parseEconomyCalc(content: string | null | undefined): EconomyCalcData | null {
+  if (!content) return null;
+  try {
+    const data = JSON.parse(content) as EconomyCalcData;
+    if (!data || !Array.isArray(data.rounds)) return null;
+    const rounds = data.rounds.filter(
+      (r) =>
+        r &&
+        typeof r.situation === "string" &&
+        typeof r.question === "string" &&
+        typeof r.answer === "number" &&
+        Number.isFinite(r.answer) &&
+        typeof r.unit === "string" &&
+        typeof r.pitch === "string" &&
+        Array.isArray(r.steps) &&
+        r.steps.length > 0 &&
+        r.steps.every((s) => typeof s === "string"),
+    );
+    return rounds.length > 0 ? { title: data.title, prompt: data.prompt, rounds } : null;
+  } catch {
+    return null;
+  }
+}
