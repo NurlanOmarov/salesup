@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseTimestamp, parseVtt, cuesToRawText, fmtTimecode, aggregateCues, cuesToVtt, vttTimestamp } from "./vtt.js";
+import { parseTimestamp, parseVtt, cuesToRawText, fmtTimecode, aggregateCues, cuesToVtt, vttTimestamp, splitForCleaning } from "./vtt.js";
 
 describe("parseTimestamp", () => {
   it("часы:минуты:секунды", () => {
@@ -110,5 +110,20 @@ describe("cuesToVtt", () => {
     expect(vtt.startsWith("WEBVTT")).toBe(true);
     expect(vtt).toContain("00:00:00.000 --> 00:00:03.000");
     expect(vtt).toContain("Привет");
+  });
+});
+
+describe("splitForCleaning", () => {
+  it("режет длинный текст по пробелам, ничего не теряя", () => {
+    const words = Array.from({ length: 3000 }, (_, i) => `слово${i}`);
+    const text = words.join(" ");
+    const parts = splitForCleaning(text, 5000);
+    expect(parts.length).toBeGreaterThan(1);
+    expect(parts.every((p) => p.length <= 5000)).toBe(true);
+    expect(parts.join(" ").split(" ")).toEqual(words);
+  });
+
+  it("короткий текст — один кусок", () => {
+    expect(splitForCleaning("коротко", 5000)).toEqual(["коротко"]);
   });
 });

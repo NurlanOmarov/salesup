@@ -173,3 +173,24 @@ export function cuesToVtt(cues: SubtitleCue[]): string {
   }
   return lines.join("\n");
 }
+
+/**
+ * Нарезка сырого транскрипта на куски для очистки LLM. Одним запросом длинный
+ * урок не помещался в ответ (maxTokens): очищенный текст молча обрывался около
+ * 10 тыс. знаков, и хвост урока пропадал из RAG и контента. Режем по пробелам
+ * (в авто-субтитрах нет пунктуации), стараясь попасть на конец предложения.
+ */
+export function splitForCleaning(text: string, maxChars = 6000): string[] {
+  const out: string[] = [];
+  let rest = text.trim();
+  while (rest.length > maxChars) {
+    const window = rest.slice(0, maxChars);
+    const sentence = Math.max(window.lastIndexOf(". "), window.lastIndexOf("? "), window.lastIndexOf("! "));
+    const cut = sentence > maxChars * 0.6 ? sentence + 1 : window.lastIndexOf(" ");
+    const at = cut > 0 ? cut : maxChars;
+    out.push(rest.slice(0, at).trim());
+    rest = rest.slice(at).trim();
+  }
+  if (rest) out.push(rest);
+  return out;
+}

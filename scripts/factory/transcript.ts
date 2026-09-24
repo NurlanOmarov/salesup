@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { db } from "@/lib/db";
 import { complete } from "@/lib/ai/anthropic";
 import { CLEAN_TRANSCRIPT_SYSTEM, cleanTranscriptPrompt } from "@/lib/ai/prompts/clean-transcript";
-import { parseVtt, cuesToRawText } from "@/lib/factory/vtt";
+import { parseVtt, cuesToRawText, splitForCleaning } from "@/lib/factory/vtt";
 import { parseArgs } from "./lib/args.js";
 import { run, requireBinary } from "./lib/exec.js";
 import { c, log } from "./lib/log.js";
@@ -85,15 +85,30 @@ async function processLesson(
     cleanText = rawText;
     log.info("Режим --raw: без вызова LLM (очистку делаете в Claude Code)");
   } else {
-    log.step("Очистка через Haiku…");
-    cleanText = await complete({
-      model: "claude-haiku-4-5",
-      system: CLEAN_TRANSCRIPT_SYSTEM,
-      prompt: cleanTranscriptPrompt(rawText),
-      maxTokens: 4096,
-      temperature: 0.2,
-      operation: "transcript.clean",
-    });
+    // По кускам: одним запросом ответ упирался в maxTokens, и очищенный текст
+    // длинного урока обрывался около 10 тыс. знаков — хвост терялся молча.
+    const parts = splitForCleaning(rawText);
+    log.step(`Очистка через Haiku… (${parts.length} ${parts.length === 1 ? "кусок" : "куска(ов)"})`);
+    const cleaned: string[] = [];
+    for (const part of parts) {
+      cleaned.push(
+        (
+          await complete({
+            model: "claude-haiku-4-5",
+            system: CLEAN_TRANSCRIPT_SYSTEM,
+            prompt: cleanTranscriptPrompt(part),
+            maxTokens: 8192,
+            temperature: 0.2,
+            operation: "transcript.clean",
+          })
+        ).trim(),
+      );
+    }
+    cleanText = cleaned.join("\n\n");
+    // Страховка: очищенный текст заметно короче сырого — значит, что-то обрезалось.
+    if (cleanText.length < rawText.length * 0.6) {
+      log.warn(`«${lesson.title}»: очищенный текст ${cleanText.length} из ${rawText.length} знаков — проверьте, не обрезан ли`);
+    }
   }
 
   await db.transcript.upsert({
