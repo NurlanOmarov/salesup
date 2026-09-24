@@ -466,3 +466,45 @@ describe("калькулятор выгоды", () => {
     expect(isEconomyAnswerCorrect({ answer: 100, tolerance: 0 }, 101)).toBe(false);
   });
 });
+
+describe("проверяемые раунды тайм-интерактивов", () => {
+  it("слон: куски берутся, только если настоящих хватает на цель и есть ловушки", () => {
+    const base = { variant: "elephant", title: "t", prompt: "p", goal: 2 };
+    const ok = { text: "a", ok: true, why: "w" };
+    const bad = { text: "b", ok: false, why: "w" };
+    expect(parseMetaphor(JSON.stringify({ ...base, slices: [ok, ok, bad] }))?.slices).toHaveLength(3);
+    expect(parseMetaphor(JSON.stringify({ ...base, slices: [ok, bad] }))?.slices).toBeUndefined();
+    expect(parseMetaphor(JSON.stringify({ ...base, slices: [ok, ok] }))?.slices).toBeUndefined();
+  });
+
+  it("лягушка: утро нужно и с лягушками, и с главными делами", () => {
+    const base = { variant: "frog", title: "t", prompt: "p", goal: 2 };
+    const frog = { text: "a", minutes: 2, frog: true, why: "w" };
+    const big = { text: "b", minutes: 90, frog: false, why: "w" };
+    expect(parseMetaphor(JSON.stringify({ ...base, tasks: [frog, big] }))?.tasks).toHaveLength(2);
+    expect(parseMetaphor(JSON.stringify({ ...base, tasks: [frog, frog] }))?.tasks).toBeUndefined();
+  });
+
+  it("матрица: кейсы с неверным квадрантом отбрасываются, меньше трёх — раунда нет", () => {
+    const c = (q: number) => ({ text: "x", q, why: "w" });
+    expect(parseEisenhower(JSON.stringify({ title: "t", prompt: "p", cases: [c(0), c(1), c(2), c(7)] }))?.cases).toHaveLength(3);
+    expect(parseEisenhower(JSON.stringify({ title: "t", prompt: "p", cases: [c(0), c(1)] }))?.cases).toBeUndefined();
+  });
+
+  it("60/40: игра дня только с важными делами в пуле и форс-мажорами", () => {
+    const pool = [
+      { text: "a", hours: 1, important: true, why: "w" },
+      { text: "b", hours: 1, important: false },
+    ];
+    const d = parseRule6040(JSON.stringify({ title: "t", prompt: "p", dayHours: 8, pool, surprises: [{ text: "s", hours: 1 }] }));
+    expect(d?.pool).toHaveLength(2);
+    expect(d?.pool?.[0]?.why).toBe("w");
+    expect(parseRule6040(JSON.stringify({ title: "t", prompt: "p", dayHours: 8, pool }))?.pool).toBeUndefined();
+  });
+
+  it("хронометраж: события с неизвестным типом отбрасываются", () => {
+    const e = (kind: string) => ({ text: "x", minutes: 5, kind, why: "w" });
+    const d = parseTimeAudit(JSON.stringify({ title: "t", prompt: "p", events: [e("work"), e("break"), e("waster"), e("work"), e("sleep")] }));
+    expect(d?.events).toHaveLength(4);
+  });
+});

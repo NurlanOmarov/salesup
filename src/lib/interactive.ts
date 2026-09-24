@@ -173,6 +173,25 @@ export type MetaphorVariant = "elephant" | "frog" | "nails";
 
 const METAPHOR_VARIANTS: MetaphorVariant[] = ["elephant", "frog", "nails"];
 
+const str = (v: unknown): v is string => typeof v === "string" && v.trim().length > 0;
+const num = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
+
+/** Кусок слона: настоящий (конкретное дело на неделю) или ложный (лозунг, «всё сразу»). */
+export interface ElephantSlice {
+  text: string;
+  ok: boolean;
+  /** Почему это кусок / не кусок — по уроку. */
+  why: string;
+}
+
+/** Дело «утра менеджера»: лягушка (короткое неприятное) или главное/объёмное дело. */
+export interface MorningTask {
+  text: string;
+  minutes: number;
+  frog: boolean;
+  why: string;
+}
+
 export interface MetaphorData {
   variant: MetaphorVariant;
   title: string;
@@ -183,6 +202,16 @@ export interface MetaphorData {
   bigTaskPlaceholder?: string;
   /** Плейсхолдер поля одного пункта (кусок/задача). */
   itemPlaceholder?: string;
+  /**
+   * Слон: пул кусков из урока — первый, проверяемый раунд («режем слона»).
+   * Настоящих кусков должно быть не меньше goal. Свои куски — второй шаг.
+   */
+  slices?: ElephantSlice[];
+  /**
+   * Лягушка: готовое «утро менеджера» из урока — первый, проверяемый раунд.
+   * Нужно съесть все лягушки раньше главных дел; отложенные растут.
+   */
+  tasks?: MorningTask[];
 }
 
 /** Безопасный парсинг тренажёра-метафоры. null при неизвестном варианте/битой структуре. */
@@ -213,10 +242,32 @@ export function parseMetaphor(content: string | null | undefined): MetaphorData 
         typeof data.bigTaskPlaceholder === "string" ? data.bigTaskPlaceholder : undefined,
       itemPlaceholder:
         typeof data.itemPlaceholder === "string" ? data.itemPlaceholder : undefined,
+      ...(parsedSlices(data.slices, goal)),
+      ...(parsedTasks(data.tasks)),
     };
   } catch {
     return null;
   }
+}
+
+function parsedSlices(raw: unknown, goal: number): { slices?: ElephantSlice[] } {
+  if (!Array.isArray(raw)) return {};
+  const slices = raw
+    .filter((x): x is ElephantSlice => !!x && str(x.text) && typeof x.ok === "boolean" && str(x.why))
+    .slice(0, 16);
+  // Игра имеет смысл, только если настоящих кусков хватает на цель и есть ловушки.
+  return slices.filter((x) => x.ok).length >= goal && slices.some((x) => !x.ok) ? { slices } : {};
+}
+
+function parsedTasks(raw: unknown): { tasks?: MorningTask[] } {
+  if (!Array.isArray(raw)) return {};
+  const tasks = raw
+    .filter(
+      (x): x is MorningTask =>
+        !!x && str(x.text) && num(x.minutes) && x.minutes > 0 && typeof x.frog === "boolean" && str(x.why),
+    )
+    .slice(0, 12);
+  return tasks.some((t) => t.frog) && tasks.some((t) => !t.frog) ? { tasks } : {};
 }
 
 /**
@@ -251,6 +302,18 @@ export interface EisenhowerData {
   prompt: string;
   /** Необязательные примеры задач для старта (ученик может добавлять свои). */
   seedTasks?: string[];
+  /**
+   * Проверяемый первый раунд: дела из урока с верным квадрантом (0 — A «сделать
+   * сейчас», 1 — B «запланировать», 2 — C «сократить», 3 — D «удалить»).
+   * После него — свои задачи без проверки (seedTasks).
+   */
+  cases?: EisenhowerCase[];
+}
+
+export interface EisenhowerCase {
+  text: string;
+  q: 0 | 1 | 2 | 3;
+  why: string;
 }
 
 export function parseEisenhower(content: string | null | undefined): EisenhowerData | null {
@@ -261,7 +324,15 @@ export function parseEisenhower(content: string | null | undefined): EisenhowerD
     const seedTasks = Array.isArray(data.seedTasks)
       ? data.seedTasks.filter((t): t is string => typeof t === "string").slice(0, 12)
       : undefined;
-    return { title: data.title, prompt: data.prompt, seedTasks };
+    const cases = Array.isArray(data.cases)
+      ? data.cases
+          .filter(
+            (c): c is EisenhowerCase =>
+              !!c && str(c.text) && str(c.why) && [0, 1, 2, 3].includes(c.q as number),
+          )
+          .slice(0, 14)
+      : [];
+    return { title: data.title, prompt: data.prompt, seedTasks, ...(cases.length >= 3 ? { cases } : {}) };
   } catch {
     return null;
   }
@@ -277,6 +348,23 @@ export interface Rule6040Data {
   dayHours: number;
   /** Примеры дел {текст, часы} для старта. */
   seedTasks?: { text: string; hours: number }[];
+  /**
+   * «Прожитый день» (уроки 09 и 14): ученик раскладывает дела на две полосы —
+   * «план на сегодня» (60%) и «гибкие, если успею» (40%). Затем прилетают
+   * форс-мажоры (surprises): съедают свободное время, потом гибкие дела уезжают
+   * на завтра, а если план перегружен — срываются дела плана с конца дня.
+   * important — дело нужно сделать именно сегодня (жёсткое/срочное).
+   */
+  pool?: DayTask[];
+  surprises?: { text: string; hours: number }[];
+}
+
+export interface DayTask {
+  text: string;
+  hours: number;
+  important: boolean;
+  /** Почему это жёсткое или гибкое дело — показывается в разборе дня. */
+  why?: string;
 }
 
 export function parseRule6040(content: string | null | undefined): Rule6040Data | null {
@@ -294,7 +382,25 @@ export function parseRule6040(content: string | null | undefined): Rule6040Data 
           .map((t) => ({ text: t.text, hours: Math.min(dayHours, Math.max(0.5, t.hours)) }))
           .slice(0, 12)
       : undefined;
-    return { title: d.title, prompt: d.prompt, dayHours, seedTasks };
+    const pool = Array.isArray(d.pool)
+      ? d.pool
+          .filter((t) => t && str(t.text) && num(t.hours) && typeof t.important === "boolean")
+          .map((t) => ({
+            text: t.text,
+            hours: Math.min(dayHours, Math.max(0.5, t.hours)),
+            important: t.important,
+            ...(str(t.why) ? { why: t.why } : {}),
+          }))
+          .slice(0, 14)
+      : [];
+    const surprises = Array.isArray(d.surprises)
+      ? d.surprises
+          .filter((t) => t && str(t.text) && num(t.hours))
+          .map((t) => ({ text: t.text, hours: Math.min(dayHours, Math.max(0.25, t.hours)) }))
+          .slice(0, 6)
+      : [];
+    const game = pool.some((t) => t.important) && surprises.length > 0;
+    return { title: d.title, prompt: d.prompt, dayHours, seedTasks, ...(game ? { pool, surprises } : {}) };
   } catch {
     return null;
   }
@@ -325,10 +431,26 @@ export function parseSmartGoal(content: string | null | undefined): SmartGoalDat
 
 // ─── Хронометраж / пожиратели времени (круг дня + экстраполяция потерь) ────────
 
+export type TimeEventKind = "work" | "break" | "waster";
+
+/** Событие «ленты дня» для честного хронометража. */
+export interface TimeAuditEvent {
+  text: string;
+  minutes: number;
+  kind: TimeEventKind;
+  why: string;
+}
+
 export interface TimeAuditData {
   title: string;
   prompt: string;
   seedActivities?: { text: string; hours: number; waster: boolean }[];
+  /**
+   * Проверяемый первый раунд: сырая лента дня менеджера — ученик относит каждое
+   * событие к работе, нормальному перерыву или пожирателю. Итог — доли дня и
+   * сравнение с «60/20/20» из урока. Свой день — второй шаг (seedActivities).
+   */
+  events?: TimeAuditEvent[];
 }
 
 export function parseTimeAudit(content: string | null | undefined): TimeAuditData | null {
@@ -344,7 +466,16 @@ export function parseTimeAudit(content: string | null | undefined): TimeAuditDat
           .map((a) => ({ text: a.text, hours: Math.min(24, Math.max(0.25, a.hours)), waster: a.waster }))
           .slice(0, 16)
       : undefined;
-    return { title: d.title, prompt: d.prompt, seedActivities };
+    const events = Array.isArray(d.events)
+      ? d.events
+          .filter(
+            (e): e is TimeAuditEvent =>
+              !!e && str(e.text) && num(e.minutes) && e.minutes > 0 && str(e.why) &&
+              ["work", "break", "waster"].includes(e.kind),
+          )
+          .slice(0, 20)
+      : [];
+    return { title: d.title, prompt: d.prompt, seedActivities, ...(events.length >= 4 ? { events } : {}) };
   } catch {
     return null;
   }
