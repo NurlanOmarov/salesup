@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Zap, Check, X, Trophy, RefreshCw, Timer, Flame } from "lucide-react";
 import type { ObjectionsData } from "@/lib/interactive";
 import { scoreAnswer, comboMultiplier, RAPID_QUESTION_MS } from "@/lib/learn/rapidfire";
+import { unquote } from "@/lib/learn/format";
 import { usePracticeDone } from "@/components/learn/practice-context";
 import { toScorePct } from "@/lib/learn/practice";
 
@@ -29,9 +30,14 @@ const TICK_MS = 50;
 const RADIUS = 26;
 const CIRC = 2 * Math.PI * RADIUS;
 
+/** Колода на прогон: порядок возражений и порядок вариантов в каждом — случайные. */
+function shuffleDeck(items: ObjectionsData["items"]): ObjectionsData["items"] {
+  return shuffle(items).map((it) => ({ ...it, options: shuffle(it.options) }));
+}
+
 export function RapidFireDrill({ data }: { data: ObjectionsData }) {
   const [phase, setPhase] = useState<Phase>("intro");
-  const [order, setOrder] = useState(() => shuffle(data.items));
+  const [order, setOrder] = useState(() => shuffleDeck(data.items));
   const [index, setIndex] = useState(0);
   const [timeLeft, setTimeLeft] = useState(RAPID_QUESTION_MS);
   const [picked, setPicked] = useState<number | null>(null);
@@ -86,7 +92,7 @@ export function RapidFireDrill({ data }: { data: ObjectionsData }) {
   }, [phase, index, resolve]);
 
   const start = () => {
-    setOrder(shuffle(data.items));
+    setOrder(shuffleDeck(data.items));
     setIndex(0);
     setScore(0);
     setStreak(0);
@@ -224,7 +230,7 @@ export function RapidFireDrill({ data }: { data: ObjectionsData }) {
       {/* Возражение */}
       <div className="mt-3 rounded-2xl border border-rose-500/25 bg-rose-500/[0.06] p-4">
         <p className="text-xs font-medium uppercase tracking-wide text-rose-600">Возражение</p>
-        <p className="mt-0.5 font-semibold">«{item.objection}»</p>
+        <p className="mt-0.5 font-semibold">«{unquote(item.objection)}»</p>
       </div>
 
       {/* Варианты */}

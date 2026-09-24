@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageSquareWarning, Check, X, Lightbulb, ChevronRight, RefreshCw, Trophy } from "lucide-react";
 import type { ObjectionsData } from "@/lib/interactive";
+import { seededShuffle, unquote } from "@/lib/learn/format";
 import { usePracticeDone } from "@/components/learn/practice-context";
 import { toScorePct } from "@/lib/learn/practice";
 
@@ -19,15 +20,22 @@ export function ObjectionTrainer({ data }: { data: ObjectionsData }) {
   const [picked, setPicked] = useState<number | null>(null);
   const [correctCount, setCorrectCount] = useState(0);
   const [done, setDone] = useState(false);
+  // Номер прогона: «Пройти заново» перемешивает варианты по-новому.
+  const [attempt, setAttempt] = useState(0);
   usePracticeDone("OBJECTIONS", done, toScorePct(correctCount, total));
 
   const item = items[index];
   const answered = picked !== null;
+  // Варианты перемешаны: в данных верный ответ часто стоит первым.
+  const options = useMemo(
+    () => (item ? seededShuffle(item.options, `${item.objection}#${attempt}`) : []),
+    [item, attempt],
+  );
 
   const pick = (i: number) => {
     if (answered || !item) return;
     setPicked(i);
-    if (item.options[i]?.correct) setCorrectCount((c) => c + 1);
+    if (options[i]?.correct) setCorrectCount((c) => c + 1);
   };
 
   const next = () => {
@@ -44,6 +52,7 @@ export function ObjectionTrainer({ data }: { data: ObjectionsData }) {
     setPicked(null);
     setCorrectCount(0);
     setDone(false);
+    setAttempt((a) => a + 1);
   };
 
   if (done) {
@@ -87,7 +96,7 @@ export function ObjectionTrainer({ data }: { data: ObjectionsData }) {
         </div>
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-rose-600">Клиент возражает</p>
-          <p className="mt-0.5 font-semibold">«{item.objection}»</p>
+          <p className="mt-0.5 font-semibold">«{unquote(item.objection)}»</p>
         </div>
       </div>
 
@@ -95,7 +104,7 @@ export function ObjectionTrainer({ data }: { data: ObjectionsData }) {
 
       {/* Варианты ответа */}
       <div className="mt-2 space-y-2">
-        {item.options.map((o, i) => {
+        {options.map((o, i) => {
           const isPicked = picked === i;
           const reveal = answered && (o.correct || isPicked);
           return (

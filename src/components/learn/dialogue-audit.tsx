@@ -101,7 +101,8 @@ export function DialogueAudit({ data }: { data: DialogueAuditData }) {
                     className="overflow-hidden pl-12 pt-1.5 text-xs text-foreground/60"
                   >
                     {l.error ? "Ошибка: " : "Верно: "}
-                    {l.explanation}
+                    {/* Префикс ставим сами — в данных он бывает продублирован. */}
+                    {l.explanation.replace(/^\s*(ошибка|верно)\s*[:—-]\s*/i, "")}
                   </motion.p>
                 ) : null}
               </AnimatePresence>

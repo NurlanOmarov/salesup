@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PartyPopper, RotateCcw, XCircle } from "lucide-react";
 import type { ObjectionScaleData, ScaleOption } from "@/lib/interactive";
+import { unquote } from "@/lib/learn/format";
 import { usePracticeDone } from "@/components/learn/practice-context";
 import { toScorePct } from "@/lib/learn/practice";
 
@@ -87,7 +88,7 @@ export function ObjectionScale({ data }: { data: ObjectionScaleData }) {
         <Scale tilt={tilt} />
 
         <div className="min-w-0">
-          <p className="rounded-xl bg-foreground/[0.04] p-3 text-sm font-semibold">«{round.objection}»</p>
+          <p className="rounded-xl bg-foreground/[0.04] p-3 text-sm font-semibold">«{unquote(round.objection)}»</p>
 
           {!won && !left ? (
             <div className="mt-3 grid gap-2">
