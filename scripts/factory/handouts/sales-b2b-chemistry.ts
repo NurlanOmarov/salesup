@@ -1,5 +1,5 @@
 /**
- * Раздатки курса «Продажи B2B в промышленной химии» (slug: sales-b2b-chemistry).
+ * Раздатки курса «B2B продажи промышленной химии» (slug: sales-b2b-chemistry).
  *
  * Содержание — строго по шести видеоурокам Виталия Дубовика
  * (транскрипты в «Презентации/Продажи B2B в промышленной химии/<NN-Урок>/transcript.txt»).
@@ -12,7 +12,7 @@ import type { CourseHandout } from "./types.js";
 export const HANDOUT: CourseHandout = {
   slug: "sales-b2b-chemistry",
   folder: "Продажи B2B в промышленной химии",
-  courseTitle: "Продажи B2B в промышленной химии",
+  courseTitle: "B2B продажи промышленной химии",
   decks: [
     {
       dir: "01-10 рекомендаций",
