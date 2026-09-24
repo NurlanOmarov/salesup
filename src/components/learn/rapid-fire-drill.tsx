@@ -47,7 +47,13 @@ export function RapidFireDrill({ data }: { data: ObjectionsData }) {
   const [maxStreak, setMaxStreak] = useState(0);
   const [correctCount, setCorrectCount] = useState(0);
   const [shake, setShake] = useState(false);
-  usePracticeDone("RAPID_FIRE", phase === "done", toScorePct(correctCount, data.items.length));
+  // Прогон, где ученик не ответил ни разу (все таймеры истекли), не засчитываем.
+  const [answeredCount, setAnsweredCount] = useState(0);
+  usePracticeDone(
+    "RAPID_FIRE",
+    phase === "done" && answeredCount > 0,
+    toScorePct(correctCount, data.items.length),
+  );
   const deadline = useRef(0);
 
   const item = order[index];
@@ -60,6 +66,7 @@ export function RapidFireDrill({ data }: { data: ObjectionsData }) {
       const newStreak = correct ? streak + 1 : 0;
       const pts = scoreAnswer(correct, remainingMs, newStreak);
       setPicked(choice);
+      if (choice !== null) setAnsweredCount((n) => n + 1);
       setScore((s) => s + pts);
       setGained(pts);
       setStreak(newStreak);
@@ -98,6 +105,7 @@ export function RapidFireDrill({ data }: { data: ObjectionsData }) {
     setStreak(0);
     setMaxStreak(0);
     setCorrectCount(0);
+    setAnsweredCount(0);
     setPicked(null);
     setPhase("playing");
   };

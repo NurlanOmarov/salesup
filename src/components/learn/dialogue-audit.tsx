@@ -34,7 +34,8 @@ export function DialogueAudit({ data }: { data: DialogueAuditData }) {
   const hits = [...marked].filter((i) => lines[i]!.error).length;
   const falsePos = [...marked].filter((i) => !lines[i]!.error).length;
   const score = Math.max(0, hits - falsePos);
-  usePracticeDone("DIALOGUE_AUDIT", checked, toScorePct(score, totalErrors));
+  // Пустая проверка («Проверить» без единой отметки) тренировкой не считается.
+  usePracticeDone("DIALOGUE_AUDIT", checked && marked.size > 0, toScorePct(score, totalErrors));
 
   return (
     <div className="rounded-2xl border border-foreground/10 bg-background p-4 sm:p-5">
@@ -115,7 +116,9 @@ export function DialogueAudit({ data }: { data: DialogueAuditData }) {
         {!checked ? (
           <button
             onClick={() => setChecked(true)}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-slate-950 transition-colors hover:bg-amber-400"
+            disabled={marked.size === 0}
+            title={marked.size === 0 ? "Сначала отметьте реплики с ошибками" : undefined}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-slate-950 transition-colors hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Проверить
           </button>
