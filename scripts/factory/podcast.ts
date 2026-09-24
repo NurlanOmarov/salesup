@@ -70,6 +70,7 @@ const QUEUE_ORDER = [
   "sales-kitchens",
   "service-pawnshop",
   "sales-kitchens-basics",
+  "sales-b2b-chemistry",
 ];
 
 /** NotebookLM ограничивает число Audio Overview в день — отличаем от прочих сбоев. */

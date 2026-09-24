@@ -15,8 +15,8 @@ export const HANDOUT: CourseHandout = {
   courseTitle: "Продажи B2B в промышленной химии",
   decks: [
     {
-      dir: "01-Десять рекомендаций",
-      file: "01 — Десять рекомендаций",
+      dir: "01-10 рекомендаций",
+      file: "01 — 10 рекомендаций",
       slides: [
         {
           layout: "cover",
@@ -196,8 +196,8 @@ export const HANDOUT: CourseHandout = {
       ],
     },
     {
-      dir: "03-Десять ошибок",
-      file: "03 — Десять ошибок",
+      dir: "03-10 ошибок",
+      file: "03 — 10 ошибок",
       slides: [
         {
           layout: "cover",
