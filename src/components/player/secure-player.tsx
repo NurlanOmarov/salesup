@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import Hls from "hls.js";
 import { saveLessonProgress } from "@/app/(student)/app/learn/[courseSlug]/[lessonId]/actions";
-import { usePlayerRegistration } from "@/components/player/player-context";
+import { usePlayerRegistration, usePlayerEnded } from "@/components/player/player-context";
 
 /**
  * Защищённый HLS-плеер (CLAUDE.md, правило 2 / S2.2). Источник — наш проксирующий
@@ -44,6 +44,7 @@ export function SecurePlayer({
   const watchedRef = useRef(0); // секунды реального просмотра с последнего сохранения
   const lastTickRef = useRef<number | null>(null);
   const registerPlayer = usePlayerRegistration();
+  const notifyEndedRef = useRef(usePlayerEnded());
 
   const [levels, setLevels] = useState<Level[]>([]);
   const [currentLevel, setCurrentLevel] = useState(-1); // -1 = авто
@@ -155,9 +156,11 @@ export function SecurePlayer({
       lastTickRef.current = now;
     };
     const onPause = () => persist();
+    const onEnded = () => notifyEndedRef.current();
 
     video.addEventListener("timeupdate", onTime);
     video.addEventListener("pause", onPause);
+    video.addEventListener("ended", onEnded);
     const interval = setInterval(persist, SAVE_INTERVAL_MS);
     const onUnload = () => persist();
     window.addEventListener("beforeunload", onUnload);
@@ -165,6 +168,7 @@ export function SecurePlayer({
     return () => {
       video.removeEventListener("timeupdate", onTime);
       video.removeEventListener("pause", onPause);
+      video.removeEventListener("ended", onEnded);
       clearInterval(interval);
       window.removeEventListener("beforeunload", onUnload);
       persist();

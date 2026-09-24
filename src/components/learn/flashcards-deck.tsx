@@ -4,6 +4,8 @@ import { useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { ChevronLeft, ChevronRight, RotateCw, RefreshCw, Check } from "lucide-react";
 import type { FlashcardsData } from "@/lib/interactive";
+import { usePracticeDone } from "@/components/learn/practice-context";
+import { toScorePct } from "@/lib/learn/practice";
 
 /**
  * Тренажёр флеш-карточек урока: лицо (термин/вопрос) → переворот → оборот (ответ).
@@ -17,6 +19,10 @@ export function FlashcardsDeck({ deck }: { deck: FlashcardsData }) {
   const [flipped, setFlipped] = useState(false);
   const reduceMotion = useReducedMotion();
   const [known, setKnown] = useState<Set<number>>(new Set());
+  // Карточка «просмотрена», когда её перевернули или отметили «знаю». Прошёл
+  // колоду — тренажёр засчитан; балл — доля карточек, отмеченных «знаю».
+  const [seen, setSeen] = useState<Set<number>>(new Set());
+  usePracticeDone("FLASHCARDS", total > 0 && seen.size >= total, toScorePct(known.size, total));
 
   const go = (next: number) => {
     setFlipped(false);
@@ -25,11 +31,13 @@ export function FlashcardsDeck({ deck }: { deck: FlashcardsData }) {
 
   const markKnown = () => {
     setKnown((s) => new Set(s).add(index));
+    setSeen((s) => new Set(s).add(index));
     if (index < total - 1) go(index + 1);
   };
 
   const reset = () => {
     setKnown(new Set());
+    setSeen(new Set());
     setFlipped(false);
     setIndex(0);
   };
@@ -51,7 +59,10 @@ export function FlashcardsDeck({ deck }: { deck: FlashcardsData }) {
 
       {/* Карточка с переворотом */}
       <button
-        onClick={() => setFlipped((f) => !f)}
+        onClick={() => {
+          setFlipped((f) => !f);
+          setSeen((s) => new Set(s).add(index));
+        }}
         className="group relative mt-3 flex min-h-[200px] w-full items-center justify-center overflow-hidden rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/[0.07] to-transparent p-6 text-center transition-colors hover:from-amber-500/[0.12] sm:min-h-[240px]"
         style={{ perspective: 1000 }}
       >

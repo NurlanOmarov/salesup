@@ -1,5 +1,6 @@
 import type { OrgRole } from "@prisma/client";
 import { db } from "@/lib/db";
+import { trainerKindsByLesson } from "@/lib/learn/practice-server";
 import { computeSeatUsage, type SeatUsage } from "@/lib/org/seats";
 
 /**
@@ -324,6 +325,10 @@ export interface MemberRow {
   progress: number;
   lessonsDone: number;
   lessonsTotal: number;
+  /** Уроки с тренажёрами, где работник прошёл хотя бы одну тренировку. */
+  practiceDone: number;
+  /** Уроки с тренажёрами в открытых работнику курсах. */
+  practiceTotal: number;
   /** Средний балл сданных тестов, % (null — ни одного сданного). */
   avgScore: number | null;
   certificates: number;
@@ -438,6 +443,24 @@ export async function getOrgMembers(orgId: string): Promise<MemberRow[]> {
   });
   const certsByUser = new Map(certs.map((c) => [c.userId, c._count._all]));
 
+  // Тренировки: уроки с тренажёрами и где работник прошёл хоть один тренажёр.
+  const [trainerKinds, practiceRows] = await Promise.all([
+    trainerKindsByLesson(lessonIds),
+    lessonIds.length
+      ? db.practiceResult.findMany({
+          where: { userId: { in: userIds }, lessonId: { in: lessonIds } },
+          select: { userId: true, lessonId: true },
+          distinct: ["userId", "lessonId"],
+        })
+      : Promise.resolve([]),
+  ]);
+  const practicedByUser = new Map<string, Set<string>>();
+  for (const r of practiceRows) {
+    const set = practicedByUser.get(r.userId) ?? new Set<string>();
+    set.add(r.lessonId);
+    practicedByUser.set(r.userId, set);
+  }
+
   return memberships.map((m) => {
     const userCourses = coursesByUser.get(m.userId) ?? [];
     const total = userCourses.reduce(
@@ -452,6 +475,8 @@ export async function getOrgMembers(orgId: string): Promise<MemberRow[]> {
     );
     const done = doneSet ? [...doneSet].filter((id) => allowed.has(id)).length : 0;
     const avg = avgByUser.get(m.userId);
+    const practiceLessons = [...allowed].filter((id) => trainerKinds.has(id));
+    const practiced = practicedByUser.get(m.userId);
 
     return {
       membershipId: m.id,
@@ -466,6 +491,8 @@ export async function getOrgMembers(orgId: string): Promise<MemberRow[]> {
       progress: total === 0 ? 0 : done / total,
       lessonsDone: done,
       lessonsTotal: total,
+      practiceDone: practiced ? practiceLessons.filter((id) => practiced.has(id)).length : 0,
+      practiceTotal: practiceLessons.length,
       avgScore: avg == null ? null : Math.round(avg),
       certificates: certsByUser.get(m.userId) ?? 0,
       lastActiveAt: lastActiveByUser.get(m.userId) ?? null,
@@ -658,6 +685,8 @@ export interface OrgProgressMember {
   progress: number;
   lessonsDone: number;
   lessonsTotal: number;
+  practiceDone: number;
+  practiceTotal: number;
   avgScore: number | null;
   certificates: number;
   lastActiveAt: Date | null;
@@ -754,6 +783,8 @@ export async function getOrgProgressSnapshot(
         progress: m.progress,
         lessonsDone: m.lessonsDone,
         lessonsTotal: m.lessonsTotal,
+        practiceDone: m.practiceDone,
+        practiceTotal: m.practiceTotal,
         avgScore: m.avgScore,
         certificates: m.certificates,
         lastActiveAt: m.lastActiveAt,

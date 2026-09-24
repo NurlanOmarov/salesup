@@ -4,6 +4,8 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PartyPopper, RotateCcw, XCircle } from "lucide-react";
 import type { ObjectionScaleData, ScaleOption } from "@/lib/interactive";
+import { usePracticeDone } from "@/components/learn/practice-context";
+import { toScorePct } from "@/lib/learn/practice";
 
 /**
  * Игра «весы возражения» (S: bespoke). На каждый раунд — реплика клиента и пул
@@ -23,6 +25,9 @@ export function ObjectionScale({ data }: { data: ObjectionScaleData }) {
   const [feedback, setFeedback] = useState<{ tone: "good" | "bad"; text: string } | null>(null);
   const [won, setWon] = useState(false);
   const [left, setLeft] = useState(false); // клиент ушёл — раунд провален
+  // Раунды, снятые позитивом с первой попытки (без промахов и без «Заново»).
+  const [cleanWins, setCleanWins] = useState(0);
+  const [dirty, setDirty] = useState(false);
 
   function resetRoundState() {
     setDisabled(new Set());
@@ -36,12 +41,14 @@ export function ObjectionScale({ data }: { data: ObjectionScaleData }) {
   function pick(opt: ScaleOption, i: number) {
     if (disabled.has(i) || won || left) return;
     if (opt.positive) {
+      if (!dirty && misses === 0) setCleanWins((n) => n + 1);
       setTilt(2);
       setFeedback({ tone: "good", text: opt.feedback });
       setWon(true);
       return;
     }
     const nextMisses = misses + 1;
+    setDirty(true);
     setMisses(nextMisses);
     setDisabled((p) => new Set(p).add(i));
     setTilt(-Math.min(2, nextMisses));
@@ -53,6 +60,7 @@ export function ObjectionScale({ data }: { data: ObjectionScaleData }) {
 
   function nextRound() {
     resetRoundState();
+    setDirty(false);
     setRoundIdx((r) => Math.min(data.rounds.length - 1, r + 1));
   }
 
@@ -62,6 +70,7 @@ export function ObjectionScale({ data }: { data: ObjectionScaleData }) {
 
   const isLastRound = roundIdx >= data.rounds.length - 1;
   const allDone = won && isLastRound;
+  usePracticeDone("OBJECTION_SCALE", allDone, toScorePct(cleanWins, data.rounds.length));
 
   if (!round) return null;
 
@@ -165,6 +174,8 @@ export function ObjectionScale({ data }: { data: ObjectionScaleData }) {
                 type="button"
                 onClick={() => {
                   setRoundIdx(0);
+                  setCleanWins(0);
+                  setDirty(false);
                   resetRoundState();
                 }}
                 className="inline-flex items-center gap-1.5 text-xs font-medium text-foreground/50 transition-colors hover:text-foreground/80"

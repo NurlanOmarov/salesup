@@ -21,6 +21,7 @@ import {
   Volume2,
   Keyboard,
 } from "lucide-react";
+import { usePracticeDone } from "@/components/learn/practice-context";
 
 /**
  * Тренажёр-симулятор диалога (S-интерактив для продаж): ученик ведёт переписку с
@@ -86,6 +87,8 @@ export function SimulationChat({
   const [pending, setPending] = useState(false);
   const [remaining, setRemaining] = useState<number | null>(null);
   const [card, setCard] = useState<Scorecard | null>(null);
+  // Засчитываем только настоящий разбор: заглушка при ошибке сети фаз не содержит.
+  usePracticeDone("SIMULATION", !!card && card.phases.length > 0, card?.overallPct ?? null);
   const [voiceMode, setVoiceMode] = useState(false);
   const [voiceStatus, setVoiceStatus] = useState<VoiceStatus>("idle");
   const [voiceError, setVoiceError] = useState<string | null>(null);

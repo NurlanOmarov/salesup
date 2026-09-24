@@ -9,7 +9,7 @@ import { db } from "@/lib/db";
 export interface DailyQuestCounts {
   lessons: number; // уроков пройдено сегодня
   reviews: number; // карточек повторено сегодня
-  practice: number; // тренировок-диалогов сегодня (симуляции)
+  practice: number; // тренировок сегодня: тренажёры уроков + симуляции диалога
 }
 
 export interface DailyQuest {
@@ -32,7 +32,7 @@ export function buildDailyQuests(counts: DailyQuestCounts): DailyQuest[] {
   return [
     make("lesson", "Пройти урок", counts.lessons, 1),
     make("review", "Повторить 5 карточек", counts.reviews, 5),
-    make("practice", "Провести тренировку-диалог", counts.practice, 1),
+    make("practice", "Пройти тренажёр урока", counts.practice, 1),
   ];
 }
 
@@ -51,10 +51,12 @@ function startOfDay(now: Date): Date {
 /** Прогресс дневных целей ученика: считает активность из доменных таблиц за сегодня. */
 export async function dailyQuests(userId: string, now = new Date()): Promise<DailyQuest[]> {
   const since = startOfDay(now);
-  const [lessons, reviews, practice] = await Promise.all([
+  const [lessons, reviews, trainers, simulations] = await Promise.all([
     db.lessonProgress.count({ where: { userId, completedAt: { gte: since } } }),
     db.cardReview.count({ where: { userId, lastReviewedAt: { gte: since } } }),
+    // updatedAt — чтобы засчитывалось и повторное прохождение, не только первое.
+    db.practiceResult.count({ where: { userId, updatedAt: { gte: since } } }),
     db.simulationRun.count({ where: { userId, finishedAt: { gte: since } } }),
   ]);
-  return buildDailyQuests({ lessons, reviews, practice });
+  return buildDailyQuests({ lessons, reviews, practice: trainers + simulations });
 }

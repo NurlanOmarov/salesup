@@ -87,6 +87,8 @@ export const handlers: Record<string, JobHandler> = {
         newStudents: d.newStudents,
         active: d.activeStudents,
         certs: d.certificatesIssued,
+        practiceFinishes: d.practiceFinishes,
+        practiceCoverage: d.practiceCoverage,
         llmUsd: d.llmCostUsd,
         notFound404: d.notFoundTotal,
         redirectHits: d.redirectHits,

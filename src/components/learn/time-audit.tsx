@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Plus, X } from "lucide-react";
 import type { TimeAuditData } from "@/lib/interactive";
+import { usePracticeDone } from "@/components/learn/practice-context";
 
 /**
  * Хронометраж / пожиратели времени. Ученик логирует часы дня по делам и помечает
@@ -40,6 +41,9 @@ export function TimeAudit({ data }: { data: TimeAuditData }) {
   const wastedPct = total > 0 ? Math.round((wasted / total) * 100) : 0;
   // Экстраполяция: потери в день × 250 рабочих дней ÷ 40 ч в неделе.
   const weeksPerYear = Math.round((wasted * 250) / 40);
+  // Засчитываем свой хронометраж: добавлено своё занятие и найден хотя бы один пожиратель.
+  const ownActs = acts.length - (data.seedActivities?.length ?? 0);
+  usePracticeDone("TIME_AUDIT", ownActs >= 1 && acts.some((a) => a.waster));
 
   // Углы секторов
   let acc = 0;

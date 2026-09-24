@@ -5,6 +5,7 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Undo2 } from "lucide-react";
 import type { EisenhowerData } from "@/lib/interactive";
+import { usePracticeDone } from "@/components/learn/practice-context";
 
 /**
  * Интерактивная матрица Эйзенхауэра. Ученик вводит СВОИ задачи и раскладывает их
@@ -71,6 +72,8 @@ export function EisenhowerMatrix({ data }: { data: EisenhowerData }) {
   const [draft, setDraft] = useState("");
 
   const unsorted = tasks.filter((t) => t.q === null);
+  // Засчитываем, когда разложено хотя бы три задачи и неразобранных не осталось.
+  usePracticeDone("EISENHOWER", tasks.length >= 3 && unsorted.length === 0);
 
   function addTask() {
     const v = draft.trim();

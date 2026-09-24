@@ -4,6 +4,8 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, X, Lightbulb, ChevronRight, RefreshCw, Trophy, Quote } from "lucide-react";
 import type { ClientTypeKey, ClientTypesData } from "@/lib/interactive";
+import { usePracticeDone } from "@/components/learn/practice-context";
+import { toScorePct } from "@/lib/learn/practice";
 
 /**
  * Тренажёр типологии клиента (AiArtifact CLIENT_TYPES).
@@ -90,6 +92,9 @@ export function ClientTypesTrainer({ data }: { data: ClientTypesData }) {
   const [typeHits, setTypeHits] = useState(0);
   const [reactionHits, setReactionHits] = useState(0);
   const [done, setDone] = useState(false);
+
+  // Балл — доля верных ответов: и тип клиента, и реакция на каждой карточке.
+  usePracticeDone("CLIENT_TYPES", done, toScorePct(typeHits + reactionHits, total * 2));
 
   const card = cards[index];
   const typeAnswered = pickedType !== null;

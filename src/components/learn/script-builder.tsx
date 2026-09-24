@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Check, X, RefreshCw, Trophy, ArrowRight } from "lucide-react";
 import type { ScriptBuilderData } from "@/lib/interactive";
+import { usePracticeDone } from "@/components/learn/practice-context";
+import { toScorePct } from "@/lib/learn/practice";
 
 /**
  * Конструктор скрипта: ученик собирает этапы звонка/визита в правильном порядке,
@@ -35,6 +37,7 @@ export function ScriptBuilder({ data }: { data: ScriptBuilderData }) {
 
   const correctCount = picked.filter((stepIdx, pos) => stepIdx === pos).length;
   const allCorrect = checked && correctCount === steps.length;
+  usePracticeDone("SCRIPT_BUILDER", checked, toScorePct(correctCount, steps.length));
 
   return (
     <div className="rounded-2xl border border-foreground/10 bg-background p-4 sm:p-5">

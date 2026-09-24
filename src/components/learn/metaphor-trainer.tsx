@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { motion, AnimatePresence, useAnimationControls } from "framer-motion";
 import { Plus, X, RotateCcw, PartyPopper } from "lucide-react";
 import type { MetaphorData, MetaphorVariant } from "@/lib/interactive";
+import { usePracticeDone } from "@/components/learn/practice-context";
 
 /**
  * Тренажёры-метафоры тайм-менеджмента. Ученик работает со СВОИМИ задачами,
@@ -104,6 +105,7 @@ function AccumulatePanel({ data }: { data: MetaphorData }) {
   const capped = entries.length >= goal;
   const progress = Math.min(1, entries.length / goal);
   const done = entries.length >= goal;
+  usePracticeDone("TASK_METAPHOR", done);
 
   const showBigTask = data.variant === "elephant";
   const listLabel = data.variant === "nails" ? "Главные дела на день" : "Разбейте на куски";
@@ -231,6 +233,8 @@ function FrogPanel({ data }: { data: MetaphorData }) {
 
   const alive = frogs.filter((f) => !f.eaten);
   const maxLevel = alive.reduce((m, f) => Math.max(m, f.level), 0);
+  // Съел самую противную первой — 100; каждое откладывание снимает 25.
+  usePracticeDone("TASK_METAPHOR", finished !== null, Math.max(0, 100 - growth * 25));
 
   function addFrog() {
     const v = draft.trim();

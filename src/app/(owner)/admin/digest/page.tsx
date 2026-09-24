@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Users, UserPlus, PlayCircle, GraduationCap, Award, Inbox, Coins, HardDrive, ThumbsDown, AlertTriangle, FileWarning, ArrowRightLeft } from "lucide-react";
+import { Users, UserPlus, PlayCircle, GraduationCap, Award, Inbox, Coins, HardDrive, ThumbsDown, AlertTriangle, FileWarning, ArrowRightLeft, Dumbbell, Target } from "lucide-react";
 import { buildDigest } from "@/lib/digest/build";
 import { formatUsd } from "@/lib/ai/pricing";
 
@@ -39,6 +39,19 @@ export default async function DigestPage() {
         { icon: PlayCircle, label: "Уроков пройдено", value: d.lessonsCompleted, sub: "за 7 дней" },
         { icon: GraduationCap, label: "Тестов сдано", value: d.quizzesPassed, sub: "за 7 дней" },
         { icon: Award, label: "Сертификатов", value: d.certificatesIssued, sub: "выдано" },
+      ],
+    },
+    {
+      title: "Практика",
+      cards: [
+        { icon: Dumbbell, label: "Тренажёров пройдено", value: d.practiceFinishes, sub: `открывали ${d.practiceOpens} раз` },
+        { icon: Users, label: "Тренировались", value: d.practiceStudents, sub: "учеников за 7 дней" },
+        {
+          icon: Target,
+          label: "Уроки с практикой",
+          value: d.practiceCoverage == null ? "—" : `${Math.round(d.practiceCoverage * 100)}%`,
+          sub: "досмотренных уроков закреплены тренажёром",
+        },
       ],
     },
     {

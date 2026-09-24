@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PartyPopper, RotateCcw } from "lucide-react";
 import { CART_KIND_ORDER, type CartQuestion, type NeedsCartData } from "@/lib/interactive";
+import { usePracticeDone } from "@/components/learn/practice-context";
 
 const KIND_LABEL: Record<string, string> = {
   open: "открытый",
@@ -29,9 +30,13 @@ export function NeedsCart({ data }: { data: NeedsCartData }) {
   // Пока в пуле остались вопросы более раннего типа воронки — принимаем только их.
   const minKindInPool = pool.reduce((m, q) => Math.min(m, CART_KIND_ORDER[q.kind]), Infinity);
   const done = pool.length === 0;
+  // Каждый вопрос не по порядку воронки снимает 15 баллов.
+  const [misses, setMisses] = useState(0);
+  usePracticeDone("NEEDS_CART", done, Math.max(0, 100 - misses * 15));
 
   function pick(q: CartQuestion, i: number) {
     if (CART_KIND_ORDER[q.kind] > minKindInPool) {
+      setMisses((m) => m + 1);
       const earlierLabel = KIND_LABEL[KIND_BY_PRIORITY[minKindInPool] ?? "open"];
       setReject({
         i,
@@ -49,6 +54,7 @@ export function NeedsCart({ data }: { data: NeedsCartData }) {
     setPicked([]);
     setPool(data.questions);
     setReject(null);
+    setMisses(0);
   }
 
   return (

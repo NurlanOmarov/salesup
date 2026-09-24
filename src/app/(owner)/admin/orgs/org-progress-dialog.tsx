@@ -332,6 +332,11 @@ function SnapshotBody({ data }: { data: OrgProgressSnapshot }) {
                       <span className="text-xs text-foreground/45">
                         {m.lessonsDone} из {m.lessonsTotal} уроков
                       </span>
+                      {m.practiceTotal > 0 ? (
+                        <span className="block text-xs text-foreground/45">
+                          тренировки: {m.practiceDone} из {m.practiceTotal}
+                        </span>
+                      ) : null}
                     </td>
                     <td className="px-3 py-2 text-foreground/70">
                       {m.avgScore == null ? "—" : `${m.avgScore}%`}

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PartyPopper, RotateCcw, ThumbsDown, ThumbsUp } from "lucide-react";
 import type { StageLadderData } from "@/lib/interactive";
+import { usePracticeDone } from "@/components/learn/practice-context";
 
 /**
  * Игра «лестница этапов продажи» (S: bespoke, по образцу metaphor-trainer.tsx).
@@ -21,6 +22,9 @@ export function StageLadder({ data }: { data: StageLadderData }) {
   const [shake, setShake] = useState(false);
   const [feedback, setFeedback] = useState<{ ok: boolean; text: string } | null>(null);
   const [done, setDone] = useState(false);
+  const [misses, setMisses] = useState(0);
+  // Каждый неверный выбор на «реакции клиента» снимает треть балла.
+  usePracticeDone("STAGE_LADDER", done, Math.max(0, 100 - misses * 34));
 
   const card = data.reactionCards[cardIdx];
 
@@ -35,12 +39,14 @@ export function StageLadder({ data }: { data: StageLadderData }) {
     setShake(false);
     setFeedback(null);
     setDone(false);
+    setMisses(0);
   }
 
   function choose(choiceClose: boolean) {
     if (!card) return;
     const correct = choiceClose === card.positive;
     if (!correct) {
+      setMisses((m) => m + 1);
       setShake(true);
       setFeedback({ ok: false, text: card.explanation });
       setTimeout(() => setShake(false), 420);

@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Dumbbell, ChevronRight } from "lucide-react";
 import { requireUser } from "@/lib/auth/guards";
 import { db } from "@/lib/db";
 import { canAccessCourse, canAccessLesson, hasDemoLimit } from "@/lib/access";
 import { ExamRunner } from "./exam-runner";
+import { coursePracticeGate } from "@/lib/learn/practice-server";
+import { PRACTICE_LABELS } from "@/lib/learn/practice";
 import type { RunnerQuestion } from "@/components/quiz/types";
 
 export const metadata: Metadata = {
@@ -33,7 +35,7 @@ export default async function QuizPage({
       passScore: true,
       maxAttempts: true,
       status: true,
-      course: { select: { slug: true, title: true, completionMessage: true } },
+      course: { select: { id: true, slug: true, title: true, completionMessage: true } },
       lesson: { select: { id: true, title: true, requiresQuizPass: true, module: { select: { course: { select: { slug: true, title: true } } } } } },
       questions: {
         where: { validation: "VALIDATED" },
@@ -71,6 +73,68 @@ export default async function QuizPage({
       select: { id: true },
     });
     if (courseRow && (await hasDemoLimit(userId, courseRow.id))) notFound();
+  }
+
+  // Допуск практикой: итоговый экзамен — после тренировки в каждом уроке с
+  // тренажёрами. Иначе курс проходили цепочкой «видео → тест», не открывая практику.
+  // Кто уже сдал экзамен, не блокируем; владелец видит экзамен всегда.
+  if (!quiz.lesson && quiz.course && session.user.role !== "OWNER") {
+    const passedExam = await db.quizAttempt.count({ where: { quizId, userId, status: "PASSED" } });
+    if (passedExam === 0) {
+      const gate = await coursePracticeGate(userId, quiz.course.id);
+      if (gate.missing.length > 0) {
+        const doneCount = gate.total - gate.missing.length;
+        return (
+          <main className="mx-auto max-w-2xl px-4 py-8">
+            <Link
+              href="/app"
+              className="inline-flex items-center gap-1.5 text-sm text-foreground/60 transition-colors hover:text-foreground"
+            >
+              <ArrowLeft className="size-4" />
+              Моё обучение
+            </Link>
+            <div className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/[0.06] p-5 sm:p-6">
+              <div className="flex size-12 items-center justify-center rounded-2xl bg-amber-500/15 text-amber-700">
+                <Dumbbell className="size-6" />
+              </div>
+              <h1 className="mt-3 text-xl font-bold">{quiz.title}: сначала практика</h1>
+              <p className="mt-2 text-foreground/70">
+                Итоговый экзамен открывается, когда в каждом уроке пройдена тренировка. Тест
+                проверяет знания, а тренажёр — умение применить их в разговоре с клиентом.
+                Каждая тренировка занимает пару минут.
+              </p>
+              <p className="mt-3 text-sm font-medium text-foreground/60">
+                Тренировки: {doneCount} из {gate.total}
+              </p>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-foreground/10">
+                <div
+                  className="h-full rounded-full bg-amber-500"
+                  style={{ width: `${Math.round((doneCount / gate.total) * 100)}%` }}
+                />
+              </div>
+            </div>
+            <ul className="mt-4 space-y-2">
+              {gate.missing.map((l) => (
+                <li key={l.lessonId}>
+                  <Link
+                    href={`/app/learn/${quiz.course!.slug}/${l.lessonId}?tab=practice`}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-foreground/10 p-4 transition-colors hover:bg-foreground/[0.03]"
+                  >
+                    <span className="min-w-0">
+                      <span className="block font-medium">{l.title}</span>
+                      <span className="block text-sm text-foreground/55">
+                        Тренажёр «{PRACTICE_LABELS[l.mainKind]}»
+                      </span>
+                    </span>
+                    <ChevronRight className="size-5 shrink-0 text-amber-700" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </main>
+        );
+      }
+    }
   }
 
   // «Назад» — в кабинет (для итогового экзамена) или к уроку (для задания урока),

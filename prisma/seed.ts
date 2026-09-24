@@ -229,6 +229,8 @@ const BADGES = [
   { code: "course-complete", title: "Курс пройден", description: "Пройден весь курс и сдан итоговый экзамен" },
   { code: "first-ai-client", title: "Первая сделка с ИИ-клиентом", description: "Завершена первая симуляция продажи" },
   { code: "perfect-exam", title: "100% по итоговому тесту", description: "Идеальный результат финального экзамена" },
+  { code: "first-practice", title: "Первая тренировка", description: "Пройден первый тренажёр урока" },
+  { code: "practice-course", title: "Практик", description: "Пройдены тренажёры во всех уроках курса" },
 ];
 
 // publish: урок публикуется сразу при создании (обычно вводный ролик курса);

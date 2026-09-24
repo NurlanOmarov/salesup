@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CheckCircle2, Circle, Lock, PlayCircle, GraduationCap } from "lucide-react";
+import { CheckCircle2, Circle, Lock, PlayCircle, GraduationCap, Dumbbell } from "lucide-react";
 
 export interface SidebarLesson {
   id: string;
@@ -11,6 +11,8 @@ export interface SidebarLesson {
   /** Закрыт границей демо-доступа — в отличие от `locked`, кликабелен: ведёт на
    *  пейволл. Видимый платный урок продаёт, спрятанный — нет. */
   demoLocked?: boolean;
+  /** Тренировка урока: пройдена / ещё нет; null — у урока нет тренажёров. */
+  practice?: "done" | "todo" | null;
 }
 
 export interface SidebarModule {
@@ -71,7 +73,24 @@ export function LessonSidebar({
                       ].join(" ")}
                     />
                     <span className="line-clamp-2">{l.title}</span>
-                    {isCurrent ? <PlayCircle className="ml-auto size-4 shrink-0 text-amber-600" /> : null}
+                    {/* Гантель: тренировка урока пройдена (зелёная) или ждёт после
+                        просмотра (янтарная) — видно, где практика пропущена. */}
+                    {l.practice === "done" || (l.practice === "todo" && l.completed) ? (
+                      <Dumbbell
+                        aria-label={l.practice === "done" ? "Тренировка пройдена" : "Тренировка не пройдена"}
+                        className={[
+                          "ml-auto size-3.5 shrink-0",
+                          l.practice === "done" ? "text-emerald-600" : "text-amber-500",
+                        ].join(" ")}
+                      />
+                    ) : null}
+                    {isCurrent ? (
+                      <PlayCircle
+                        className={`size-4 shrink-0 text-amber-600 ${
+                          l.practice === "done" || (l.practice === "todo" && l.completed) ? "" : "ml-auto"
+                        }`}
+                      />
+                    ) : null}
                   </span>
                 );
                 return (

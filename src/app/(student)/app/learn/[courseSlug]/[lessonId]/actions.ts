@@ -8,6 +8,12 @@ import { awardXp, awardBadge, touchStreak } from "@/lib/gamification/award";
 import { XP_REWARDS } from "@/lib/gamification/levels";
 import { addNote, deleteNote } from "@/lib/learn/notes";
 import { markCertificateReadyIfEligible } from "@/lib/certificates/issue";
+import { PRACTICE_KINDS } from "@/lib/learn/practice";
+import {
+  recordPracticeFinish,
+  recordPracticeOpen,
+  trainerKindsByLesson,
+} from "@/lib/learn/practice-server";
 
 /**
  * Сохранение прогресса просмотра урока (S2.2/S4.2): upsert LessonProgress каждые
@@ -105,5 +111,36 @@ export const deleteNoteAction = safeAction(
   async ({ noteId }, { session }) => {
     await deleteNote(session!.user.id, noteId);
     return { ok: true };
+  },
+);
+
+/**
+ * Тренажёр урока открыт или пройден. Тренажёры считают итог в браузере — сюда
+ * приходит только вид и балл. Засчитываем лишь те виды, что реально есть у урока:
+ * иначе прямым запросом можно было бы «пройти» практику и открыть экзамен.
+ */
+export const reportPracticeAction = safeAction(
+  {
+    schema: z.object({
+      lessonId: z.string().min(1),
+      kind: z.enum(PRACTICE_KINDS),
+      phase: z.enum(["open", "finish"]),
+      scorePct: z.number().int().min(0).max(100).nullable().optional(),
+    }),
+    auth: "user",
+  },
+  async ({ lessonId, kind, phase, scorePct }, { session }) => {
+    const userId = session!.user.id;
+    const access = await canAccessLesson(userId, lessonId);
+    if (!access.ok) throw new Error("Нет доступа к уроку");
+
+    const available = (await trainerKindsByLesson([lessonId])).get(lessonId);
+    if (!available?.has(kind)) throw new Error("У урока нет такого тренажёра");
+
+    if (phase === "open") {
+      await recordPracticeOpen(userId, lessonId, kind);
+      return { firstTime: false, lessonStepDone: false, xpGained: 0, bestScore: null };
+    }
+    return recordPracticeFinish(userId, lessonId, kind, scorePct ?? null);
   },
 );

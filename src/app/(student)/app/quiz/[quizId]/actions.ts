@@ -8,6 +8,7 @@ import { scoreAttempt, type QuestionLike, type GradableType } from "@/lib/quiz/s
 import { markCertificateReadyIfEligible } from "@/lib/certificates/issue";
 import { awardXp, awardBadge } from "@/lib/gamification/award";
 import { XP_REWARDS } from "@/lib/gamification/levels";
+import { coursePracticeGate } from "@/lib/learn/practice-server";
 
 /**
  * Приём и оценка попытки теста (S4.1). Правильные ответы НЕ покидают сервер до сдачи:
@@ -65,6 +66,15 @@ export const submitQuizAttempt = safeAction(
     if (!access.ok) throw new Error("Нет доступа к курсу");
     if (!lessonId && quiz.courseId && (await hasDemoLimit(userId, quiz.courseId))) {
       throw new Error("Итоговый экзамен доступен после оплаты полного курса");
+    }
+
+    // Допуск практикой к итоговому экзамену (как на странице теста): сдавшие
+    // раньше и владелец не блокируются.
+    if (!lessonId && quiz.courseId && session!.user.role !== "OWNER") {
+      const passedBefore = await db.quizAttempt.count({ where: { quizId, userId, status: "PASSED" } });
+      if (passedBefore === 0 && (await coursePracticeGate(userId, quiz.courseId)).missing.length > 0) {
+        throw new Error("Сначала пройдите тренировки во всех уроках курса");
+      }
     }
 
     // Лимит пересдач

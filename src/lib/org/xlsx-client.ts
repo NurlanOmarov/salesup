@@ -14,6 +14,8 @@ export interface MemberReportRow {
   courses: number;
   lessonsDone: number;
   lessonsTotal: number;
+  /** «3 из 5» — уроки с тренажёрами, где работник тренировался; "" — тренажёров нет. */
+  practice: string;
   progressPct: number;
   avgScore: number | null;
   certificates: number;
@@ -70,6 +72,7 @@ export async function downloadOrgReportXlsx(input: OrgReportInput): Promise<void
     { header: "Курсов", key: "courses", width: 10 },
     { header: "Пройдено уроков", key: "lessons", width: 18 },
     { header: "Прогресс, %", key: "progress", width: 13 },
+    { header: "Тренировки", key: "practice", width: 14 },
     { header: "Средний балл, %", key: "score", width: 17 },
     { header: "Сертификатов", key: "certs", width: 14 },
     { header: "Последняя активность", key: "active", width: 22 },
@@ -95,6 +98,7 @@ export async function downloadOrgReportXlsx(input: OrgReportInput): Promise<void
       courses: m.courses,
       lessons: `${m.lessonsDone} из ${m.lessonsTotal}`,
       progress: m.progressPct,
+      practice: m.practice,
       score: m.avgScore ?? "",
       certs: m.certificates,
       active: m.lastActive,

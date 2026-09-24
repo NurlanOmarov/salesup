@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Check } from "lucide-react";
 import type { SmartGoalData } from "@/lib/interactive";
+import { usePracticeDone } from "@/components/learn/practice-context";
 
 /**
  * SMART-цель: расплывчатая цель «фокусируется» по мере ответа на 5 критериев —
@@ -27,6 +28,7 @@ export function SmartGoal({ data }: { data: SmartGoalData }) {
 
   const filled = CRITERIA.filter((c) => (answers[c.key] ?? "").trim().length >= 2).length;
   const done = filled === CRITERIA.length && goal.trim().length >= 2;
+  usePracticeDone("SMART_GOAL", done);
 
   return (
     <div className="rounded-2xl border border-foreground/10 bg-background p-5 sm:p-6">

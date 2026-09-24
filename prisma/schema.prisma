@@ -79,6 +79,7 @@ model User {
   events          Event[]
   llmUsage        LlmUsage[]
   cardReviews     CardReview[]
+  practiceResults PracticeResult[]
   orgMemberships  OrgMembership[]
 }
 
@@ -182,74 +183,74 @@ enum AccessDuration {
 }
 
 model Course {
-  id                  String         @id @default(cuid())
-  slug                String         @unique
-  type                ProductType    @default(COURSE)
-  title               String
-  subtitle            String?
-  description         String         @db.Text // markdown; генерируется фабрикой из транскриптов
-  industry            String?
-  audience            CourseAudience @default(SPECIALIZED) // ось витрины «для кого» (фильтр /courses)
-  coverUrl            String?
-  coverAlt            String? // alt-текст обложки (image SEO/доступность); генерируется AI по картинке
-  promoVideoKey       String? // ключ HLS-папки трейлера в lib/storage (публичный, без шифрования)
+  id                     String         @id @default(cuid())
+  slug                   String         @unique
+  type                   ProductType    @default(COURSE)
+  title                  String
+  subtitle               String?
+  description            String         @db.Text // markdown; генерируется фабрикой из транскриптов
+  industry               String?
+  audience               CourseAudience @default(SPECIALIZED) // ось витрины «для кого» (фильтр /courses)
+  coverUrl               String?
+  coverAlt               String? // alt-текст обложки (image SEO/доступность); генерируется AI по картинке
+  promoVideoKey          String? // ключ HLS-папки трейлера в lib/storage (публичный, без шифрования)
   /// Промо-ролики курса на витрине: [{ id, vertical, title? }] — только ID видео,
   /// сами ролики остаются на YouTube (правило 10 — бюджет диска VPS). Разбор и
   /// нормализация — lib/courses/promo-video.ts.
-  promoVideos         Json?
-  priceTiyn           Int
-  oldPriceTiyn        Int?
+  promoVideos            Json?
+  priceTiyn              Int
+  oldPriceTiyn           Int?
   /// ID товара в WooCommerce на activesales.by. Заполнен → на витрине кнопка
   /// «Купить» ведёт в магазин, а оплаченный заказ открывает доступ автоматически
   /// (docs/WOO-INTEGRATION.md). Пусто → курс продаётся только вручную.
   /// Заказ ищет курс сначала по SKU товара (SKU = slug), это поле — запасной ключ.
-  wooProductId        Int?           @unique
+  wooProductId           Int?           @unique
   /// Постоянная платёжная ссылка курса из личного кабинета Альфа-Банка
   /// (https://ecom.alfabank.by/sc/…). Задана → на витрине кнопка «Оплатить»,
   /// а оплата открывает доступ автоматически (docs/ALFA-PAYMENT-LINKS.md).
   /// Курс определяется параметром `course` = slug, зашитым в саму ссылку.
-  alfaPaymentUrl      String?
+  alfaPaymentUrl         String?
   /// Срок доступа, который получает ученик по умолчанию («по тарифу курса» в
   /// админке). Год — базовое решение тарифного плана: материалы остаются у
   /// ученика, а AI-практика тратит токены и не может быть бессрочной
   /// (docs/PRICING-PLAN.md §9). Бессрочный доступ — осознанный выбор в сделке.
-  accessDuration      AccessDuration @default(MONTHS_12)
-  status              PublishStatus  @default(DRAFT)
-  inDevelopment       Boolean        @default(false) // бейдж «В разработке» на витрине (курс виден, но контент ещё не готов)
-  sortOrder           Int            @default(0)
+  accessDuration         AccessDuration @default(MONTHS_12)
+  status                 PublishStatus  @default(DRAFT)
+  inDevelopment          Boolean        @default(false) // бейдж «В разработке» на витрине (курс виден, но контент ещё не готов)
+  sortOrder              Int            @default(0)
   // Фабрика курсов
-  sourcePlaylistUrl   String? // YouTube-плейлист — источник курса
-  factoryRunAt        DateTime? // когда курс собран/пересобран фабрикой
+  sourcePlaylistUrl      String? // YouTube-плейлист — источник курса
+  factoryRunAt           DateTime? // когда курс собран/пересобран фабрикой
   // Сертификат
-  certificateEnabled  Boolean        @default(true)
-  certificateMinScore Int            @default(80)
-  hoursLabel          String?
+  certificateEnabled     Boolean        @default(true)
+  certificateMinScore    Int            @default(80)
+  hoursLabel             String?
   /// Благодарность по окончании курса — показывается после сдачи экзамена, в
   /// кабинете и на странице сертификатов. Нужна, когда курс — часть большой
   /// программы (sales-diy — первая часть ещё не вышедшего курса). null — не показывать.
-  completionMessage   String?        @db.Text
+  completionMessage      String?        @db.Text
   /// Название курса на сертификате, если отличается от витринного
   /// (sales-diy: «Эффективные продажи в DIY»). null — берётся title.
   certificateCourseTitle String?
   /// Что именно пройдено — строка сертификата после «успешно прошёл(ла)»:
   /// «бизнес-курс онлайн» по умолчанию, у sales-diy — «вводную часть бизнес-курса онлайн».
-  certificateLead     String?
+  certificateLead        String?
   // SEO (генерируется фабрикой, валидируется критиком; поля *Title/*Description —
   // ручной override владельца поверх фабрики: пусто → берётся сгенерённое/дефолт).
-  seoTitle            String?
-  seoDescription      String?
-  ogImageUrl          String?
-  ogTitle             String? // override OG-заголовка (иначе title)
-  ogDescription       String? // override OG-описания (иначе subtitle)
-  canonicalPath       String? // override canonical (иначе /courses/<slug>)
-  focusKeyword        String? // целевой запрос — для AI-скоринга и подсказок
-  seoNoindex          Boolean        @default(false) // снять из индекса (напр. черновик-препринт)
-  learnPoints         Json? // string[]
-  targetAudience      Json? // string[]
-  faq                 Json? // {q,a}[]
-  publishedAt         DateTime?
-  createdAt           DateTime       @default(now())
-  updatedAt           DateTime       @updatedAt
+  seoTitle               String?
+  seoDescription         String?
+  ogImageUrl             String?
+  ogTitle                String? // override OG-заголовка (иначе title)
+  ogDescription          String? // override OG-описания (иначе subtitle)
+  canonicalPath          String? // override canonical (иначе /courses/<slug>)
+  focusKeyword           String? // целевой запрос — для AI-скоринга и подсказок
+  seoNoindex             Boolean        @default(false) // снять из индекса (напр. черновик-препринт)
+  learnPoints            Json? // string[]
+  targetAudience         Json? // string[]
+  faq                    Json? // {q,a}[]
+  publishedAt            DateTime?
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
 
   modules      Module[]
   enrollments  Enrollment[]
@@ -343,6 +344,7 @@ model Lesson {
   simulationScenarios SimulationScenario[]
   contentGaps         ContentGap[]
   aiArtifacts         AiArtifact[]
+  practiceResults     PracticeResult[]
   subtitles           SubtitleTrack[]
   podcastStatus       PodcastLessonStatus?
 
@@ -830,29 +832,29 @@ enum CertificateStatus {
 }
 
 model Certificate {
-  id         String            @id @default(cuid())
-  number     String?           @unique // присваивается вручную при выдаче
-  userId     String
-  courseId   String
-  holderName String? // ФИО — вводит сам ученик на шаге 2, с согласием (consentAt); D-019
-  scorePct   Int?
-  hoursLabel String?
-  pdfKey     String? // относительный ключ в lib/storage (если владелец приложит PDF)
-  verifyHash String?           @unique
-  status     CertificateStatus @default(READY)
-  readyAt    DateTime          @default(now()) // когда выполнены условия
-  issuedAt   DateTime? // когда выпущен PDF (автоматически после ввода ФИО) либо владелец пометил «Выдан»
+  id             String            @id @default(cuid())
+  number         String?           @unique // присваивается вручную при выдаче
+  userId         String
+  courseId       String
+  holderName     String? // ФИО — вводит сам ученик на шаге 2, с согласием (consentAt); D-019
+  scorePct       Int?
+  hoursLabel     String?
+  pdfKey         String? // относительный ключ в lib/storage (если владелец приложит PDF)
+  verifyHash     String?           @unique
+  status         CertificateStatus @default(READY)
+  readyAt        DateTime          @default(now()) // когда выполнены условия
+  issuedAt       DateTime? // когда выпущен PDF (автоматически после ввода ФИО) либо владелец пометил «Выдан»
   /// Согласие на обработку ФИО и сведений о прохождении курса для сертификата
   /// (Закон РБ № 99-З): когда дано и редакция текста (CERTIFICATE_CONSENT_VERSION).
   consentAt      DateTime?
   consentVersion String?
   /// Куда и когда ушёл PDF: ответственному представителю организации (B2B) или
   /// на почту самого ученика (розница). Пусто — письмо ещё не отправлено.
-  emailedAt  DateTime?
-  emailedTo  String?
-  revokedAt  DateTime?
-  user       User              @relation(fields: [userId], references: [id])
-  course     Course            @relation(fields: [courseId], references: [id])
+  emailedAt      DateTime?
+  emailedTo      String?
+  revokedAt      DateTime?
+  user           User              @relation(fields: [userId], references: [id])
+  course         Course            @relation(fields: [courseId], references: [id])
 
   @@unique([userId, courseId])
 }
@@ -974,6 +976,28 @@ model AiArtifact {
   cardReviews CardReview[]
 
   @@unique([lessonId, type])
+}
+
+// Результат тренажёра урока (лестница этапов, весы, «найди ошибку», карточки и т.д.).
+// Тренажёры работают в браузере; по завершении клиент сообщает итог сюда. Одна запись
+// на ученика × урок × тренажёр: первое прохождение даёт XP, дальше копится лучший балл.
+// kind — ключ из lib/learn/practice.ts (типы AiArtifact + RAPID_FIRE / SIMULATION).
+model PracticeResult {
+  id          String   @id @default(cuid())
+  userId      String
+  lessonId    String
+  kind        String
+  bestScore   Int? // 0–100; null — у тренажёра нет балла (песочницы, схема)
+  lastScore   Int?
+  runs        Int      @default(1)
+  completedAt DateTime @default(now()) // первое прохождение
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson      Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId, kind])
+  @@index([lessonId])
+  @@index([completedAt])
 }
 
 // Прогресс интервального повторения флеш-карточки (Leitner-lite, по карточке на ученика).
@@ -1159,37 +1183,37 @@ enum OrgRole {
 /// Клиент-организация. Реквизиты юрлица персональными данными не являются;
 /// единственная ПДн-точка — контакты ответственного представителя (оферта, п. 10.7).
 model Organization {
-  id           String    @id @default(cuid())
-  slug         String    @unique // короткий код: acme → логины работников acme-0042
-  name         String // наименование клиента
-  unp          String? // УНП (для счёта); не ПДн — реквизит юрлица
-  contactEmail String? // e-mail ответственного представителя
-  contactNote  String? // Telegram/телефон — как удобно клиенту
-  note         String?   @db.Text // заметки владельца (номер счёта, договорённости)
+  id                String     @id @default(cuid())
+  slug              String     @unique // короткий код: acme → логины работников acme-0042
+  name              String // наименование клиента
+  unp               String? // УНП (для счёта); не ПДн — реквизит юрлица
+  contactEmail      String? // e-mail ответственного представителя
+  contactNote       String? // Telegram/телефон — как удобно клиенту
+  note              String?    @db.Text // заметки владельца (номер счёта, договорённости)
   /// Рынок клиента: BY/KZ/RU/UZ (lib/seo/site-hosts.ts). Доступ от домена не
   /// зависит — учётка работает на любом из них; код нужен, чтобы готовые
   /// сообщения вели на «свой» домен клиента, а не на канонический .by.
-  site         String?
-  status       OrgStatus @default(ACTIVE)
+  site              String?
+  status            OrgStatus  @default(ACTIVE)
   /// Платный клиент или пилот (пригласили потестить). Доступом не управляет —
   /// это пометка для владельца и статистики; запись поступления от организации
   /// переводит её в PAID автоматически (lib/finance).
-  billing      OrgBilling @default(PILOT)
+  billing           OrgBilling @default(PILOT)
   /// Лимит устройств для работников клиента: null = стандартный (DEVICE_LIMIT),
   /// 0 = безлимит, N = N устройств. Персональный лимит работника (User.deviceLimit)
   /// перекрывает этот; см. lib/antishare/heuristics.resolveDeviceLimit.
-  deviceLimit  Int?
+  deviceLimit       Int?
   /// Счётчик выданных логинов: acme-0001, acme-0002… Инкрементируется в транзакции
   /// самозаписи — гарантирует уникальность без гонок.
-  loginSeq     Int       @default(0)
+  loginSeq          Int        @default(0)
   /// Когда владелец последний раз отправил клиенту письмо с доступами (учётка
   /// ответственного + учётки работников) и на какой адрес. Нужно, чтобы владелец
   /// видел, что клиенту доступы ушли, а не полагался на память. Адрес — контакт
   /// ответственного (реквизит клиента, оферта п. 10.7), пароли здесь не хранятся.
   credentialsSentAt DateTime?
   credentialsSentTo String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
 
   memberships  OrgMembership[]
   licenses     OrgLicense[]

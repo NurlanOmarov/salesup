@@ -50,4 +50,8 @@ export const XP_REWARDS = {
   quizPassed: 30,
   examPassed: 80,
   certificate: 100,
+  /** Первый тренажёр урока — шаг «Тренировка» пути урока. */
+  practiceFirstInLesson: 25,
+  /** Каждый следующий новый тренажёр того же урока. */
+  practiceExtra: 10,
 } as const;

@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { storage } from "@/lib/storage";
+import { PRACTICE_FINISH, PRACTICE_OPEN, trainerKindsByLesson } from "@/lib/learn/practice-server";
 
 /**
  * Сбор данных еженедельного дайджеста владельцу (S6.2). Принцип zero-touch:
@@ -16,6 +17,17 @@ export interface DigestData {
   lessonsCompleted: number;
   quizzesPassed: number;
   certificatesIssued: number;
+  /** Открытий тренажёров за период (событие practice.open). */
+  practiceOpens: number;
+  /** Прохождений тренажёров за период (practice.finish). */
+  practiceFinishes: number;
+  /** Учеников, прошедших хотя бы один тренажёр за период. */
+  practiceStudents: number;
+  /**
+   * Доля уроков, досмотренных за период, по которым ученик прошёл тренировку, 0..1.
+   * null — за период не досмотрено ни одного урока с тренажёрами.
+   */
+  practiceCoverage: number | null;
   newLeads: number;
   llmCostUsd: number;
   llmTokens: number;
@@ -92,6 +104,8 @@ export async function buildDigest(
   // Семантика — только по явному запросу (weekly-job); сбой embeddings не валит дайджест.
   const cannibalPairs = opts.semantic ? await safeCannibalPairs() : null;
 
+  const practice = await practiceStats(since);
+
   const activeIds = new Set([...activeProgress.map((p) => p.userId), ...activeAttempts.map((a) => a.userId)]);
 
   return {
@@ -103,6 +117,7 @@ export async function buildDigest(
     lessonsCompleted,
     quizzesPassed,
     certificatesIssued,
+    ...practice,
     newLeads,
     llmCostUsd: (llm._sum.costMicroUsd ?? 0) / 1_000_000,
     llmTokens: (llm._sum.inputTokens ?? 0) + (llm._sum.outputTokens ?? 0),
@@ -114,6 +129,46 @@ export async function buildDigest(
     notFoundTotal,
     redirectHits: redirectAgg._sum.hits ?? 0,
     cannibalPairs,
+  };
+}
+
+/**
+ * Тренировки за период: заметили ли ученики практику и закрепляют ли уроки.
+ * Покрытие — по урокам с тренажёрами, досмотренным за период: у скольких из этих
+ * пар «ученик × урок» есть пройденный тренажёр (когда угодно).
+ */
+async function practiceStats(since: Date) {
+  const [opens, finishes] = await Promise.all([
+    db.event.count({ where: { name: PRACTICE_OPEN, createdAt: { gte: since } } }),
+    db.event.findMany({
+      where: { name: PRACTICE_FINISH, createdAt: { gte: since } },
+      select: { userId: true },
+    }),
+  ]);
+  const completed = await db.lessonProgress.findMany({
+    where: { completedAt: { gte: since } },
+    select: { userId: true, lessonId: true },
+  });
+  const lessonIds = [...new Set(completed.map((c) => c.lessonId))];
+  const kinds = await trainerKindsByLesson(lessonIds);
+  const withTrainers = completed.filter((c) => kinds.has(c.lessonId));
+  const practiced = withTrainers.length
+    ? await db.practiceResult.findMany({
+        where: {
+          userId: { in: [...new Set(withTrainers.map((c) => c.userId))] },
+          lessonId: { in: [...new Set(withTrainers.map((c) => c.lessonId))] },
+        },
+        select: { userId: true, lessonId: true },
+        distinct: ["userId", "lessonId"],
+      })
+    : [];
+  const practicedPairs = new Set(practiced.map((p) => `${p.userId}:${p.lessonId}`));
+  const covered = withTrainers.filter((c) => practicedPairs.has(`${c.userId}:${c.lessonId}`)).length;
+  return {
+    practiceOpens: opens,
+    practiceFinishes: finishes.length,
+    practiceStudents: new Set(finishes.map((f) => f.userId).filter(Boolean)).size,
+    practiceCoverage: withTrainers.length ? covered / withTrainers.length : null,
   };
 }
 

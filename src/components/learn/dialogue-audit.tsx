@@ -4,6 +4,8 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, AlertTriangle, Trophy, RefreshCw, User, Headset } from "lucide-react";
 import type { DialogueAuditData } from "@/lib/interactive";
+import { usePracticeDone } from "@/components/learn/practice-context";
+import { toScorePct } from "@/lib/learn/practice";
 
 /**
  * Тренажёр «найди ошибку»: показан диалог менеджера с клиентом, ученик отмечает
@@ -32,6 +34,7 @@ export function DialogueAudit({ data }: { data: DialogueAuditData }) {
   const hits = [...marked].filter((i) => lines[i]!.error).length;
   const falsePos = [...marked].filter((i) => !lines[i]!.error).length;
   const score = Math.max(0, hits - falsePos);
+  usePracticeDone("DIALOGUE_AUDIT", checked, toScorePct(score, totalErrors));
 
   return (
     <div className="rounded-2xl border border-foreground/10 bg-background p-4 sm:p-5">

@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Plus, X, Zap } from "lucide-react";
 import type { Rule6040Data } from "@/lib/interactive";
+import { usePracticeDone } from "@/components/learn/practice-context";
 
 /**
  * Правило 60/40: планируй жёстко не больше 60% дня, остальное — буфер на
@@ -34,6 +35,9 @@ export function Rule6040({ data }: { data: Rule6040Data }) {
   const zone = frac <= 0.6 ? "ok" : frac <= 1 ? "warn" : "over";
   const color = zone === "ok" ? "#10b981" : zone === "warn" ? "#f59e0b" : "#ef4444";
   const arcFrac = Math.min(frac, 1);
+  // Засчитываем свой план: добавлено своё дело, и день уложен в 60% с буфером.
+  const ownTasks = tasks.length - (data.seedTasks?.length ?? 0);
+  usePracticeDone("RULE_6040", ownTasks >= 1 && zone === "ok");
 
   function add(text: string, h: number, urgent = false) {
     const v = text.trim();

@@ -4,6 +4,8 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageSquareWarning, Check, X, Lightbulb, ChevronRight, RefreshCw, Trophy } from "lucide-react";
 import type { ObjectionsData } from "@/lib/interactive";
+import { usePracticeDone } from "@/components/learn/practice-context";
+import { toScorePct } from "@/lib/learn/practice";
 
 /**
  * Тренажёр отработки возражений (S-интерактив для курсов о продажах). Клиент
@@ -17,6 +19,7 @@ export function ObjectionTrainer({ data }: { data: ObjectionsData }) {
   const [picked, setPicked] = useState<number | null>(null);
   const [correctCount, setCorrectCount] = useState(0);
   const [done, setDone] = useState(false);
+  usePracticeDone("OBJECTIONS", done, toScorePct(correctCount, total));
 
   const item = items[index];
   const answered = picked !== null;

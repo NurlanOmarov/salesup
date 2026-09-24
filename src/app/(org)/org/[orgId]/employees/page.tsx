@@ -165,6 +165,11 @@ export default async function EmployeesPage({
                     <span className="text-xs text-foreground/45">
                       {m.lessonsDone} из {m.lessonsTotal}
                     </span>
+                    {m.practiceTotal > 0 ? (
+                      <span className="block text-xs text-foreground/45">
+                        тренировки: {m.practiceDone} из {m.practiceTotal}
+                      </span>
+                    ) : null}
                   </td>
                   <td className="px-4 py-3 text-foreground/70">
                     {m.avgScore == null ? "—" : `${m.avgScore}%`}

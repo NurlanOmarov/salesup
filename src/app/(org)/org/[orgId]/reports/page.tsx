@@ -58,6 +58,7 @@ export default async function ReportsPage({
     lessonsDone: m.lessonsDone,
     lessonsTotal: m.lessonsTotal,
     progressPct: Math.round(m.progress * 100),
+    practice: m.practiceTotal > 0 ? `${m.practiceDone} из ${m.practiceTotal}` : "",
     avgScore: m.avgScore,
     certificates: m.certificates,
     lastActive: m.lastActiveAt
@@ -229,6 +230,11 @@ export default async function ReportsPage({
                       <span className="text-xs text-foreground/45">
                         {m.lessonsDone} из {m.lessonsTotal}
                       </span>
+                      {m.practiceTotal > 0 ? (
+                        <span className="block text-xs text-foreground/45">
+                          тренировки: {m.practiceDone} из {m.practiceTotal}
+                        </span>
+                      ) : null}
                     </td>
                     <td className="px-4 py-3 text-foreground/70">
                       {m.avgScore == null ? "—" : `${m.avgScore}%`}

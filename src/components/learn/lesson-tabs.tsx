@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
@@ -38,6 +38,10 @@ import {
   Calculator,
   GraduationCap,
   ChevronRight,
+  CheckCircle2,
+  Circle,
+  ChevronDown,
+  X,
 } from "lucide-react";
 import { SecurePlayer, type SubtitleTrackInfo } from "@/components/player/secure-player";
 import { PlayerProvider } from "@/components/player/player-context";
@@ -66,6 +70,9 @@ import { StageLadder } from "@/components/learn/stage-ladder";
 import { ObjectionScale } from "@/components/learn/objection-scale";
 import { NeedsCart } from "@/components/learn/needs-cart";
 import { EconomyCalc } from "@/components/learn/economy-calc";
+import { PracticeProvider } from "@/components/learn/practice-context";
+import { reportPracticeAction } from "@/app/(student)/app/learn/[courseSlug]/[lessonId]/actions";
+import { PRACTICE_LABELS, pickMainTrainer, type PracticeKind } from "@/lib/learn/practice";
 import type { SlideDeckData } from "@/lib/slides";
 import type {
   FlashcardsData,
@@ -135,6 +142,33 @@ type Tab =
 
 type Group = "watch" | "materials" | "practice" | "tutor";
 
+/** Вкладка → вид тренажёра (для учёта прохождения и выбора главного тренажёра). */
+const TAB_KIND: Partial<Record<Tab, PracticeKind>> = {
+  flashcards: "FLASHCARDS",
+  objections: "OBJECTIONS",
+  rapidfire: "RAPID_FIRE",
+  branching: "BRANCHING",
+  script: "SCRIPT_BUILDER",
+  audit: "DIALOGUE_AUDIT",
+  hotspot: "HOTSPOT",
+  metaphor: "TASK_METAPHOR",
+  eisenhower: "EISENHOWER",
+  rule6040: "RULE_6040",
+  smart: "SMART_GOAL",
+  timeaudit: "TIME_AUDIT",
+  clienttypes: "CLIENT_TYPES",
+  ladder: "STAGE_LADDER",
+  scale: "OBJECTION_SCALE",
+  cart: "NEEDS_CART",
+  economy: "ECONOMY_CALC",
+  simulation: "SIMULATION",
+};
+
+interface PracticeToast {
+  xp: number;
+  stepDone: boolean;
+}
+
 const GROUPS: { key: Group; label: string; icon: typeof PlayCircle }[] = [
   { key: "watch", label: "Смотреть", icon: PlayCircle },
   { key: "materials", label: "Материалы", icon: BookOpen },
@@ -176,6 +210,11 @@ export function LessonTabs({
   voiceEnabled = false,
   subtitles = [],
   defaultSubtitleLang = null,
+  practicedKinds = [],
+  videoCompleted = false,
+  quizPassed = false,
+  nextLocked = false,
+  initialTab = null,
 }: {
   lessonId: string;
   videoReady: boolean;
@@ -211,14 +250,17 @@ export function LessonTabs({
   voiceEnabled?: boolean;
   subtitles?: SubtitleTrackInfo[];
   defaultSubtitleLang?: string | null;
+  /** Тренажёры этого урока, уже пройденные учеником (PracticeResult). */
+  practicedKinds?: PracticeKind[];
+  /** Видео урока досмотрено (LessonProgress.completedAt). */
+  videoCompleted?: boolean;
+  /** Задание урока сдано. */
+  quizPassed?: boolean;
+  /** Следующий урок закрыт до сдачи задания этого. */
+  nextLocked?: boolean;
+  /** «practice» — открыть урок сразу на главном тренажёре (ссылки из допуска к экзамену). */
+  initialTab?: "practice" | null;
 }) {
-  const [tab, setTab] = useState<Tab>("video");
-  const reduceMotion = useReducedMotion();
-  /** Подложка активной вкладки переезжает пружиной; при «уменьшить движение» — мгновенно. */
-  const indicatorTransition = reduceMotion
-    ? { duration: 0 }
-    : ({ type: "spring", stiffness: 350, damping: 30 } as const);
-
   const tabs: { key: Tab; label: string; icon: typeof PlayCircle; show: boolean; group: Group }[] = [
     { key: "video", label: "Видео", icon: PlayCircle, show: true, group: "watch" },
     { key: "podcast", label: "Подкаст", icon: Podcast, show: hasPodcast, group: "watch" },
@@ -227,10 +269,10 @@ export function LessonTabs({
     { key: "slides", label: "Презентация", icon: Presentation, show: !!slides || hasSlidesPdf, group: "materials" },
     { key: "transcript", label: "Транскрипт", icon: ScrollText, show: !!transcript, group: "materials" },
     { key: "notes", label: "Заметки", icon: StickyNote, show: true, group: "materials" },
-    // Задание — первым в «Практике»: вкладка группы открывает её первый пункт, а
-    // сдача задания — единственное, что открывает следующий урок. Когда первыми
-    // стояли карточки с крупным «ВОПРОС», ученики отвечали на них и не понимали,
-    // почему урок не засчитан.
+    // Порядок внутри «Практики» задаёт practiceOrder ниже: главный тренажёр (с
+    // пометкой «главный»), затем задание. Когда первыми стояли карточки с крупным
+    // «ВОПРОС», ученики отвечали на них и не понимали, почему урок не засчитан —
+    // поэтому карточки в главные не выбираются почти никогда (низ приоритета).
     { key: "quiz", label: "Задание", icon: GraduationCap, show: !!quiz, group: "practice" },
     { key: "flashcards", label: "Карточки", icon: Layers, show: !!flashcards, group: "practice" },
     { key: "objections", label: "Возражения", icon: MessageSquareWarning, show: !!objections, group: "practice" },
@@ -255,16 +297,77 @@ export function LessonTabs({
   ];
 
   const visible = tabs.filter((t) => t.show);
+
+  // Главный тренажёр урока — шаг «Тренировка» между видео и заданием. Остальные
+  // тренажёры прячутся под «Ещё»: семь равноправных вкладок практики ученики не
+  // открывали вовсе — непонятно, с какой начать.
+  const mainKind = pickMainTrainer(
+    visible.map((t) => TAB_KIND[t.key]).filter((k): k is PracticeKind => !!k),
+  );
+  const mainTab = mainKind ? visible.find((t) => TAB_KIND[t.key] === mainKind)?.key ?? null : null;
+
+  const [tab, setTab] = useState<Tab>(initialTab === "practice" && mainTab ? mainTab : "video");
+  const reduceMotion = useReducedMotion();
+  /** Подложка активной вкладки переезжает пружиной; при «уменьшить движение» — мгновенно. */
+  const indicatorTransition = reduceMotion
+    ? { duration: 0 }
+    : ({ type: "spring", stiffness: 350, damping: 30 } as const);
+
+  const [done, setDone] = useState<Set<PracticeKind>>(() => new Set(practicedKinds));
+  const [videoDone, setVideoDone] = useState(videoCompleted);
+  const [toast, setToast] = useState<PracticeToast | null>(null);
+  const [showMore, setShowMore] = useState(false);
+  const lessonPracticed = done.size > 0;
+
+  // Открытие тренажёра — событие для аналитики (один раз за визит на вид).
+  const opened = useRef(new Set<PracticeKind>());
+  useEffect(() => {
+    const kind = TAB_KIND[tab];
+    if (!kind || opened.current.has(kind)) return;
+    opened.current.add(kind);
+    void reportPracticeAction({ lessonId, kind, phase: "open" });
+  }, [tab, lessonId]);
+
+  const onPracticeFinish = useCallback(
+    (kind: PracticeKind, scorePct: number | null) => {
+      void reportPracticeAction({ lessonId, kind, phase: "finish", scorePct }).then((res) => {
+        if (!res.ok) return;
+        setDone((s) => new Set(s).add(kind));
+        if (res.data.firstTime) setToast({ xp: res.data.xpGained, stepDone: res.data.lessonStepDone });
+      });
+    },
+    [lessonId],
+  );
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 7000);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  // Порядок «Практики»: главный тренажёр → задание → остальные (под «Ещё»).
+  const practiceOrder = (key: Tab) => (key === mainTab ? 0 : key === "quiz" ? 1 : 2);
   const groups = GROUPS.map((g) => ({
     ...g,
-    items: visible.filter((t) => t.group === g.key),
+    items: visible
+      .filter((t) => t.group === g.key)
+      .sort((a, b) => (g.key === "practice" ? practiceOrder(a.key) - practiceOrder(b.key) : 0)),
   })).filter((g) => g.items.length > 0);
 
   const activeGroupKey = visible.find((t) => t.key === tab)?.group ?? groups[0]?.key;
   const activeGroup = groups.find((g) => g.key === activeGroupKey) ?? groups[0];
 
+  const isExtra = (key: Tab) => !!TAB_KIND[key] && key !== mainTab;
+  const extras = activeGroup?.key === "practice" ? activeGroup.items.filter((t) => isExtra(t.key)) : [];
+  const extrasOpen = showMore || extras.some((t) => t.key === tab);
+  const subTabs =
+    activeGroup?.key === "practice" && extras.length > 1 && !extrasOpen
+      ? activeGroup.items.filter((t) => !isExtra(t.key))
+      : (activeGroup?.items ?? []);
+
   return (
-    <PlayerProvider>
+    <PracticeProvider onFinish={onPracticeFinish}>
+    <PlayerProvider onEnded={() => setVideoDone(true)}>
     <div>
       {/* Уровень 1 — группы форматов (на узких экранах прокручиваются) */}
       <div
@@ -310,8 +413,9 @@ export function LessonTabs({
           aria-label={`Форматы: ${activeGroup.label}`}
           className="mt-2 flex gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
-          {activeGroup.items.map((t) => {
+          {subTabs.map((t) => {
             const active = tab === t.key;
+            const kind = TAB_KIND[t.key];
             return (
               <button
                 key={t.key}
@@ -336,10 +440,27 @@ export function LessonTabs({
                 <span className="relative z-10 flex items-center gap-1.5">
                   <t.icon className="size-4" />
                   {t.label}
+                  {kind && done.has(kind) ? (
+                    <CheckCircle2 aria-label="пройден" className="size-3.5 text-emerald-600" />
+                  ) : t.key === mainTab ? (
+                    <span className="rounded-full bg-amber-500/15 px-1.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+                      главный
+                    </span>
+                  ) : null}
                 </span>
               </button>
             );
           })}
+          {subTabs.length < activeGroup.items.length ? (
+            <button
+              type="button"
+              onClick={() => setShowMore(true)}
+              className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-lg border border-dashed border-foreground/15 px-3 py-1.5 text-sm font-medium text-foreground/55 transition-colors hover:bg-foreground/5"
+            >
+              Ещё тренажёры · {extras.length}
+              <ChevronDown className="size-3.5" />
+            </button>
+          ) : null}
         </div>
       ) : null}
 
@@ -358,6 +479,33 @@ export function LessonTabs({
             Видео готовится — загляните позже.
           </div>
         )}
+        {videoDone && mainTab && mainKind && !lessonPracticed ? (
+          <motion.div
+            initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/[0.07] p-4"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-700">
+                <Dumbbell className="size-5" />
+              </div>
+              <div>
+                <p className="font-semibold">Видео просмотрено — закрепите на практике</p>
+                <p className="text-sm text-foreground/60">
+                  Тренажёр «{PRACTICE_LABELS[mainKind]}»: пара минут, +25 XP. Без практики знания уходят за неделю.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setTab(mainTab)}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-slate-950 transition-colors hover:bg-amber-400"
+            >
+              Начать тренировку
+              <ChevronRight className="size-4" />
+            </button>
+          </motion.div>
+        ) : null}
       </div>
 
       {/* Аудио — монтируется один раз (вне переключения вкладок), чтобы не рвать воспроизведение */}
@@ -612,8 +760,178 @@ export function LessonTabs({
           </motion.div>
         ) : null}
       </AnimatePresence>
+
+      <LessonPath
+        videoDone={videoDone}
+        practice={mainTab && mainKind ? { label: PRACTICE_LABELS[mainKind], done: lessonPracticed } : null}
+        quiz={quiz ? { id: quiz.id, title: quiz.title, passed: quizPassed } : null}
+        nextLocked={nextLocked}
+        onVideo={() => setTab("video")}
+        onPractice={() => mainTab && setTab(mainTab)}
+      />
+
+      <AnimatePresence>
+        {toast ? (
+          <motion.div
+            role="status"
+            initial={reduceMotion ? false : { opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 16 }}
+            className="fixed inset-x-4 bottom-4 z-50 mx-auto flex max-w-md items-start gap-3 rounded-2xl border border-emerald-500/30 bg-background p-4 shadow-lg sm:left-auto sm:right-6"
+          >
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-700">
+              <Dumbbell className="size-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold">
+                Тренировка засчитана <span className="text-emerald-700">+{toast.xp} XP</span>
+              </p>
+              <p className="mt-0.5 text-sm text-foreground/60">
+                {toast.stepDone && quiz && !quizPassed
+                  ? "Шаг «Тренировка» пройден. Теперь задание — после практики оно даётся легче."
+                  : "Ещё один тренажёр за плечами. Возвращайтесь к нему перед встречей с клиентом."}
+              </p>
+              {toast.stepDone && quiz && !quizPassed ? (
+                <Link
+                  href={`/app/quiz/${quiz.id}`}
+                  className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-amber-700 hover:underline"
+                >
+                  К заданию
+                  <ChevronRight className="size-4" />
+                </Link>
+              ) : null}
+            </div>
+            <button
+              type="button"
+              aria-label="Закрыть"
+              onClick={() => setToast(null)}
+              className="text-foreground/40 transition-colors hover:text-foreground/70"
+            >
+              <X className="size-4" />
+            </button>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </div>
     </PlayerProvider>
+    </PracticeProvider>
+  );
+}
+
+/**
+ * Путь урока: Видео → Тренировка → Задание. Раньше под уроком был один блок
+ * «Проверь себя», и ученики шли «видео → тест», не заглядывая в практику. Теперь
+ * тренировка — такой же шаг, как остальные, а текущий шаг подсвечен.
+ */
+function LessonPath({
+  videoDone,
+  practice,
+  quiz,
+  nextLocked,
+  onVideo,
+  onPractice,
+}: {
+  videoDone: boolean;
+  practice: { label: string; done: boolean } | null;
+  quiz: { id: string; title: string; passed: boolean } | null;
+  nextLocked: boolean;
+  onVideo: () => void;
+  onPractice: () => void;
+}) {
+  type Step = {
+    key: string;
+    title: string;
+    hint: string;
+    done: boolean;
+    icon: typeof PlayCircle;
+    onClick?: () => void;
+    href?: string;
+  };
+  const steps: Step[] = [
+    { key: "video", title: "Видео", hint: videoDone ? "Просмотрено" : "Досмотрите до конца", done: videoDone, icon: PlayCircle, onClick: onVideo },
+  ];
+  if (practice) {
+    steps.push({
+      key: "practice",
+      title: "Тренировка",
+      hint: practice.done ? `«${practice.label}» — засчитано` : `«${practice.label}» · +25 XP`,
+      done: practice.done,
+      icon: Dumbbell,
+      onClick: onPractice,
+    });
+  }
+  if (quiz) {
+    steps.push({
+      key: "quiz",
+      title: "Задание",
+      hint: quiz.passed ? "Сдано" : nextLocked ? "Открывает следующий урок" : quiz.title,
+      done: quiz.passed,
+      icon: GraduationCap,
+      href: `/app/quiz/${quiz.id}`,
+    });
+  }
+  if (steps.length < 2) return null;
+  const currentIdx = steps.findIndex((s) => !s.done);
+
+  return (
+    <div className="mt-5 rounded-2xl border border-foreground/10 bg-background p-3 sm:p-4">
+      <p className="px-1 text-xs font-semibold uppercase tracking-wide text-foreground/45">
+        {currentIdx === -1 ? "Урок пройден на 100%" : "Путь урока"}
+      </p>
+      <ol className={`mt-2 grid gap-2 ${steps.length === 3 ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+        {steps.map((s, i) => {
+          const current = i === currentIdx;
+          const body = (
+            <span
+              className={[
+                "flex h-full items-center gap-3 rounded-xl border p-3 text-left transition-colors",
+                s.done
+                  ? "border-emerald-500/25 bg-emerald-500/[0.05]"
+                  : current
+                    ? "border-amber-500/40 bg-amber-500/[0.08] hover:bg-amber-500/[0.12]"
+                    : "border-foreground/10 hover:bg-foreground/[0.03]",
+              ].join(" ")}
+            >
+              <span
+                className={[
+                  "flex size-9 shrink-0 items-center justify-center rounded-lg",
+                  s.done ? "bg-emerald-500/15 text-emerald-700" : current ? "bg-amber-500/15 text-amber-700" : "bg-foreground/5 text-foreground/45",
+                ].join(" ")}
+              >
+                <s.icon className="size-4.5" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center gap-1.5 text-sm font-semibold">
+                  <span className="text-foreground/40">{i + 1}.</span>
+                  {s.title}
+                </span>
+                <span className="block truncate text-xs text-foreground/55">{s.hint}</span>
+              </span>
+              {s.done ? (
+                <CheckCircle2 className="size-5 shrink-0 text-emerald-600" />
+              ) : current ? (
+                <ChevronRight className="size-5 shrink-0 text-amber-700" />
+              ) : (
+                <Circle className="size-5 shrink-0 text-foreground/20" />
+              )}
+            </span>
+          );
+          return (
+            <li key={s.key}>
+              {s.href ? (
+                <Link href={s.href} className="block h-full">
+                  {body}
+                </Link>
+              ) : (
+                <button type="button" onClick={s.onClick} className="block h-full w-full">
+                  {body}
+                </button>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </div>
   );
 }
 

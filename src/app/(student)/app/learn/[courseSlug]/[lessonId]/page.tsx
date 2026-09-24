@@ -35,6 +35,8 @@ import {
 } from "@/lib/interactive";
 import { loadScenario } from "@/lib/ai/simulate";
 import { listLessonNotes } from "@/lib/learn/notes";
+import { isPracticeKind } from "@/lib/learn/practice";
+import { trainerKindsByLesson } from "@/lib/learn/practice-server";
 
 export const metadata: Metadata = {
   title: "Урок",
@@ -48,7 +50,7 @@ export default async function LearnPage({
   searchParams,
 }: {
   params: Promise<{ courseSlug: string; lessonId: string }>;
-  searchParams?: Promise<{ t?: string }>;
+  searchParams?: Promise<{ t?: string; tab?: string }>;
 }) {
   const { courseSlug, lessonId } = await params;
   const sp = searchParams ? await searchParams : {};
@@ -409,6 +411,32 @@ export default async function LearnPage({
     );
   }
 
+  // Тренировки: какие уроки курса с тренажёрами и где ученик уже тренировался.
+  const allLessonIds = course.modules.flatMap((m) => m.lessons.map((l) => l.id));
+  const [trainerKinds, practiceRows] = await Promise.all([
+    trainerKindsByLesson(allLessonIds),
+    db.practiceResult.findMany({
+      where: { userId, lessonId: { in: allLessonIds } },
+      select: { lessonId: true, kind: true },
+    }),
+  ]);
+  const practicedLessons = new Set(practiceRows.map((r) => r.lessonId));
+  const practicedKinds = practiceRows
+    .filter((r) => r.lessonId === lessonId)
+    .map((r) => r.kind)
+    .filter(isPracticeKind);
+  for (const m of modules) {
+    for (const l of m.lessons) {
+      l.practice = trainerKinds.has(l.id) ? (practicedLessons.has(l.id) ? "done" : "todo") : null;
+    }
+  }
+  const lessonHasTrainers = trainerKinds.has(lessonId);
+  const quizPassed = passedLessonIds.has(lessonId);
+  const fullyDone =
+    !!lessonPos?.completedAt &&
+    (!lessonHasTrainers || practicedLessons.has(lessonId)) &&
+    (!lessonQuiz || quizPassed);
+
   // Задание текущего урока открывает следующий: пока не сдано — «Следующий урок»
   // недоступен, вместо кнопки показываем понятное объяснение.
   const nextLocked = !!next && !isUnlocked(next.id);
@@ -452,7 +480,7 @@ export default async function LearnPage({
           {lessonPos?.completedAt ? (
             <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-700">
               <CheckCircle2 className="size-3.5" />
-              Пройден
+              {fullyDone ? "Пройден на 100%" : "Пройден"}
             </span>
           ) : null}
         </div>
@@ -494,6 +522,11 @@ export default async function LearnPage({
             voiceEnabled={env.VOICE_ENABLED}
             subtitles={subtitles}
             defaultSubtitleLang={viewer?.subtitleLang ?? null}
+            practicedKinds={practicedKinds}
+            videoCompleted={!!lessonPos?.completedAt}
+            quizPassed={quizPassed}
+            nextLocked={nextLocked}
+            initialTab={sp.tab === "practice" ? "practice" : null}
           />
         </div>
 
@@ -503,30 +536,6 @@ export default async function LearnPage({
             <Info className="size-3.5 shrink-0" />
             Урок отметится пройденным автоматически после просмотра ≥90% видео.
           </p>
-        ) : null}
-
-        {/* Задание к уроку */}
-        {lessonQuiz ? (
-          <Link
-            href={`/app/quiz/${lessonQuiz.id}`}
-            className="mt-5 flex items-center justify-between gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/[0.06] p-4 transition-colors hover:bg-amber-500/10"
-          >
-            <div className="flex items-center gap-3">
-              <div className="flex size-10 items-center justify-center rounded-xl bg-amber-500/15 text-amber-700">
-                <GraduationCap className="size-5" />
-              </div>
-              <div>
-                <p className="font-semibold">Проверь себя</p>
-                <p className="text-sm text-foreground/60">{lessonQuiz.title}</p>
-                {nextLocked ? (
-                  <p className="mt-1 text-sm font-medium text-amber-700 dark:text-amber-400">
-                    Сдайте задание — оно открывает следующий урок.
-                  </p>
-                ) : null}
-              </div>
-            </div>
-            <ChevronRight className="size-5 text-amber-700" />
-          </Link>
         ) : null}
 
         {/* Навигация prev/next */}

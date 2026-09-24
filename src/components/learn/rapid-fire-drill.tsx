@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Zap, Check, X, Trophy, RefreshCw, Timer, Flame } from "lucide-react";
 import type { ObjectionsData } from "@/lib/interactive";
 import { scoreAnswer, comboMultiplier, RAPID_QUESTION_MS } from "@/lib/learn/rapidfire";
+import { usePracticeDone } from "@/components/learn/practice-context";
+import { toScorePct } from "@/lib/learn/practice";
 
 /**
  * Тренажёр «возражения на скорость» (rapid-fire): то же содержание, что у
@@ -39,6 +41,7 @@ export function RapidFireDrill({ data }: { data: ObjectionsData }) {
   const [maxStreak, setMaxStreak] = useState(0);
   const [correctCount, setCorrectCount] = useState(0);
   const [shake, setShake] = useState(false);
+  usePracticeDone("RAPID_FIRE", phase === "done", toScorePct(correctCount, data.items.length));
   const deadline = useRef(0);
 
   const item = order[index];

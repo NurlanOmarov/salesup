@@ -13,13 +13,23 @@ export interface PlayerHandle {
   seek: (sec: number) => void;
 }
 
-const PlayerContext = createContext<{ handle: React.MutableRefObject<PlayerHandle | null> } | null>(
-  null,
-);
+const PlayerContext = createContext<{
+  handle: React.MutableRefObject<PlayerHandle | null>;
+  onEnded: React.MutableRefObject<(() => void) | undefined>;
+} | null>(null);
 
-export function PlayerProvider({ children }: { children: ReactNode }) {
+/** onEnded — видео досмотрено до конца (урок предлагает следующий шаг — тренировку). */
+export function PlayerProvider({ children, onEnded }: { children: ReactNode; onEnded?: () => void }) {
   const handle = useRef<PlayerHandle | null>(null);
-  return <PlayerContext.Provider value={{ handle }}>{children}</PlayerContext.Provider>;
+  const endedRef = useRef(onEnded);
+  endedRef.current = onEnded;
+  return <PlayerContext.Provider value={{ handle, onEnded: endedRef }}>{children}</PlayerContext.Provider>;
+}
+
+/** Плеер сообщает, что видео закончилось. */
+export function usePlayerEnded(): () => void {
+  const ctx = useContext(PlayerContext);
+  return () => ctx?.onEnded.current?.();
 }
 
 /** Плеер вызывает это, чтобы зарегистрировать управление (или null, если плеера нет). */

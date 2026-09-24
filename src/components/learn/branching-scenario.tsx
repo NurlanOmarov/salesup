@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { User, UserRound, GitBranch, RefreshCw, Trophy, XCircle, Flag } from "lucide-react";
 import type { BranchingData, BranchNode, BranchOutcome } from "@/lib/interactive";
+import { usePracticeDone } from "@/components/learn/practice-context";
 
 /**
  * Тренажёр ветвящегося диалога: на каждом шаге ученик выбирает реплику, диалог
@@ -32,6 +33,13 @@ export function BranchingScenario({ data }: { data: BranchingData }) {
   const node: BranchNode | undefined = byId.get(currentId);
   const choices = node?.choices ?? [];
   const terminal = !!node && choices.length === 0;
+  // Балл по исходу ветки: успех — 100, нейтральный итог — 60, провал — 0.
+  const outcomeScore = { win: 100, neutral: 60, lose: 0 } as const;
+  usePracticeDone(
+    "BRANCHING",
+    terminal && history.length > 0,
+    terminal ? outcomeScore[node!.outcome ?? "neutral"] : null,
+  );
 
   function choose(text: string, to: string, note?: string) {
     if (!node) return;

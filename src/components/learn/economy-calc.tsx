@@ -8,6 +8,8 @@ import {
   parseUserNumber,
   type EconomyCalcData,
 } from "@/lib/interactive";
+import { usePracticeDone } from "@/components/learn/practice-context";
+import { toScorePct } from "@/lib/learn/practice";
 
 const fmt = (n: number) =>
   n.toLocaleString("ru-RU", { maximumFractionDigits: 2 }).replace(/ /g, " ");
@@ -26,6 +28,8 @@ export function EconomyCalc({ data }: { data: EconomyCalcData }) {
   const [firstTry, setFirstTry] = useState(0);
   const [finished, setFinished] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Балл — доля расчётов, решённых с первой попытки.
+  usePracticeDone("ECONOMY_CALC", finished, toScorePct(firstTry, data.rounds.length));
 
   const round = data.rounds[idx];
   if (!round) return null;

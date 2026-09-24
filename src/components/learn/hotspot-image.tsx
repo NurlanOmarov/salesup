@@ -4,6 +4,7 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, Plus, X } from "lucide-react";
 import type { HotspotData } from "@/lib/interactive";
+import { usePracticeDone } from "@/components/learn/practice-context";
 
 /**
  * Hotspot-схема: изображение (схема воронки, этапы визита) с кликабельными точками.
@@ -21,6 +22,7 @@ export function HotspotImage({ data }: { data: HotspotData }) {
 
   const total = data.points.length;
   const done = seen.size === total;
+  usePracticeDone("HOTSPOT", total > 0 && done);
   const left = total - seen.size;
 
   const open = (i: number) => {
