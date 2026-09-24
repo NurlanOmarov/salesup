@@ -173,6 +173,7 @@ import {
   TIME_CHECKLISTS,
   TIME_SCRIPTS,
   TIME_BRANCHING,
+  TIME_DIALOGUE_AUDITS,
   TIME_METAPHORS,
   TIME_EISENHOWER,
   TIME_RULE6040,
@@ -3301,6 +3302,7 @@ async function main() {
     await seedArtifacts(timeCourse.id, "CHECKLIST", TIME_CHECKLISTS);
     await seedArtifacts(timeCourse.id, "SCRIPT_BUILDER", TIME_SCRIPTS);
     await seedArtifacts(timeCourse.id, "BRANCHING", TIME_BRANCHING);
+    await seedArtifacts(timeCourse.id, "DIALOGUE_AUDIT", TIME_DIALOGUE_AUDITS);
     await seedArtifacts(timeCourse.id, "TASK_METAPHOR", TIME_METAPHORS);
     await seedArtifacts(timeCourse.id, "EISENHOWER", TIME_EISENHOWER);
     await seedArtifacts(timeCourse.id, "RULE_6040", TIME_RULE6040);
