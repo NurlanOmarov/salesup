@@ -14,10 +14,10 @@ import { usePracticeDone } from "@/components/learn/practice-context";
 
 const CRITERIA: { key: string; letter: string; label: string; hint: string }[] = [
   { key: "s", letter: "S", label: "Конкретная", hint: "Что именно и для чего сделать?" },
-  { key: "m", letter: "M", label: "Измеримая", hint: "По какому числу поймёте, что достигли?" },
+  { key: "m", letter: "M", label: "Измеримая", hint: "С какого до какого? Например: было 600 $ → стало 700 $" },
   { key: "a", letter: "A", label: "Достижимая", hint: "Реально ли с вашими ресурсами?" },
-  { key: "r", letter: "R", label: "Совместимая", hint: "Совместима ли цель с вашей ситуацией сейчас — нужна ли она вам?" },
-  { key: "t", letter: "T", label: "Ограниченная по времени", hint: "К какой конкретной дате?" },
+  { key: "r", letter: "R", label: "Совместимая", hint: "Уместна ли сейчас — «хороша ложка к обеду»? Нужна ли вам эта цель?" },
+  { key: "t", letter: "T", label: "Временные рамки", hint: "К какой дате? Например: к 5 апреля" },
 ];
 
 const RINGS = [82, 64, 46, 28]; // радиусы колец (внешнее → внутреннее), + центр
