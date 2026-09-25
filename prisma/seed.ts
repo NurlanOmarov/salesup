@@ -1839,9 +1839,10 @@ const COURSES: CourseSpec[] = [
       },
     ],
     modules: PAWNSHOP_MODULES,
-    // Промо-ролика нет: на YouTube была сама запись тренинга целиком (54 мин) —
-    // это и есть уроки курса, раздавать её бесплатно на витрине нельзя.
-    promoVideos: [],
+    // Промо — видео-презентация тренинга (YouTube 295o5JtgvHA, 49 с), лежит у нас
+    // сжатым MP4 (pnpm factory:promo). Полную запись тренинга (pRAvDN-yy4I) не
+    // ставим: из неё нарезаны уроки курса.
+    promoVideos: [{ id: "promo-1", file: "courses/service-pawnshop/promo/promo-1.mp4", vertical: false }],
   },
   {
     slug: "sales-b2b-chemistry",
