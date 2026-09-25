@@ -747,6 +747,7 @@ export default async function CoursePage({
           courseTitle={course.title}
           priceByn={prices.main}
           priceOther={prices.alt || null}
+          checkoutUrl={checkoutUrl}
         />
       </section>
 

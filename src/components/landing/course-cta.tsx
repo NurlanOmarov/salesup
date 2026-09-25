@@ -182,12 +182,15 @@ export function CourseCtaSection({
   courseTitle,
   priceByn,
   priceOther,
+  checkoutUrl,
 }: {
   slug: string;
   courseId: string;
   courseTitle: string;
   priceByn: string;
   priceOther: string | null;
+  /** Ссылка на оплату; null — курс продаётся только через заявку. */
+  checkoutUrl?: string | null;
 }) {
   const continueUrl = useContinueUrl(slug);
   const t = messagesFor(useLocale());
@@ -212,6 +215,58 @@ export function CourseCtaSection({
               className={cn(buttonVariants({ variant: "outline-light", size: "lg" }))}
             >{t.cta.myLearning}</Link>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Курс с онлайн-оплатой: главное действие — оплатить, форма заявки остаётся
+  // вторым путём (счёт для организации, вопрос перед покупкой). Иначе человек,
+  // долиставший до низа страницы, видел только «оставьте контакты» и не знал,
+  // что курс можно купить прямо сейчас.
+  if (checkoutUrl) {
+    return (
+      <div className="relative overflow-hidden rounded-3xl bg-slate-950 p-8 text-white md:p-12">
+        <div className="pointer-events-none absolute -top-24 right-0 h-72 w-72 rounded-full bg-brand/15 blur-3xl" />
+        <div className="relative grid items-center gap-10 md:grid-cols-2">
+          <Reveal>
+            <div>
+              <h2 className="text-3xl font-bold">Начать обучение</h2>
+              <p className="mt-3 text-white/70">
+                Оплата картой на странице банка. Доступ откроется автоматически, логин придёт
+                на указанную почту.
+              </p>
+              <p className="mt-4 font-semibold text-brand-light">{courseTitle}</p>
+              <p className="text-2xl font-bold">{priceByn}</p>
+              {priceOther ? <p className="text-sm text-white/50">{priceOther}</p> : null}
+
+              <a
+                href={checkoutUrl}
+                onClick={() => {
+                  trackEvent("checkout_start", { slug });
+                  rememberCheckout(slug);
+                }}
+                className={cn(buttonVariants({ variant: "brand", size: "lg" }), "mt-5 w-full sm:w-auto")}
+              >
+                <CreditCard className="size-5" />
+                Оплатить и начать
+              </a>
+              <p className="mt-3 text-sm text-white/60">
+                Уже оплатили?{" "}
+                <Link href="/login" className="underline underline-offset-4 hover:text-white">
+                  Войдите в кабинет
+                </Link>
+              </p>
+            </div>
+          </Reveal>
+          <Reveal delay={0.05}>
+            <div className="rounded-2xl bg-background p-6 text-foreground shadow-2xl">
+              <p className="mb-4 text-sm text-foreground/60">
+                Нужен счёт для организации или остались вопросы? Оставьте контакты — перезвоним.
+              </p>
+              <LeadForm courseId={courseId} />
+            </div>
+          </Reveal>
         </div>
       </div>
     );
