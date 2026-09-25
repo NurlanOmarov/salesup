@@ -281,10 +281,10 @@ type CourseSpec = {
   modules: ModuleSpec[];
   coverUrl?: string;
   /**
-   * Промо-ролики витрины: только ID видео, сами ролики остаются на YouTube
-   * (lib/courses/promo-video.ts). `vertical` — Shorts, показываем 9:16.
+   * Промо-ролики витрины: сжатые MP4 на нашем сервере (pnpm factory:promo,
+   * lib/courses/promo-video.ts). `vertical` — снят вертикально, показываем 9:16.
    */
-  promoVideos?: { id: string; vertical: boolean; title?: string; file?: string }[];
+  promoVideos?: { id: string; vertical: boolean; title?: string; file: string }[];
 };
 
 // ── Курс «Эффективные продажи кухонь 2.0» (реальный YouTube-плейлист) ────────
@@ -1388,11 +1388,12 @@ const COURSES: CourseSpec[] = [
       },
     ],
     modules: DIY_MODULES,
-    // Вертикальные промо-ролики тренера (YouTube Shorts) — остаются на YouTube.
+    // Вертикальные промо-ролики тренера (с его YouTube Shorts 8BpOtMv_Qzk,
+    // ctzDBxj4Ctc, h4lIYHm6PpU) — лежат у нас сжатыми MP4 (pnpm factory:promo).
     promoVideos: [
-      { id: "8BpOtMv_Qzk", vertical: true },
-      { id: "ctzDBxj4Ctc", vertical: true },
-      { id: "h4lIYHm6PpU", vertical: true },
+      { id: "promo-1", file: "courses/sales-diy/promo/promo-1.mp4", vertical: true },
+      { id: "promo-2", file: "courses/sales-diy/promo/promo-2.mp4", vertical: true },
+      { id: "promo-3", file: "courses/sales-diy/promo/promo-3.mp4", vertical: true },
     ],
   },
   {
@@ -1720,9 +1721,9 @@ const COURSES: CourseSpec[] = [
     ],
     modules: KITCHEN_MODULES,
     coverUrl: "/images/courses/sales-kitchens.png",
-    // Промо-ролик тренера «Содержание видео курса для продавцов кухонь» —
-    // остаётся на YouTube, у нас только ID.
-    promoVideos: [{ id: "W2EIMlXSmQs", vertical: false }],
+    // Промо-ролик тренера «Содержание видео курса для продавцов кухонь»
+    // (YouTube W2EIMlXSmQs) — лежит у нас сжатым MP4 (pnpm factory:promo).
+    promoVideos: [{ id: "promo-1", file: "courses/sales-kitchens/promo/promo-1.mp4", vertical: false }],
   },
   {
     slug: "sales-kitchens-basics",
@@ -1778,9 +1779,9 @@ const COURSES: CourseSpec[] = [
       },
     ],
     modules: KITCHEN_BASICS_MODULES,
-    // Промо — рекламный ролик тренинга (не дублирует уроки курса). Демо фильма
-    // «1–16» не подошло: у него на YouTube нет обложки, отдаётся серая заглушка.
-    promoVideos: [{ id: "PPldpQy4Oks", vertical: false }],
+    // Промо — рекламный ролик тренинга (YouTube PPldpQy4Oks, не дублирует уроки
+    // курса) — лежит у нас сжатым MP4 (pnpm factory:promo).
+    promoVideos: [{ id: "promo-1", file: "courses/sales-kitchens-basics/promo/promo-1.mp4", vertical: false }],
   },
   {
     slug: "service-pawnshop",
@@ -1838,8 +1839,9 @@ const COURSES: CourseSpec[] = [
       },
     ],
     modules: PAWNSHOP_MODULES,
-    // Промо — сама запись тренинга: у ролика есть нормальная обложка на YouTube.
-    promoVideos: [{ id: "pRAvDN-yy4I", vertical: false }],
+    // Промо-ролика нет: на YouTube была сама запись тренинга целиком (54 мин) —
+    // это и есть уроки курса, раздавать её бесплатно на витрине нельзя.
+    promoVideos: [],
   },
   {
     slug: "sales-b2b-chemistry",
@@ -1949,8 +1951,9 @@ const COURSES: CourseSpec[] = [
       },
     ],
     modules: MATTRESS_MODULES,
-    // Промо — сам ролик про СПИН: у него на YouTube брендированная вертикальная обложка.
-    promoVideos: [{ id: "zUTNMRRxx7c", vertical: true }],
+    // Промо — ролик тренера про СПИН (YouTube zUTNMRRxx7c) — лежит у нас сжатым
+    // MP4 (pnpm factory:promo).
+    promoVideos: [{ id: "promo-1", file: "courses/sales-mattresses/promo/promo-1.mp4", vertical: true }],
   },
   {
     slug: "sales-shoes",
@@ -2007,8 +2010,8 @@ const COURSES: CourseSpec[] = [
     modules: SHOES_MODULES,
     coverUrl: "/images/courses/sales-shoes.png",
     // Промо-ролик тренера «Содержание видео-уроков по продажам обуви в розницу
-    // за 1 минуту» — остаётся на YouTube, у нас только ID.
-    promoVideos: [{ id: "OXDSOlTZg_Y", vertical: false }],
+    // за 1 минуту» (YouTube OXDSOlTZg_Y) — лежит у нас сжатым MP4 (pnpm factory:promo).
+    promoVideos: [{ id: "promo-1", file: "courses/sales-shoes/promo/promo-1.mp4", vertical: false }],
   },
   {
     slug: "sales-b2b",
@@ -2254,7 +2257,8 @@ const COURSES: CourseSpec[] = [
       },
     ],
     coverUrl: "/images/courses/sales-b2b.png",
-    promoVideos: [{ id: "1KRI6JCGv00", vertical: true }],
+    // Промо — обзор тренинга (YouTube 1KRI6JCGv00), лежит у нас сжатым MP4.
+    promoVideos: [{ id: "promo-1", file: "courses/sales-b2b/promo/promo-1.mp4", vertical: true }],
   },
 ];
 

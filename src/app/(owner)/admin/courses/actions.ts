@@ -50,30 +50,16 @@ export const updateCourseAction = safeAction(
       canonicalPath: z.string().trim().max(300).optional().or(z.literal("")),
       focusKeyword: z.string().trim().max(120).optional().or(z.literal("")),
       coverAlt: z.string().trim().max(200).optional().or(z.literal("")),
-      // Промо-ролики витрины: храним только ID видео (11 символов), сами ролики
-      // остаются на YouTube. Ссылку в ID превращает форма. Свои ролики (`file`,
-      // рилсы без YouTube) загружает фабрика — форма их только сохраняет.
+      // Промо-ролики витрины: только свои MP4 из каталога promo курса — их
+      // заливает фабрика (pnpm factory:promo), форма правит подпись и ориентацию.
       promoVideos: z
         .array(
-          // Без .refine(): в "use server"-файле Next принимает инлайн-функцию
-          // за серверное действие и валит сборку. Два вида ролика — union.
-          z.union([
-            z.object({
-              id: z
-                .string()
-                .trim()
-                .regex(/^[A-Za-z0-9_-]{11}$/, "ID видео YouTube — 11 символов"),
-              vertical: z.boolean(),
-              title: z.string().trim().max(80).optional(),
-              file: z.undefined().optional(),
-            }),
-            z.object({
-              id: z.string().trim(),
-              vertical: z.boolean(),
-              title: z.string().trim().max(80).optional(),
-              file: z.string().regex(PROMO_FILE_RE, "Некорректный файл ролика"),
-            }),
-          ]),
+          z.object({
+            id: z.string().trim(),
+            vertical: z.boolean(),
+            title: z.string().trim().max(80).optional(),
+            file: z.string().regex(PROMO_FILE_RE, "Некорректный файл ролика"),
+          }),
         )
         .max(6, "Больше шести роликов на карточке — это уже не промо"),
       seoNoindex: z.boolean(),
@@ -130,7 +116,7 @@ export const updateCourseAction = safeAction(
           id: v.id,
           vertical: v.vertical,
           ...(v.title ? { title: v.title } : {}),
-          ...(v.file ? { file: v.file } : {}),
+          file: v.file,
         })),
       seoNoindex: input.seoNoindex,
       certificateEnabled: input.certificateEnabled,

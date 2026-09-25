@@ -236,7 +236,7 @@ export default async function CoursePage({
 
   const totalLessons = course.modules.reduce((n, m) => n + m.lessons.length, 0);
 
-  // Промо-ролики курса: только ID, сами видео остаются на YouTube.
+  // Промо-ролики курса: сжатые MP4 с нашего сервера (lib/courses/promo-video.ts).
   const promoVideos = parsePromoVideos(course.promoVideos);
 
   // JSON-LD
@@ -562,7 +562,7 @@ export default async function CoursePage({
         </div>
       </section>
 
-      {/* Промо-ролики: живут на YouTube, у нас — только ID (Course.promoVideos).
+      {/* Промо-ролики: свои MP4 из каталога promo курса (Course.promoVideos).
           Ставим сразу под hero: ролик о содержании курса отвечает на «а что там
           внутри» раньше, чем человек дойдёт до списка уроков. */}
       {promoVideos.length > 0 ? (

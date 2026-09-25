@@ -10,9 +10,10 @@ import {
 } from "./lib/prod.js";
 
 /**
- * CLI: выкладка своих промо-роликов курса на прод — тех, которых нет на YouTube
- * (рилсы, присланные файлом). Витрина играет их из каталога promo курса
- * (lib/courses/promo-video.ts, раздача /api/promo → nginx).
+ * CLI: выкладка промо-роликов курса на прод. Витрина играет только свои файлы
+ * из каталога promo курса (lib/courses/promo-video.ts, раздача /api/promo → nginx);
+ * ролик с YouTube сначала скачать (yt-dlp --cookies-from-browser chrome) и
+ * пережать рецептом ниже, для вертикального превью — i.ytimg.com/vi/<id>/oardefault.jpg.
  *
  *   pnpm factory:promo --course <slug> --dir <каталог> [--dry-run]
  *

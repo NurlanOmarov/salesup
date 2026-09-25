@@ -10,13 +10,9 @@ import {
 } from "@/lib/courses/promo-video";
 
 /**
- * Промо-ролики курса: источник — YouTube, копий у нас нет (правило 10 — диск VPS
- * держим под уроки, а не под маркетинг). Исключение — рилсы, которых на YouTube
- * нет: они лежат у нас сжатым MP4 (`file`) и играют в обычном <video>.
- *
- * До клика грузится только превью-кадр: iframe YouTube тянет около мегабайта
- * скриптов и ставит куки, поэтому появляется он лишь по нажатию (домен nocookie,
- * rel=0 — после ролика не подсовываются чужие каналы).
+ * Промо-ролики курса: лежат у нас сжатым MP4 (lib/courses/promo-video.ts) и
+ * играют в обычном <video>. До клика грузится только кадр-превью, сам ролик —
+ * по нажатию: на странице их бывает до шести.
  */
 export function PromoVideos({
   videos,
@@ -27,7 +23,7 @@ export function PromoVideos({
 }) {
   if (videos.length === 0) return null;
 
-  // Один ролик — крупно; несколько — сеткой. Вертикальные шортсы узкие, поэтому
+  // Один ролик — крупно; несколько — сеткой. Вертикальные ролики узкие, поэтому
   // в ряд их помещается три, а горизонтальным хватает двух колонок.
   if (videos.length === 1) {
     const only = videos[0]!;
@@ -44,7 +40,7 @@ export function PromoVideos({
     <div
       className={cn(
         allVertical
-          ? // Шортсы: на телефоне — лента со снэпом (три кадра 9:16 в столбик
+          ? // Вертикальные: на телефоне — лента со снэпом (три кадра 9:16 в столбик
             // это три экрана прокрутки), на десктопе — ровный ряд.
             "-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 sm:pb-0 [&::-webkit-scrollbar]:hidden"
           : "grid gap-5 sm:grid-cols-2",
@@ -75,15 +71,9 @@ function PromoVideoItem({
   courseTitle: string;
   className?: string;
 }) {
-  const { id, vertical, title, file } = video;
+  const { vertical, title, file } = video;
   const [playing, setPlaying] = useState(false);
-  // У вертикальных роликов кадр в исходных пропорциях лежит в oardefault;
-  // maxres для них — тот же кадр с полями. При 404 откатываемся на hqdefault.
-  const [thumb, setThumb] = useState(
-    file
-      ? promoMediaUrl(promoPosterKey(file))
-      : `https://i.ytimg.com/vi/${id}/${vertical ? "oardefault" : "maxresdefault"}.jpg`,
-  );
+  const thumb = promoMediaUrl(promoPosterKey(file));
 
   const label = title ? `${title} — ${courseTitle}` : courseTitle;
   const frameCls = cn(
@@ -93,9 +83,8 @@ function PromoVideoItem({
 
   return (
     <figure className={className}>
-      {playing && file ? (
+      {playing ? (
         <div className={frameCls}>
-          {/* Свой ролик: до клика грузится только кадр-превью, сам MP4 — по нажатию. */}
           <video
             className="absolute inset-0 size-full object-contain"
             src={promoMediaUrl(file)}
@@ -105,17 +94,6 @@ function PromoVideoItem({
             autoPlay
             playsInline
             preload="auto"
-          />
-        </div>
-      ) : playing ? (
-        <div className={frameCls}>
-          <iframe
-            className="absolute inset-0 size-full"
-            src={`https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&modestbranding=1`}
-            title={label}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            referrerPolicy="strict-origin-when-cross-origin"
-            allowFullScreen
           />
         </div>
       ) : (
@@ -131,9 +109,6 @@ function PromoVideoItem({
             alt=""
             aria-hidden
             loading="lazy"
-            onError={() => {
-              if (!file) setThumb(`https://i.ytimg.com/vi/${id}/hqdefault.jpg`);
-            }}
             className="absolute inset-0 size-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
           />
           <span className="absolute inset-0 bg-slate-950/25 transition-colors group-hover:bg-slate-950/10" />

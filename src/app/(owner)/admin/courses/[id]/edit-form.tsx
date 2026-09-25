@@ -29,8 +29,6 @@ import { AiSuggestionCard, UndoBar } from "../../seo/ai-suggestion";
 import type { MetaScore, MetaSuggestion } from "@/lib/seo/ai";
 import {
   parsePromoVideos,
-  youtubeId,
-  isShortsUrl,
   type PromoVideo,
 } from "@/lib/courses/promo-video";
 
@@ -67,7 +65,6 @@ interface CourseFields {
 }
 
 /** Строка списка промо-роликов: разобранный ролик + то, что владелец ввёл. */
-type PromoVideoRow = PromoVideo & { input: string };
 
 const SYMBOLS = { KZT: "тенге", RUB: "рос. руб.", BYN: "бел. руб." } as const;
 
@@ -138,11 +135,10 @@ export function CourseEditForm({
   );
 
   const [coverAlt, setCoverAlt] = useState(course.coverAlt ?? "");
-  // Промо-ролики курса: у нас хранятся только ID видео, сами ролики остаются
-  // на YouTube. В форме к каждому держим исходный ввод (ссылку), чтобы владелец
-  // видел то, что вставил, а не голый ID.
-  const [promoVideos, setPromoVideos] = useState<PromoVideoRow[]>(() =>
-    parsePromoVideos(course.promoVideos).map((v) => ({ ...v, input: v.id })),
+  // Промо-ролики курса: MP4 на нашем сервере. Заливает их фабрика
+  // (pnpm factory:promo) — в форме только подпись, ориентация и «убрать».
+  const [promoVideos, setPromoVideos] = useState<PromoVideo[]>(() =>
+    parsePromoVideos(course.promoVideos),
   );
   const [ogKey, setOgKey] = useState(course.ogImageUrl);
   const [ogMsg, setOgMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -268,7 +264,7 @@ export function CourseEditForm({
     setCanonicalPath(course.canonicalPath ?? "");
     setFocusKeyword(course.focusKeyword ?? "");
     setCoverAlt(course.coverAlt ?? "");
-    setPromoVideos(parsePromoVideos(course.promoVideos).map((v) => ({ ...v, input: v.id })));
+    setPromoVideos(parsePromoVideos(course.promoVideos));
     setSeoNoindex(course.seoNoindex);
     setCertificateEnabled(course.certificateEnabled);
     setMetaSuggestion(null);
@@ -319,14 +315,12 @@ export function CourseEditForm({
         canonicalPath,
         focusKeyword,
         coverAlt,
-        promoVideos: promoVideos
-          .filter((v) => v.id)
-          .map((v) => ({
-            id: v.id,
-            vertical: v.vertical,
-            title: v.title || undefined,
-            file: v.file,
-          })),
+        promoVideos: promoVideos.map((v) => ({
+          id: v.id,
+          vertical: v.vertical,
+          title: v.title || undefined,
+          file: v.file,
+        })),
         seoNoindex,
         certificateEnabled,
         wooProductId: wooProductId > 0 ? wooProductId : "",
@@ -1151,10 +1145,10 @@ export function CourseEditForm({
           </p>
         </div>
 
-        {/* Промо-ролики на витрине курса: храним только ID, видео остаются на YouTube */}
+        {/* Промо-ролики на витрине курса: MP4 на нашем сервере, заливает фабрика */}
         <div className="border-t border-foreground/10 pt-3">
           <p className="text-sm font-medium text-foreground/80">
-            Промо-ролики на YouTube
+            Промо-ролики
           </p>
           <div className="mt-2 space-y-3">
             {promoVideos.map((row, i) => (
@@ -1163,34 +1157,9 @@ export function CourseEditForm({
                 className="rounded-lg border border-foreground/10 p-3"
               >
                 <div className="flex items-start gap-2">
-                  {row.file ? (
-                    <p className="mt-1 flex-1 break-all text-sm text-foreground/70">
-                      Ролик на нашем сервере: {row.file.split("/").pop()}
-                    </p>
-                  ) : (
-                    <input
-                      className={inputCls}
-                      placeholder="Ссылка на видео или ID"
-                      value={row.input}
-                      onChange={(e) => {
-                        const input = e.target.value;
-                        setPromoVideos((rows) =>
-                          rows.map((r, idx) =>
-                            idx === i
-                              ? {
-                                  ...r,
-                                  input,
-                                  id: youtubeId(input) ?? "",
-                                  // Ссылка /shorts/ — ролик заведомо вертикальный;
-                                  // ручную галочку это не перебивает.
-                                  vertical: isShortsUrl(input) || r.vertical,
-                                }
-                              : r,
-                          ),
-                        );
-                      }}
-                    />
-                  )}
+                  <p className="mt-1 flex-1 break-all text-sm text-foreground/70">
+                    {row.file.split("/").pop()}
+                  </p>
                   <button
                     type="button"
                     onClick={() =>
@@ -1227,37 +1196,16 @@ export function CourseEditForm({
                         )
                       }
                     />
-                    Вертикальный (Shorts)
+                    Вертикальный (9:16)
                   </label>
-                  <span className="text-xs text-foreground/40">
-                    {row.file
-                      ? "загружен фабрикой"
-                      : row.id
-                        ? `ID: ${row.id}`
-                        : "ссылка не распознана"}
-                  </span>
                 </div>
               </div>
             ))}
           </div>
-          {promoVideos.length < 6 ? (
-            <button
-              type="button"
-              onClick={() =>
-                setPromoVideos((rows) => [
-                  ...rows,
-                  { id: "", vertical: false, input: "" },
-                ])
-              }
-              className="mt-2 rounded-md border border-foreground/15 px-3 py-1.5 text-xs font-medium text-foreground/70 transition-colors hover:border-amber-400 hover:text-amber-700"
-            >
-              + Добавить ролик
-            </button>
-          ) : null}
           <p className="mt-1.5 text-xs text-foreground/40">
-            Вставьте адрес ролика — ID подставится сам. Видео остаётся на YouTube:
-            на странице курса до клика грузится только превью-кадр. Список пуст →
-            блока с видео на витрине нет.
+            Ролики лежат на нашем сервере, новые заливаются командой
+            pnpm factory:promo. На странице курса до клика грузится только
+            превью-кадр. Список пуст → блока с видео на витрине нет.
           </p>
         </div>
 
