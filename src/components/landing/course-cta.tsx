@@ -96,10 +96,13 @@ function useContinueUrl(slug: string): string | null {
 export function CourseCta({
   slug,
   checkoutUrl,
+  payInByn,
 }: {
   slug: string;
   /** Ссылка на оплату в магазине; null — курс продаётся через заявку. */
   checkoutUrl?: string | null;
+  /** Сумма списания в белорусских рублях — показывается, если витрина в другой валюте. */
+  payInByn?: string | null;
 }) {
   const continueUrl = useContinueUrl(slug);
   const startedCheckout = useStartedCheckout(slug);
@@ -147,6 +150,12 @@ export function CourseCta({
           {startedCheckout ? "Оплатить ещё раз" : "Оплатить и начать"}
         </a>
 
+        {payInByn ? (
+          <p className="text-center text-xs text-white/50">
+            Оплата картой на странице банка, списание в белорусских рублях — {payInByn}
+          </p>
+        ) : null}
+
         {/* Постоянная точка входа: покупатель возвращается со страницы банка без
             сессии, и без этой ссылки единственная кнопка на экране — «купить». */}
         <p className="text-center text-sm text-white/60">
@@ -183,6 +192,7 @@ export function CourseCtaSection({
   priceByn,
   priceOther,
   checkoutUrl,
+  payInByn,
 }: {
   slug: string;
   courseId: string;
@@ -191,6 +201,8 @@ export function CourseCtaSection({
   priceOther: string | null;
   /** Ссылка на оплату; null — курс продаётся только через заявку. */
   checkoutUrl?: string | null;
+  /** Сумма списания в белорусских рублях — показывается, если витрина в другой валюте. */
+  payInByn?: string | null;
 }) {
   const continueUrl = useContinueUrl(slug);
   const t = messagesFor(useLocale());
@@ -251,6 +263,11 @@ export function CourseCtaSection({
                 <CreditCard className="size-5" />
                 Оплатить и начать
               </a>
+              {payInByn ? (
+                <p className="mt-2 text-xs text-white/50">
+                  Списание на странице банка в белорусских рублях — {payInByn}
+                </p>
+              ) : null}
               <p className="mt-3 text-sm text-white/60">
                 Уже оплатили?{" "}
                 <Link href="/login" className="underline underline-offset-4 hover:text-white">

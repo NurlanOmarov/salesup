@@ -211,10 +211,14 @@ export default async function CoursePage({
   // Приоритет — платёжная ссылка банка: покупатель уходит прямо на страницу
   // оплаты, без промежуточной корзины магазина.
   const checkoutUrl =
-    site?.code !== "BY"
-      ? null
-      : (course.alfaPaymentUrl ??
-        (course.wooProductId ? shopCheckoutUrl(env.WOO_STORE_URL, course.wooProductId) : null));
+    course.alfaPaymentUrl ??
+    (course.wooProductId ? shopCheckoutUrl(env.WOO_STORE_URL, course.wooProductId) : null);
+
+  // Эквайринг белорусский, поэтому списание всегда в белорусских рублях — а на
+  // .kz/.ru/.uz витрина показывает цену в местной валюте по кросс-курсу. Без
+  // предупреждения человек увидел бы на странице банка незнакомую сумму и бросил
+  // оплату, решив, что ошибся. На .by примечание не нужно: там валюта совпадает.
+  const payInByn = site?.currency && site.currency !== "byn" ? prices.byn : null;
 
   // Контакты — из SeoSettings (правятся в /admin/seo без деплоя).
   const { whatsapp: wa, telegram: tg, viber } = await getSupportContacts();
@@ -448,7 +452,7 @@ export default async function CoursePage({
                   </p>
                 )}
 
-                <CourseCta slug={slug} checkoutUrl={checkoutUrl} />
+                <CourseCta slug={slug} checkoutUrl={checkoutUrl} payInByn={payInByn} />
 
                 <div className="mt-4 flex flex-col gap-2">
                   {wa ? (
@@ -748,6 +752,7 @@ export default async function CoursePage({
           priceByn={prices.main}
           priceOther={prices.alt || null}
           checkoutUrl={checkoutUrl}
+          payInByn={payInByn}
         />
       </section>
 
