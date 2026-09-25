@@ -6,6 +6,7 @@ import { BookOpen } from "lucide-react";
 import { Reveal } from "@/components/landing/reveal";
 import { CourseCard, type CourseCardData } from "@/components/catalog/course-card";
 import { CustomCourseOffer } from "@/components/catalog/custom-course-offer";
+import { CatalogReviews, type CatalogReview } from "@/components/catalog/catalog-reviews";
 import { useLocale } from "@/i18n/client";
 import type { Locale } from "@/i18n/routing";
 import { localizedIndustry } from "@/content/industries";
@@ -68,7 +69,13 @@ function matchesFilter(course: CourseCardData, filter: string): boolean {
   return true;
 }
 
-export function CoursesCatalog({ courses }: { courses: CourseCardData[] }) {
+export function CoursesCatalog({
+  courses,
+  reviews = [],
+}: {
+  courses: CourseCardData[];
+  reviews?: CatalogReview[];
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -96,6 +103,30 @@ export function CoursesCatalog({ courses }: { courses: CourseCardData[] }) {
     () => courses.filter((c) => matchesFilter(c, activeFilter)),
     [courses, activeFilter],
   );
+
+  const reviewCourses = useMemo(
+    () => new Map(courses.map((c) => [c.id, { slug: c.slug, title: c.title }])),
+    [courses],
+  );
+  // Отзывы со всех курсов, но при фильтре первыми идут отзывы о показанных
+  // курсах: человек выбрал отрасль — ему интереснее мнение коллег по ней.
+  const orderedReviews = useMemo(() => {
+    const shown = new Set(visible.map((c) => c.id));
+    const known = reviews.filter((r) => reviewCourses.has(r.courseId));
+    const ordered = [
+      ...known.filter((r) => shown.has(r.courseId)),
+      ...known.filter((r) => !shown.has(r.courseId)),
+    ];
+    // Отзывы с живых тренингов привязаны сразу к нескольким курсам — в общей
+    // плитке один и тот же текст показываем один раз.
+    const seen = new Set<string>();
+    return ordered.filter((r) => {
+      const key = `${r.userName}\n${r.text}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [reviews, visible, reviewCourses]);
 
   // Одна таблетка «Все» без альтернатив — фильтр бессмысленен, не показываем.
   const showFilter = facets.length > 1;
@@ -147,8 +178,9 @@ export function CoursesCatalog({ courses }: { courses: CourseCardData[] }) {
         </Reveal>
       ) : null}
 
-      {/* Плитка «Не нашли своей темы?» — всегда последней в сетке: и в полном
-          каталоге, и в отфильтрованном, где отрасли человека может не оказаться. */}
+      {/* Плитка «Не нашли своей темы?» — сразу после карточек курсов: и в полном
+          каталоге, и в отфильтрованном, где отрасли человека может не оказаться.
+          За ней — плитка отзывов учеников. */}
       <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {visible.map((c, i) => (
           <Reveal key={c.slug} delay={i * 0.04}>
@@ -159,6 +191,11 @@ export function CoursesCatalog({ courses }: { courses: CourseCardData[] }) {
         <Reveal delay={visible.length * 0.04} className="h-full">
           <CustomCourseOffer />
         </Reveal>
+        {orderedReviews.length > 0 ? (
+          <Reveal delay={(visible.length + 1) * 0.04} className="h-full">
+            <CatalogReviews reviews={orderedReviews} courses={reviewCourses} />
+          </Reveal>
+        ) : null}
       </div>
     </>
   );

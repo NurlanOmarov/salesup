@@ -10,6 +10,7 @@ import { getStaticPageSeo } from "@/lib/seo/static-pages";
 import { Reveal } from "@/components/landing/reveal";
 import type { CourseCardData } from "@/components/catalog/course-card";
 import { CoursesCatalog } from "@/components/catalog/courses-catalog";
+import type { CatalogReview } from "@/components/catalog/catalog-reviews";
 import { getPublishedLandings } from "@/lib/seo/landings";
 import { coursesPageContent } from "@/content/courses-page-content";
 import { currentSite, pageAlternates, siteOrigin } from "@/lib/seo/site";
@@ -103,6 +104,25 @@ async function getCourses(main: MainCurrency, locale: Locale): Promise<CourseCar
   });
 }
 
+// Отзывы учеников со всех курсов — те же условия, что на странице курса и на
+// главной: прошли автопроверку и есть согласие на публикацию под именем (99-З).
+async function getReviews(): Promise<CatalogReview[]> {
+  return buildSafe(
+    () =>
+      db.review.findMany({
+        where: {
+          autoModeration: "VALIDATED",
+          publicConsent: true,
+          course: { status: "PUBLISHED" },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 20,
+        select: { id: true, courseId: true, userName: true, rating: true, text: true },
+      }),
+    [],
+  );
+}
+
 export default async function CoursesPage() {
   // Цены показываем в валюте страны домена (мультидомен), остальные — справочно.
   const site = await currentSite();
@@ -110,7 +130,10 @@ export default async function CoursesPage() {
   const locale = await getLocale();
   const { audience, howItWorks, difference, faq } = coursesPageContent(locale);
   const t = messagesFor(locale);
-  const courses = await getCourses(site?.currency ?? "byn", locale);
+  const [courses, reviews] = await Promise.all([
+    getCourses(site?.currency ?? "byn", locale),
+    getReviews(),
+  ]);
   // Посадочные показываем только на русской витрине: тексты кластеров русские.
   const landings = locale === DEFAULT_LOCALE ? await getPublishedLandings() : [];
 
@@ -191,7 +214,7 @@ export default async function CoursesPage() {
             <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3" />
           }
         >
-          <CoursesCatalog courses={courses} />
+          <CoursesCatalog courses={courses} reviews={reviews} />
         </Suspense>
       )}
 

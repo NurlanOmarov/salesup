@@ -47,6 +47,9 @@ const ru = {
     customDialogText:
       "Расскажите, что продаёте и чему нужно научить команду, — свяжемся и обсудим программу.",
     close: "Закрыть",
+    reviewsTitle: "Отзывы учеников",
+    reviewsPrev: "Предыдущий отзыв",
+    reviewsNext: "Следующий отзыв",
   },
   language: {
     label: "Тіл / Язык",
@@ -309,6 +312,9 @@ const kk = {
     customDialogText:
       "Не сататыныңызды және командаға нені үйрету керегін айтыңыз — хабарласып, бағдарламаны талқылаймыз.",
     close: "Жабу",
+    reviewsTitle: "Оқушылардың пікірлері",
+    reviewsPrev: "Алдыңғы пікір",
+    reviewsNext: "Келесі пікір",
   },
   language: {
     label: "Тіл / Язык",
@@ -544,6 +550,9 @@ const uz = {
     customDialogText:
       "Nima sotayotganingizni va jamoaga nimani o'rgatish kerakligini yozing — bog'lanib, dasturni muhokama qilamiz.",
     close: "Yopish",
+    reviewsTitle: "O'quvchilar fikrlari",
+    reviewsPrev: "Oldingi fikr",
+    reviewsNext: "Keyingi fikr",
   },
   language: {
     label: "Til / Язык",
